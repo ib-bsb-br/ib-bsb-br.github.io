@@ -5,14 +5,13 @@ date: 2024-07-17
 type: post
 layout: post
 published: true
-slug: webhooks-using-serverlesscom-lift-plugin
+slug: serverless-lift
 title: 'Webhooks using `Serverless.com` Lift plugin'
 ---
 
-***
-serverless.yml
+# serverless.yml
 
-```yml
+{% codeblock yaml%}
 service: github-webhook-service
 
 provider:
@@ -49,13 +48,11 @@ package:
   patterns:
     - '!node_modules/aws-sdk/**'
     - '!node_modules/@aws-sdk/**'
-```
-***
+{% endcodeblock %}
 
----
-handler.mjs
+# handler.mjs
 
-~~~mjs
+{% codeblock javascript %}
 import { Octokit } from "@octokit/rest";
 import { Base64 } from "js-base64";
 
@@ -171,5 +168,4 @@ export const handleWebhook = async (event) => {
     };
   }
 };
-~~~
----
+{% endcodeblock %}
