@@ -1,1 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>infoBAG</title>
+    <meta name="title" content="infoBAG" />
+    <meta name="description" content="can't steer unless already moving" />
+    <link rel="canonical" href="https://ib.bsb.br/dedup/">
+    <link rel="alternate" type="application/rss+xml" title="infoBAG" href="https://ib.bsb.br/rss.xml">
+    <link href="/style.css" rel="stylesheet">
+    <link href="/pagefind/pagefind-ui.css" rel="stylesheet">
+    <script src="/assets/js/prism.js" defer></script>
+    <script src="/assets/js/search.js" defer></script>
+    <script src="/pagefind/pagefind-ui.js" type="text/javascript"></script>
+    <script type="module">
+      import PagefindHighlight from '/pagefind/pagefind-highlight.js';
+      new PagefindHighlight({ highlightParam: "highlight" });
+    </script>
+    
+      <meta itemprop="keywords" content="tools">
+      
+        <meta property="article:tag" content="tools">
+      
+    
+  </head>
+  <body class="post-content-body">
+    <header class="header-container">
+      <div id="search" class="search-input-block"></div>
+      <nav aria-label="Main navigation" class="header-content">
+        <a href="/" aria-label="Home">
+          <img src="/assets/Sudden_Death_Rune.gif" alt="Sudden Death Rune" class="favicon search-link">
+        </a>
+        <a href="https://ib.bsb.br/archive" aria-label="Archive">
+          <img src="/favicon.ico" alt="Archive Icon" class="favicon search-link">
+        </a>
+        <a href="https://ib.bsb.br/tags" aria-label="Tags">
+          <img src="/assets/Label.gif" alt="Tags Icon" class="favicon search-link">
+        </a>
+        <a href="https://ib.bsb.br/events" aria-label="Events">
+          <img src="/assets/Paralyse_Rune.gif" alt="Events Icon" class="favicon search-link">
+        </a>
+      </nav>
+    </header>
+    <article class="post-wrapper">
+      <main class="content">
+        <div class="container mt-5">
+    <h1 class="mb-4">Duplicate Entry Tool</h1>
+    <div class="form-group">
+      <label for="inputText">Enter your list of strings:</label>
+      <textarea class="form-control" id="inputText" rows="5"></textarea>
+    </div>
 
+    <div class="form-group">
+      <label>Select delimiter:</label><br />
+      <div class="form-check form-check-inline">
+        <input class="form-check-input" type="radio" name="delimiterRadio" id="linebreakRadio" value="linebreak" checked="" />
+        <label class="form-check-label" for="linebreakRadio">Line Break</label>
+      </div>
+      <div class="form-check form-check-inline">
+        <input class="form-check-input" type="radio" name="delimiterRadio" id="commaRadio" value="comma" />
+        <label class="form-check-label" for="commaRadio">Comma (CSV)</label>
+      </div>
+      <div class="form-check form-check-inline">
+        <input class="form-check-input" type="radio" name="delimiterRadio" id="tabRadio" value="tab" />
+        <label class="form-check-label" for="tabRadio">Tab (TSV)</label>
+      </div>
+    </div>
+
+    <button class="btn btn-primary mr-2" onclick="findDuplicates()">Find Duplicates</button>
+    <button class="btn btn-primary" onclick="removeDuplicates()">Remove Duplicates</button>
+
+    <h2 class="mt-4">Duplicates:</h2>
+    <textarea class="form-control" id="duplicatesText" rows="5" readonly=""></textarea>
+    <button class="btn btn-secondary mt-2" onclick="copyToClipboard('duplicatesText')">Copy Duplicates</button>
+
+    <h2 class="mt-4">Result:</h2>
+    <textarea class="form-control" id="outputText" rows="5" readonly=""></textarea>
+    <button class="btn btn-secondary mt-2" onclick="copyToClipboard('outputText')">Copy Result</button>
+  </div>
+<script>
+    function removeDuplicates() {
+      const inputText = document.getElementById("inputText").value;
+      let delimiter = "";
+
+      // Find the selected radio button
+      const selectedRadioButton = document.querySelector('input[name="delimiterRadio"]:checked');
+
+      if (selectedRadioButton) {
+        delimiter = selectedRadioButton.value;
+      }
+
+      let outputText = "";
+
+      if (delimiter === "linebreak") {
+        const inputLines = inputText.trim().split("\n");
+        const uniqueLines = Array.from(new Set(inputLines));
+        outputText = uniqueLines.join("\n");
+      } else if (delimiter === "comma") {
+        const inputItems = inputText.trim().split(",");
+        const uniqueItems = Array.from(new Set(inputItems));
+        outputText = uniqueItems.join(",");
+      } else if (delimiter === "tab") {
+        const inputItems = inputText.trim().split("\t");
+        const uniqueItems = Array.from(new Set(inputItems));
+        outputText = uniqueItems.join("\t");
+      }
+
+      document.getElementById("outputText").value = outputText;
+    }
+
+    function findDuplicates() {
+      const inputText = document.getElementById("inputText").value;
+      let delimiter = "";
+
+      // Find the selected radio button
+      const selectedRadioButton = document.querySelector('input[name="delimiterRadio"]:checked');
+
+      if (selectedRadioButton) {
+        delimiter = selectedRadioButton.value;
+      }
+
+      let duplicatesText = "";
+
+      if (delimiter === "linebreak") {
+        const inputLines = inputText.trim().split("\n");
+        const duplicates = findDuplicate_from_array(inputLines);
+        duplicatesText = duplicates.join("\n");
+      } else if (delimiter === "comma") {
+        const inputItems = inputText.trim().split(",");
+        const duplicates = findDuplicate_from_array(inputItems);
+        duplicatesText = duplicates.join(",");
+      } else if (delimiter === "tab") {
+        const inputItems = inputText.trim().split("\t");
+        const duplicates = findDuplicate_from_array(inputItems);
+        duplicatesText = duplicates.join("\t");
+      }
+
+      document.getElementById("duplicatesText").value = duplicatesText;
+    }
+
+    function findDuplicate_from_array(arr) {
+      const seen = {};
+      const duplicates = [];
+
+      for (const item of arr) {
+        if (seen[item]) {
+          duplicates.push(item);
+        } else {
+          seen[item] = true;
+        }
+      }
+
+      return duplicates;
+    }
+
+    function copyToClipboard(elementId) {
+      const textArea = document.getElementById(elementId);
+      textArea.select();
+      document.execCommand("copy");
+    }
+  </script>
+
+
+      </main>
+    </article>
+  </body>
+</html>
