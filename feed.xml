@@ -1,4 +1,272 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.4">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2024-09-21T17:44:16+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">Daily coffee for the heart</title><link href="https://ib.bsb.br/daily-coffee-for-the-heart/" rel="alternate" type="text/html" title="Daily coffee for the heart" /><published>2024-09-19T00:00:00+00:00</published><updated>2024-09-20T02:37:06+00:00</updated><id>https://ib.bsb.br/daily-coffee-for-the-heart</id><content type="html" xml:base="https://ib.bsb.br/daily-coffee-for-the-heart/"><![CDATA[<h1 id="coffees-sweet-spot-daily-consumption-and-cardiometabolic-risk">Coffee’s ‘Sweet Spot’: Daily Consumption and Cardiometabolic Risk</h1>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.4">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2024-09-21T17:47:45+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">Webhooks using `Serverless.com` Lift plugin</title><link href="https://ib.bsb.br/serverless-lift/" rel="alternate" type="text/html" title="Webhooks using `Serverless.com` Lift plugin" /><published>2024-09-21T00:00:00+00:00</published><updated>2024-09-21T17:47:16+00:00</updated><id>https://ib.bsb.br/serverless-lift</id><content type="html" xml:base="https://ib.bsb.br/serverless-lift/"><![CDATA[<h1 id="serverlessyml">serverless.yml</h1>
+
+<section data-filename="yaml_code-block.yaml" data-code="service: github-webhook-service
+provider:
+name: aws
+runtime: nodejs20.x
+region: us-east-1
+environment:
+GITHUB_TOKEN: ${env:GITHUB_TOKEN}
+plugins:
+- serverless-lift
+constructs:
+webhook:
+type: webhook
+path: /webhook
+method: POST
+eventType: $request.body.type
+insecure: true
+functions:
+handleWebhook:
+handler: handler.handleWebhook
+events:
+- eventBridge:
+eventBus: ${construct:webhook.busName}
+pattern:
+source:
+- webhook
+detail-type:
+- new_comment
+package:
+patterns:
+- '!node_modules/aws-sdk/**'
+- '!node_modules/@aws-sdk/**'" data-download-link="" data-download-link-label="Download Yaml" class="language-yaml line-numbers" style="white-space:pre-wrap;"><code class="language-yaml">service: github-webhook-service
+provider:
+name: aws
+runtime: nodejs20.x
+region: us-east-1
+environment:
+GITHUB_TOKEN: ${env:GITHUB_TOKEN}
+plugins:
+- serverless-lift
+constructs:
+webhook:
+type: webhook
+path: /webhook
+method: POST
+eventType: $request.body.type
+insecure: true
+functions:
+handleWebhook:
+handler: handler.handleWebhook
+events:
+- eventBridge:
+eventBus: ${construct:webhook.busName}
+pattern:
+source:
+- webhook
+detail-type:
+- new_comment
+package:
+patterns:
+- '!node_modules/aws-sdk/**'
+- '!node_modules/@aws-sdk/**'</code></section>
+
+<h1 id="handlermjs">handler.mjs</h1>
+
+<section data-filename="javascript_code-block.js" data-code="import { Octokit } from &quot;@octokit/rest&quot;;
+import { Base64 } from &quot;js-base64&quot;;
+/**
+* Converts a string to a URL-friendly slug.
+* @param {string} text - The text to be slugified.
+* @return {string} The slugified text.
+*/
+const slugify = (text) =&gt; {
+return text
+.toString()
+.toLowerCase()
+.trim()
+.replace(/\s+/g, '-')           // Replace spaces with -
+.replace(/[^\w\-]+/g, '')       // Remove all non-word chars
+.replace(/\-\-+/g, '-')         // Replace multiple - with single -
+.replace(/^-+/, '')             // Trim - from start of text
+.replace(/-+$/, '');            // Trim - from end of text
+};
+/**
+* Formats a date string to YYYY-MM-DD.
+* @param {string} date - The date string to format.
+* @return {string} The formatted date string.
+*/
+const formatDate = (date) =&gt; {
+const d = new Date(date);
+if (isNaN(d.getTime())) {
+throw new Error('Invalid date provided');
+}
+return d.toISOString().split('T')[0];
+};
+/**
+* Creates the content for a blog post.
+* @param {Object} data - The data for the blog post.
+* @param {string} data.by_nickname - The author's nickname.
+* @param {string} data.by_email - The author's email.
+* @param {string} data.content - The content of the post.
+* @param {string} data.time - The timestamp of the post.
+* @return {string} The formatted blog post content.
+*/
+const createPostContent = (data) =&gt; {
+const { by_nickname, by_email, content, time } = data;
+const slugName = slugify(by_nickname);
+const date = formatDate(time);
+return `---
+tags:
+- ${by_email}
+info: aberto.
+date: ${date}
+type: post
+layout: post
+published: true
+slug: ${slugName}
+title: '${by_nickname}'
+---
+${content}`;
+};
+/**
+* Handles the webhook event for creating a new blog post.
+* @param {Object} event - The webhook event object.
+* @return {Object} The response object.
+*/
+export const handleWebhook = async (event) =&gt; {
+try {
+if (!event || !event.detail || !event.detail.data) {
+throw new Error('Invalid event structure');
+}
+const { by_nickname, by_email, content } = event.detail.data;
+const time = event.time || new Date().toISOString();
+if (!by_email || !by_nickname || !content) {
+throw new Error('Missing required fields: email, nickname, or content');
+}
+const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
+if (!process.env.GITHUB_TOKEN) {
+throw new Error('GitHub token is not set');
+}
+const owner = &quot;${REPO_OWNER}&quot;;
+const repo = &quot;${REPO_NAME}&quot;;
+const date = formatDate(time);
+const slugName = slugify(by_nickname);
+const path = `_posts/${date}-${slugName}.md`;
+const message = `New post by ${by_nickname}`;
+const postContent = createPostContent({ by_nickname, by_email, content, time });
+const contentEncoded = Base64.encode(postContent);
+await octokit.repos.createOrUpdateFileContents({
+owner,
+repo,
+path,
+message,
+content: contentEncoded,
+});
+return {
+statusCode: 200,
+body: JSON.stringify({ message: &quot;File created/updated successfully&quot;, path }),
+};
+} catch (error) {
+console.error('Error in handleWebhook:', error);
+return {
+statusCode: error.status || 500,
+body: JSON.stringify({ message: error.message || &quot;An unexpected error occurred&quot; }),
+};
+}
+};" data-download-link="" data-download-link-label="Download Javascript" class="language-javascript line-numbers" style="white-space:pre-wrap;"><code class="language-javascript">import { Octokit } from "@octokit/rest";
+import { Base64 } from "js-base64";
+/**
+* Converts a string to a URL-friendly slug.
+* @param {string} text - The text to be slugified.
+* @return {string} The slugified text.
+*/
+const slugify = (text) =&gt; {
+return text
+.toString()
+.toLowerCase()
+.trim()
+.replace(/\s+/g, '-')           // Replace spaces with -
+.replace(/[^\w\-]+/g, '')       // Remove all non-word chars
+.replace(/\-\-+/g, '-')         // Replace multiple - with single -
+.replace(/^-+/, '')             // Trim - from start of text
+.replace(/-+$/, '');            // Trim - from end of text
+};
+/**
+* Formats a date string to YYYY-MM-DD.
+* @param {string} date - The date string to format.
+* @return {string} The formatted date string.
+*/
+const formatDate = (date) =&gt; {
+const d = new Date(date);
+if (isNaN(d.getTime())) {
+throw new Error('Invalid date provided');
+}
+return d.toISOString().split('T')[0];
+};
+/**
+* Creates the content for a blog post.
+* @param {Object} data - The data for the blog post.
+* @param {string} data.by_nickname - The author's nickname.
+* @param {string} data.by_email - The author's email.
+* @param {string} data.content - The content of the post.
+* @param {string} data.time - The timestamp of the post.
+* @return {string} The formatted blog post content.
+*/
+const createPostContent = (data) =&gt; {
+const { by_nickname, by_email, content, time } = data;
+const slugName = slugify(by_nickname);
+const date = formatDate(time);
+return `---
+tags:
+- ${by_email}
+info: aberto.
+date: ${date}
+type: post
+layout: post
+published: true
+slug: ${slugName}
+title: '${by_nickname}'
+---
+${content}`;
+};
+/**
+* Handles the webhook event for creating a new blog post.
+* @param {Object} event - The webhook event object.
+* @return {Object} The response object.
+*/
+export const handleWebhook = async (event) =&gt; {
+try {
+if (!event || !event.detail || !event.detail.data) {
+throw new Error('Invalid event structure');
+}
+const { by_nickname, by_email, content } = event.detail.data;
+const time = event.time || new Date().toISOString();
+if (!by_email || !by_nickname || !content) {
+throw new Error('Missing required fields: email, nickname, or content');
+}
+const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
+if (!process.env.GITHUB_TOKEN) {
+throw new Error('GitHub token is not set');
+}
+const owner = "${REPO_OWNER}";
+const repo = "${REPO_NAME}";
+const date = formatDate(time);
+const slugName = slugify(by_nickname);
+const path = `_posts/${date}-${slugName}.md`;
+const message = `New post by ${by_nickname}`;
+const postContent = createPostContent({ by_nickname, by_email, content, time });
+const contentEncoded = Base64.encode(postContent);
+await octokit.repos.createOrUpdateFileContents({
+owner,
+repo,
+path,
+message,
+content: contentEncoded,
+});
+return {
+statusCode: 200,
+body: JSON.stringify({ message: "File created/updated successfully", path }),
+};
+} catch (error) {
+console.error('Error in handleWebhook:', error);
+return {
+statusCode: error.status || 500,
+body: JSON.stringify({ message: error.message || "An unexpected error occurred" }),
+};
+}
+};</code></section>]]></content><author><name></name></author><category term="scripts&gt;cloud" /><summary type="html"><![CDATA[serverless.yml]]></summary></entry><entry><title type="html">Daily coffee for the heart</title><link href="https://ib.bsb.br/daily-coffee-for-the-heart/" rel="alternate" type="text/html" title="Daily coffee for the heart" /><published>2024-09-19T00:00:00+00:00</published><updated>2024-09-20T02:37:06+00:00</updated><id>https://ib.bsb.br/daily-coffee-for-the-heart</id><content type="html" xml:base="https://ib.bsb.br/daily-coffee-for-the-heart/"><![CDATA[<h1 id="coffees-sweet-spot-daily-consumption-and-cardiometabolic-risk">Coffee’s ‘Sweet Spot’: Daily Consumption and Cardiometabolic Risk</h1>
 
 <p>Reference: <code class="language-plaintext highlighter-rouge">https://www.medscape.com/viewarticle/coffees-sweet-spot-daily-consumption-and-cardiometabolic-2024a1000gss</code></p>
 
@@ -1343,202 +1611,4 @@ Create a new file named <code class="language-plaintext highlighter-rouge">.gith
   <li><strong><code class="language-plaintext highlighter-rouge">.github/workflows/deploy.yml</code>:</strong> This workflow automates the entire process, building your Jekyll site, running PageFind indexing, and deploying the final output to GitHub Pages.</li>
   <li><strong><code class="language-plaintext highlighter-rouge">pagefind-entry.json</code>:</strong> This file, generated by PageFind during indexing, is crucial for the search functionality. Ensure it’s correctly generated and located in the <code class="language-plaintext highlighter-rouge">_pagefind</code> directory.</li>
   <li><strong>CSS Customization:</strong> Include and customize the <code class="language-plaintext highlighter-rouge">pagefind-modular-ui.css</code> file to style the search interface according to your website’s design.</li>
-</ul>]]></content><author><name></name></author><category term="github&gt;jekyll" /><summary type="html"><![CDATA[Understanding the Components]]></summary></entry><entry><title type="html">Arm Tendinitis</title><link href="https://ib.bsb.br/arm-tendinitis/" rel="alternate" type="text/html" title="Arm Tendinitis" /><published>2024-08-13T00:00:00+00:00</published><updated>2024-09-20T02:37:06+00:00</updated><id>https://ib.bsb.br/arm-tendinitis</id><content type="html" xml:base="https://ib.bsb.br/arm-tendinitis/"><![CDATA[<ol>
-  <li><strong>Tendinitis</strong>: Inflammation of the tendons, which can cause pain and stiffness. However, tendinitis typically affects specific areas rather than the entire arm.</li>
-  <li><strong>Carpal Tunnel Syndrome</strong>: Compression of the median nerve in the wrist, leading to pain, numbness, and tingling in the thumb, index, middle, and ring fingers. This can sometimes extend up the arm.</li>
-  <li><strong>Cubital Tunnel Syndrome</strong>: Compression of the ulnar nerve at the elbow, causing pain and tingling in the ring and pinky fingers, which can extend up the forearm.</li>
-  <li><strong>Radial Tunnel Syndrome</strong>: Compression of the radial nerve, which can cause pain from the elbow to the hand, often mistaken for tennis elbow.</li>
-  <li><strong>Thoracic Outlet Syndrome</strong>: Compression of nerves or blood vessels between the collarbone and the first rib, leading to pain and numbness in the arm and hand.</li>
-  <li><strong>Cervical Radiculopathy</strong>: Nerve compression in the neck, which can cause pain, numbness, and weakness radiating down the arm.</li>
-</ol>
-
-<h3 id="symptoms-to-watch-for">Symptoms to Watch For</h3>
-
-<ul>
-  <li><strong>Pain</strong>: Along the entire arm, especially when using the mouse or cellphone.</li>
-  <li><strong>Stiffness</strong>: In the thumb and other parts of the arm.</li>
-  <li><strong>Shocks</strong>: Sudden, sharp pain or tingling sensations.</li>
-  <li><strong>Tremors</strong>: Involuntary movements, particularly in the thumb.</li>
-  <li><strong>Numbness or Tingling</strong>: In the fingers or arm.</li>
-  <li><strong>Weakness</strong>: Difficulty in gripping or lifting objects.</li>
-</ul>
-
-<h2 id="immediate-steps">Immediate Steps</h2>
-
-<ol>
-  <li><strong>Rest and Avoid Aggravating Activities</strong>: Limit the use of the mouse and cellphone.</li>
-  <li><strong>Ergonomic Adjustments</strong>: Use ergonomic tools to reduce strain.</li>
-  <li><strong>Ice and Compression</strong>: Apply ice packs and use compression sleeves.</li>
-  <li><strong>Anti-inflammatory Medications</strong>: Over-the-counter NSAIDs like ibuprofen.</li>
-</ol>
-
-<h2 id="when-to-see-a-doctor">When to See a Doctor</h2>
-
-<p>Given the complexity and severity of your symptoms, it is crucial to consult a healthcare professional for a thorough evaluation. They may recommend:</p>
-
-<ul>
-  <li><strong>Physical Examination</strong>: To assess the range of motion, strength, and areas of tenderness.</li>
-  <li><strong>Imaging Studies</strong>: X-rays, MRI, or ultrasound to visualize the affected areas.</li>
-  <li><strong>Nerve Conduction Studies</strong>: To evaluate nerve function and identify any compression or damage.</li>
-</ul>
-
-<h2 id="possible-treatments">Possible Treatments</h2>
-
-<ul>
-  <li><strong>Physical Therapy</strong>: Tailored exercises and stretches to improve flexibility and strength.</li>
-  <li><strong>Medications</strong>: Anti-inflammatory drugs, pain relievers, or corticosteroid injections.</li>
-  <li><strong>Ergonomic Adjustments</strong>: Modifications to your workspace and daily activities.</li>
-  <li><strong>Surgery</strong>: In severe cases, surgical intervention may be necessary to relieve nerve compression.</li>
-</ul>
-
-<h2 id="weight-lifting-program-for-tendinitis-recovery">Weight Lifting Program for Tendinitis Recovery</h2>
-
-<p>To develop a daily weight lifting program for tendinitis recovery, it is essential to understand the unique characteristics and recovery needs of tendons compared to muscles. Here is a structured program based on the FITT Principle (Frequency, Intensity, Type, Time):</p>
-
-<h3 id="frequency">Frequency</h3>
-<ul>
-  <li>Perform tendon exercises 2 times a day, separated by at least 6 hours, for 3-4 days per week.</li>
-</ul>
-
-<h3 id="intensity">Intensity</h3>
-<ul>
-  <li>Use a heavy weight that allows you to complete just 8-15 repetitions per set (3 sets of 8-15 reps).</li>
-</ul>
-
-<h3 id="type">Type</h3>
-<ul>
-  <li>Execute the exercises at a slow tempo, taking 3-4 seconds for both the upward and downward movements.</li>
-</ul>
-
-<h3 id="time">Time</h3>
-<ul>
-  <li>Limit the tendon exercises to 5-10 minutes with short rest periods of 20-30 seconds between sets.</li>
-</ul>
-
-<h3 id="example-exercises">Example Exercises</h3>
-
-<h4 id="1-slow-heavy-squats">1. Slow, Heavy Squats</h4>
-<ul>
-  <li><strong>How to Perform</strong>: Stand with feet shoulder-width apart, hold a weight (dumbbell or barbell) at your shoulders or sides. Slowly lower into a squat position over 3-4 seconds, then rise back up over 3-4 seconds.</li>
-  <li><strong>Reps/Sets</strong>: 3 sets of 8-15 reps.</li>
-</ul>
-
-<h4 id="2-eccentric-wrist-flexion">2. Eccentric Wrist Flexion</h4>
-<ul>
-  <li><strong>How to Perform</strong>: Hold a light weight (1-2 pounds) in your hand with your palm facing up. Slowly lower the weight down over 3-4 seconds, then use your other hand to help lift it back up.</li>
-  <li><strong>Reps/Sets</strong>: 3 sets of 8-15 reps.</li>
-</ul>
-
-<h4 id="3-eccentric-wrist-extension">3. Eccentric Wrist Extension</h4>
-<ul>
-  <li><strong>How to Perform</strong>: Hold a light weight with your palm facing down. Slowly lower the weight down over 3-4 seconds, then use your other hand to help lift it back up.</li>
-  <li><strong>Reps/Sets</strong>: 3 sets of 8-15 reps.</li>
-</ul>
-
-<h4 id="4-calf-raises">4. Calf Raises</h4>
-<ul>
-  <li><strong>How to Perform</strong>: Stand on a step with your heels hanging off the edge. Slowly raise your heels up over 3-4 seconds, then lower them back down over 3-4 seconds.</li>
-  <li><strong>Reps/Sets</strong>: 3 sets of 8-15 reps.</li>
-</ul>
-
-<h4 id="5-bicep-curls">5. Bicep Curls</h4>
-<ul>
-  <li><strong>How to Perform</strong>: Use a light weight (5-8 pounds). Stand up straight and hold the weight with your palm facing up. Slowly curl the weight up towards your shoulder over 3-4 seconds, then lower it back down over 3-4 seconds.</li>
-  <li><strong>Reps/Sets</strong>: 3 sets of 8-15 reps.</li>
-</ul>
-
-<h2 id="farmers-walk-and-tendinitis">Farmers Walk and Tendinitis</h2>
-
-<h3 id="benefits-of-farmers-walk">Benefits of Farmers Walk</h3>
-
-<ol>
-  <li><strong>Grip Strength</strong>: The Farmers Walk is excellent for improving grip strength, which can be beneficial for various daily activities and other exercises.</li>
-  <li><strong>Forearm Strength</strong>: It helps in building both forearm size and strength, which can support the muscles and tendons in your arms.</li>
-  <li><strong>Postural Strength</strong>: Enhances postural stability and control, which can help in maintaining proper alignment and reducing strain on tendons.</li>
-</ol>
-
-<h3 id="considerations-for-tendinitis">Considerations for Tendinitis</h3>
-
-<p>While the Farmers Walk has numerous benefits, it is crucial to consider how it impacts tendinitis, especially given your symptoms of pain, stiffness, and nerve involvement.</p>
-
-<ol>
-  <li><strong>Repetitive Strain</strong>: The repetitive gripping and carrying motion can potentially exacerbate tendinitis if not performed correctly or if the weights are too heavy.</li>
-  <li><strong>Nerve Compression</strong>: Given your symptoms of shocks and tremors, there might be nerve involvement. The Farmers Walk could potentially increase pressure on the nerves if not done with proper form and weight management.</li>
-</ol>
-
-<h3 id="recommended-approach">Recommended Approach</h3>
-
-<h4 id="start-light-and-gradual">Start Light and Gradual</h4>
-<ul>
-  <li><strong>Light Weights</strong>: Begin with lighter weights to avoid excessive strain on your tendons and nerves.</li>
-  <li><strong>Short Distances</strong>: Start with shorter distances and gradually increase as your strength and endurance improve.</li>
-</ul>
-
-<h4 id="focus-on-form">Focus on Form</h4>
-<ul>
-  <li><strong>Proper Grip</strong>: Ensure you are gripping the weights correctly to avoid unnecessary strain on your wrists and forearms.</li>
-  <li><strong>Posture</strong>: Maintain an upright posture with shoulders back and core engaged to distribute the load evenly.</li>
-</ul>
-
-<h4 id="complementary-exercises-and-massages">Complementary Exercises and Massages</h4>
-
-<p>In addition to the Farmers Walk, incorporate specific exercises and massages to alleviate symptoms and strengthen the affected muscles.</p>
-
-<h3 id="exercises">Exercises</h3>
-
-<ol>
-  <li><strong>Wrist Flexor and Extensor Stretches</strong>
-    <ul>
-      <li><strong>How to Perform</strong>: Extend your arm with the palm up/down and gently pull your fingers back with the other hand.</li>
-      <li><strong>Duration</strong>: Hold for 15-30 seconds.</li>
-      <li><strong>Repetitions</strong>: Repeat 2-4 times.</li>
-    </ul>
-  </li>
-  <li><strong>Eccentric Wrist Flexion and Extension</strong>
-    <ul>
-      <li><strong>How to Perform</strong>: Use a light weight, slowly lower it down over 3-4 seconds, and use the other hand to lift it back up.</li>
-      <li><strong>Repetitions</strong>: 10-15 reps.</li>
-      <li><strong>Sets</strong>: 2-3 sets.</li>
-    </ul>
-  </li>
-  <li><strong>Thumb Flexion and Extension</strong>
-    <ul>
-      <li><strong>How to Perform</strong>: Gently bend your thumb towards your palm and extend it back out.</li>
-      <li><strong>Repetitions</strong>: 10-15 reps.</li>
-      <li><strong>Sets</strong>: 2-3 sets.</li>
-    </ul>
-  </li>
-</ol>
-
-<h3 id="massages">Massages</h3>
-
-<ol>
-  <li><strong>Forearm Massage</strong>
-    <ul>
-      <li><strong>How to Perform</strong>: Use your opposite hand or a massage tool to apply gentle pressure in circular motions along the forearm.</li>
-      <li><strong>Duration</strong>: 5-10 minutes.</li>
-    </ul>
-  </li>
-  <li><strong>Thumb and Wrist Massage</strong>
-    <ul>
-      <li><strong>How to Perform</strong>: Gently massage the base of your thumb and wrist using circular motions.</li>
-      <li><strong>Duration</strong>: 5-10 minutes.</li>
-    </ul>
-  </li>
-  <li><strong>Ice Massage</strong>
-    <ul>
-      <li><strong>How to Perform</strong>: Rub ice over the affected area in circular motions.</li>
-      <li><strong>Duration</strong>: 5-10 minutes.</li>
-    </ul>
-  </li>
-</ol>
-
-<h2 id="prognosis-and-recovery">Prognosis and Recovery</h2>
-
-<h3 id="is-it-possible-to-be-cured">Is It Possible to Be Cured?</h3>
-
-<ol>
-  <li><strong>Early Intervention</strong>: If treated early and appropriately, tendinitis and related conditions can often be fully resolved with conservative treatments such as rest, physical therapy, and ergonomic adjustments.</li>
-  <li><strong>Chronic Conditions</strong>: Chronic conditions may take longer to recover, but with consistent treatment, significant improvement is possible.</li>
-  <li><strong>Permanent Damage</strong>: Severe cases with extensive tendon or nerve damage may result in some degree of permanent impairment, but this is less common.</li>
-</ol>]]></content><author><name></name></author><category term="saúde" /><summary type="html"><![CDATA[Tendinitis: Inflammation of the tendons, which can cause pain and stiffness. However, tendinitis typically affects specific areas rather than the entire arm. Carpal Tunnel Syndrome: Compression of the median nerve in the wrist, leading to pain, numbness, and tingling in the thumb, index, middle, and ring fingers. This can sometimes extend up the arm. Cubital Tunnel Syndrome: Compression of the ulnar nerve at the elbow, causing pain and tingling in the ring and pinky fingers, which can extend up the forearm. Radial Tunnel Syndrome: Compression of the radial nerve, which can cause pain from the elbow to the hand, often mistaken for tennis elbow. Thoracic Outlet Syndrome: Compression of nerves or blood vessels between the collarbone and the first rib, leading to pain and numbness in the arm and hand. Cervical Radiculopathy: Nerve compression in the neck, which can cause pain, numbness, and weakness radiating down the arm.]]></summary></entry></feed>
+</ul>]]></content><author><name></name></author><category term="github&gt;jekyll" /><summary type="html"><![CDATA[Understanding the Components]]></summary></entry></feed>

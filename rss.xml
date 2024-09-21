@@ -44,11 +44,288 @@
     <title>infoBAG</title>
     <link href="https://ib.bsb.br/rss.xml" rel="self"/>
     <link href="https://ib.bsb.br/"/>
-    <updated>2024-09-21T17:44:16+00:00</updated>
+    <updated>2024-09-21T17:47:45+00:00</updated>
     <id>https://ib.bsb.br</id>
     <author>
         <name></name>
     </author>
+    
+    <entry>
+        <title>Webhooks using `Serverless.com` Lift plugin</title>
+        <link href="https://ib.bsb.br/serverless-lift/"/>
+        <updated>2024-09-21T00:00:00+00:00</updated>
+        <id>https://ib.bsb.br/serverless-lift/</id>
+        <content type="html">&lt;h1 id=&quot;serverlessyml&quot;&gt;serverless.yml&lt;/h1&gt;
+
+&lt;section data-filename=&quot;yaml_code-block.yaml&quot; data-code=&quot;service: github-webhook-service
+provider:
+name: aws
+runtime: nodejs20.x
+region: us-east-1
+environment:
+GITHUB_TOKEN: ${env:GITHUB_TOKEN}
+plugins:
+- serverless-lift
+constructs:
+webhook:
+type: webhook
+path: /webhook
+method: POST
+eventType: $request.body.type
+insecure: true
+functions:
+handleWebhook:
+handler: handler.handleWebhook
+events:
+- eventBridge:
+eventBus: ${construct:webhook.busName}
+pattern:
+source:
+- webhook
+detail-type:
+- new_comment
+package:
+patterns:
+- &apos;!node_modules/aws-sdk/**&apos;
+- &apos;!node_modules/@aws-sdk/**&apos;&quot; data-download-link=&quot;&quot; data-download-link-label=&quot;Download Yaml&quot; class=&quot;language-yaml line-numbers&quot; style=&quot;white-space:pre-wrap;&quot;&gt;&lt;code class=&quot;language-yaml&quot;&gt;service: github-webhook-service
+provider:
+name: aws
+runtime: nodejs20.x
+region: us-east-1
+environment:
+GITHUB_TOKEN: ${env:GITHUB_TOKEN}
+plugins:
+- serverless-lift
+constructs:
+webhook:
+type: webhook
+path: /webhook
+method: POST
+eventType: $request.body.type
+insecure: true
+functions:
+handleWebhook:
+handler: handler.handleWebhook
+events:
+- eventBridge:
+eventBus: ${construct:webhook.busName}
+pattern:
+source:
+- webhook
+detail-type:
+- new_comment
+package:
+patterns:
+- &apos;!node_modules/aws-sdk/**&apos;
+- &apos;!node_modules/@aws-sdk/**&apos;&lt;/code&gt;&lt;/section&gt;
+
+&lt;h1 id=&quot;handlermjs&quot;&gt;handler.mjs&lt;/h1&gt;
+
+&lt;section data-filename=&quot;javascript_code-block.js&quot; data-code=&quot;import { Octokit } from &amp;quot;@octokit/rest&amp;quot;;
+import { Base64 } from &amp;quot;js-base64&amp;quot;;
+/**
+* Converts a string to a URL-friendly slug.
+* @param {string} text - The text to be slugified.
+* @return {string} The slugified text.
+*/
+const slugify = (text) =&amp;gt; {
+return text
+.toString()
+.toLowerCase()
+.trim()
+.replace(/\s+/g, &apos;-&apos;)           // Replace spaces with -
+.replace(/[^\w\-]+/g, &apos;&apos;)       // Remove all non-word chars
+.replace(/\-\-+/g, &apos;-&apos;)         // Replace multiple - with single -
+.replace(/^-+/, &apos;&apos;)             // Trim - from start of text
+.replace(/-+$/, &apos;&apos;);            // Trim - from end of text
+};
+/**
+* Formats a date string to YYYY-MM-DD.
+* @param {string} date - The date string to format.
+* @return {string} The formatted date string.
+*/
+const formatDate = (date) =&amp;gt; {
+const d = new Date(date);
+if (isNaN(d.getTime())) {
+throw new Error(&apos;Invalid date provided&apos;);
+}
+return d.toISOString().split(&apos;T&apos;)[0];
+};
+/**
+* Creates the content for a blog post.
+* @param {Object} data - The data for the blog post.
+* @param {string} data.by_nickname - The author&apos;s nickname.
+* @param {string} data.by_email - The author&apos;s email.
+* @param {string} data.content - The content of the post.
+* @param {string} data.time - The timestamp of the post.
+* @return {string} The formatted blog post content.
+*/
+const createPostContent = (data) =&amp;gt; {
+const { by_nickname, by_email, content, time } = data;
+const slugName = slugify(by_nickname);
+const date = formatDate(time);
+return `---
+tags:
+- ${by_email}
+info: aberto.
+date: ${date}
+type: post
+layout: post
+published: true
+slug: ${slugName}
+title: &apos;${by_nickname}&apos;
+---
+${content}`;
+};
+/**
+* Handles the webhook event for creating a new blog post.
+* @param {Object} event - The webhook event object.
+* @return {Object} The response object.
+*/
+export const handleWebhook = async (event) =&amp;gt; {
+try {
+if (!event || !event.detail || !event.detail.data) {
+throw new Error(&apos;Invalid event structure&apos;);
+}
+const { by_nickname, by_email, content } = event.detail.data;
+const time = event.time || new Date().toISOString();
+if (!by_email || !by_nickname || !content) {
+throw new Error(&apos;Missing required fields: email, nickname, or content&apos;);
+}
+const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
+if (!process.env.GITHUB_TOKEN) {
+throw new Error(&apos;GitHub token is not set&apos;);
+}
+const owner = &amp;quot;${REPO_OWNER}&amp;quot;;
+const repo = &amp;quot;${REPO_NAME}&amp;quot;;
+const date = formatDate(time);
+const slugName = slugify(by_nickname);
+const path = `_posts/${date}-${slugName}.md`;
+const message = `New post by ${by_nickname}`;
+const postContent = createPostContent({ by_nickname, by_email, content, time });
+const contentEncoded = Base64.encode(postContent);
+await octokit.repos.createOrUpdateFileContents({
+owner,
+repo,
+path,
+message,
+content: contentEncoded,
+});
+return {
+statusCode: 200,
+body: JSON.stringify({ message: &amp;quot;File created/updated successfully&amp;quot;, path }),
+};
+} catch (error) {
+console.error(&apos;Error in handleWebhook:&apos;, error);
+return {
+statusCode: error.status || 500,
+body: JSON.stringify({ message: error.message || &amp;quot;An unexpected error occurred&amp;quot; }),
+};
+}
+};&quot; data-download-link=&quot;&quot; data-download-link-label=&quot;Download Javascript&quot; class=&quot;language-javascript line-numbers&quot; style=&quot;white-space:pre-wrap;&quot;&gt;&lt;code class=&quot;language-javascript&quot;&gt;import { Octokit } from &quot;@octokit/rest&quot;;
+import { Base64 } from &quot;js-base64&quot;;
+/**
+* Converts a string to a URL-friendly slug.
+* @param {string} text - The text to be slugified.
+* @return {string} The slugified text.
+*/
+const slugify = (text) =&amp;gt; {
+return text
+.toString()
+.toLowerCase()
+.trim()
+.replace(/\s+/g, &apos;-&apos;)           // Replace spaces with -
+.replace(/[^\w\-]+/g, &apos;&apos;)       // Remove all non-word chars
+.replace(/\-\-+/g, &apos;-&apos;)         // Replace multiple - with single -
+.replace(/^-+/, &apos;&apos;)             // Trim - from start of text
+.replace(/-+$/, &apos;&apos;);            // Trim - from end of text
+};
+/**
+* Formats a date string to YYYY-MM-DD.
+* @param {string} date - The date string to format.
+* @return {string} The formatted date string.
+*/
+const formatDate = (date) =&amp;gt; {
+const d = new Date(date);
+if (isNaN(d.getTime())) {
+throw new Error(&apos;Invalid date provided&apos;);
+}
+return d.toISOString().split(&apos;T&apos;)[0];
+};
+/**
+* Creates the content for a blog post.
+* @param {Object} data - The data for the blog post.
+* @param {string} data.by_nickname - The author&apos;s nickname.
+* @param {string} data.by_email - The author&apos;s email.
+* @param {string} data.content - The content of the post.
+* @param {string} data.time - The timestamp of the post.
+* @return {string} The formatted blog post content.
+*/
+const createPostContent = (data) =&amp;gt; {
+const { by_nickname, by_email, content, time } = data;
+const slugName = slugify(by_nickname);
+const date = formatDate(time);
+return `---
+tags:
+- ${by_email}
+info: aberto.
+date: ${date}
+type: post
+layout: post
+published: true
+slug: ${slugName}
+title: &apos;${by_nickname}&apos;
+---
+${content}`;
+};
+/**
+* Handles the webhook event for creating a new blog post.
+* @param {Object} event - The webhook event object.
+* @return {Object} The response object.
+*/
+export const handleWebhook = async (event) =&amp;gt; {
+try {
+if (!event || !event.detail || !event.detail.data) {
+throw new Error(&apos;Invalid event structure&apos;);
+}
+const { by_nickname, by_email, content } = event.detail.data;
+const time = event.time || new Date().toISOString();
+if (!by_email || !by_nickname || !content) {
+throw new Error(&apos;Missing required fields: email, nickname, or content&apos;);
+}
+const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
+if (!process.env.GITHUB_TOKEN) {
+throw new Error(&apos;GitHub token is not set&apos;);
+}
+const owner = &quot;${REPO_OWNER}&quot;;
+const repo = &quot;${REPO_NAME}&quot;;
+const date = formatDate(time);
+const slugName = slugify(by_nickname);
+const path = `_posts/${date}-${slugName}.md`;
+const message = `New post by ${by_nickname}`;
+const postContent = createPostContent({ by_nickname, by_email, content, time });
+const contentEncoded = Base64.encode(postContent);
+await octokit.repos.createOrUpdateFileContents({
+owner,
+repo,
+path,
+message,
+content: contentEncoded,
+});
+return {
+statusCode: 200,
+body: JSON.stringify({ message: &quot;File created/updated successfully&quot;, path }),
+};
+} catch (error) {
+console.error(&apos;Error in handleWebhook:&apos;, error);
+return {
+statusCode: error.status || 500,
+body: JSON.stringify({ message: error.message || &quot;An unexpected error occurred&quot; }),
+};
+}
+};&lt;/code&gt;&lt;/section&gt;
+</content>
+    </entry>
     
     <entry>
         <title>Daily coffee for the heart</title>
@@ -3101,283 +3378,6 @@ if __name__ == &apos;__main__&apos;:
     &lt;/ul&gt;
   &lt;/li&gt;
 &lt;/ol&gt;
-</content>
-    </entry>
-    
-    <entry>
-        <title>Webhooks using `Serverless.com` Lift plugin</title>
-        <link href="https://ib.bsb.br/serverless-lift/"/>
-        <updated>2024-07-17T00:00:00+00:00</updated>
-        <id>https://ib.bsb.br/serverless-lift/</id>
-        <content type="html">&lt;h1 id=&quot;serverlessyml&quot;&gt;serverless.yml&lt;/h1&gt;
-
-&lt;section data-filename=&quot;yaml_code-block.yaml&quot; data-code=&quot;service: github-webhook-service
-provider:
-name: aws
-runtime: nodejs20.x
-region: us-east-1
-environment:
-GITHUB_TOKEN: ${env:GITHUB_TOKEN}
-plugins:
-- serverless-lift
-constructs:
-webhook:
-type: webhook
-path: /webhook
-method: POST
-eventType: $request.body.type
-insecure: true
-functions:
-handleWebhook:
-handler: handler.handleWebhook
-events:
-- eventBridge:
-eventBus: ${construct:webhook.busName}
-pattern:
-source:
-- webhook
-detail-type:
-- new_comment
-package:
-patterns:
-- &apos;!node_modules/aws-sdk/**&apos;
-- &apos;!node_modules/@aws-sdk/**&apos;&quot; data-download-link=&quot;&quot; data-download-link-label=&quot;Download Yaml&quot; class=&quot;language-yaml line-numbers&quot; style=&quot;white-space:pre-wrap;&quot;&gt;&lt;code class=&quot;language-yaml&quot;&gt;service: github-webhook-service
-provider:
-name: aws
-runtime: nodejs20.x
-region: us-east-1
-environment:
-GITHUB_TOKEN: ${env:GITHUB_TOKEN}
-plugins:
-- serverless-lift
-constructs:
-webhook:
-type: webhook
-path: /webhook
-method: POST
-eventType: $request.body.type
-insecure: true
-functions:
-handleWebhook:
-handler: handler.handleWebhook
-events:
-- eventBridge:
-eventBus: ${construct:webhook.busName}
-pattern:
-source:
-- webhook
-detail-type:
-- new_comment
-package:
-patterns:
-- &apos;!node_modules/aws-sdk/**&apos;
-- &apos;!node_modules/@aws-sdk/**&apos;&lt;/code&gt;&lt;/section&gt;
-
-&lt;h1 id=&quot;handlermjs&quot;&gt;handler.mjs&lt;/h1&gt;
-
-&lt;section data-filename=&quot;javascript_code-block.js&quot; data-code=&quot;import { Octokit } from &amp;quot;@octokit/rest&amp;quot;;
-import { Base64 } from &amp;quot;js-base64&amp;quot;;
-/**
-* Converts a string to a URL-friendly slug.
-* @param {string} text - The text to be slugified.
-* @return {string} The slugified text.
-*/
-const slugify = (text) =&amp;gt; {
-return text
-.toString()
-.toLowerCase()
-.trim()
-.replace(/\s+/g, &apos;-&apos;)           // Replace spaces with -
-.replace(/[^\w\-]+/g, &apos;&apos;)       // Remove all non-word chars
-.replace(/\-\-+/g, &apos;-&apos;)         // Replace multiple - with single -
-.replace(/^-+/, &apos;&apos;)             // Trim - from start of text
-.replace(/-+$/, &apos;&apos;);            // Trim - from end of text
-};
-/**
-* Formats a date string to YYYY-MM-DD.
-* @param {string} date - The date string to format.
-* @return {string} The formatted date string.
-*/
-const formatDate = (date) =&amp;gt; {
-const d = new Date(date);
-if (isNaN(d.getTime())) {
-throw new Error(&apos;Invalid date provided&apos;);
-}
-return d.toISOString().split(&apos;T&apos;)[0];
-};
-/**
-* Creates the content for a blog post.
-* @param {Object} data - The data for the blog post.
-* @param {string} data.by_nickname - The author&apos;s nickname.
-* @param {string} data.by_email - The author&apos;s email.
-* @param {string} data.content - The content of the post.
-* @param {string} data.time - The timestamp of the post.
-* @return {string} The formatted blog post content.
-*/
-const createPostContent = (data) =&amp;gt; {
-const { by_nickname, by_email, content, time } = data;
-const slugName = slugify(by_nickname);
-const date = formatDate(time);
-return `---
-tags:
-- ${by_email}
-info: aberto.
-date: ${date}
-type: post
-layout: post
-published: true
-slug: ${slugName}
-title: &apos;${by_nickname}&apos;
----
-${content}`;
-};
-/**
-* Handles the webhook event for creating a new blog post.
-* @param {Object} event - The webhook event object.
-* @return {Object} The response object.
-*/
-export const handleWebhook = async (event) =&amp;gt; {
-try {
-if (!event || !event.detail || !event.detail.data) {
-throw new Error(&apos;Invalid event structure&apos;);
-}
-const { by_nickname, by_email, content } = event.detail.data;
-const time = event.time || new Date().toISOString();
-if (!by_email || !by_nickname || !content) {
-throw new Error(&apos;Missing required fields: email, nickname, or content&apos;);
-}
-const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
-if (!process.env.GITHUB_TOKEN) {
-throw new Error(&apos;GitHub token is not set&apos;);
-}
-const owner = &amp;quot;${REPO_OWNER}&amp;quot;;
-const repo = &amp;quot;${REPO_NAME}&amp;quot;;
-const date = formatDate(time);
-const slugName = slugify(by_nickname);
-const path = `_posts/${date}-${slugName}.md`;
-const message = `New post by ${by_nickname}`;
-const postContent = createPostContent({ by_nickname, by_email, content, time });
-const contentEncoded = Base64.encode(postContent);
-await octokit.repos.createOrUpdateFileContents({
-owner,
-repo,
-path,
-message,
-content: contentEncoded,
-});
-return {
-statusCode: 200,
-body: JSON.stringify({ message: &amp;quot;File created/updated successfully&amp;quot;, path }),
-};
-} catch (error) {
-console.error(&apos;Error in handleWebhook:&apos;, error);
-return {
-statusCode: error.status || 500,
-body: JSON.stringify({ message: error.message || &amp;quot;An unexpected error occurred&amp;quot; }),
-};
-}
-};&quot; data-download-link=&quot;&quot; data-download-link-label=&quot;Download Javascript&quot; class=&quot;language-javascript line-numbers&quot; style=&quot;white-space:pre-wrap;&quot;&gt;&lt;code class=&quot;language-javascript&quot;&gt;import { Octokit } from &quot;@octokit/rest&quot;;
-import { Base64 } from &quot;js-base64&quot;;
-/**
-* Converts a string to a URL-friendly slug.
-* @param {string} text - The text to be slugified.
-* @return {string} The slugified text.
-*/
-const slugify = (text) =&amp;gt; {
-return text
-.toString()
-.toLowerCase()
-.trim()
-.replace(/\s+/g, &apos;-&apos;)           // Replace spaces with -
-.replace(/[^\w\-]+/g, &apos;&apos;)       // Remove all non-word chars
-.replace(/\-\-+/g, &apos;-&apos;)         // Replace multiple - with single -
-.replace(/^-+/, &apos;&apos;)             // Trim - from start of text
-.replace(/-+$/, &apos;&apos;);            // Trim - from end of text
-};
-/**
-* Formats a date string to YYYY-MM-DD.
-* @param {string} date - The date string to format.
-* @return {string} The formatted date string.
-*/
-const formatDate = (date) =&amp;gt; {
-const d = new Date(date);
-if (isNaN(d.getTime())) {
-throw new Error(&apos;Invalid date provided&apos;);
-}
-return d.toISOString().split(&apos;T&apos;)[0];
-};
-/**
-* Creates the content for a blog post.
-* @param {Object} data - The data for the blog post.
-* @param {string} data.by_nickname - The author&apos;s nickname.
-* @param {string} data.by_email - The author&apos;s email.
-* @param {string} data.content - The content of the post.
-* @param {string} data.time - The timestamp of the post.
-* @return {string} The formatted blog post content.
-*/
-const createPostContent = (data) =&amp;gt; {
-const { by_nickname, by_email, content, time } = data;
-const slugName = slugify(by_nickname);
-const date = formatDate(time);
-return `---
-tags:
-- ${by_email}
-info: aberto.
-date: ${date}
-type: post
-layout: post
-published: true
-slug: ${slugName}
-title: &apos;${by_nickname}&apos;
----
-${content}`;
-};
-/**
-* Handles the webhook event for creating a new blog post.
-* @param {Object} event - The webhook event object.
-* @return {Object} The response object.
-*/
-export const handleWebhook = async (event) =&amp;gt; {
-try {
-if (!event || !event.detail || !event.detail.data) {
-throw new Error(&apos;Invalid event structure&apos;);
-}
-const { by_nickname, by_email, content } = event.detail.data;
-const time = event.time || new Date().toISOString();
-if (!by_email || !by_nickname || !content) {
-throw new Error(&apos;Missing required fields: email, nickname, or content&apos;);
-}
-const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
-if (!process.env.GITHUB_TOKEN) {
-throw new Error(&apos;GitHub token is not set&apos;);
-}
-const owner = &quot;${REPO_OWNER}&quot;;
-const repo = &quot;${REPO_NAME}&quot;;
-const date = formatDate(time);
-const slugName = slugify(by_nickname);
-const path = `_posts/${date}-${slugName}.md`;
-const message = `New post by ${by_nickname}`;
-const postContent = createPostContent({ by_nickname, by_email, content, time });
-const contentEncoded = Base64.encode(postContent);
-await octokit.repos.createOrUpdateFileContents({
-owner,
-repo,
-path,
-message,
-content: contentEncoded,
-});
-return {
-statusCode: 200,
-body: JSON.stringify({ message: &quot;File created/updated successfully&quot;, path }),
-};
-} catch (error) {
-console.error(&apos;Error in handleWebhook:&apos;, error);
-return {
-statusCode: error.status || 500,
-body: JSON.stringify({ message: error.message || &quot;An unexpected error occurred&quot; }),
-};
-}
-};&lt;/code&gt;&lt;/section&gt;
 </content>
     </entry>
     
@@ -47333,19 +47333,19 @@ Pense duas vezes antes de se envolver.
         &lt;ul class=&quot;search-link&quot;&gt;
         
             
+            &lt;li&gt;&lt;a href=&quot;/serverless-lift&quot;&gt;
+                &lt;time datetime=&quot;2024-09-21T00:00:00+00:00&quot;&gt;&lt;strong&gt;September 21, 2024&lt;/strong&gt;&lt;/time&gt;
+                &amp;hArr;
+                
+                Webhooks using `Serverless.com` Lift plugin
+                
+            &lt;/a&gt;&lt;/li&gt;
+            
             &lt;li&gt;&lt;a href=&quot;/aws-pushsafer-billing-alarm&quot;&gt;
                 &lt;time datetime=&quot;2024-07-25T00:00:00+00:00&quot;&gt;&lt;strong&gt;July 25, 2024&lt;/strong&gt;&lt;/time&gt;
                 &amp;hArr;
                 
                 AWS PushSafer billing alarm
-                
-            &lt;/a&gt;&lt;/li&gt;
-            
-            &lt;li&gt;&lt;a href=&quot;/serverless-lift&quot;&gt;
-                &lt;time datetime=&quot;2024-07-17T00:00:00+00:00&quot;&gt;&lt;strong&gt;July 17, 2024&lt;/strong&gt;&lt;/time&gt;
-                &amp;hArr;
-                
-                Webhooks using `Serverless.com` Lift plugin
                 
             &lt;/a&gt;&lt;/li&gt;
             
@@ -47547,9 +47547,9 @@ Pense duas vezes antes de se envolver.
             
             &lt;li&gt;&lt;a href=&quot;#edital-direito-processual-penal&quot; aria-label=&quot;Child tag edital&amp;gt;direito&amp;gt;processual-penal&quot;&gt;edital&amp;gt;direito&amp;gt;processual-penal&lt;/a&gt;&lt;/li&gt;
             
-            &lt;li&gt;&lt;a href=&quot;#direito&quot; aria-label=&quot;Child tag direito&quot;&gt;direito&lt;/a&gt;&lt;/li&gt;
-            
             &lt;li&gt;&lt;a href=&quot;#direito-processual-penal&quot; aria-label=&quot;Child tag direito&amp;gt;processual-penal&quot;&gt;direito&amp;gt;processual-penal&lt;/a&gt;&lt;/li&gt;
+            
+            &lt;li&gt;&lt;a href=&quot;#direito&quot; aria-label=&quot;Child tag direito&quot;&gt;direito&lt;/a&gt;&lt;/li&gt;
             
             
         &lt;/ul&gt;
@@ -47627,9 +47627,9 @@ Pense duas vezes antes de se envolver.
         
         &lt;h2&gt;Parent tags:&lt;/h2&gt;
             
-            &lt;li&gt;&lt;a href=&quot;#direito&quot; aria-label=&quot;Parent tag direito&quot;&gt;direito&lt;/a&gt;&lt;/li&gt;
-            
             &lt;li&gt;&lt;a href=&quot;#edital&quot; aria-label=&quot;Parent tag edital&quot;&gt;edital&lt;/a&gt;&lt;/li&gt;
+            
+            &lt;li&gt;&lt;a href=&quot;#direito&quot; aria-label=&quot;Parent tag direito&quot;&gt;direito&lt;/a&gt;&lt;/li&gt;
             
             
         &lt;/ul&gt;
@@ -47820,9 +47820,9 @@ Pense duas vezes antes de se envolver.
             
             &lt;h2&gt;Child tags:&lt;/h2&gt;
             
-            &lt;li&gt;&lt;a href=&quot;#jekyll&quot; aria-label=&quot;Child tag jekyll&quot;&gt;jekyll&lt;/a&gt;&lt;/li&gt;
-            
             &lt;li&gt;&lt;a href=&quot;#tools-github-estudos&quot; aria-label=&quot;Child tag tools&amp;gt;github&amp;gt;estudos&quot;&gt;tools&amp;gt;github&amp;gt;estudos&lt;/a&gt;&lt;/li&gt;
+            
+            &lt;li&gt;&lt;a href=&quot;#jekyll&quot; aria-label=&quot;Child tag jekyll&quot;&gt;jekyll&lt;/a&gt;&lt;/li&gt;
             
             &lt;li&gt;&lt;a href=&quot;#github-jekyll&quot; aria-label=&quot;Child tag github&amp;gt;jekyll&quot;&gt;github&amp;gt;jekyll&lt;/a&gt;&lt;/li&gt;
             
@@ -49144,6 +49144,14 @@ Pense duas vezes antes de se envolver.
         &lt;ul class=&quot;search-link&quot;&gt;
         
             
+            &lt;li&gt;&lt;a href=&quot;/serverless-lift&quot;&gt;
+                &lt;time datetime=&quot;2024-09-21T00:00:00+00:00&quot;&gt;&lt;strong&gt;September 21, 2024&lt;/strong&gt;&lt;/time&gt;
+                &amp;hArr;
+                
+                Webhooks using `Serverless.com` Lift plugin
+                
+            &lt;/a&gt;&lt;/li&gt;
+            
             &lt;li&gt;&lt;a href=&quot;/urls-list-text-scraper&quot;&gt;
                 &lt;time datetime=&quot;2024-09-12T00:00:00+00:00&quot;&gt;&lt;strong&gt;September 12, 2024&lt;/strong&gt;&lt;/time&gt;
                 &amp;hArr;
@@ -49165,14 +49173,6 @@ Pense duas vezes antes de se envolver.
                 &amp;hArr;
                 
                 iPhone: files2zip &amp;amp; zip2clipboard
-                
-            &lt;/a&gt;&lt;/li&gt;
-            
-            &lt;li&gt;&lt;a href=&quot;/serverless-lift&quot;&gt;
-                &lt;time datetime=&quot;2024-07-17T00:00:00+00:00&quot;&gt;&lt;strong&gt;July 17, 2024&lt;/strong&gt;&lt;/time&gt;
-                &amp;hArr;
-                
-                Webhooks using `Serverless.com` Lift plugin
                 
             &lt;/a&gt;&lt;/li&gt;
             
@@ -49368,25 +49368,25 @@ Pense duas vezes antes de se envolver.
             
             &lt;h2&gt;Child tags:&lt;/h2&gt;
             
+            &lt;li&gt;&lt;a href=&quot;#google-apps-script&quot; aria-label=&quot;Child tag google-apps-script&quot;&gt;google-apps-script&lt;/a&gt;&lt;/li&gt;
+            
             &lt;li&gt;&lt;a href=&quot;#scripts-ai&quot; aria-label=&quot;Child tag scripts&amp;gt;AI&quot;&gt;scripts&amp;gt;AI&lt;/a&gt;&lt;/li&gt;
             
-            &lt;li&gt;&lt;a href=&quot;#scripts-google-apps-script&quot; aria-label=&quot;Child tag scripts&amp;gt;google-apps-script&quot;&gt;scripts&amp;gt;google-apps-script&lt;/a&gt;&lt;/li&gt;
-            
-            &lt;li&gt;&lt;a href=&quot;#ai&quot; aria-label=&quot;Child tag AI&quot;&gt;AI&lt;/a&gt;&lt;/li&gt;
-            
-            &lt;li&gt;&lt;a href=&quot;#scripts-mobile&quot; aria-label=&quot;Child tag scripts&amp;gt;mobile&quot;&gt;scripts&amp;gt;mobile&lt;/a&gt;&lt;/li&gt;
-            
-            &lt;li&gt;&lt;a href=&quot;#google-apps-script&quot; aria-label=&quot;Child tag google-apps-script&quot;&gt;google-apps-script&lt;/a&gt;&lt;/li&gt;
+            &lt;li&gt;&lt;a href=&quot;#mobile&quot; aria-label=&quot;Child tag mobile&quot;&gt;mobile&lt;/a&gt;&lt;/li&gt;
             
             &lt;li&gt;&lt;a href=&quot;#scripts-powershell-software-windows&quot; aria-label=&quot;Child tag scripts&amp;gt;powershell, software&amp;gt;windows&quot;&gt;scripts&amp;gt;powershell, software&amp;gt;windows&lt;/a&gt;&lt;/li&gt;
             
             &lt;li&gt;&lt;a href=&quot;#scripts-cloud&quot; aria-label=&quot;Child tag scripts&amp;gt;cloud&quot;&gt;scripts&amp;gt;cloud&lt;/a&gt;&lt;/li&gt;
             
-            &lt;li&gt;&lt;a href=&quot;#mobile&quot; aria-label=&quot;Child tag mobile&quot;&gt;mobile&lt;/a&gt;&lt;/li&gt;
+            &lt;li&gt;&lt;a href=&quot;#cloud&quot; aria-label=&quot;Child tag cloud&quot;&gt;cloud&lt;/a&gt;&lt;/li&gt;
             
             &lt;li&gt;&lt;a href=&quot;#powershell-software-windows&quot; aria-label=&quot;Child tag powershell, software&amp;gt;windows&quot;&gt;powershell, software&amp;gt;windows&lt;/a&gt;&lt;/li&gt;
             
-            &lt;li&gt;&lt;a href=&quot;#cloud&quot; aria-label=&quot;Child tag cloud&quot;&gt;cloud&lt;/a&gt;&lt;/li&gt;
+            &lt;li&gt;&lt;a href=&quot;#ai&quot; aria-label=&quot;Child tag AI&quot;&gt;AI&lt;/a&gt;&lt;/li&gt;
+            
+            &lt;li&gt;&lt;a href=&quot;#scripts-mobile&quot; aria-label=&quot;Child tag scripts&amp;gt;mobile&quot;&gt;scripts&amp;gt;mobile&lt;/a&gt;&lt;/li&gt;
+            
+            &lt;li&gt;&lt;a href=&quot;#scripts-google-apps-script&quot; aria-label=&quot;Child tag scripts&amp;gt;google-apps-script&quot;&gt;scripts&amp;gt;google-apps-script&lt;/a&gt;&lt;/li&gt;
             
             
         &lt;/ul&gt;
@@ -49450,7 +49450,7 @@ Pense duas vezes antes de se envolver.
         
             
             &lt;li&gt;&lt;a href=&quot;/serverless-lift&quot;&gt;
-                &lt;time datetime=&quot;2024-07-17T00:00:00+00:00&quot;&gt;&lt;strong&gt;July 17, 2024&lt;/strong&gt;&lt;/time&gt;
+                &lt;time datetime=&quot;2024-09-21T00:00:00+00:00&quot;&gt;&lt;strong&gt;September 21, 2024&lt;/strong&gt;&lt;/time&gt;
                 &amp;hArr;
                 
                 &lt;mark&gt;Webhooks using `Serverless.com` Lift plugin&lt;/mark&gt;
@@ -49605,9 +49605,9 @@ Pense duas vezes antes de se envolver.
         
         &lt;h2&gt;Parent tags:&lt;/h2&gt;
             
-            &lt;li&gt;&lt;a href=&quot;#powershell-software&quot; aria-label=&quot;Parent tag powershell, software&quot;&gt;powershell, software&lt;/a&gt;&lt;/li&gt;
-            
             &lt;li&gt;&lt;a href=&quot;#scripts&quot; aria-label=&quot;Parent tag scripts&quot;&gt;scripts&lt;/a&gt;&lt;/li&gt;
+            
+            &lt;li&gt;&lt;a href=&quot;#powershell-software&quot; aria-label=&quot;Parent tag powershell, software&quot;&gt;powershell, software&lt;/a&gt;&lt;/li&gt;
             
             
         &lt;/ul&gt;
@@ -49721,9 +49721,9 @@ Pense duas vezes antes de se envolver.
             
             &lt;h2&gt;Child tags:&lt;/h2&gt;
             
-            &lt;li&gt;&lt;a href=&quot;#mobile&quot; aria-label=&quot;Child tag mobile&quot;&gt;mobile&lt;/a&gt;&lt;/li&gt;
-            
             &lt;li&gt;&lt;a href=&quot;#software-mobile&quot; aria-label=&quot;Child tag software&amp;gt;mobile&quot;&gt;software&amp;gt;mobile&lt;/a&gt;&lt;/li&gt;
+            
+            &lt;li&gt;&lt;a href=&quot;#mobile&quot; aria-label=&quot;Child tag mobile&quot;&gt;mobile&lt;/a&gt;&lt;/li&gt;
             
             &lt;li&gt;&lt;a href=&quot;#software-cloud&quot; aria-label=&quot;Child tag software&amp;gt;cloud&quot;&gt;software&amp;gt;cloud&lt;/a&gt;&lt;/li&gt;
             
@@ -50004,9 +50004,9 @@ Pense duas vezes antes de se envolver.
             
             &lt;h2&gt;Child tags:&lt;/h2&gt;
             
-            &lt;li&gt;&lt;a href=&quot;#tasks-iphone&quot; aria-label=&quot;Child tag tasks&amp;gt;iphone&quot;&gt;tasks&amp;gt;iphone&lt;/a&gt;&lt;/li&gt;
-            
             &lt;li&gt;&lt;a href=&quot;#iphone&quot; aria-label=&quot;Child tag iphone&quot;&gt;iphone&lt;/a&gt;&lt;/li&gt;
+            
+            &lt;li&gt;&lt;a href=&quot;#tasks-iphone&quot; aria-label=&quot;Child tag tasks&amp;gt;iphone&quot;&gt;tasks&amp;gt;iphone&lt;/a&gt;&lt;/li&gt;
             
             
         &lt;/ul&gt;
@@ -50170,13 +50170,13 @@ Pense duas vezes antes de se envolver.
             
             &lt;h2&gt;Child tags:&lt;/h2&gt;
             
-            &lt;li&gt;&lt;a href=&quot;#ai-prompt&quot; aria-label=&quot;Child tag AI&amp;gt;prompt&quot;&gt;AI&amp;gt;prompt&lt;/a&gt;&lt;/li&gt;
-            
-            &lt;li&gt;&lt;a href=&quot;#github-estudos&quot; aria-label=&quot;Child tag github&amp;gt;estudos&quot;&gt;github&amp;gt;estudos&lt;/a&gt;&lt;/li&gt;
-            
             &lt;li&gt;&lt;a href=&quot;#tools-github-estudos&quot; aria-label=&quot;Child tag tools&amp;gt;github&amp;gt;estudos&quot;&gt;tools&amp;gt;github&amp;gt;estudos&lt;/a&gt;&lt;/li&gt;
             
             &lt;li&gt;&lt;a href=&quot;#tools-ai-prompt&quot; aria-label=&quot;Child tag tools&amp;gt;AI&amp;gt;prompt&quot;&gt;tools&amp;gt;AI&amp;gt;prompt&lt;/a&gt;&lt;/li&gt;
+            
+            &lt;li&gt;&lt;a href=&quot;#ai-prompt&quot; aria-label=&quot;Child tag AI&amp;gt;prompt&quot;&gt;AI&amp;gt;prompt&lt;/a&gt;&lt;/li&gt;
+            
+            &lt;li&gt;&lt;a href=&quot;#github-estudos&quot; aria-label=&quot;Child tag github&amp;gt;estudos&quot;&gt;github&amp;gt;estudos&lt;/a&gt;&lt;/li&gt;
             
             
         &lt;/ul&gt;
@@ -50529,8 +50529,8 @@ document.getElementById(&apos;triggerWorkflow&apos;).addEventListener(&apos;clic
         &lt;a class=&quot;post-heading&quot; href=&quot;#&quot; id=&quot;back-to-top&quot; aria-label=&quot;Back to top&quot;&gt;
           &lt;img src=&quot;/assets/gold.ico&quot; alt=&quot;gold icon&quot; /&gt;
         &lt;/a&gt;
-        2024-07-17
-         &amp;rightarrowtail; 20 Sep 2024
+        2024-09-21
+         &amp;rightarrowtail; 21 Sep 2024
         
       &lt;/h3&gt;
       &lt;ul&gt;
