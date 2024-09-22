@@ -6,6 +6,7 @@ on:
   repository_dispatch:
     types: [trigger-jekyll]
   workflow_dispatch:
+
 permissions:
   contents: write
   pages: write
@@ -24,33 +25,23 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Configure Git Attributes
-        run: |
-          echo "data.db merge=ours" >> .gitattributes
-          git add .gitattributes
-          git commit -m "Configure merge strategy for data.db" || echo "No changes to .gitattributes to commit"
-      
-      - name: Setup Git Merge Driver
-        run: |
-          git config merge.ours.driver true
-
       - name: Setup Ruby
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: .ruby-version
           bundler-cache: true        
-      
+
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      
+
       - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           sudo apt-get install sqlite3 
-      
+
       - name: Cache tag data
         uses: actions/cache@v4
         with:
@@ -59,7 +50,7 @@ jobs:
           save-always: true
           restore-keys: |
             tag-data-
-      
+
       - name: Cache Jekyll _site directory
         uses: actions/cache@v4
         with:
@@ -68,13 +59,13 @@ jobs:
           save-always: true
           restore-keys: |
             jekyll-site-
-      
+
       - name: Process markdown files for tags
         run: python tags.py
-      
+
       - name: Fetch calendar events
         run: python events.py
-      
+
       - name: Commit and push changes (pre-build)
         run: |
           git config --local user.email "actions@github.com"
@@ -86,7 +77,7 @@ jobs:
       - name: Setup Pages
         id: pages
         uses: actions/configure-pages@v5
-      
+
       - name: Build with Jekyll
         env:
           PAGES_REPO_NWO: ib-bsb-br/ib-bsb-br.github.io
@@ -96,15 +87,15 @@ jobs:
           echo "base_path from env is: ${base_path}"
           export base_path="${base_path}" 
           echo "base_path after export is: ${base_path}"
-          bundle exec jekyll build --trace --config _config.yml --baseurl "${basepath}"
-      
+          bundle exec jekyll build --trace --config _config.yml --baseurl "${base_path}"
+
       - name: Generate Pagefind Index
         run: |
           npx -y pagefind --site ${{ github.workspace }}/_site --output-path ${{ github.workspace }}/_site/pagefind
-      
+
       - name: Modify Pagefind UI
         run: python modify-pagefind-ui.py
-      
+
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
         with:
@@ -119,22 +110,12 @@ jobs:
   add-posts-to-inbox:
     runs-on: ubuntu-latest
     needs: build-and-deploy
-    if: github.event_name == 'push' && contains(github.event.head_commit.message, '[skip ci]') == false
+    if: github.event_name == 'push' && !contains(github.event.head_commit.message, '[skip ci]')
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
-      - name: Configure Git Attributes
-        run: |
-          echo "data.db merge=ours" >> .gitattributes
-          git add .gitattributes
-          git commit -m "Configure merge strategy for data.db" || echo "No changes to .gitattributes to commit"
-      
-      - name: Setup Git Merge Driver
-        run: |
-          git config merge.ours.driver true
 
       - name: Install Python dependencies
         run: |
@@ -169,7 +150,7 @@ jobs:
           fi
         shell: bash
 
-      - name: Print inbox_files.txt contents
+      - name: Print infoBAG.txt contents
         run: cat infoBAG.txt
 
       - name: Run spaced inbox script
@@ -194,5 +175,5 @@ jobs:
       - name: Commit and Push
         run: |
           git commit -m "Update spaced-inbox with new posts" || echo "No changes to commit"
-          git pull --rebase --strategy-option=theirs
+          git pull --rebase
           git push --force-with-lease
