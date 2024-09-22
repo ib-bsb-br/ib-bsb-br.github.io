@@ -1,11 +1,11 @@
 ---
 title: Linux typewriter setup
-date: 2022-11-22 01:00:00 -02:00
+date: 2022-11-22
 categories:
 - Tutorial
 tags:
 - linux
-comment: https://tedz.eu/Linux%20typewriter%20notes.html
+comment: https://tedz.eu/view.php?mdfile=20221010_003531.md
 info: aberto.
 type: post
 layout: post
