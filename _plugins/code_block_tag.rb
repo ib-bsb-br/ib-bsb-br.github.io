@@ -38,7 +38,11 @@ module Jekyll
       download_label = "Download #{@language.capitalize()}"
       
       # Construct HTML output with data attributes 
-      "<section data-filename=\"#{filename}\" data-download-link data-download-link-label=\"#{download_label}\" line-numbers\" style=\"white-space:pre-wrap;\"><code class=\"language-#{@language}\">#{code_content}</code></section>"
+      <section data-filename=\"#{filename}\" data-download-link data-download-link-label=\"#{download_label}\" class=\"line-numbers\" style=\"white-space:pre-wrap;\">
+      <code class=\"language-#{@language}\">
+      #{code_content}
+      </code>
+      </section>
     end
   end
 end
