@@ -1,7 +1,5 @@
 ---
-categories: []
-tags:
-  - 'software>windows cloud'
+tags: software>windows, cloud
 comment: 'https://github.com/FilenCloudDienste/filen-cli'
 info: fechado.
 date: '2024-10-13'
