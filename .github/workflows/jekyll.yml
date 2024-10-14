@@ -29,34 +29,48 @@ jobs:
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: .ruby-version
-          bundler-cache: true        
+          bundler-cache: true
 
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
+      - name: Cache Python dependencies
+        uses: actions/cache@v4
+        id: cache-pip
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
       - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          sudo apt-get install sqlite3 
+        if: steps.cache-pip.outputs.cache-hit != 'true'
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y sqlite3
 
       - name: Cache tag data
         uses: actions/cache@v4
+        id: cache-tag-data
         with:
           path: ${{ github.workspace }}/.jekyll-cache
           key: tag-data-${{ github.sha }}
-          save-always: true
           restore-keys: |
             tag-data-
 
       - name: Cache Jekyll _site directory
         uses: actions/cache@v4
+        id: cache-jekyll-site
         with:
           path: ${{ github.workspace }}/_site
           key: jekyll-site-${{ github.sha }}
-          save-always: true
           restore-keys: |
             jekyll-site-
 
@@ -71,9 +85,9 @@ jobs:
           git config --local user.email "actions@github.com"
           git config --local user.name "GitHub Actions"
           git add --all
-          git commit --allow-empty -m "Commit ${GITHUB_SHA}" || echo "Nothing to commit"
-          git push origin main || echo "Nothing to push"
-          
+          git diff-index --quiet HEAD || git commit -m "Update content [skip ci]"
+          git push origin main || echo "No changes to push"
+
       - name: Setup Pages
         id: pages
         uses: actions/configure-pages@v5
@@ -84,14 +98,10 @@ jobs:
           JEKYLL_ENV: production
           base_path: ""
         run: |
-          echo "base_path from env is: ${base_path}"
-          export base_path="${base_path}" 
-          echo "base_path after export is: ${base_path}"
           bundle exec jekyll build --trace --config _config.yml --baseurl "${base_path}"
 
       - name: Generate Pagefind Index
-        run: |
-          npx -y pagefind --site ${{ github.workspace }}/_site --output-path ${{ github.workspace }}/_site/pagefind
+        run: npx -y pagefind --site ${{ github.workspace }}/_site --output-path ${{ github.workspace }}/_site/pagefind
 
       - name: Modify Pagefind UI
         run: python modify-pagefind-ui.py
@@ -117,9 +127,25 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Cache Python dependencies
+        uses: actions/cache@v4
+        id: cache-pip
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
       - name: Install Python dependencies
         run: |
+          python -m pip install --upgrade pip
           pip install matplotlib
+        if: steps.cache-pip.outputs.cache-hit != 'true'
 
       - name: Initialize spaced-inbox database
         run: |
@@ -148,32 +174,20 @@ jobs:
               echo -e "\n$URL\n=====" >> infoBAG.txt
             done < post_urls.txt
           fi
-        shell: bash
-
-      - name: Print infoBAG.txt contents
-        run: cat infoBAG.txt
 
       - name: Run spaced inbox script
-        run: |
-          python script.py --no-review
-        shell: /usr/bin/bash -e {0}
+        run: python script.py --no-review
         env:
           TERM: xterm
 
       - name: Run review load visualizer
-        run: |
-          python review_load.py data.db
-
-      - name: Configure Git
-        run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-
-      - name: Stage Changes
-        run: git add --all
+        run: python review_load.py data.db
 
       - name: Commit and Push
         run: |
-          git commit -m "Update spaced-inbox with new posts" || echo "No changes to commit"
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add --all
+          git diff-index --quiet HEAD || git commit -m "Update spaced-inbox with new posts"
           git pull --rebase
-          git push --force-with-lease
+          git push
