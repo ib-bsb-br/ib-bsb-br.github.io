@@ -281,7 +281,7 @@ def save_output(output_data, output_folders: List[str]):
 
 # Example usage (make sure to update the directory paths accordingly):
 posts_directory = '_posts'
-output_folders = ['assets/data', '_data']  # Now saving in both directories
+output_folders = ['assets/data', '_data', '_includes', '_includes/assets/data']  # Now saving in both directories
 
 # Process the tags and generate the outputs
 tag_data, combined_tags = process_tags(posts_directory)
