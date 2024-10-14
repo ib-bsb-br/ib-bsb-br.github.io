@@ -1,6 +1,5 @@
 ---
-tags:
-  - scripts>powershell, software>windows
+tags: scripts>powershell, software>windows
 info: aberto.
 date: 2024-09-12
 type: post
