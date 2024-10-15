@@ -8,4 +8,8 @@ type: post
 layout: post
 sha: 
 ---
-<source src="https://cdn.jsdelivr.net/gh/ib-bsb-br/ib-bsb-br.github.io@main/assets/Serei-Um-Pai-Muito-Melhor.mp4" type="video/mp4"></video>
+
+<video controls>
+  <source src="https://cdn.jsdelivr.net/gh/ib-bsb-br/ib-bsb-br.github.io@main/assets/Serei-Um-Pai-Muito-Melhor.mp4" type="video/mp4">
+  Seu navegador não suporta a reprodução de vídeos.
+</video>
