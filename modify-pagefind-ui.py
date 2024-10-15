@@ -11,7 +11,7 @@ FILE = "_site/pagefind/pagefind-ui.js"
 ORIGINAL_EXPRESSION = r'placeholder:"Search",clear_search:"Clear"'
 
 # Replacement expression
-NEW_EXPRESSION = r'placeholder:"    infoBAG",clear_search:"X"'
+NEW_EXPRESSION = r'placeholder:"can\'t steer unless already moving",clear_search:"X"'
 
 # Read the contents of the file
 with open(FILE, 'r') as f:
