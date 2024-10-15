@@ -1,10 +1,7 @@
 ---
-title: Tasks Flow (MyLifeOrganized - MLO)
-date: 2022-10-31 01:00:00 -02:00
-categories:
-- Stuff
-tags:
-- tasks
+title: Taskflow - MyLifeOrganized
+date: 2022-10-31
+tags: tasks, mlo
 comment: https://www.mylifeorganized.net/
 info: aberto.
 type: post
