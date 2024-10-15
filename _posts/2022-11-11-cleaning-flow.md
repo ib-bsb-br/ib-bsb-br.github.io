@@ -1,10 +1,7 @@
 ---
 title: Cleaning flowchart
-date: 2022-11-11 01:00:00 -02:00
-categories:
-- Stuff
-tags:
-- tasks
+date: 2022-11-11
+tags: tasks
 comment: 
 info: fechado.
 type: post
