@@ -1,6 +1,6 @@
 ---
-title: reassess
-date: 2024-04-13
+title: Compile LLM chat-history
+date: 2024-10-16
 tags: AI>prompt
 info: aberto.
 type: post
