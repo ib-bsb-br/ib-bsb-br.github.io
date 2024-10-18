@@ -416,27 +416,22 @@ export WORKFLOW_ID="main.yml"
    - Create a workflow file in your repository (e.g., `your-workflow-file.yml`).
    - Ensure it includes `workflow_dispatch` in the `on` section:
 
-     {% codeblock yaml %}
-name: Trigger Workflow
+{% codeblock yaml %}
+name: Dispatch Workflow
 
 on:
   workflow_dispatch:
-    inputs:
-      some_input:
-        description: 'An example input'
-        required: false
-  
+
 jobs:
-  trigger-workflow:
+  dispatch_event:
     runs-on: ubuntu-latest
-    name: Dispatch Event
     steps:
-      - name: Trigger target workflow
+      - name: Dispatch GitHub Actions Workflow
         run: |
           curl -X POST \
-          -H "Accept: application/vnd.github+json" \
-          -H "Authorization: Bearer ${{ secrets.WORKFLOW_DISPATCH_TOKEN }}" \
-          -H "Content-Type: application/json" \
-          -d '{"event_type":"trigger-jekyll", "client_payload": {"message": "Triggered from main workflow"}}'
-          https://api.github.com/repos/${{ github.repository }}/dispatches
-      {% endcodeblock %}
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{"event_type":"trigger-jekyll", "client_payload": {"message": "Triggered from main workflow"}}' \
+            https://api.github.com/repos/ib-bsb-br/ib-bsb-br.github.io/dispatches
+{% endcodeblock %}
