@@ -1,15 +1,20 @@
-name: Dispatch Workflow
+name: Trigger Workflow
 
 on:
+  schedule:
+    - cron: '*/5 * * * *'
   workflow_dispatch:
-
+  
 jobs:
-  dispatch_event:
+  trigger-workflow:
     runs-on: ubuntu-latest
+    name: Dispatch Event
     steps:
-      - name: Repository Dispatch
-        uses: peter-evans/repository-dispatch@v3
-        with:
-          repository: ib-bsb-br/ib-bsb-br.github.io
-          event-type: trigger-jekyll
-          client-payload: '{"ref": "main"}'
+      - name: Trigger target workflow
+        run: |
+          curl -X POST \
+          -H "Accept: application/vnd.github+json" \
+          -H "Authorization: Bearer ${{ secrets.WORKFLOW_DISPATCH_TOKEN }}" \
+          -H "Content-Type: application/json" \
+          -d '{"event_type":"trigger-jekyll", "client_payload": {"message": "Triggered from main workflow"}}' \ # Include optional client_payload
+          https://api.github.com/repos/${{ github.repository }}/dispatches
