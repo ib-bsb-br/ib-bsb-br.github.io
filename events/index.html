@@ -34,55 +34,77 @@
     <p><button id="triggerWorkflow">Events</button></p>
 <div id="calendar"></div>
 
+<script src="/assets/js/vendor/fullcalendar/index.global.min.js"></script>
+
 <script>
   document.addEventListener('DOMContentLoaded', function() {
-    var calendarEl = document.getElementById('calendar');
+    const calendarEl = document.getElementById('calendar');
     fetch('/assets/data/events.json')
-      .then(response => response.json())
+      .then(response => {
+        if (!response.ok) {
+          throw new Error(`Network response was not ok: ${response.statusText}`);
+        }
+        return response.json();
+      })
       .then(data => {
-        var calendar = new FullCalendar.Calendar(calendarEl, {
+        const calendar = new FullCalendar.Calendar(calendarEl, {
           initialView: 'listMonth',
-          events: data
+          events: data,
+          headerToolbar: {
+            left: 'prev,next today',
+            center: 'title',
+            right: 'listMonth,dayGridMonth,timeGridWeek,timeGridDay'
+          },
+          navLinks: true,
+          editable: false,
+          selectable: false,
+          selectMirror: false,
+          dayMaxEvents: true,
         });
         calendar.render();
       })
       .catch(error => {
         console.error('Error loading events:', error);
+        alert('Failed to load events. Please try again later.');
       });
   });
 </script>
 
 <script>
-    const webhookEndpoint = 'https://8k5ij92zn4.execute-api.us-east-1.amazonaws.com/dev/trigger_github_workflow'; // Path to your webhook endpoint
-document.getElementById('triggerWorkflow').addEventListener('click', async () => {
-  try {
-const inputs = { ref: 'main', workflow_id: 'dispatch-workflow.yml', inputs: { some_input: 'value' } };
-const response = await fetch(webhookEndpoint, {
-method: 'POST',
-headers: { 'Content-Type': 'application/json' },
-body: JSON.stringify({
-      "ref": "main",
-      "workflow_id": "your-workflow-file.yml",
-      "inputs": {
-        "some_input": "value"
-      }
-    }),
-});
-if (!response.ok) {
-const errorData = await response.json();
-throw new Error(`Server error: ${response.status} - ${errorData.message}`);
-}
-const data = await response.json();
-// Handle successful response
-// ...
-} catch (error) {
-// Handle error and display message to user
-// ...
-}
-});
-  </script>
+  document.getElementById('triggerWorkflow').addEventListener('click', async () => {
+    const webhookEndpoint = 'https://8k5ij92zn4.execute-api.us-east-1.amazonaws.com/dev/trigger_github_workflow';
 
-<script src="/assets/js/vendor/fullcalendar/index.global.min.js"></script>
+    const payload = {
+      ref: 'main',
+      workflow_id: 'dispatch-workflow.yml', // Ensure this matches your GitHub Actions workflow filename
+      inputs: {
+        some_input: 'value' // Replace with actual inputs your workflow expects
+      }
+    };
+
+    try {
+      const response = await fetch(webhookEndpoint, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json' 
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(`Server error: ${response.status} - ${errorData.message}`);
+      }
+
+      const data = await response.json();
+      console.log('Workflow dispatched successfully:', data);
+      alert('Workflow has been successfully triggered.');
+    } catch (error) {
+      console.error('Error triggering workflow:', error);
+      alert(`Failed to trigger workflow: ${error.message}`);
+    }
+  });
+</script>
 
 <p>&lt;/body&gt;
 &lt;/html&gt;</p>
@@ -93,7 +115,7 @@ const data = await response.json();
         
         
         
-        2024-10-18 15:57:59
+        2024-10-18 16:16:24
         <a href="/" aria-label="Homepage">
           &#8505; infoBAG
         </a>
