@@ -54,7 +54,7 @@
     <title>infoBAG</title>
     <link href="https://ib.bsb.br/rss.xml" rel="self"/>
     <link href="https://ib.bsb.br/"/>
-    <updated>2024-10-18T19:52:17+00:00</updated>
+    <updated>2024-10-18T19:53:51+00:00</updated>
     <id>https://ib.bsb.br</id>
     <author>
         <name></name>
@@ -72,10 +72,10 @@ provider:
 name: aws
 runtime: nodejs20.x
 region: us-east-1
-environment:
-GITHUB_TOKEN: ${env:GITHUB_TOKEN} # Secure GitHub token for API authentication
-GITHUB_REPOSITORY: your-github-username/your-repo-name # Format: owner/repo
-WORKFLOW_ID: your-workflow-file.yml # Default workflow ID, can be overridden
+environment:  
+GITHUB_TOKEN: ${env:GITHUB_TOKEN}  # Securely store your GitHub Personal Access Token
+GITHUB_REPOSITORY: ib-bsb-br/ib-bsb-br.github.io  # Replace with your GitHub repository
+WORKFLOW_ID: dispatch-workflow.yml # The filename or ID of the GitHub Actions workflow to trigger
 plugins:
 - serverless-lift
 functions:
@@ -85,8 +85,14 @@ events:
 - http:
 path: /webhook  # Webhook endpoint path
 method: post
-cors: true # Enable CORS for cross-origin requests
-# Optional: Function to manually trigger GitHub workflows
+cors: true
+- eventBridge:
+eventBus: ${construct:webhook.busName}
+pattern:
+source:
+- webhook
+detail-type:
+- new_comment
 triggerGithubWorkflow:
 handler: handler.triggerGithubWorkflow
 events:
@@ -99,19 +105,8 @@ webhook:
 type: webhook
 path: /webhook
 method: POST
-eventType: $request.body.type
+eventType: $request.body.eventType  # Maps to &apos;detail-type&apos; in EventBridge event
 insecure: true
-functions:
-handleWebhook:
-handler: handler.handleWebhook
-events:
-- eventBridge:
-eventBus: ${construct:webhook.busName}
-pattern:
-source:
-- webhook
-detail-type:
-- new_comment
 package:
 patterns:
 - &apos;!node_modules/aws-sdk/**&apos;
@@ -120,10 +115,10 @@ provider:
 name: aws
 runtime: nodejs20.x
 region: us-east-1
-environment:
-GITHUB_TOKEN: ${env:GITHUB_TOKEN} # Secure GitHub token for API authentication
-GITHUB_REPOSITORY: your-github-username/your-repo-name # Format: owner/repo
-WORKFLOW_ID: your-workflow-file.yml # Default workflow ID, can be overridden
+environment:  
+GITHUB_TOKEN: ${env:GITHUB_TOKEN}  # Securely store your GitHub Personal Access Token
+GITHUB_REPOSITORY: ib-bsb-br/ib-bsb-br.github.io  # Replace with your GitHub repository
+WORKFLOW_ID: dispatch-workflow.yml # The filename or ID of the GitHub Actions workflow to trigger
 plugins:
 - serverless-lift
 functions:
@@ -133,8 +128,14 @@ events:
 - http:
 path: /webhook  # Webhook endpoint path
 method: post
-cors: true # Enable CORS for cross-origin requests
-# Optional: Function to manually trigger GitHub workflows
+cors: true
+- eventBridge:
+eventBus: ${construct:webhook.busName}
+pattern:
+source:
+- webhook
+detail-type:
+- new_comment
 triggerGithubWorkflow:
 handler: handler.triggerGithubWorkflow
 events:
@@ -147,19 +148,8 @@ webhook:
 type: webhook
 path: /webhook
 method: POST
-eventType: $request.body.type
+eventType: $request.body.eventType  # Maps to &apos;detail-type&apos; in EventBridge event
 insecure: true
-functions:
-handleWebhook:
-handler: handler.handleWebhook
-events:
-- eventBridge:
-eventBus: ${construct:webhook.busName}
-pattern:
-source:
-- webhook
-detail-type:
-- new_comment
 package:
 patterns:
 - &apos;!node_modules/aws-sdk/**&apos;
@@ -211,8 +201,7 @@ const { by_nickname, by_email, content, time } = data;
 const slugName = slugify(by_nickname);
 const date = formatDate(time);
 return `---
-tags:
-- ${by_email}
+tags: ${by_email}
 info: aberto.
 date: ${date}
 type: post
@@ -234,13 +223,16 @@ ${content}`;
 */
 const triggerWorkflowDispatch = async (octokit, owner, repo, ref, workflowId, inputs = {}) =&amp;gt; {
 try {
-const response = await octokit.request(&apos;POST /repos/{owner}/{repo}/actions/workflows/{workflow_id}/dispatches&apos;, {
+const response = await octokit.request(
+&apos;POST /repos/{owner}/{repo}/actions/workflows/{workflow_id}/dispatches&apos;,
+{
 owner,
 repo,
 workflow_id: workflowId,
 ref,
 inputs,
-});
+}
+);
 if (response.status !== 204) {
 throw new Error(`Failed to dispatch workflow. GitHub API status: ${response.status}`);
 }
@@ -248,18 +240,55 @@ console.log(`Workflow &apos;${workflowId}&apos; dispatched successfully on ${rep
 return response.data;
 } catch (error) {
 console.error(&apos;Error dispatching workflow:&apos;, error);
-throw error; // Re-throw to be caught in calling function
+throw error;
 }
+};
+/**
+* Returns CORS headers.
+* @return {Object} CORS headers.
+*/
+const getCorsHeaders = () =&amp;gt; {
+return {
+&apos;Access-Control-Allow-Origin&apos;: &apos;https://ib.bsb.br&apos;,
+&apos;Access-Control-Allow-Methods&apos;: &apos;POST, OPTIONS&apos;,
+&apos;Access-Control-Allow-Headers&apos;: &apos;Content-Type&apos;,
+};
 };
 /**
 * Handles incoming webhook events to create/update a blog post and trigger a workflow.
 * @param {Object} event - Event data from AWS Lambda invocation.
-* @return {Object} Response object with statusCode and body.
+* @return {Object} Response object with statusCode, headers, and body.
 */
 export const handleWebhook = async (event) =&amp;gt; {
 try {
-const body = event.body ? JSON.parse(event.body) : {};
-const { inputs } = body; // Get inputs from request body if any
+console.log(&apos;Event received:&apos;, JSON.stringify(event, null, 2));
+let body;
+// Determine if the event is from an HTTP request or EventBridge
+if (event.body) {
+// HTTP request
+body = JSON.parse(event.body);
+} else if (event.detail) {
+// EventBridge event
+body = event.detail;
+} else {
+throw new Error(&apos;No data received in the event.&apos;);
+}
+// Handle nested &apos;data&apos; object if present
+const data = body.data || body;
+// Extract and validate data from the webhook event
+const { by_nickname, by_email, content } = data;
+if (!by_email || !by_nickname || !content) {
+throw new Error(&apos;Missing required fields: by_email, by_nickname, or content.&apos;);
+}
+// Use &apos;createdAt&apos; or &apos;updatedAt&apos; as the time, or default to current time
+let eventTime = data.createdAt || data.updatedAt || new Date().toISOString();
+// Validate and format the time
+try {
+eventTime = formatDate(eventTime);
+} catch (e) {
+// If invalid, default to current date
+eventTime = formatDate(new Date().toISOString());
+}
 // Validate required environment variables
 const githubToken = process.env.GITHUB_TOKEN;
 const githubRepository = process.env.GITHUB_REPOSITORY;
@@ -269,49 +298,80 @@ throw new Error(&apos;Missing required environment variables.&apos;);
 }
 const [owner, repo] = githubRepository.split(&apos;/&apos;);
 const octokit = new Octokit({ auth: githubToken });
-// Extract and validate data from the webhook event
-const eventData = body || {};
-const { by_nickname, by_email, content } = eventData;
-const time = eventData.time || new Date().toISOString();
-if (!by_email || !by_nickname || !content) {
-throw new Error(&apos;Missing required fields: by_email, by_nickname, or content.&apos;);
-}
 // Create or update the blog post file in the repository
-const date = formatDate(time);
 const slugName = slugify(by_nickname);
-const path = `_posts/${date}-${slugName}.md`;
+const path = `_posts/${eventTime}-${slugName}.md`;
 const message = `New post by ${by_nickname}`;
-const postContent = createPostContent({ by_nickname, by_email, content, time });
+const postContent = createPostContent({
+by_nickname,
+by_email,
+content,
+time: eventTime,
+});
 const contentEncoded = Base64.encode(postContent);
+// Check if the file already exists
+let sha;
+try {
+const { data: fileData } = await octokit.repos.getContent({
+owner,
+repo,
+path,
+});
+sha = fileData.sha; // File exists, so we&apos;ll update it
+} catch (err) {
+if (err.status !== 404) {
+console.error(&apos;Error fetching file content:&apos;, err);
+throw err;
+}
+// File does not exist; proceed to create it
+}
+// Create or update the file in the repository
 await octokit.repos.createOrUpdateFileContents({
 owner,
 repo,
 path,
 message,
 content: contentEncoded,
+sha, // Include sha if updating an existing file
 });
 // Dispatch the workflow
 const ref = &apos;main&apos;; // You can make this dynamic if needed
-await triggerWorkflowDispatch(octokit, owner, repo, ref, workflowId, inputs);
+await triggerWorkflowDispatch(octokit, owner, repo, ref, workflowId);
 return {
 statusCode: 200,
-body: JSON.stringify({ message: &apos;File created/updated and workflow triggered&apos;, path }),
+headers: getCorsHeaders(),
+body: JSON.stringify({
+message: &apos;File created/updated and workflow triggered&apos;,
+path,
+}),
 };
 } catch (error) {
 console.error(&apos;Error in handleWebhook:&apos;, error);
 return {
-statusCode: error.status || 500,
-body: JSON.stringify({ message: error.message || &apos;An unexpected error occurred.&apos; }),
+statusCode: error.statusCode || 500,
+headers: getCorsHeaders(),
+body: JSON.stringify({
+message: error.message || &apos;An unexpected error occurred.&apos;,
+}),
 };
 }
 };
 /**
-* Optional function to manually trigger a GitHub Actions workflow via HTTP endpoint.
+* Handles requests to manually trigger a GitHub Actions workflow via HTTP endpoint.
 * @param {Object} event - Event data from AWS Lambda invocation.
-* @return {Object} Response object with statusCode and body.
+* @return {Object} Response object with statusCode, headers, and body.
 */
 export const triggerGithubWorkflow = async (event) =&amp;gt; {
 try {
+if (event.httpMethod === &apos;OPTIONS&apos;) {
+// Respond to CORS preflight request
+return {
+statusCode: 200,
+headers: getCorsHeaders(),
+body: &apos;&apos;,
+};
+}
+console.log(&apos;Event received:&apos;, JSON.stringify(event, null, 2));
 const body = event.body ? JSON.parse(event.body) : {};
 const { ref = &apos;main&apos;, workflow_id, inputs = {} } = body;
 // Validate required environment variables
@@ -327,16 +387,20 @@ throw new Error(&apos;Workflow ID is required.&apos;);
 const [owner, repo] = githubRepository.split(&apos;/&apos;);
 const octokit = new Octokit({ auth: githubToken });
 // Dispatch the workflow
-const response = await triggerWorkflowDispatch(octokit, owner, repo, ref, workflowId, inputs);
+await triggerWorkflowDispatch(octokit, owner, repo, ref, workflowId, inputs);
 return {
 statusCode: 200,
-body: JSON.stringify({ message: &apos;Workflow dispatched successfully.&apos;, details: response }),
+headers: getCorsHeaders(),
+body: JSON.stringify({ message: &apos;Workflow dispatched successfully.&apos; }),
 };
 } catch (error) {
 console.error(&apos;Error in triggerGithubWorkflow:&apos;, error);
 return {
-statusCode: error.status || 500,
-body: JSON.stringify({ message: error.message || &apos;Failed to dispatch workflow.&apos; }),
+statusCode: error.statusCode || 500,
+headers: getCorsHeaders(),
+body: JSON.stringify({
+message: error.message || &apos;Failed to dispatch workflow.&apos;,
+}),
 };
 }
 };&quot; data-download-link=&quot;&quot; data-download-link-label=&quot;Download Javascript&quot;&gt;&lt;code class=&quot;language-javascript&quot;&gt;import { Octokit } from &quot;@octokit/rest&quot;;
@@ -383,8 +447,7 @@ const { by_nickname, by_email, content, time } = data;
 const slugName = slugify(by_nickname);
 const date = formatDate(time);
 return `---
-tags:
-- ${by_email}
+tags: ${by_email}
 info: aberto.
 date: ${date}
 type: post
@@ -406,13 +469,16 @@ ${content}`;
 */
 const triggerWorkflowDispatch = async (octokit, owner, repo, ref, workflowId, inputs = {}) =&amp;gt; {
 try {
-const response = await octokit.request(&apos;POST /repos/{owner}/{repo}/actions/workflows/{workflow_id}/dispatches&apos;, {
+const response = await octokit.request(
+&apos;POST /repos/{owner}/{repo}/actions/workflows/{workflow_id}/dispatches&apos;,
+{
 owner,
 repo,
 workflow_id: workflowId,
 ref,
 inputs,
-});
+}
+);
 if (response.status !== 204) {
 throw new Error(`Failed to dispatch workflow. GitHub API status: ${response.status}`);
 }
@@ -420,18 +486,55 @@ console.log(`Workflow &apos;${workflowId}&apos; dispatched successfully on ${rep
 return response.data;
 } catch (error) {
 console.error(&apos;Error dispatching workflow:&apos;, error);
-throw error; // Re-throw to be caught in calling function
+throw error;
 }
+};
+/**
+* Returns CORS headers.
+* @return {Object} CORS headers.
+*/
+const getCorsHeaders = () =&amp;gt; {
+return {
+&apos;Access-Control-Allow-Origin&apos;: &apos;https://ib.bsb.br&apos;,
+&apos;Access-Control-Allow-Methods&apos;: &apos;POST, OPTIONS&apos;,
+&apos;Access-Control-Allow-Headers&apos;: &apos;Content-Type&apos;,
+};
 };
 /**
 * Handles incoming webhook events to create/update a blog post and trigger a workflow.
 * @param {Object} event - Event data from AWS Lambda invocation.
-* @return {Object} Response object with statusCode and body.
+* @return {Object} Response object with statusCode, headers, and body.
 */
 export const handleWebhook = async (event) =&amp;gt; {
 try {
-const body = event.body ? JSON.parse(event.body) : {};
-const { inputs } = body; // Get inputs from request body if any
+console.log(&apos;Event received:&apos;, JSON.stringify(event, null, 2));
+let body;
+// Determine if the event is from an HTTP request or EventBridge
+if (event.body) {
+// HTTP request
+body = JSON.parse(event.body);
+} else if (event.detail) {
+// EventBridge event
+body = event.detail;
+} else {
+throw new Error(&apos;No data received in the event.&apos;);
+}
+// Handle nested &apos;data&apos; object if present
+const data = body.data || body;
+// Extract and validate data from the webhook event
+const { by_nickname, by_email, content } = data;
+if (!by_email || !by_nickname || !content) {
+throw new Error(&apos;Missing required fields: by_email, by_nickname, or content.&apos;);
+}
+// Use &apos;createdAt&apos; or &apos;updatedAt&apos; as the time, or default to current time
+let eventTime = data.createdAt || data.updatedAt || new Date().toISOString();
+// Validate and format the time
+try {
+eventTime = formatDate(eventTime);
+} catch (e) {
+// If invalid, default to current date
+eventTime = formatDate(new Date().toISOString());
+}
 // Validate required environment variables
 const githubToken = process.env.GITHUB_TOKEN;
 const githubRepository = process.env.GITHUB_REPOSITORY;
@@ -441,49 +544,80 @@ throw new Error(&apos;Missing required environment variables.&apos;);
 }
 const [owner, repo] = githubRepository.split(&apos;/&apos;);
 const octokit = new Octokit({ auth: githubToken });
-// Extract and validate data from the webhook event
-const eventData = body || {};
-const { by_nickname, by_email, content } = eventData;
-const time = eventData.time || new Date().toISOString();
-if (!by_email || !by_nickname || !content) {
-throw new Error(&apos;Missing required fields: by_email, by_nickname, or content.&apos;);
-}
 // Create or update the blog post file in the repository
-const date = formatDate(time);
 const slugName = slugify(by_nickname);
-const path = `_posts/${date}-${slugName}.md`;
+const path = `_posts/${eventTime}-${slugName}.md`;
 const message = `New post by ${by_nickname}`;
-const postContent = createPostContent({ by_nickname, by_email, content, time });
+const postContent = createPostContent({
+by_nickname,
+by_email,
+content,
+time: eventTime,
+});
 const contentEncoded = Base64.encode(postContent);
+// Check if the file already exists
+let sha;
+try {
+const { data: fileData } = await octokit.repos.getContent({
+owner,
+repo,
+path,
+});
+sha = fileData.sha; // File exists, so we&apos;ll update it
+} catch (err) {
+if (err.status !== 404) {
+console.error(&apos;Error fetching file content:&apos;, err);
+throw err;
+}
+// File does not exist; proceed to create it
+}
+// Create or update the file in the repository
 await octokit.repos.createOrUpdateFileContents({
 owner,
 repo,
 path,
 message,
 content: contentEncoded,
+sha, // Include sha if updating an existing file
 });
 // Dispatch the workflow
 const ref = &apos;main&apos;; // You can make this dynamic if needed
-await triggerWorkflowDispatch(octokit, owner, repo, ref, workflowId, inputs);
+await triggerWorkflowDispatch(octokit, owner, repo, ref, workflowId);
 return {
 statusCode: 200,
-body: JSON.stringify({ message: &apos;File created/updated and workflow triggered&apos;, path }),
+headers: getCorsHeaders(),
+body: JSON.stringify({
+message: &apos;File created/updated and workflow triggered&apos;,
+path,
+}),
 };
 } catch (error) {
 console.error(&apos;Error in handleWebhook:&apos;, error);
 return {
-statusCode: error.status || 500,
-body: JSON.stringify({ message: error.message || &apos;An unexpected error occurred.&apos; }),
+statusCode: error.statusCode || 500,
+headers: getCorsHeaders(),
+body: JSON.stringify({
+message: error.message || &apos;An unexpected error occurred.&apos;,
+}),
 };
 }
 };
 /**
-* Optional function to manually trigger a GitHub Actions workflow via HTTP endpoint.
+* Handles requests to manually trigger a GitHub Actions workflow via HTTP endpoint.
 * @param {Object} event - Event data from AWS Lambda invocation.
-* @return {Object} Response object with statusCode and body.
+* @return {Object} Response object with statusCode, headers, and body.
 */
 export const triggerGithubWorkflow = async (event) =&amp;gt; {
 try {
+if (event.httpMethod === &apos;OPTIONS&apos;) {
+// Respond to CORS preflight request
+return {
+statusCode: 200,
+headers: getCorsHeaders(),
+body: &apos;&apos;,
+};
+}
+console.log(&apos;Event received:&apos;, JSON.stringify(event, null, 2));
 const body = event.body ? JSON.parse(event.body) : {};
 const { ref = &apos;main&apos;, workflow_id, inputs = {} } = body;
 // Validate required environment variables
@@ -499,77 +633,91 @@ throw new Error(&apos;Workflow ID is required.&apos;);
 const [owner, repo] = githubRepository.split(&apos;/&apos;);
 const octokit = new Octokit({ auth: githubToken });
 // Dispatch the workflow
-const response = await triggerWorkflowDispatch(octokit, owner, repo, ref, workflowId, inputs);
+await triggerWorkflowDispatch(octokit, owner, repo, ref, workflowId, inputs);
 return {
 statusCode: 200,
-body: JSON.stringify({ message: &apos;Workflow dispatched successfully.&apos;, details: response }),
+headers: getCorsHeaders(),
+body: JSON.stringify({ message: &apos;Workflow dispatched successfully.&apos; }),
 };
 } catch (error) {
 console.error(&apos;Error in triggerGithubWorkflow:&apos;, error);
 return {
-statusCode: error.status || 500,
-body: JSON.stringify({ message: error.message || &apos;Failed to dispatch workflow.&apos; }),
+statusCode: error.statusCode || 500,
+headers: getCorsHeaders(),
+body: JSON.stringify({
+message: error.message || &apos;Failed to dispatch workflow.&apos;,
+}),
 };
 }
 };&lt;/code&gt;&lt;/section&gt;
 
 &lt;h1 id=&quot;3-client-side-javascript-if-applicable&quot;&gt;3. Client-Side JavaScript (If Applicable):&lt;/h1&gt;
 
-&lt;section data-filename=&quot;javascript_code-block.js&quot; data-code=&quot;const webhookEndpoint = &apos;/webhook&apos;; // Path to your webhook endpoint
+&lt;section data-filename=&quot;javascript_code-block.js&quot; data-code=&quot;&amp;lt;button id=&amp;quot;triggerWorkflow&amp;quot;&amp;gt;Events&amp;lt;/button&amp;gt;
+&amp;lt;div id=&amp;quot;calendar&amp;quot;&amp;gt;&amp;lt;/div&amp;gt;
+&amp;lt;script&amp;gt;
 document.getElementById(&apos;triggerWorkflow&apos;).addEventListener(&apos;click&apos;, async () =&amp;gt; {
-// Display status message to user
-// ...
+const webhookEndpoint = &apos;https://8k5ij92zn4.execute-api.us-east-1.amazonaws.com/dev/trigger_github_workflow&apos;; // Replace with your actual endpoint
+const payload = {
+ref: &apos;main&apos;,
+workflow_id: &apos;dispatch-workflow.yml&apos;, // Ensure this matches your GitHub Actions workflow filename
+inputs: {
+some_input: &apos;An example input&apos; // Replace with actual inputs your workflow expects
+}
+};
 try {
-const inputs = { run_workflow: &apos;yes&apos;, testParam: Math.random() }; // Example inputs
 const response = await fetch(webhookEndpoint, {
 method: &apos;POST&apos;,
-headers: { &apos;Content-Type&apos;: &apos;application/json&apos; },
-body: JSON.stringify({
-by_nickname: &apos;John Doe&apos;, // Example data
-by_email: &apos;john.doe@example.com&apos;,
-content: &apos;This is a test post.&apos;,
-inputs, // Send inputs in the request body
-}),
+headers: {
+&apos;Content-Type&apos;: &apos;application/json&apos;
+},
+body: JSON.stringify(payload),
 });
 if (!response.ok) {
 const errorData = await response.json();
 throw new Error(`Server error: ${response.status} - ${errorData.message}`);
 }
 const data = await response.json();
-// Handle successful response
-// ...
+console.log(&apos;Workflow dispatched successfully:&apos;, data);
+alert(&apos;Workflow has been successfully triggered.&apos;);
 } catch (error) {
-// Handle error and display message to user
-// ...
+console.error(&apos;Error triggering workflow:&apos;, error);
+alert(`Failed to trigger workflow: ${error.message}`);
 }
-});&quot; data-download-link=&quot;&quot; data-download-link-label=&quot;Download Javascript&quot;&gt;&lt;code class=&quot;language-javascript&quot;&gt;const webhookEndpoint = &apos;/webhook&apos;; // Path to your webhook endpoint
-document.getElementById(&apos;triggerWorkflow&apos;).addEventListener(&apos;click&apos;, async () =&amp;gt; {
-// Display status message to user
-// ...
+});
+&amp;lt;/script&amp;gt;&quot; data-download-link=&quot;&quot; data-download-link-label=&quot;Download Javascript&quot;&gt;&lt;code class=&quot;language-javascript&quot;&gt;&lt;button id=&quot;triggerWorkflow&quot;&gt;Events&lt;/button&gt;
+&lt;div id=&quot;calendar&quot;&gt;&lt;/div&gt;
+&lt;script&gt;
+document.getElementById(&apos;triggerWorkflow&apos;).addEventListener(&apos;click&apos;, async () =&gt; {
+const webhookEndpoint = &apos;https://8k5ij92zn4.execute-api.us-east-1.amazonaws.com/dev/trigger_github_workflow&apos;; // Replace with your actual endpoint
+const payload = {
+ref: &apos;main&apos;,
+workflow_id: &apos;dispatch-workflow.yml&apos;, // Ensure this matches your GitHub Actions workflow filename
+inputs: {
+some_input: &apos;An example input&apos; // Replace with actual inputs your workflow expects
+}
+};
 try {
-const inputs = { run_workflow: &apos;yes&apos;, testParam: Math.random() }; // Example inputs
 const response = await fetch(webhookEndpoint, {
 method: &apos;POST&apos;,
-headers: { &apos;Content-Type&apos;: &apos;application/json&apos; },
-body: JSON.stringify({
-by_nickname: &apos;John Doe&apos;, // Example data
-by_email: &apos;john.doe@example.com&apos;,
-content: &apos;This is a test post.&apos;,
-inputs, // Send inputs in the request body
-}),
+headers: {
+&apos;Content-Type&apos;: &apos;application/json&apos;
+},
+body: JSON.stringify(payload),
 });
 if (!response.ok) {
 const errorData = await response.json();
 throw new Error(`Server error: ${response.status} - ${errorData.message}`);
 }
 const data = await response.json();
-// Handle successful response
-// ...
+console.log(&apos;Workflow dispatched successfully:&apos;, data);
+alert(&apos;Workflow has been successfully triggered.&apos;);
 } catch (error) {
-// Handle error and display message to user
-// ...
+console.error(&apos;Error triggering workflow:&apos;, error);
+alert(`Failed to trigger workflow: ${error.message}`);
 }
-});&lt;/code&gt;&lt;/section&gt;
+});
+&lt;/script&gt;&lt;/code&gt;&lt;/section&gt;
 
 &lt;hr /&gt;
 
@@ -587,11 +735,11 @@ const data = await response.json();
   &lt;/li&gt;
 &lt;/ol&gt;
 
-&lt;section data-filename=&quot;bash_code-block.sh&quot; data-code=&quot;$env:GITHUB_TOKEN=&amp;quot;your_personal_access_token&amp;quot;
-$env:GITHUB_REPOSITORY=&amp;quot;owner/repo&amp;quot;
-$env:WORKFLOW_ID=&amp;quot;main.yml&amp;quot;&quot; data-download-link=&quot;&quot; data-download-link-label=&quot;Download Bash&quot;&gt;&lt;code class=&quot;language-bash&quot;&gt;$env:GITHUB_TOKEN=&quot;your_personal_access_token&quot;
-$env:GITHUB_REPOSITORY=&quot;owner/repo&quot;
-$env:WORKFLOW_ID=&quot;main.yml&quot;&lt;/code&gt;&lt;/section&gt;
+&lt;section data-filename=&quot;bash_code-block.sh&quot; data-code=&quot;export GITHUB_TOKEN=&amp;quot;your_personal_access_token&amp;quot;
+export GITHUB_REPOSITORY=&amp;quot;owner/repo&amp;quot;
+export WORKFLOW_ID=&amp;quot;main.yml&amp;quot;&quot; data-download-link=&quot;&quot; data-download-link-label=&quot;Download Bash&quot;&gt;&lt;code class=&quot;language-bash&quot;&gt;export GITHUB_TOKEN=&quot;your_personal_access_token&quot;
+export GITHUB_REPOSITORY=&quot;owner/repo&quot;
+export WORKFLOW_ID=&quot;main.yml&quot;&lt;/code&gt;&lt;/section&gt;
 
 &lt;ol&gt;
   &lt;li&gt;
@@ -599,7 +747,7 @@ $env:WORKFLOW_ID=&quot;main.yml&quot;&lt;/code&gt;&lt;/section&gt;
 
     &lt;ul&gt;
       &lt;li&gt;Install dependencies: &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;npm install&lt;/code&gt;&lt;/li&gt;
-      &lt;li&gt;Deploy using the Serverless Framework: &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;serverless deploy&lt;/code&gt;&lt;/li&gt;
+      &lt;li&gt;Deploy using the Serverless Framework: (1) &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;{npx serverless print&lt;/code&gt;; (2) &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;serverless deploy&lt;/code&gt;.&lt;/li&gt;
     &lt;/ul&gt;
   &lt;/li&gt;
   &lt;li&gt;
@@ -607,51 +755,53 @@ $env:WORKFLOW_ID=&quot;main.yml&quot;&lt;/code&gt;&lt;/section&gt;
 
     &lt;ul&gt;
       &lt;li&gt;Create a workflow file in your repository (e.g., &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;your-workflow-file.yml&lt;/code&gt;).&lt;/li&gt;
-      &lt;li&gt;Ensure it includes &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;workflow_dispatch&lt;/code&gt; in the &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;on&lt;/code&gt; section:
-        &lt;section data-filename=&quot;yaml_code-block.yaml&quot; data-code=&quot;on:
+      &lt;li&gt;
+        &lt;p&gt;Ensure it includes &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;workflow_dispatch&lt;/code&gt; in the &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;on&lt;/code&gt; section:&lt;/p&gt;
+
+        &lt;section data-filename=&quot;yaml_code-block.yaml&quot; data-code=&quot;name: Trigger Workflow
+on:
 workflow_dispatch:
 inputs:
-run_workflow:
-description: &apos;Trigger to run the workflow&apos;
-required: true
-default: &apos;yes&apos;&quot; data-download-link=&quot;&quot; data-download-link-label=&quot;Download Yaml&quot;&gt;&lt;code class=&quot;language-yaml&quot;&gt;on:
+some_input:
+description: &apos;An example input&apos;
+required: false
+jobs:
+trigger-workflow:
+runs-on: ubuntu-latest
+name: Dispatch Event
+steps:
+     - name: Trigger target workflow
+run: |
+curl -X POST \
+-H &amp;quot;Accept: application/vnd.github+json&amp;quot; \
+-H &amp;quot;Authorization: Bearer $&amp;quot; \
+-H &amp;quot;Content-Type: application/json&amp;quot; \
+-d &apos;{&amp;quot;event_type&amp;quot;:&amp;quot;trigger-jekyll&amp;quot;, &amp;quot;client_payload&amp;quot;: {&amp;quot;message&amp;quot;: &amp;quot;Triggered from main workflow&amp;quot;}}&apos;
+https://api.github.com/repos/$/dispatches&quot; data-download-link=&quot;&quot; data-download-link-label=&quot;Download Yaml&quot;&gt;&lt;code class=&quot;language-yaml&quot;&gt;name: Trigger Workflow
+on:
 workflow_dispatch:
 inputs:
-run_workflow:
-description: &apos;Trigger to run the workflow&apos;
-required: true
-default: &apos;yes&apos;&lt;/code&gt;&lt;/section&gt;
+some_input:
+description: &apos;An example input&apos;
+required: false
+jobs:
+trigger-workflow:
+runs-on: ubuntu-latest
+name: Dispatch Event
+steps:
+     - name: Trigger target workflow
+run: |
+curl -X POST \
+-H &quot;Accept: application/vnd.github+json&quot; \
+-H &quot;Authorization: Bearer $&quot; \
+-H &quot;Content-Type: application/json&quot; \
+-d &apos;{&quot;event_type&quot;:&quot;trigger-jekyll&quot;, &quot;client_payload&quot;: {&quot;message&quot;: &quot;Triggered from main workflow&quot;}}&apos;
+https://api.github.com/repos/$/dispatches&lt;/code&gt;&lt;/section&gt;
       &lt;/li&gt;
-      &lt;li&gt;Define the jobs and steps as needed for your application.&lt;/li&gt;
-    &lt;/ul&gt;
-  &lt;/li&gt;
-  &lt;li&gt;
-    &lt;p&gt;&lt;strong&gt;Testing the Functions:&lt;/strong&gt;&lt;/p&gt;
-
-    &lt;ul&gt;
-      &lt;li&gt;Test the &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;handleWebhook&lt;/code&gt; function by sending a POST request to the &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;/webhook&lt;/code&gt; endpoint.
-        &lt;ul&gt;
-          &lt;li&gt;Include required data fields in the request body (&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;by_nickname&lt;/code&gt;, &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;by_email&lt;/code&gt;, &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;content&lt;/code&gt;).&lt;/li&gt;
-          &lt;li&gt;Optionally include &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;inputs&lt;/code&gt; for the workflow.&lt;/li&gt;
-        &lt;/ul&gt;
-      &lt;/li&gt;
-      &lt;li&gt;If the &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;triggerGithubWorkflow&lt;/code&gt; function is added, test it by sending a POST request to the &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;/trigger_github_workflow&lt;/code&gt; endpoint.
-        &lt;ul&gt;
-          &lt;li&gt;Include &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;workflow_id&lt;/code&gt;, &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;ref&lt;/code&gt;, and &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;inputs&lt;/code&gt; in the request body as needed.&lt;/li&gt;
-        &lt;/ul&gt;
-      &lt;/li&gt;
-    &lt;/ul&gt;
-  &lt;/li&gt;
-  &lt;li&gt;
-    &lt;p&gt;&lt;strong&gt;Security Considerations:&lt;/strong&gt;&lt;/p&gt;
-
-    &lt;ul&gt;
-      &lt;li&gt;Ensure that all tokens and sensitive data are securely stored and not exposed to users.&lt;/li&gt;
-      &lt;li&gt;Regularly review and update dependencies to fix any known vulnerabilities.&lt;/li&gt;
-      &lt;li&gt;Monitor logs for any suspicious activities or errors.&lt;/li&gt;
     &lt;/ul&gt;
   &lt;/li&gt;
 &lt;/ol&gt;
+
 </content>
     </entry>
     
@@ -46292,11 +46442,11 @@ Pense duas vezes antes de se envolver.
             
             &lt;h2&gt;Child tags:&lt;/h2&gt;
             
-            &lt;li&gt;&lt;a href=&quot;#ai-prompt&quot; aria-label=&quot;Child tag AI&amp;gt;prompt&quot;&gt;AI&amp;gt;prompt&lt;/a&gt;&lt;/li&gt;
-            
             &lt;li&gt;&lt;a href=&quot;#llm&quot; aria-label=&quot;Child tag LLM&quot;&gt;LLM&lt;/a&gt;&lt;/li&gt;
             
             &lt;li&gt;&lt;a href=&quot;#ai-llm&quot; aria-label=&quot;Child tag AI&amp;gt;LLM&quot;&gt;AI&amp;gt;LLM&lt;/a&gt;&lt;/li&gt;
+            
+            &lt;li&gt;&lt;a href=&quot;#ai-prompt&quot; aria-label=&quot;Child tag AI&amp;gt;prompt&quot;&gt;AI&amp;gt;prompt&lt;/a&gt;&lt;/li&gt;
             
             &lt;li&gt;&lt;a href=&quot;#prompt&quot; aria-label=&quot;Child tag prompt&quot;&gt;prompt&lt;/a&gt;&lt;/li&gt;
             
@@ -47141,11 +47291,11 @@ Pense duas vezes antes de se envolver.
             
             &lt;h2&gt;Child tags:&lt;/h2&gt;
             
+            &lt;li&gt;&lt;a href=&quot;#edital-direito-processual-penal&quot; aria-label=&quot;Child tag edital&amp;gt;direito&amp;gt;processual-penal&quot;&gt;edital&amp;gt;direito&amp;gt;processual-penal&lt;/a&gt;&lt;/li&gt;
+            
             &lt;li&gt;&lt;a href=&quot;#direito&quot; aria-label=&quot;Child tag direito&quot;&gt;direito&lt;/a&gt;&lt;/li&gt;
             
             &lt;li&gt;&lt;a href=&quot;#direito-processual-penal&quot; aria-label=&quot;Child tag direito&amp;gt;processual-penal&quot;&gt;direito&amp;gt;processual-penal&lt;/a&gt;&lt;/li&gt;
-            
-            &lt;li&gt;&lt;a href=&quot;#edital-direito-processual-penal&quot; aria-label=&quot;Child tag edital&amp;gt;direito&amp;gt;processual-penal&quot;&gt;edital&amp;gt;direito&amp;gt;processual-penal&lt;/a&gt;&lt;/li&gt;
             
             &lt;li&gt;&lt;a href=&quot;#edital-direito&quot; aria-label=&quot;Child tag edital&amp;gt;direito&quot;&gt;edital&amp;gt;direito&lt;/a&gt;&lt;/li&gt;
             
@@ -47225,9 +47375,9 @@ Pense duas vezes antes de se envolver.
         
         &lt;h2&gt;Parent tags:&lt;/h2&gt;
             
-            &lt;li&gt;&lt;a href=&quot;#edital&quot; aria-label=&quot;Parent tag edital&quot;&gt;edital&lt;/a&gt;&lt;/li&gt;
-            
             &lt;li&gt;&lt;a href=&quot;#direito&quot; aria-label=&quot;Parent tag direito&quot;&gt;direito&lt;/a&gt;&lt;/li&gt;
+            
+            &lt;li&gt;&lt;a href=&quot;#edital&quot; aria-label=&quot;Parent tag edital&quot;&gt;edital&lt;/a&gt;&lt;/li&gt;
             
             
         &lt;/ul&gt;
@@ -48231,9 +48381,9 @@ Pense duas vezes antes de se envolver.
         
         &lt;h2&gt;Parent tags:&lt;/h2&gt;
             
-            &lt;li&gt;&lt;a href=&quot;#software&quot; aria-label=&quot;Parent tag software&quot;&gt;software&lt;/a&gt;&lt;/li&gt;
-            
             &lt;li&gt;&lt;a href=&quot;#scripts&quot; aria-label=&quot;Parent tag scripts&quot;&gt;scripts&lt;/a&gt;&lt;/li&gt;
+            
+            &lt;li&gt;&lt;a href=&quot;#software&quot; aria-label=&quot;Parent tag software&quot;&gt;software&lt;/a&gt;&lt;/li&gt;
             
             
         &lt;/ul&gt;
@@ -49016,25 +49166,25 @@ Pense duas vezes antes de se envolver.
             
             &lt;h2&gt;Child tags:&lt;/h2&gt;
             
-            &lt;li&gt;&lt;a href=&quot;#scripts-cloud&quot; aria-label=&quot;Child tag scripts&amp;gt;cloud&quot;&gt;scripts&amp;gt;cloud&lt;/a&gt;&lt;/li&gt;
-            
-            &lt;li&gt;&lt;a href=&quot;#powershell&quot; aria-label=&quot;Child tag powershell&quot;&gt;powershell&lt;/a&gt;&lt;/li&gt;
-            
-            &lt;li&gt;&lt;a href=&quot;#scripts-ai&quot; aria-label=&quot;Child tag scripts&amp;gt;AI&quot;&gt;scripts&amp;gt;AI&lt;/a&gt;&lt;/li&gt;
-            
-            &lt;li&gt;&lt;a href=&quot;#scripts-google-apps-script&quot; aria-label=&quot;Child tag scripts&amp;gt;google-apps-script&quot;&gt;scripts&amp;gt;google-apps-script&lt;/a&gt;&lt;/li&gt;
-            
             &lt;li&gt;&lt;a href=&quot;#google-apps-script&quot; aria-label=&quot;Child tag google-apps-script&quot;&gt;google-apps-script&lt;/a&gt;&lt;/li&gt;
-            
-            &lt;li&gt;&lt;a href=&quot;#ai&quot; aria-label=&quot;Child tag AI&quot;&gt;AI&lt;/a&gt;&lt;/li&gt;
             
             &lt;li&gt;&lt;a href=&quot;#mobile&quot; aria-label=&quot;Child tag mobile&quot;&gt;mobile&lt;/a&gt;&lt;/li&gt;
             
             &lt;li&gt;&lt;a href=&quot;#scripts-mobile&quot; aria-label=&quot;Child tag scripts&amp;gt;mobile&quot;&gt;scripts&amp;gt;mobile&lt;/a&gt;&lt;/li&gt;
             
+            &lt;li&gt;&lt;a href=&quot;#powershell&quot; aria-label=&quot;Child tag powershell&quot;&gt;powershell&lt;/a&gt;&lt;/li&gt;
+            
             &lt;li&gt;&lt;a href=&quot;#cloud&quot; aria-label=&quot;Child tag cloud&quot;&gt;cloud&lt;/a&gt;&lt;/li&gt;
             
             &lt;li&gt;&lt;a href=&quot;#scripts-powershell&quot; aria-label=&quot;Child tag scripts&amp;gt;powershell&quot;&gt;scripts&amp;gt;powershell&lt;/a&gt;&lt;/li&gt;
+            
+            &lt;li&gt;&lt;a href=&quot;#ai&quot; aria-label=&quot;Child tag AI&quot;&gt;AI&lt;/a&gt;&lt;/li&gt;
+            
+            &lt;li&gt;&lt;a href=&quot;#scripts-cloud&quot; aria-label=&quot;Child tag scripts&amp;gt;cloud&quot;&gt;scripts&amp;gt;cloud&lt;/a&gt;&lt;/li&gt;
+            
+            &lt;li&gt;&lt;a href=&quot;#scripts-google-apps-script&quot; aria-label=&quot;Child tag scripts&amp;gt;google-apps-script&quot;&gt;scripts&amp;gt;google-apps-script&lt;/a&gt;&lt;/li&gt;
+            
+            &lt;li&gt;&lt;a href=&quot;#scripts-ai&quot; aria-label=&quot;Child tag scripts&amp;gt;AI&quot;&gt;scripts&amp;gt;AI&lt;/a&gt;&lt;/li&gt;
             
             
         &lt;/ul&gt;
@@ -49371,17 +49521,17 @@ Pense duas vezes antes de se envolver.
             
             &lt;h2&gt;Child tags:&lt;/h2&gt;
             
-            &lt;li&gt;&lt;a href=&quot;#windows&quot; aria-label=&quot;Child tag windows&quot;&gt;windows&lt;/a&gt;&lt;/li&gt;
-            
-            &lt;li&gt;&lt;a href=&quot;#software-windows&quot; aria-label=&quot;Child tag software&amp;gt;windows&quot;&gt;software&amp;gt;windows&lt;/a&gt;&lt;/li&gt;
+            &lt;li&gt;&lt;a href=&quot;#software-linux&quot; aria-label=&quot;Child tag software&amp;gt;linux&quot;&gt;software&amp;gt;linux&lt;/a&gt;&lt;/li&gt;
             
             &lt;li&gt;&lt;a href=&quot;#mobile&quot; aria-label=&quot;Child tag mobile&quot;&gt;mobile&lt;/a&gt;&lt;/li&gt;
             
-            &lt;li&gt;&lt;a href=&quot;#software-mobile&quot; aria-label=&quot;Child tag software&amp;gt;mobile&quot;&gt;software&amp;gt;mobile&lt;/a&gt;&lt;/li&gt;
-            
             &lt;li&gt;&lt;a href=&quot;#linux&quot; aria-label=&quot;Child tag linux&quot;&gt;linux&lt;/a&gt;&lt;/li&gt;
             
-            &lt;li&gt;&lt;a href=&quot;#software-linux&quot; aria-label=&quot;Child tag software&amp;gt;linux&quot;&gt;software&amp;gt;linux&lt;/a&gt;&lt;/li&gt;
+            &lt;li&gt;&lt;a href=&quot;#software-windows&quot; aria-label=&quot;Child tag software&amp;gt;windows&quot;&gt;software&amp;gt;windows&lt;/a&gt;&lt;/li&gt;
+            
+            &lt;li&gt;&lt;a href=&quot;#software-mobile&quot; aria-label=&quot;Child tag software&amp;gt;mobile&quot;&gt;software&amp;gt;mobile&lt;/a&gt;&lt;/li&gt;
+            
+            &lt;li&gt;&lt;a href=&quot;#windows&quot; aria-label=&quot;Child tag windows&quot;&gt;windows&lt;/a&gt;&lt;/li&gt;
             
             
         &lt;/ul&gt;
@@ -49710,9 +49860,9 @@ Pense duas vezes antes de se envolver.
             
             &lt;h2&gt;Child tags:&lt;/h2&gt;
             
-            &lt;li&gt;&lt;a href=&quot;#iphone&quot; aria-label=&quot;Child tag iphone&quot;&gt;iphone&lt;/a&gt;&lt;/li&gt;
-            
             &lt;li&gt;&lt;a href=&quot;#tasks-iphone&quot; aria-label=&quot;Child tag tasks&amp;gt;iphone&quot;&gt;tasks&amp;gt;iphone&lt;/a&gt;&lt;/li&gt;
+            
+            &lt;li&gt;&lt;a href=&quot;#iphone&quot; aria-label=&quot;Child tag iphone&quot;&gt;iphone&lt;/a&gt;&lt;/li&gt;
             
             
         &lt;/ul&gt;
@@ -49883,13 +50033,13 @@ Pense duas vezes antes de se envolver.
             
             &lt;h2&gt;Child tags:&lt;/h2&gt;
             
-            &lt;li&gt;&lt;a href=&quot;#github-estudos&quot; aria-label=&quot;Child tag github&amp;gt;estudos&quot;&gt;github&amp;gt;estudos&lt;/a&gt;&lt;/li&gt;
+            &lt;li&gt;&lt;a href=&quot;#tools-github&quot; aria-label=&quot;Child tag tools&amp;gt;github&quot;&gt;tools&amp;gt;github&lt;/a&gt;&lt;/li&gt;
             
             &lt;li&gt;&lt;a href=&quot;#tools-github-estudos&quot; aria-label=&quot;Child tag tools&amp;gt;github&amp;gt;estudos&quot;&gt;tools&amp;gt;github&amp;gt;estudos&lt;/a&gt;&lt;/li&gt;
             
             &lt;li&gt;&lt;a href=&quot;#github&quot; aria-label=&quot;Child tag github&quot;&gt;github&lt;/a&gt;&lt;/li&gt;
             
-            &lt;li&gt;&lt;a href=&quot;#tools-github&quot; aria-label=&quot;Child tag tools&amp;gt;github&quot;&gt;tools&amp;gt;github&lt;/a&gt;&lt;/li&gt;
+            &lt;li&gt;&lt;a href=&quot;#github-estudos&quot; aria-label=&quot;Child tag github&amp;gt;estudos&quot;&gt;github&amp;gt;estudos&lt;/a&gt;&lt;/li&gt;
             
             
         &lt;/ul&gt;
@@ -50220,22 +50370,27 @@ Pense duas vezes antes de se envolver.
         related_24 scripts
     }
     software {
-        child windows
-        child software_windows
-        child mobile
-        child software_mobile
-        child linux
         child software_linux
+        child mobile
+        child linux
+        child software_windows
+        child software_mobile
+        child windows
     }
     software ||--|| linux : SUBSET_OF
     calls {
     }
     edital {
+        child edital_direito_processual-penal
         child direito
         child direito_processual-penal
-        child edital_direito_processual-penal
         child edital_direito
     }
+    edital_direito_processual-penal {
+        parent direito
+        parent edital
+    }
+    edital ||--|| edital_direito_processual-penal : SUBSET_OF
     direito {
         parent edital
         child edital_direito_processual-penal
@@ -50245,11 +50400,6 @@ Pense duas vezes antes de se envolver.
         parent edital
     }
     edital ||--|| direito_processual-penal : SUBSET_OF
-    edital_direito_processual-penal {
-        parent edital
-        parent direito
-    }
-    edital ||--|| edital_direito_processual-penal : SUBSET_OF
     edital_direito {
         parent edital
         child processual-penal
@@ -50264,23 +50414,23 @@ Pense duas vezes antes de se envolver.
     }
     AI {
         parent scripts
-        child AI_prompt
         child LLM
         child AI_LLM
+        child AI_prompt
         child prompt
     }
     AI ||--|| AI_prompt : SUBSET_OF
     scripts {
-        child scripts_cloud
-        child powershell
-        child scripts_AI
-        child scripts_google-apps-script
         child google-apps-script
-        child AI
         child mobile
         child scripts_mobile
+        child powershell
         child cloud
         child scripts_powershell
+        child AI
+        child scripts_cloud
+        child scripts_google-apps-script
+        child scripts_AI
         related_2 estudos
         related_24 linux
     }
@@ -50300,44 +50450,27 @@ Pense duas vezes antes de se envolver.
     sell {
     }
     tasks {
-        child iphone
         child tasks_iphone
+        child iphone
         related_2 mlo
     }
+    tasks_iphone {
+        parent tasks
+    }
+    tasks ||--|| tasks_iphone : SUBSET_OF
     iphone {
         parent tasks
         related_2 scripts_mobile
         related_2 software_mobile
     }
     tasks ||--|| iphone : SUBSET_OF
-    tasks_iphone {
-        parent tasks
-    }
-    tasks ||--|| tasks_iphone : SUBSET_OF
-    scripts_cloud {
-        parent scripts
-        related_2 tools_github
-    }
-    scripts ||--|| scripts_cloud : SUBSET_OF
-    powershell {
-        parent scripts
-    }
-    scripts ||--|| powershell : SUBSET_OF
-    scripts_AI {
-        parent scripts
-    }
-    scripts ||--|| scripts_AI : SUBSET_OF
-    scripts_google-apps-script {
-        parent scripts
-    }
-    scripts ||--|| scripts_google-apps-script : SUBSET_OF
     google-apps-script {
         parent scripts
     }
     scripts ||--|| google-apps-script : SUBSET_OF
     mobile {
-        parent software
         parent scripts
+        parent software
     }
     scripts ||--|| mobile : SUBSET_OF
     scripts_mobile {
@@ -50345,6 +50478,10 @@ Pense duas vezes antes de se envolver.
         related_2 iphone
     }
     scripts ||--|| scripts_mobile : SUBSET_OF
+    powershell {
+        parent scripts
+    }
+    scripts ||--|| powershell : SUBSET_OF
     cloud {
         parent scripts
         related_2 software_linux
@@ -50356,6 +50493,19 @@ Pense duas vezes antes de se envolver.
         related_2 software_windows
     }
     scripts ||--|| scripts_powershell : SUBSET_OF
+    scripts_cloud {
+        parent scripts
+        related_2 tools_github
+    }
+    scripts ||--|| scripts_cloud : SUBSET_OF
+    scripts_google-apps-script {
+        parent scripts
+    }
+    scripts ||--|| scripts_google-apps-script : SUBSET_OF
+    scripts_AI {
+        parent scripts
+    }
+    scripts ||--|| scripts_AI : SUBSET_OF
     estudos {
         parent tools_github
         related_2 scripts
@@ -50368,15 +50518,12 @@ Pense duas vezes antes de se envolver.
     }
     tools_github ||--|| estudos : SUBSET_OF
     tools {
-        child github_estudos
+        child tools_github
         child tools_github_estudos
         child github
-        child tools_github
+        child github_estudos
     }
-    github_estudos {
-        parent tools
-    }
-    tools ||--|| github_estudos : SUBSET_OF
+    tools ||--|| tools_github : SUBSET_OF
     tools_github_estudos {
         parent tools
         parent github
@@ -50389,7 +50536,10 @@ Pense duas vezes antes de se envolver.
         child jekyll
     }
     tools ||--|| github : SUBSET_OF
-    tools ||--|| tools_github : SUBSET_OF
+    github_estudos {
+        parent tools
+    }
+    tools ||--|| github_estudos : SUBSET_OF
     spirit {
         related_2 admoestacao
     }
@@ -50415,22 +50565,22 @@ Pense duas vezes antes de se envolver.
         related_2 iphone
     }
     software ||--|| software_mobile : SUBSET_OF
-    windows {
+    software_linux {
         parent software
+        related_2 cloud
     }
-    software ||--|| windows : SUBSET_OF
+    software ||--|| software_linux : SUBSET_OF
+    software ||--|| mobile : SUBSET_OF
     software_windows {
         parent software
         related_2 cloud
         related_2 scripts_powershell
     }
     software ||--|| software_windows : SUBSET_OF
-    software ||--|| mobile : SUBSET_OF
-    software_linux {
+    windows {
         parent software
-        related_2 cloud
     }
-    software ||--|| software_linux : SUBSET_OF
+    software ||--|| windows : SUBSET_OF
     saude {
     }
     despesas {
@@ -50615,14 +50765,14 @@ document.addEventListener(&apos;DOMContentLoaded&apos;, () =&gt; {
         &lt;a class=&quot;post-heading&quot; href=&quot;#&quot; id=&quot;back-to-top&quot; aria-label=&quot;Back to top&quot;&gt;
           &lt;img src=&quot;/assets/gold.ico&quot; alt=&quot;gold icon&quot; /&gt;
         &lt;/a&gt;
-        1992-07-12
+        2024-10-18
          &amp;rightarrowtail; 18 Oct 2024
         
       &lt;/h3&gt;
       &lt;ul&gt;
-        &lt;a href=&quot;/events/&quot;&gt;
+        &lt;a href=&quot;/serverless-lift-gha/&quot;&gt;
           &lt;h2&gt;
-            Events
+            Github actions workflow dispatch + Webhooks using `Serverless.com` Lift plugin
           &lt;/h2&gt;
         &lt;/a&gt;
       &lt;/ul&gt;
@@ -50633,14 +50783,14 @@ document.addEventListener(&apos;DOMContentLoaded&apos;, () =&gt; {
         &lt;a class=&quot;post-heading&quot; href=&quot;#&quot; id=&quot;back-to-top&quot; aria-label=&quot;Back to top&quot;&gt;
           &lt;img src=&quot;/assets/gold.ico&quot; alt=&quot;gold icon&quot; /&gt;
         &lt;/a&gt;
-        2024-10-18
+        1992-07-12
          &amp;rightarrowtail; 18 Oct 2024
         
       &lt;/h3&gt;
       &lt;ul&gt;
-        &lt;a href=&quot;/serverless-lift-gha/&quot;&gt;
+        &lt;a href=&quot;/events/&quot;&gt;
           &lt;h2&gt;
-            Github actions workflow dispatch + Webhooks using `Serverless.com` Lift plugin
+            Events
           &lt;/h2&gt;
         &lt;/a&gt;
       &lt;/ul&gt;
@@ -56190,7 +56340,7 @@ this.diff_match_patch=diff_match_patch;this.DIFF_DELETE=DIFF_DELETE;this.DIFF_IN
         
         
         
-        2024-10-18 16:52:17
+        2024-10-18 16:53:51
         <a href="/" aria-label="Homepage">
           &#8505; infoBAG
         </a>

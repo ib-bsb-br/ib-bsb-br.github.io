@@ -59,7 +59,7 @@
           <time datetime="2024-10-18T00:00:00+00:00" class="post-date">
             18 Oct 2024</time>
           
-            <span class="post-updated"> &rightarrowtail; <time datetime="2024-10-18T16:11:12+00:00">18 Oct 2024</time></span>
+            <span class="post-updated"> &rightarrowtail; <time datetime="2024-10-18T19:52:38+00:00">18 Oct 2024</time></span>
           
           
           <div class="post-info">
@@ -110,10 +110,10 @@ provider:
 name: aws
 runtime: nodejs20.x
 region: us-east-1
-environment:
-GITHUB_TOKEN: ${env:GITHUB_TOKEN} # Secure GitHub token for API authentication
-GITHUB_REPOSITORY: your-github-username/your-repo-name # Format: owner/repo
-WORKFLOW_ID: your-workflow-file.yml # Default workflow ID, can be overridden
+environment:  
+GITHUB_TOKEN: ${env:GITHUB_TOKEN}  # Securely store your GitHub Personal Access Token
+GITHUB_REPOSITORY: ib-bsb-br/ib-bsb-br.github.io  # Replace with your GitHub repository
+WORKFLOW_ID: dispatch-workflow.yml # The filename or ID of the GitHub Actions workflow to trigger
 plugins:
 - serverless-lift
 functions:
@@ -123,8 +123,14 @@ events:
 - http:
 path: /webhook  # Webhook endpoint path
 method: post
-cors: true # Enable CORS for cross-origin requests
-# Optional: Function to manually trigger GitHub workflows
+cors: true
+- eventBridge:
+eventBus: ${construct:webhook.busName}
+pattern:
+source:
+- webhook
+detail-type:
+- new_comment
 triggerGithubWorkflow:
 handler: handler.triggerGithubWorkflow
 events:
@@ -137,19 +143,8 @@ webhook:
 type: webhook
 path: /webhook
 method: POST
-eventType: $request.body.type
+eventType: $request.body.eventType  # Maps to 'detail-type' in EventBridge event
 insecure: true
-functions:
-handleWebhook:
-handler: handler.handleWebhook
-events:
-- eventBridge:
-eventBus: ${construct:webhook.busName}
-pattern:
-source:
-- webhook
-detail-type:
-- new_comment
 package:
 patterns:
 - '!node_modules/aws-sdk/**'
@@ -158,10 +153,10 @@ provider:
 name: aws
 runtime: nodejs20.x
 region: us-east-1
-environment:
-GITHUB_TOKEN: ${env:GITHUB_TOKEN} # Secure GitHub token for API authentication
-GITHUB_REPOSITORY: your-github-username/your-repo-name # Format: owner/repo
-WORKFLOW_ID: your-workflow-file.yml # Default workflow ID, can be overridden
+environment:  
+GITHUB_TOKEN: ${env:GITHUB_TOKEN}  # Securely store your GitHub Personal Access Token
+GITHUB_REPOSITORY: ib-bsb-br/ib-bsb-br.github.io  # Replace with your GitHub repository
+WORKFLOW_ID: dispatch-workflow.yml # The filename or ID of the GitHub Actions workflow to trigger
 plugins:
 - serverless-lift
 functions:
@@ -171,8 +166,14 @@ events:
 - http:
 path: /webhook  # Webhook endpoint path
 method: post
-cors: true # Enable CORS for cross-origin requests
-# Optional: Function to manually trigger GitHub workflows
+cors: true
+- eventBridge:
+eventBus: ${construct:webhook.busName}
+pattern:
+source:
+- webhook
+detail-type:
+- new_comment
 triggerGithubWorkflow:
 handler: handler.triggerGithubWorkflow
 events:
@@ -185,19 +186,8 @@ webhook:
 type: webhook
 path: /webhook
 method: POST
-eventType: $request.body.type
+eventType: $request.body.eventType  # Maps to 'detail-type' in EventBridge event
 insecure: true
-functions:
-handleWebhook:
-handler: handler.handleWebhook
-events:
-- eventBridge:
-eventBus: ${construct:webhook.busName}
-pattern:
-source:
-- webhook
-detail-type:
-- new_comment
 package:
 patterns:
 - '!node_modules/aws-sdk/**'
@@ -255,8 +245,7 @@ const { by_nickname, by_email, content, time } = data;
 const slugName = slugify(by_nickname);
 const date = formatDate(time);
 return `---
-tags:
-- ${by_email}
+tags: ${by_email}
 info: aberto.
 date: ${date}
 type: post
@@ -278,13 +267,16 @@ ${content}`;
 */
 const triggerWorkflowDispatch = async (octokit, owner, repo, ref, workflowId, inputs = {}) =&gt; {
 try {
-const response = await octokit.request('POST /repos/{owner}/{repo}/actions/workflows/{workflow_id}/dispatches', {
+const response = await octokit.request(
+'POST /repos/{owner}/{repo}/actions/workflows/{workflow_id}/dispatches',
+{
 owner,
 repo,
 workflow_id: workflowId,
 ref,
 inputs,
-});
+}
+);
 if (response.status !== 204) {
 throw new Error(`Failed to dispatch workflow. GitHub API status: ${response.status}`);
 }
@@ -292,18 +284,55 @@ console.log(`Workflow '${workflowId}' dispatched successfully on ${repo}`);
 return response.data;
 } catch (error) {
 console.error('Error dispatching workflow:', error);
-throw error; // Re-throw to be caught in calling function
+throw error;
 }
+};
+/**
+* Returns CORS headers.
+* @return {Object} CORS headers.
+*/
+const getCorsHeaders = () =&gt; {
+return {
+'Access-Control-Allow-Origin': 'https://ib.bsb.br',
+'Access-Control-Allow-Methods': 'POST, OPTIONS',
+'Access-Control-Allow-Headers': 'Content-Type',
+};
 };
 /**
 * Handles incoming webhook events to create/update a blog post and trigger a workflow.
 * @param {Object} event - Event data from AWS Lambda invocation.
-* @return {Object} Response object with statusCode and body.
+* @return {Object} Response object with statusCode, headers, and body.
 */
 export const handleWebhook = async (event) =&gt; {
 try {
-const body = event.body ? JSON.parse(event.body) : {};
-const { inputs } = body; // Get inputs from request body if any
+console.log('Event received:', JSON.stringify(event, null, 2));
+let body;
+// Determine if the event is from an HTTP request or EventBridge
+if (event.body) {
+// HTTP request
+body = JSON.parse(event.body);
+} else if (event.detail) {
+// EventBridge event
+body = event.detail;
+} else {
+throw new Error('No data received in the event.');
+}
+// Handle nested 'data' object if present
+const data = body.data || body;
+// Extract and validate data from the webhook event
+const { by_nickname, by_email, content } = data;
+if (!by_email || !by_nickname || !content) {
+throw new Error('Missing required fields: by_email, by_nickname, or content.');
+}
+// Use 'createdAt' or 'updatedAt' as the time, or default to current time
+let eventTime = data.createdAt || data.updatedAt || new Date().toISOString();
+// Validate and format the time
+try {
+eventTime = formatDate(eventTime);
+} catch (e) {
+// If invalid, default to current date
+eventTime = formatDate(new Date().toISOString());
+}
 // Validate required environment variables
 const githubToken = process.env.GITHUB_TOKEN;
 const githubRepository = process.env.GITHUB_REPOSITORY;
@@ -313,49 +342,80 @@ throw new Error('Missing required environment variables.');
 }
 const [owner, repo] = githubRepository.split('/');
 const octokit = new Octokit({ auth: githubToken });
-// Extract and validate data from the webhook event
-const eventData = body || {};
-const { by_nickname, by_email, content } = eventData;
-const time = eventData.time || new Date().toISOString();
-if (!by_email || !by_nickname || !content) {
-throw new Error('Missing required fields: by_email, by_nickname, or content.');
-}
 // Create or update the blog post file in the repository
-const date = formatDate(time);
 const slugName = slugify(by_nickname);
-const path = `_posts/${date}-${slugName}.md`;
+const path = `_posts/${eventTime}-${slugName}.md`;
 const message = `New post by ${by_nickname}`;
-const postContent = createPostContent({ by_nickname, by_email, content, time });
+const postContent = createPostContent({
+by_nickname,
+by_email,
+content,
+time: eventTime,
+});
 const contentEncoded = Base64.encode(postContent);
+// Check if the file already exists
+let sha;
+try {
+const { data: fileData } = await octokit.repos.getContent({
+owner,
+repo,
+path,
+});
+sha = fileData.sha; // File exists, so we'll update it
+} catch (err) {
+if (err.status !== 404) {
+console.error('Error fetching file content:', err);
+throw err;
+}
+// File does not exist; proceed to create it
+}
+// Create or update the file in the repository
 await octokit.repos.createOrUpdateFileContents({
 owner,
 repo,
 path,
 message,
 content: contentEncoded,
+sha, // Include sha if updating an existing file
 });
 // Dispatch the workflow
 const ref = 'main'; // You can make this dynamic if needed
-await triggerWorkflowDispatch(octokit, owner, repo, ref, workflowId, inputs);
+await triggerWorkflowDispatch(octokit, owner, repo, ref, workflowId);
 return {
 statusCode: 200,
-body: JSON.stringify({ message: 'File created/updated and workflow triggered', path }),
+headers: getCorsHeaders(),
+body: JSON.stringify({
+message: 'File created/updated and workflow triggered',
+path,
+}),
 };
 } catch (error) {
 console.error('Error in handleWebhook:', error);
 return {
-statusCode: error.status || 500,
-body: JSON.stringify({ message: error.message || 'An unexpected error occurred.' }),
+statusCode: error.statusCode || 500,
+headers: getCorsHeaders(),
+body: JSON.stringify({
+message: error.message || 'An unexpected error occurred.',
+}),
 };
 }
 };
 /**
-* Optional function to manually trigger a GitHub Actions workflow via HTTP endpoint.
+* Handles requests to manually trigger a GitHub Actions workflow via HTTP endpoint.
 * @param {Object} event - Event data from AWS Lambda invocation.
-* @return {Object} Response object with statusCode and body.
+* @return {Object} Response object with statusCode, headers, and body.
 */
 export const triggerGithubWorkflow = async (event) =&gt; {
 try {
+if (event.httpMethod === 'OPTIONS') {
+// Respond to CORS preflight request
+return {
+statusCode: 200,
+headers: getCorsHeaders(),
+body: '',
+};
+}
+console.log('Event received:', JSON.stringify(event, null, 2));
 const body = event.body ? JSON.parse(event.body) : {};
 const { ref = 'main', workflow_id, inputs = {} } = body;
 // Validate required environment variables
@@ -371,16 +431,20 @@ throw new Error('Workflow ID is required.');
 const [owner, repo] = githubRepository.split('/');
 const octokit = new Octokit({ auth: githubToken });
 // Dispatch the workflow
-const response = await triggerWorkflowDispatch(octokit, owner, repo, ref, workflowId, inputs);
+await triggerWorkflowDispatch(octokit, owner, repo, ref, workflowId, inputs);
 return {
 statusCode: 200,
-body: JSON.stringify({ message: 'Workflow dispatched successfully.', details: response }),
+headers: getCorsHeaders(),
+body: JSON.stringify({ message: 'Workflow dispatched successfully.' }),
 };
 } catch (error) {
 console.error('Error in triggerGithubWorkflow:', error);
 return {
-statusCode: error.status || 500,
-body: JSON.stringify({ message: error.message || 'Failed to dispatch workflow.' }),
+statusCode: error.statusCode || 500,
+headers: getCorsHeaders(),
+body: JSON.stringify({
+message: error.message || 'Failed to dispatch workflow.',
+}),
 };
 }
 };" data-download-link="" data-download-link-label="Download Javascript"><code class="language-javascript">import { Octokit } from "@octokit/rest";
@@ -427,8 +491,7 @@ const { by_nickname, by_email, content, time } = data;
 const slugName = slugify(by_nickname);
 const date = formatDate(time);
 return `---
-tags:
-- ${by_email}
+tags: ${by_email}
 info: aberto.
 date: ${date}
 type: post
@@ -450,13 +513,16 @@ ${content}`;
 */
 const triggerWorkflowDispatch = async (octokit, owner, repo, ref, workflowId, inputs = {}) =&gt; {
 try {
-const response = await octokit.request('POST /repos/{owner}/{repo}/actions/workflows/{workflow_id}/dispatches', {
+const response = await octokit.request(
+'POST /repos/{owner}/{repo}/actions/workflows/{workflow_id}/dispatches',
+{
 owner,
 repo,
 workflow_id: workflowId,
 ref,
 inputs,
-});
+}
+);
 if (response.status !== 204) {
 throw new Error(`Failed to dispatch workflow. GitHub API status: ${response.status}`);
 }
@@ -464,18 +530,55 @@ console.log(`Workflow '${workflowId}' dispatched successfully on ${repo}`);
 return response.data;
 } catch (error) {
 console.error('Error dispatching workflow:', error);
-throw error; // Re-throw to be caught in calling function
+throw error;
 }
+};
+/**
+* Returns CORS headers.
+* @return {Object} CORS headers.
+*/
+const getCorsHeaders = () =&gt; {
+return {
+'Access-Control-Allow-Origin': 'https://ib.bsb.br',
+'Access-Control-Allow-Methods': 'POST, OPTIONS',
+'Access-Control-Allow-Headers': 'Content-Type',
+};
 };
 /**
 * Handles incoming webhook events to create/update a blog post and trigger a workflow.
 * @param {Object} event - Event data from AWS Lambda invocation.
-* @return {Object} Response object with statusCode and body.
+* @return {Object} Response object with statusCode, headers, and body.
 */
 export const handleWebhook = async (event) =&gt; {
 try {
-const body = event.body ? JSON.parse(event.body) : {};
-const { inputs } = body; // Get inputs from request body if any
+console.log('Event received:', JSON.stringify(event, null, 2));
+let body;
+// Determine if the event is from an HTTP request or EventBridge
+if (event.body) {
+// HTTP request
+body = JSON.parse(event.body);
+} else if (event.detail) {
+// EventBridge event
+body = event.detail;
+} else {
+throw new Error('No data received in the event.');
+}
+// Handle nested 'data' object if present
+const data = body.data || body;
+// Extract and validate data from the webhook event
+const { by_nickname, by_email, content } = data;
+if (!by_email || !by_nickname || !content) {
+throw new Error('Missing required fields: by_email, by_nickname, or content.');
+}
+// Use 'createdAt' or 'updatedAt' as the time, or default to current time
+let eventTime = data.createdAt || data.updatedAt || new Date().toISOString();
+// Validate and format the time
+try {
+eventTime = formatDate(eventTime);
+} catch (e) {
+// If invalid, default to current date
+eventTime = formatDate(new Date().toISOString());
+}
 // Validate required environment variables
 const githubToken = process.env.GITHUB_TOKEN;
 const githubRepository = process.env.GITHUB_REPOSITORY;
@@ -485,49 +588,80 @@ throw new Error('Missing required environment variables.');
 }
 const [owner, repo] = githubRepository.split('/');
 const octokit = new Octokit({ auth: githubToken });
-// Extract and validate data from the webhook event
-const eventData = body || {};
-const { by_nickname, by_email, content } = eventData;
-const time = eventData.time || new Date().toISOString();
-if (!by_email || !by_nickname || !content) {
-throw new Error('Missing required fields: by_email, by_nickname, or content.');
-}
 // Create or update the blog post file in the repository
-const date = formatDate(time);
 const slugName = slugify(by_nickname);
-const path = `_posts/${date}-${slugName}.md`;
+const path = `_posts/${eventTime}-${slugName}.md`;
 const message = `New post by ${by_nickname}`;
-const postContent = createPostContent({ by_nickname, by_email, content, time });
+const postContent = createPostContent({
+by_nickname,
+by_email,
+content,
+time: eventTime,
+});
 const contentEncoded = Base64.encode(postContent);
+// Check if the file already exists
+let sha;
+try {
+const { data: fileData } = await octokit.repos.getContent({
+owner,
+repo,
+path,
+});
+sha = fileData.sha; // File exists, so we'll update it
+} catch (err) {
+if (err.status !== 404) {
+console.error('Error fetching file content:', err);
+throw err;
+}
+// File does not exist; proceed to create it
+}
+// Create or update the file in the repository
 await octokit.repos.createOrUpdateFileContents({
 owner,
 repo,
 path,
 message,
 content: contentEncoded,
+sha, // Include sha if updating an existing file
 });
 // Dispatch the workflow
 const ref = 'main'; // You can make this dynamic if needed
-await triggerWorkflowDispatch(octokit, owner, repo, ref, workflowId, inputs);
+await triggerWorkflowDispatch(octokit, owner, repo, ref, workflowId);
 return {
 statusCode: 200,
-body: JSON.stringify({ message: 'File created/updated and workflow triggered', path }),
+headers: getCorsHeaders(),
+body: JSON.stringify({
+message: 'File created/updated and workflow triggered',
+path,
+}),
 };
 } catch (error) {
 console.error('Error in handleWebhook:', error);
 return {
-statusCode: error.status || 500,
-body: JSON.stringify({ message: error.message || 'An unexpected error occurred.' }),
+statusCode: error.statusCode || 500,
+headers: getCorsHeaders(),
+body: JSON.stringify({
+message: error.message || 'An unexpected error occurred.',
+}),
 };
 }
 };
 /**
-* Optional function to manually trigger a GitHub Actions workflow via HTTP endpoint.
+* Handles requests to manually trigger a GitHub Actions workflow via HTTP endpoint.
 * @param {Object} event - Event data from AWS Lambda invocation.
-* @return {Object} Response object with statusCode and body.
+* @return {Object} Response object with statusCode, headers, and body.
 */
 export const triggerGithubWorkflow = async (event) =&gt; {
 try {
+if (event.httpMethod === 'OPTIONS') {
+// Respond to CORS preflight request
+return {
+statusCode: 200,
+headers: getCorsHeaders(),
+body: '',
+};
+}
+console.log('Event received:', JSON.stringify(event, null, 2));
 const body = event.body ? JSON.parse(event.body) : {};
 const { ref = 'main', workflow_id, inputs = {} } = body;
 // Validate required environment variables
@@ -543,16 +677,20 @@ throw new Error('Workflow ID is required.');
 const [owner, repo] = githubRepository.split('/');
 const octokit = new Octokit({ auth: githubToken });
 // Dispatch the workflow
-const response = await triggerWorkflowDispatch(octokit, owner, repo, ref, workflowId, inputs);
+await triggerWorkflowDispatch(octokit, owner, repo, ref, workflowId, inputs);
 return {
 statusCode: 200,
-body: JSON.stringify({ message: 'Workflow dispatched successfully.', details: response }),
+headers: getCorsHeaders(),
+body: JSON.stringify({ message: 'Workflow dispatched successfully.' }),
 };
 } catch (error) {
 console.error('Error in triggerGithubWorkflow:', error);
 return {
-statusCode: error.status || 500,
-body: JSON.stringify({ message: error.message || 'Failed to dispatch workflow.' }),
+statusCode: error.statusCode || 500,
+headers: getCorsHeaders(),
+body: JSON.stringify({
+message: error.message || 'Failed to dispatch workflow.',
+}),
 };
 }
 };</code></section>
@@ -565,61 +703,71 @@ body: JSON.stringify({ message: error.message || 'Failed to dispatch workflow.' 
   </h1>
       
 
-<section data-filename="javascript_code-block.js" data-code="const webhookEndpoint = '/webhook'; // Path to your webhook endpoint
+<section data-filename="javascript_code-block.js" data-code="&lt;button id=&quot;triggerWorkflow&quot;&gt;Events&lt;/button&gt;
+&lt;div id=&quot;calendar&quot;&gt;&lt;/div&gt;
+&lt;script&gt;
 document.getElementById('triggerWorkflow').addEventListener('click', async () =&gt; {
-// Display status message to user
-// ...
+const webhookEndpoint = 'https://8k5ij92zn4.execute-api.us-east-1.amazonaws.com/dev/trigger_github_workflow'; // Replace with your actual endpoint
+const payload = {
+ref: 'main',
+workflow_id: 'dispatch-workflow.yml', // Ensure this matches your GitHub Actions workflow filename
+inputs: {
+some_input: 'An example input' // Replace with actual inputs your workflow expects
+}
+};
 try {
-const inputs = { run_workflow: 'yes', testParam: Math.random() }; // Example inputs
 const response = await fetch(webhookEndpoint, {
 method: 'POST',
-headers: { 'Content-Type': 'application/json' },
-body: JSON.stringify({
-by_nickname: 'John Doe', // Example data
-by_email: 'john.doe@example.com',
-content: 'This is a test post.',
-inputs, // Send inputs in the request body
-}),
+headers: {
+'Content-Type': 'application/json'
+},
+body: JSON.stringify(payload),
 });
 if (!response.ok) {
 const errorData = await response.json();
 throw new Error(`Server error: ${response.status} - ${errorData.message}`);
 }
 const data = await response.json();
-// Handle successful response
-// ...
+console.log('Workflow dispatched successfully:', data);
+alert('Workflow has been successfully triggered.');
 } catch (error) {
-// Handle error and display message to user
-// ...
+console.error('Error triggering workflow:', error);
+alert(`Failed to trigger workflow: ${error.message}`);
 }
-});" data-download-link="" data-download-link-label="Download Javascript"><code class="language-javascript">const webhookEndpoint = '/webhook'; // Path to your webhook endpoint
-document.getElementById('triggerWorkflow').addEventListener('click', async () =&gt; {
-// Display status message to user
-// ...
+});
+&lt;/script&gt;" data-download-link="" data-download-link-label="Download Javascript"><code class="language-javascript"><button id="triggerWorkflow">Events</button>
+<div id="calendar"></div>
+<script>
+document.getElementById('triggerWorkflow').addEventListener('click', async () => {
+const webhookEndpoint = 'https://8k5ij92zn4.execute-api.us-east-1.amazonaws.com/dev/trigger_github_workflow'; // Replace with your actual endpoint
+const payload = {
+ref: 'main',
+workflow_id: 'dispatch-workflow.yml', // Ensure this matches your GitHub Actions workflow filename
+inputs: {
+some_input: 'An example input' // Replace with actual inputs your workflow expects
+}
+};
 try {
-const inputs = { run_workflow: 'yes', testParam: Math.random() }; // Example inputs
 const response = await fetch(webhookEndpoint, {
 method: 'POST',
-headers: { 'Content-Type': 'application/json' },
-body: JSON.stringify({
-by_nickname: 'John Doe', // Example data
-by_email: 'john.doe@example.com',
-content: 'This is a test post.',
-inputs, // Send inputs in the request body
-}),
+headers: {
+'Content-Type': 'application/json'
+},
+body: JSON.stringify(payload),
 });
 if (!response.ok) {
 const errorData = await response.json();
 throw new Error(`Server error: ${response.status} - ${errorData.message}`);
 }
 const data = await response.json();
-// Handle successful response
-// ...
+console.log('Workflow dispatched successfully:', data);
+alert('Workflow has been successfully triggered.');
 } catch (error) {
-// Handle error and display message to user
-// ...
+console.error('Error triggering workflow:', error);
+alert(`Failed to trigger workflow: ${error.message}`);
 }
-});</code></section><hr />
+});
+</script></code></section><hr />
   <h1 id="deployment-and-configuration-instructions">
     
     
@@ -641,11 +789,11 @@ const data = await response.json();
   </li>
 </ol>
 
-<section data-filename="bash_code-block.sh" data-code="$env:GITHUB_TOKEN=&quot;your_personal_access_token&quot;
-$env:GITHUB_REPOSITORY=&quot;owner/repo&quot;
-$env:WORKFLOW_ID=&quot;main.yml&quot;" data-download-link="" data-download-link-label="Download Bash"><code class="language-bash">$env:GITHUB_TOKEN="your_personal_access_token"
-$env:GITHUB_REPOSITORY="owner/repo"
-$env:WORKFLOW_ID="main.yml"</code></section>
+<section data-filename="bash_code-block.sh" data-code="export GITHUB_TOKEN=&quot;your_personal_access_token&quot;
+export GITHUB_REPOSITORY=&quot;owner/repo&quot;
+export WORKFLOW_ID=&quot;main.yml&quot;" data-download-link="" data-download-link-label="Download Bash"><code class="language-bash">export GITHUB_TOKEN="your_personal_access_token"
+export GITHUB_REPOSITORY="owner/repo"
+export WORKFLOW_ID="main.yml"</code></section>
 
 <ol>
   <li>
@@ -653,7 +801,7 @@ $env:WORKFLOW_ID="main.yml"</code></section>
 
     <ul>
       <li>Install dependencies: <code class="language-plaintext highlighter-rouge">npm install</code></li>
-      <li>Deploy using the Serverless Framework: <code class="language-plaintext highlighter-rouge">serverless deploy</code></li>
+      <li>Deploy using the Serverless Framework: (1) <code class="language-plaintext highlighter-rouge">{npx serverless print</code>; (2) <code class="language-plaintext highlighter-rouge">serverless deploy</code>.</li>
     </ul>
   </li>
   <li>
@@ -661,48 +809,49 @@ $env:WORKFLOW_ID="main.yml"</code></section>
 
     <ul>
       <li>Create a workflow file in your repository (e.g., <code class="language-plaintext highlighter-rouge">your-workflow-file.yml</code>).</li>
-      <li>Ensure it includes <code class="language-plaintext highlighter-rouge">workflow_dispatch</code> in the <code class="language-plaintext highlighter-rouge">on</code> section:
-        <section data-filename="yaml_code-block.yaml" data-code="on:
+      <li>
+        <p>Ensure it includes <code class="language-plaintext highlighter-rouge">workflow_dispatch</code> in the <code class="language-plaintext highlighter-rouge">on</code> section:</p>
+
+        <section data-filename="yaml_code-block.yaml" data-code="name: Trigger Workflow
+on:
 workflow_dispatch:
 inputs:
-run_workflow:
-description: 'Trigger to run the workflow'
-required: true
-default: 'yes'" data-download-link="" data-download-link-label="Download Yaml"><code class="language-yaml">on:
+some_input:
+description: 'An example input'
+required: false
+jobs:
+trigger-workflow:
+runs-on: ubuntu-latest
+name: Dispatch Event
+steps:
+     - name: Trigger target workflow
+run: |
+curl -X POST \
+-H &quot;Accept: application/vnd.github+json&quot; \
+-H &quot;Authorization: Bearer $&quot; \
+-H &quot;Content-Type: application/json&quot; \
+-d '{&quot;event_type&quot;:&quot;trigger-jekyll&quot;, &quot;client_payload&quot;: {&quot;message&quot;: &quot;Triggered from main workflow&quot;}}'
+https://api.github.com/repos/$/dispatches" data-download-link="" data-download-link-label="Download Yaml"><code class="language-yaml">name: Trigger Workflow
+on:
 workflow_dispatch:
 inputs:
-run_workflow:
-description: 'Trigger to run the workflow'
-required: true
-default: 'yes'</code></section>
+some_input:
+description: 'An example input'
+required: false
+jobs:
+trigger-workflow:
+runs-on: ubuntu-latest
+name: Dispatch Event
+steps:
+     - name: Trigger target workflow
+run: |
+curl -X POST \
+-H "Accept: application/vnd.github+json" \
+-H "Authorization: Bearer $" \
+-H "Content-Type: application/json" \
+-d '{"event_type":"trigger-jekyll", "client_payload": {"message": "Triggered from main workflow"}}'
+https://api.github.com/repos/$/dispatches</code></section>
       </li>
-      <li>Define the jobs and steps as needed for your application.</li>
-    </ul>
-  </li>
-  <li>
-    <p><strong>Testing the Functions:</strong></p>
-
-    <ul>
-      <li>Test the <code class="language-plaintext highlighter-rouge">handleWebhook</code> function by sending a POST request to the <code class="language-plaintext highlighter-rouge">/webhook</code> endpoint.
-        <ul>
-          <li>Include required data fields in the request body (<code class="language-plaintext highlighter-rouge">by_nickname</code>, <code class="language-plaintext highlighter-rouge">by_email</code>, <code class="language-plaintext highlighter-rouge">content</code>).</li>
-          <li>Optionally include <code class="language-plaintext highlighter-rouge">inputs</code> for the workflow.</li>
-        </ul>
-      </li>
-      <li>If the <code class="language-plaintext highlighter-rouge">triggerGithubWorkflow</code> function is added, test it by sending a POST request to the <code class="language-plaintext highlighter-rouge">/trigger_github_workflow</code> endpoint.
-        <ul>
-          <li>Include <code class="language-plaintext highlighter-rouge">workflow_id</code>, <code class="language-plaintext highlighter-rouge">ref</code>, and <code class="language-plaintext highlighter-rouge">inputs</code> in the request body as needed.</li>
-        </ul>
-      </li>
-    </ul>
-  </li>
-  <li>
-    <p><strong>Security Considerations:</strong></p>
-
-    <ul>
-      <li>Ensure that all tokens and sensitive data are securely stored and not exposed to users.</li>
-      <li>Regularly review and update dependencies to fix any known vulnerabilities.</li>
-      <li>Monitor logs for any suspicious activities or errors.</li>
     </ul>
   </li>
 </ol>
@@ -726,7 +875,7 @@ default: 'yes'</code></section>
         
         
         
-        2024-10-18 16:52:17
+        2024-10-18 16:53:51
         <a href="/" aria-label="Homepage">
           &#8505; infoBAG
         </a>
@@ -746,7 +895,7 @@ default: 'yes'</code></section>
     "headline": "Github actions workflow dispatch + Webhooks using `Serverless.com` Lift plugin",
     "description": "",
     "datePublished": "2024-10-18T00:00:00+00:00",
-    "dateModified": "2024-10-18T16:11:12+00:00",
+    "dateModified": "2024-10-18T19:52:38+00:00",
     "author": {
       "@type": "Person",
       "name": "Author"
