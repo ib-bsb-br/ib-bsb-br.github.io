@@ -161,48 +161,214 @@ Artigos:
 SOBRENOME, Nome. Título do artigo. Nome da Revista, Local, v. XX, n. XX, p. XX-XX, mês ano.
 ```
 
-## PARTE VI: NUMERAÇÃO
+# GUIA DEFINITIVO: NUMERAÇÃO, CABEÇALHOS E ESPAÇAMENTOS ABNT
 
-### 1. Páginas
-- Início da contagem: capa
-- Número visível: a partir da introdução
+## 1. ESTRUTURA BÁSICA DO DOCUMENTO
+
+### 1.1 Divisão em Seções
+```
+DOCUMENTO
+│
+├── ELEMENTOS PRÉ-TEXTUAIS
+│   ├── Capa
+│   ├── Folha de Rosto
+│   ├── Resumo
+│   └── Sumário
+│
+├── ELEMENTOS TEXTUAIS [NOVA SEÇÃO]
+│   ├── Introdução
+│   ├── Desenvolvimento
+│   └── Conclusão
+│
+└── ELEMENTOS PÓS-TEXTUAIS [NOVA SEÇÃO]
+    ├── Referências
+    ├── Apêndices
+    └── Anexos
+```
+
+## 2. NUMERAÇÃO DE PÁGINAS
+
+### 2.1 Regras ABNT
+- Todas as folhas contadas sequencialmente
+- Números aparecem a partir da primeira folha textual
+- Elementos pré-textuais: contados, não numerados
 - Posição: canto superior direito
-- Fonte tamanho 10
+- Tamanho da fonte: 10 pontos
 
-Para configurar:
-1. Menu "Inserir" > "Número de página"
-2. Selecionar posição
-3. Configurar diferentes seções para ocultar números nas páginas iniciais
+### 2.2 Configuração no Google Docs
 
-### 2. Seções
-- Numeração progressiva
-- Algarismos arábicos
-- Sem ponto final
-- Alinhadas à margem esquerda
+**Passo 1: Criar Seções**
+```
+Menu > Inserir > Quebra > Quebra de seção (próxima página)
+↳ Inserir antes da Introdução
+↳ Inserir antes das Referências
+```
 
-## PARTE VII: VERIFICAÇÃO FINAL
+**Passo 2: Configurar Cabeçalhos**
+```
+1. Dois cliques no cabeçalho
+2. Desmarcar "Vincular ao anterior"
+3. Configurar para cada seção
+```
 
-### 1. Lista de Verificação
-- [ ] Margens corretas
-- [ ] Fonte e tamanho consistentes
-- [ ] Espaçamento entre linhas
-- [ ] Recuo de parágrafos
-- [ ] Numeração de páginas
-- [ ] Formatação de títulos
-- [ ] Citações corretas
-- [ ] Referências completas
-- [ ] Sumário atualizado
+**Passo 3: Inserir Numeração**
+```
+Menu > Inserir > Números de página
+↳ Selecionar "Cabeçalho direito"
+↳ Ajustar fonte e tamanho
+```
 
-### 2. Problemas Comuns
-1. Inconsistência na formatação
-2. Erros na numeração de páginas
-3. Citações mal formatadas
-4. Referências incompletas
-5. Sumário desatualizado
+### 2.3 Resolução de Problemas Comuns
 
-### 3. Dicas de Produtividade
-1. Usar estilos do Google Docs
-2. Manter backup do arquivo
-3. Atualizar sumário regularmente
-4. Verificar normas específicas da instituição
-5. Utilizar verificador ortográfico
+**Problema 1: Números aparecem nos elementos pré-textuais**
+```
+Solução:
+1. Dois cliques no cabeçalho da seção pré-textual
+2. Marcar "Números diferentes na primeira página"
+3. Remover números visíveis
+```
+
+**Problema 2: Sequência incorreta**
+```
+Solução:
+1. Verificar vinculação entre seções
+2. Confirmar configuração "Continuar da seção anterior"
+3. Reconfigurar números iniciais se necessário
+```
+
+## 3. CABEÇALHOS
+
+### 3.1 Configuração por Seção
+
+**Elementos Pré-textuais:**
+```
+└── Sem cabeçalho
+```
+
+**Elementos Textuais:**
+```
+├── Primeira página da seção
+│   └── Sem cabeçalho
+│
+└── Demais páginas
+    ├── Título do trabalho (linha 1)
+    └── Seção atual (linha 2)
+```
+
+**Elementos Pós-textuais:**
+```
+├── Referências: sem cabeçalho
+└── Apêndices/Anexos: igual aos elementos textuais
+```
+
+### 3.2 Formatação Detalhada
+```
+CABEÇALHO
+├── Fonte: igual ao texto principal
+├── Tamanho: 12 pontos
+├── Alinhamento: centralizado
+└── Espaçamento: simples
+```
+
+## 4. ESPAÇAMENTOS
+
+### 4.1 Tabela de Espaçamentos por Elemento
+
+```
+ELEMENTO                  | ENTRE LINHAS | ANTES  | DEPOIS
+-------------------------|--------------|--------|--------
+Texto principal          | 1,5          | -      | -
+Títulos de seções       | 1,5          | 2×1,5  | 1×1,5
+Parágrafos              | 1,5          | 0      | 1×1,5
+Citações longas         | Simples      | 1×1,5  | 1×1,5
+Notas de rodapé         | Simples      | 0      | 0
+Referências             | Simples      | 1×1,5  | 1×1,5
+Legendas                | Simples      | 1×1,5  | 1×1,5
+```
+
+### 4.2 Configurações Específicas no Google Docs
+
+**Espaçamento 1,5:**
+```
+1. Selecionar texto
+2. Menu > Formatar > Espaçamento entre linhas
+3. Personalizado: 1,5
+```
+
+**Espaçamento Simples:**
+```
+1. Selecionar texto
+2. Menu > Formatar > Espaçamento entre linhas
+3. Personalizado: Simples
+```
+
+**Recuos:**
+```
+Parágrafos:
+└── Primeira linha: 1,25 cm
+
+Citações longas:
+└── Recuo esquerdo: 4 cm
+```
+
+### 4.3 Casos Especiais
+
+**Títulos sem Numeração:**
+```
+ELEMENTO                  | ESPAÇAMENTO
+-------------------------|-------------
+RESUMO                   | 2×1,5 antes e depois
+ABSTRACT                 | 2×1,5 antes e depois
+REFERÊNCIAS              | 2×1,5 antes e depois
+```
+
+**Elementos da Folha de Rosto:**
+```
+Natureza do trabalho:
+├── Recuo: 8 cm esquerda
+├── Espaçamento: simples
+└── Alinhamento: justificado
+```
+
+## 5. VERIFICAÇÃO FINAL
+
+### 5.1 Lista de Verificação
+```
+NUMERAÇÃO
+□ Páginas contadas desde a capa
+□ Números visíveis a partir da Introdução
+□ Posição correta (superior direito)
+□ Fonte tamanho 10
+
+CABEÇALHOS
+□ Ausentes nos elementos pré-textuais
+□ Formatação consistente
+□ Conteúdo correto por seção
+
+ESPAÇAMENTOS
+□ Texto principal em 1,5
+□ Recuos de parágrafo corretos
+□ Espaços entre seções
+□ Citações longas formatadas
+□ Referências com espaçamento simples
+```
+
+### 5.2 Ferramentas de Verificação
+1. Usar régua para conferir recuos
+2. Ativar marcadores de parágrafo
+3. Verificar quebras de seção
+4. Conferir vinculação de cabeçalhos
+5. Testar impressão para validar layout
+
+### 5.3 Salvamento e Backup
+```
+1. Salvar versões diferentes:
+   └── NomeTrabalho_v1.0
+   └── NomeTrabalho_v1.1
+   └── NomeTrabalho_FINAL
+
+2. Backup em:
+   ├── Google Drive
+   ├── Download local
+   └── Outro serviço em nuvem
+```
