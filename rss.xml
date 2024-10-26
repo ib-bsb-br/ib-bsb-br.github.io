@@ -54,7 +54,7 @@
     <title>infoBAG</title>
     <link href="https://ib.bsb.br/rss.xml" rel="self"/>
     <link href="https://ib.bsb.br/"/>
-    <updated>2024-10-26T03:36:10+00:00</updated>
+    <updated>2024-10-26T04:01:59+00:00</updated>
     <id>https://ib.bsb.br</id>
     <author>
         <name></name>
@@ -293,6 +293,234 @@
     &lt;/tr&gt;
   &lt;/tbody&gt;
 &lt;/table&gt;
+</content>
+    </entry>
+    
+    <entry>
+        <title>Building a File Storage Service with Cloudflare Workers and R2</title>
+        <link href="https://ib.bsb.br/building-a-file-storage-service-with-cloudflare-workers-and-r2/"/>
+        <updated>2024-10-26T00:00:00+00:00</updated>
+        <id>https://ib.bsb.br/building-a-file-storage-service-with-cloudflare-workers-and-r2/</id>
+        <content type="html">&lt;p&gt;How to create a file storage service that handles multiple file types using Cloudflare Workers for the RESTful API and Cloudflare R2 for storage. This implementation allows secure uploading, retrieving, and deleting of files.&lt;/p&gt;
+
+&lt;h3 id=&quot;introduction&quot;&gt;Introduction&lt;/h3&gt;
+
+&lt;p&gt;The goal is to build a self-hosted file storage solution (图床) that leverages Cloudflare Workers and R2, inspired by the tutorials:&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;&lt;a href=&quot;https://zhul.in/2024/08/12/new-picbed-based-on-cloudflare-and-upyun/&quot;&gt;自建图床小记一——图床架构与 DNS 解析&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://zhul.in/2024/08/13/build-restful-api-for-cloudflare-r2-with-cloudflare-workers/&quot;&gt;自建图床小记二——使用 Workers 为 R2 构建 Restful API&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;This service will:&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;Support multiple file types (images, documents, etc.).&lt;/li&gt;
+  &lt;li&gt;Use Cloudflare R2 for object storage.&lt;/li&gt;
+  &lt;li&gt;Provide a RESTful API for file operations.&lt;/li&gt;
+  &lt;li&gt;Include basic authentication for secure access.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h3 id=&quot;implementation&quot;&gt;Implementation&lt;/h3&gt;
+
+&lt;p&gt;Below is the Cloudflare Worker script with explanations and comments.&lt;/p&gt;
+
+&lt;div class=&quot;language-javascript highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;c1&quot;&gt;// Cloudflare Worker Script for File Storage Service&lt;/span&gt;
+
+&lt;span class=&quot;k&quot;&gt;export&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;default&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;async&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;fetch&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;request&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;env&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;ctx&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;await&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;handleRequest&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;request&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;env&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+  &lt;span class=&quot;p&quot;&gt;},&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;};&lt;/span&gt;
+
+&lt;span class=&quot;cm&quot;&gt;/**
+ * Handles incoming requests and routes them based on the HTTP method.
+ * @param {Request} request - The incoming HTTP request.
+ * @param {Object} env - Environment bindings (e.g., R2 bucket).
+ */&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;async&lt;/span&gt; &lt;span class=&quot;kd&quot;&gt;function&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;handleRequest&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;request&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;env&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+  &lt;span class=&quot;c1&quot;&gt;// Parse the URL to get the file path&lt;/span&gt;
+  &lt;span class=&quot;kd&quot;&gt;const&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;url&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;new&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;URL&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;request&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;url&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+  &lt;span class=&quot;kd&quot;&gt;const&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;filePath&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;decodeURIComponent&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;url&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;pathname&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;slice&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;));&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;// Remove leading &apos;/&apos;&lt;/span&gt;
+
+  &lt;span class=&quot;c1&quot;&gt;// Authentication for write operations&lt;/span&gt;
+  &lt;span class=&quot;kd&quot;&gt;const&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;AUTH_KEY&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;env&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;AUTH_KEY_SECRET&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+  &lt;span class=&quot;kd&quot;&gt;const&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;method&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;request&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;method&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;toUpperCase&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;();&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;if &lt;/span&gt;&lt;span class=&quot;p&quot;&gt;([&lt;/span&gt;&lt;span class=&quot;dl&quot;&gt;&apos;&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;PUT&lt;/span&gt;&lt;span class=&quot;dl&quot;&gt;&apos;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;dl&quot;&gt;&apos;&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;DELETE&lt;/span&gt;&lt;span class=&quot;dl&quot;&gt;&apos;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;].&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;includes&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;method&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;))&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;kd&quot;&gt;const&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;authHeader&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;request&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;headers&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;get&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;dl&quot;&gt;&apos;&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;X-Custom-Auth-Key&lt;/span&gt;&lt;span class=&quot;dl&quot;&gt;&apos;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;if &lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;authHeader&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;!==&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;AUTH_KEY&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+      &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;new&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Response&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;dl&quot;&gt;&apos;&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;Forbidden&lt;/span&gt;&lt;span class=&quot;dl&quot;&gt;&apos;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;na&quot;&gt;status&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;403&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;});&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+  &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+
+  &lt;span class=&quot;k&quot;&gt;switch &lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;method&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;case&lt;/span&gt; &lt;span class=&quot;dl&quot;&gt;&apos;&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;PUT&lt;/span&gt;&lt;span class=&quot;dl&quot;&gt;&apos;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;
+      &lt;span class=&quot;c1&quot;&gt;// Handle file upload&lt;/span&gt;
+      &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;await&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;uploadFile&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;request&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;env&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;filePath&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;case&lt;/span&gt; &lt;span class=&quot;dl&quot;&gt;&apos;&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;GET&lt;/span&gt;&lt;span class=&quot;dl&quot;&gt;&apos;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;
+      &lt;span class=&quot;c1&quot;&gt;// Handle file retrieval&lt;/span&gt;
+      &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;await&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;getFile&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;env&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;filePath&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;case&lt;/span&gt; &lt;span class=&quot;dl&quot;&gt;&apos;&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;DELETE&lt;/span&gt;&lt;span class=&quot;dl&quot;&gt;&apos;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;
+      &lt;span class=&quot;c1&quot;&gt;// Handle file deletion&lt;/span&gt;
+      &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;await&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;deleteFile&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;env&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;filePath&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+    &lt;span class=&quot;nl&quot;&gt;default&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;
+      &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;new&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Response&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;dl&quot;&gt;&apos;&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;Method Not Allowed&lt;/span&gt;&lt;span class=&quot;dl&quot;&gt;&apos;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+        &lt;span class=&quot;na&quot;&gt;status&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;405&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+        &lt;span class=&quot;na&quot;&gt;headers&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;na&quot;&gt;Allow&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;dl&quot;&gt;&apos;&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;GET, PUT, DELETE&lt;/span&gt;&lt;span class=&quot;dl&quot;&gt;&apos;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;},&lt;/span&gt;
+      &lt;span class=&quot;p&quot;&gt;});&lt;/span&gt;
+  &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+
+&lt;span class=&quot;cm&quot;&gt;/**
+ * Uploads a file to the R2 bucket.
+ * @param {Request} request - The incoming HTTP request.
+ * @param {Object} env - Environment bindings.
+ * @param {string} key - The file path in the bucket.
+ */&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;async&lt;/span&gt; &lt;span class=&quot;kd&quot;&gt;function&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;uploadFile&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;request&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;env&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;key&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+  &lt;span class=&quot;c1&quot;&gt;// Optional: Validate file size, type, etc.&lt;/span&gt;
+
+  &lt;span class=&quot;c1&quot;&gt;// Save the file to R2&lt;/span&gt;
+  &lt;span class=&quot;kd&quot;&gt;const&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;contentType&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;
+    &lt;span class=&quot;nx&quot;&gt;request&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;headers&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;get&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;dl&quot;&gt;&apos;&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;Content-Type&lt;/span&gt;&lt;span class=&quot;dl&quot;&gt;&apos;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;||&lt;/span&gt; &lt;span class=&quot;dl&quot;&gt;&apos;&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;application/octet-stream&lt;/span&gt;&lt;span class=&quot;dl&quot;&gt;&apos;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;await&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;env&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;MY_BUCKET&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;put&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;key&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;request&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;body&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;na&quot;&gt;httpMetadata&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;contentType&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;},&lt;/span&gt;
+    &lt;span class=&quot;c1&quot;&gt;// Optional: Set cache control&lt;/span&gt;
+    &lt;span class=&quot;na&quot;&gt;httpMetadata&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;na&quot;&gt;cacheControl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;dl&quot;&gt;&apos;&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;public, max-age=31536000&lt;/span&gt;&lt;span class=&quot;dl&quot;&gt;&apos;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;},&lt;/span&gt;
+  &lt;span class=&quot;p&quot;&gt;});&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;new&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Response&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;`File &apos;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;${&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;key&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&apos; uploaded successfully`&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;na&quot;&gt;status&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;200&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;});&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+
+&lt;span class=&quot;cm&quot;&gt;/**
+ * Retrieves a file from the R2 bucket.
+ * @param {Object} env - Environment bindings.
+ * @param {string} key - The file path in the bucket.
+ */&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;async&lt;/span&gt; &lt;span class=&quot;kd&quot;&gt;function&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;getFile&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;env&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;key&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+  &lt;span class=&quot;kd&quot;&gt;const&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;object&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;await&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;env&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;MY_BUCKET&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;get&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;key&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;if &lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;!&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;object&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;new&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Response&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;dl&quot;&gt;&apos;&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;File Not Found&lt;/span&gt;&lt;span class=&quot;dl&quot;&gt;&apos;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;na&quot;&gt;status&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;404&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;});&lt;/span&gt;
+  &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+
+  &lt;span class=&quot;c1&quot;&gt;// Return the file with appropriate headers&lt;/span&gt;
+  &lt;span class=&quot;kd&quot;&gt;const&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;headers&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;new&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Headers&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;();&lt;/span&gt;
+  &lt;span class=&quot;nx&quot;&gt;object&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;writeHttpMetadata&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;headers&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+  &lt;span class=&quot;nx&quot;&gt;headers&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;set&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;dl&quot;&gt;&apos;&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;ETag&lt;/span&gt;&lt;span class=&quot;dl&quot;&gt;&apos;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;object&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;httpEtag&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+
+  &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;new&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Response&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;object&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;body&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;headers&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;});&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+
+&lt;span class=&quot;cm&quot;&gt;/**
+ * Deletes a file from the R2 bucket.
+ * @param {Object} env - Environment bindings.
+ * @param {string} key - The file path in the bucket.
+ */&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;async&lt;/span&gt; &lt;span class=&quot;kd&quot;&gt;function&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;deleteFile&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;env&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;key&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;await&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;env&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;MY_BUCKET&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;delete&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;key&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;new&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Response&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;`File &apos;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;${&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;key&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&apos; deleted successfully`&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;na&quot;&gt;status&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;200&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;});&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h3 id=&quot;setup-instructions&quot;&gt;Setup Instructions&lt;/h3&gt;
+
+&lt;h4 id=&quot;1-create-an-r2-bucket&quot;&gt;1. Create an R2 Bucket&lt;/h4&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;Log in to your Cloudflare dashboard.&lt;/li&gt;
+  &lt;li&gt;Navigate to &lt;strong&gt;R2&lt;/strong&gt; and create a new bucket (e.g., &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;my-file-storage&lt;/code&gt;).&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h4 id=&quot;2-write-the-worker-script&quot;&gt;2. Write the Worker Script&lt;/h4&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;Use the script provided above.&lt;/li&gt;
+  &lt;li&gt;Save it in your Cloudflare Workers dashboard or use the &lt;a href=&quot;https://developers.cloudflare.com/workers/wrangler/&quot;&gt;Wrangler CLI&lt;/a&gt;.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h4 id=&quot;3-bind-the-r2-bucket-to-the-worker&quot;&gt;3. Bind the R2 Bucket to the Worker&lt;/h4&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;In your Worker settings, go to &lt;strong&gt;Variables &amp;gt; R2 Buckets&lt;/strong&gt;.&lt;/li&gt;
+  &lt;li&gt;Bind the &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;MY_BUCKET&lt;/code&gt; variable to your R2 bucket (&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;my-file-storage&lt;/code&gt;).&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h4 id=&quot;4-set-the-authentication-key&quot;&gt;4. Set the Authentication Key&lt;/h4&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;In &lt;strong&gt;Variables &amp;gt; Environment Variables&lt;/strong&gt;, add &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;AUTH_KEY_SECRET&lt;/code&gt; with a secure value (your secret key).&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h4 id=&quot;5-deploy-the-worker&quot;&gt;5. Deploy the Worker&lt;/h4&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;Assign a route or domain to your Worker (e.g., &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;https://files.example.com&lt;/code&gt;).&lt;/li&gt;
+  &lt;li&gt;Deploy the Worker.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h3 id=&quot;usage-examples&quot;&gt;Usage Examples&lt;/h3&gt;
+
+&lt;h4 id=&quot;uploading-a-file&quot;&gt;Uploading a File&lt;/h4&gt;
+
+&lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;curl &lt;span class=&quot;nt&quot;&gt;-X&lt;/span&gt; PUT &lt;span class=&quot;s1&quot;&gt;&apos;https://files.example.com/path/to/file.jpg&apos;&lt;/span&gt; &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+  &lt;span class=&quot;nt&quot;&gt;-H&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&apos;Content-Type: image/jpeg&apos;&lt;/span&gt; &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+  &lt;span class=&quot;nt&quot;&gt;-H&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&apos;X-Custom-Auth-Key: your_auth_key&apos;&lt;/span&gt; &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+  &lt;span class=&quot;nt&quot;&gt;--data-binary&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&apos;@local/path/to/file.jpg&apos;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h4 id=&quot;retrieving-a-file&quot;&gt;Retrieving a File&lt;/h4&gt;
+
+&lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;curl &lt;span class=&quot;nt&quot;&gt;-X&lt;/span&gt; GET &lt;span class=&quot;s1&quot;&gt;&apos;https://files.example.com/path/to/file.jpg&apos;&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;--output&lt;/span&gt; file.jpg
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h4 id=&quot;deleting-a-file&quot;&gt;Deleting a File&lt;/h4&gt;
+
+&lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;curl &lt;span class=&quot;nt&quot;&gt;-X&lt;/span&gt; DELETE &lt;span class=&quot;s1&quot;&gt;&apos;https://files.example.com/path/to/file.jpg&apos;&lt;/span&gt; &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+  &lt;span class=&quot;nt&quot;&gt;-H&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&apos;X-Custom-Auth-Key: your_auth_key&apos;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h3 id=&quot;notes-and-considerations&quot;&gt;Notes and Considerations&lt;/h3&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;
+    &lt;p&gt;&lt;strong&gt;Supported File Types:&lt;/strong&gt;&lt;/p&gt;
+
+    &lt;ul&gt;
+      &lt;li&gt;All file types are supported. Ensure the &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;Content-Type&lt;/code&gt; is correctly set when uploading.&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;&lt;strong&gt;Authentication:&lt;/strong&gt;&lt;/p&gt;
+
+    &lt;ul&gt;
+      &lt;li&gt;Only &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;PUT&lt;/code&gt; and &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;DELETE&lt;/code&gt; requests require the &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;X-Custom-Auth-Key&lt;/code&gt; header.&lt;/li&gt;
+      &lt;li&gt;&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;GET&lt;/code&gt; requests are public. Implement additional checks if you need to restrict access.&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;&lt;strong&gt;Caching:&lt;/strong&gt;&lt;/p&gt;
+
+    &lt;ul&gt;
+      &lt;li&gt;The &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;Cache-Control&lt;/code&gt; header is set for one year (&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;max-age=31536000&lt;/code&gt;).&lt;/li&gt;
+      &lt;li&gt;Adjust caching policies as needed.&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;&lt;strong&gt;Error Handling:&lt;/strong&gt;&lt;/p&gt;
+
+    &lt;ul&gt;
+      &lt;li&gt;The script provides basic error responses.&lt;/li&gt;
+      &lt;li&gt;Expand error handling for production use.&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;&lt;strong&gt;Limits:&lt;/strong&gt;&lt;/p&gt;
+
+    &lt;ul&gt;
+      &lt;li&gt;Cloudflare Workers have &lt;a href=&quot;https://developers.cloudflare.com/workers/platform/limits/&quot;&gt;limits&lt;/a&gt; on request size, CPU time, etc.&lt;/li&gt;
+      &lt;li&gt;For large files, consider using direct uploads to R2 or multipart uploads.&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+&lt;/ul&gt;
 </content>
     </entry>
     
@@ -46967,8 +47195,8 @@ Pense duas vezes antes de se envolver.
         
         
         &lt;ul class=&quot;search-link&quot;&gt;
-            &lt;a href=&quot;#cloud&quot; aria-label=&quot;Tag cloud with 5 posts&quot;&gt;
-                cloud (5)
+            &lt;a href=&quot;#cloud&quot; aria-label=&quot;Tag cloud with 6 posts&quot;&gt;
+                cloud (6)
             &lt;/a&gt;
         &lt;/ul&gt;
         
@@ -47275,8 +47503,8 @@ Pense duas vezes antes de se envolver.
         
         
         &lt;ul class=&quot;search-link&quot;&gt;
-            &lt;a href=&quot;#scripts&quot; aria-label=&quot;Tag scripts with 29 posts&quot;&gt;
-                scripts (29)
+            &lt;a href=&quot;#scripts&quot; aria-label=&quot;Tag scripts with 30 posts&quot;&gt;
+                scripts (30)
             &lt;/a&gt;
         &lt;/ul&gt;
         
@@ -47297,8 +47525,8 @@ Pense duas vezes antes de se envolver.
         
         
         &lt;ul class=&quot;search-link&quot;&gt;
-            &lt;a href=&quot;#scripts-cloud&quot; aria-label=&quot;Tag scripts&amp;gt;cloud with 2 posts&quot;&gt;
-                scripts&amp;gt;cloud (2)
+            &lt;a href=&quot;#scripts-cloud&quot; aria-label=&quot;Tag scripts&amp;gt;cloud with 3 posts&quot;&gt;
+                scripts&amp;gt;cloud (3)
             &lt;/a&gt;
         &lt;/ul&gt;
         
@@ -47429,8 +47657,8 @@ Pense duas vezes antes de se envolver.
         
         
         &lt;ul class=&quot;search-link&quot;&gt;
-            &lt;a href=&quot;#tools&quot; aria-label=&quot;Tag tools with 13 posts&quot;&gt;
-                tools (13)
+            &lt;a href=&quot;#tools&quot; aria-label=&quot;Tag tools with 14 posts&quot;&gt;
+                tools (14)
             &lt;/a&gt;
         &lt;/ul&gt;
         
@@ -47609,13 +47837,13 @@ Pense duas vezes antes de se envolver.
             
             &lt;h2&gt;Child tags:&lt;/h2&gt;
             
-            &lt;li&gt;&lt;a href=&quot;#llm&quot; aria-label=&quot;Child tag LLM&quot;&gt;LLM&lt;/a&gt;&lt;/li&gt;
+            &lt;li&gt;&lt;a href=&quot;#prompt&quot; aria-label=&quot;Child tag prompt&quot;&gt;prompt&lt;/a&gt;&lt;/li&gt;
             
             &lt;li&gt;&lt;a href=&quot;#ai-llm&quot; aria-label=&quot;Child tag AI&amp;gt;LLM&quot;&gt;AI&amp;gt;LLM&lt;/a&gt;&lt;/li&gt;
             
-            &lt;li&gt;&lt;a href=&quot;#ai-prompt&quot; aria-label=&quot;Child tag AI&amp;gt;prompt&quot;&gt;AI&amp;gt;prompt&lt;/a&gt;&lt;/li&gt;
+            &lt;li&gt;&lt;a href=&quot;#llm&quot; aria-label=&quot;Child tag LLM&quot;&gt;LLM&lt;/a&gt;&lt;/li&gt;
             
-            &lt;li&gt;&lt;a href=&quot;#prompt&quot; aria-label=&quot;Child tag prompt&quot;&gt;prompt&lt;/a&gt;&lt;/li&gt;
+            &lt;li&gt;&lt;a href=&quot;#ai-prompt&quot; aria-label=&quot;Child tag AI&amp;gt;prompt&quot;&gt;AI&amp;gt;prompt&lt;/a&gt;&lt;/li&gt;
             
             
         &lt;/ul&gt;
@@ -48223,6 +48451,14 @@ Pense duas vezes antes de se envolver.
         &lt;ul class=&quot;search-link&quot;&gt;
         
             
+            &lt;li&gt;&lt;a href=&quot;/building-a-file-storage-service-with-cloudflare-workers-and-r2&quot;&gt;
+                &lt;time datetime=&quot;2024-10-26T00:00:00+00:00&quot;&gt;&lt;strong&gt;October 26, 2024&lt;/strong&gt;&lt;/time&gt;
+                &amp;hArr;
+                
+                Building a File Storage Service with Cloudflare Workers and R2
+                
+            &lt;/a&gt;&lt;/li&gt;
+            
             &lt;li&gt;&lt;a href=&quot;/serverless-lift-gha&quot;&gt;
                 &lt;time datetime=&quot;2024-10-18T00:00:00+00:00&quot;&gt;&lt;strong&gt;October 18, 2024&lt;/strong&gt;&lt;/time&gt;
                 &amp;hArr;
@@ -48466,13 +48702,13 @@ Pense duas vezes antes de se envolver.
             
             &lt;h2&gt;Child tags:&lt;/h2&gt;
             
-            &lt;li&gt;&lt;a href=&quot;#direito&quot; aria-label=&quot;Child tag direito&quot;&gt;direito&lt;/a&gt;&lt;/li&gt;
-            
             &lt;li&gt;&lt;a href=&quot;#edital-direito-processual-penal&quot; aria-label=&quot;Child tag edital&amp;gt;direito&amp;gt;processual-penal&quot;&gt;edital&amp;gt;direito&amp;gt;processual-penal&lt;/a&gt;&lt;/li&gt;
             
-            &lt;li&gt;&lt;a href=&quot;#direito-processual-penal&quot; aria-label=&quot;Child tag direito&amp;gt;processual-penal&quot;&gt;direito&amp;gt;processual-penal&lt;/a&gt;&lt;/li&gt;
-            
             &lt;li&gt;&lt;a href=&quot;#edital-direito&quot; aria-label=&quot;Child tag edital&amp;gt;direito&quot;&gt;edital&amp;gt;direito&lt;/a&gt;&lt;/li&gt;
+            
+            &lt;li&gt;&lt;a href=&quot;#direito&quot; aria-label=&quot;Child tag direito&quot;&gt;direito&lt;/a&gt;&lt;/li&gt;
+            
+            &lt;li&gt;&lt;a href=&quot;#direito-processual-penal&quot; aria-label=&quot;Child tag direito&amp;gt;processual-penal&quot;&gt;direito&amp;gt;processual-penal&lt;/a&gt;&lt;/li&gt;
             
             
         &lt;/ul&gt;
@@ -48550,9 +48786,9 @@ Pense duas vezes antes de se envolver.
         
         &lt;h2&gt;Parent tags:&lt;/h2&gt;
             
-            &lt;li&gt;&lt;a href=&quot;#direito&quot; aria-label=&quot;Parent tag direito&quot;&gt;direito&lt;/a&gt;&lt;/li&gt;
-            
             &lt;li&gt;&lt;a href=&quot;#edital&quot; aria-label=&quot;Parent tag edital&quot;&gt;edital&lt;/a&gt;&lt;/li&gt;
+            
+            &lt;li&gt;&lt;a href=&quot;#direito&quot; aria-label=&quot;Parent tag direito&quot;&gt;direito&lt;/a&gt;&lt;/li&gt;
             
             
         &lt;/ul&gt;
@@ -50141,6 +50377,14 @@ Pense duas vezes antes de se envolver.
         &lt;ul class=&quot;search-link&quot;&gt;
         
             
+            &lt;li&gt;&lt;a href=&quot;/building-a-file-storage-service-with-cloudflare-workers-and-r2&quot;&gt;
+                &lt;time datetime=&quot;2024-10-26T00:00:00+00:00&quot;&gt;&lt;strong&gt;October 26, 2024&lt;/strong&gt;&lt;/time&gt;
+                &amp;hArr;
+                
+                Building a File Storage Service with Cloudflare Workers and R2
+                
+            &lt;/a&gt;&lt;/li&gt;
+            
             &lt;li&gt;&lt;a href=&quot;/ankiapp-interactively-ai-chat-python&quot;&gt;
                 &lt;time datetime=&quot;2024-10-20T00:00:00+00:00&quot;&gt;&lt;strong&gt;October 20, 2024&lt;/strong&gt;&lt;/time&gt;
                 &amp;hArr;
@@ -50381,25 +50625,25 @@ Pense duas vezes antes de se envolver.
             
             &lt;h2&gt;Child tags:&lt;/h2&gt;
             
-            &lt;li&gt;&lt;a href=&quot;#scripts-ai&quot; aria-label=&quot;Child tag scripts&amp;gt;AI&quot;&gt;scripts&amp;gt;AI&lt;/a&gt;&lt;/li&gt;
-            
-            &lt;li&gt;&lt;a href=&quot;#scripts-mobile&quot; aria-label=&quot;Child tag scripts&amp;gt;mobile&quot;&gt;scripts&amp;gt;mobile&lt;/a&gt;&lt;/li&gt;
-            
             &lt;li&gt;&lt;a href=&quot;#google-apps-script&quot; aria-label=&quot;Child tag google-apps-script&quot;&gt;google-apps-script&lt;/a&gt;&lt;/li&gt;
             
-            &lt;li&gt;&lt;a href=&quot;#powershell&quot; aria-label=&quot;Child tag powershell&quot;&gt;powershell&lt;/a&gt;&lt;/li&gt;
-            
-            &lt;li&gt;&lt;a href=&quot;#ai&quot; aria-label=&quot;Child tag AI&quot;&gt;AI&lt;/a&gt;&lt;/li&gt;
+            &lt;li&gt;&lt;a href=&quot;#scripts-ai&quot; aria-label=&quot;Child tag scripts&amp;gt;AI&quot;&gt;scripts&amp;gt;AI&lt;/a&gt;&lt;/li&gt;
             
             &lt;li&gt;&lt;a href=&quot;#cloud&quot; aria-label=&quot;Child tag cloud&quot;&gt;cloud&lt;/a&gt;&lt;/li&gt;
             
+            &lt;li&gt;&lt;a href=&quot;#mobile&quot; aria-label=&quot;Child tag mobile&quot;&gt;mobile&lt;/a&gt;&lt;/li&gt;
+            
             &lt;li&gt;&lt;a href=&quot;#scripts-powershell&quot; aria-label=&quot;Child tag scripts&amp;gt;powershell&quot;&gt;scripts&amp;gt;powershell&lt;/a&gt;&lt;/li&gt;
+            
+            &lt;li&gt;&lt;a href=&quot;#scripts-google-apps-script&quot; aria-label=&quot;Child tag scripts&amp;gt;google-apps-script&quot;&gt;scripts&amp;gt;google-apps-script&lt;/a&gt;&lt;/li&gt;
+            
+            &lt;li&gt;&lt;a href=&quot;#ai&quot; aria-label=&quot;Child tag AI&quot;&gt;AI&lt;/a&gt;&lt;/li&gt;
+            
+            &lt;li&gt;&lt;a href=&quot;#scripts-mobile&quot; aria-label=&quot;Child tag scripts&amp;gt;mobile&quot;&gt;scripts&amp;gt;mobile&lt;/a&gt;&lt;/li&gt;
             
             &lt;li&gt;&lt;a href=&quot;#scripts-cloud&quot; aria-label=&quot;Child tag scripts&amp;gt;cloud&quot;&gt;scripts&amp;gt;cloud&lt;/a&gt;&lt;/li&gt;
             
-            &lt;li&gt;&lt;a href=&quot;#mobile&quot; aria-label=&quot;Child tag mobile&quot;&gt;mobile&lt;/a&gt;&lt;/li&gt;
-            
-            &lt;li&gt;&lt;a href=&quot;#scripts-google-apps-script&quot; aria-label=&quot;Child tag scripts&amp;gt;google-apps-script&quot;&gt;scripts&amp;gt;google-apps-script&lt;/a&gt;&lt;/li&gt;
+            &lt;li&gt;&lt;a href=&quot;#powershell&quot; aria-label=&quot;Child tag powershell&quot;&gt;powershell&lt;/a&gt;&lt;/li&gt;
             
             
         &lt;/ul&gt;
@@ -50470,6 +50714,14 @@ Pense duas vezes antes de se envolver.
         &lt;ul class=&quot;search-link&quot;&gt;
         
             
+            &lt;li&gt;&lt;a href=&quot;/building-a-file-storage-service-with-cloudflare-workers-and-r2&quot;&gt;
+                &lt;time datetime=&quot;2024-10-26T00:00:00+00:00&quot;&gt;&lt;strong&gt;October 26, 2024&lt;/strong&gt;&lt;/time&gt;
+                &amp;hArr;
+                
+                &lt;mark&gt;Building a File Storage Service with Cloudflare Workers and R2&lt;/mark&gt;
+                
+            &lt;/a&gt;&lt;/li&gt;
+            
             &lt;li&gt;&lt;a href=&quot;/serverless-lift-gha&quot;&gt;
                 &lt;time datetime=&quot;2024-10-18T00:00:00+00:00&quot;&gt;&lt;strong&gt;October 18, 2024&lt;/strong&gt;&lt;/time&gt;
                 &amp;hArr;
@@ -50504,6 +50756,10 @@ Pense duas vezes antes de se envolver.
             
             &lt;li&gt;&lt;a href=&quot;#tools-github&quot; aria-label=&quot;Related tag tools&amp;gt;github&quot;&gt;
                 tools&amp;gt;github (2)
+            &lt;/a&gt;&lt;/li&gt;
+            
+            &lt;li&gt;&lt;a href=&quot;#tools&quot; aria-label=&quot;Related tag tools&quot;&gt;
+                tools (2)
             &lt;/a&gt;&lt;/li&gt;
             
             
@@ -50752,17 +51008,17 @@ Pense duas vezes antes de se envolver.
             
             &lt;h2&gt;Child tags:&lt;/h2&gt;
             
+            &lt;li&gt;&lt;a href=&quot;#mobile&quot; aria-label=&quot;Child tag mobile&quot;&gt;mobile&lt;/a&gt;&lt;/li&gt;
+            
+            &lt;li&gt;&lt;a href=&quot;#software-mobile&quot; aria-label=&quot;Child tag software&amp;gt;mobile&quot;&gt;software&amp;gt;mobile&lt;/a&gt;&lt;/li&gt;
+            
+            &lt;li&gt;&lt;a href=&quot;#software-linux&quot; aria-label=&quot;Child tag software&amp;gt;linux&quot;&gt;software&amp;gt;linux&lt;/a&gt;&lt;/li&gt;
+            
             &lt;li&gt;&lt;a href=&quot;#software-windows&quot; aria-label=&quot;Child tag software&amp;gt;windows&quot;&gt;software&amp;gt;windows&lt;/a&gt;&lt;/li&gt;
             
             &lt;li&gt;&lt;a href=&quot;#windows&quot; aria-label=&quot;Child tag windows&quot;&gt;windows&lt;/a&gt;&lt;/li&gt;
             
-            &lt;li&gt;&lt;a href=&quot;#software-mobile&quot; aria-label=&quot;Child tag software&amp;gt;mobile&quot;&gt;software&amp;gt;mobile&lt;/a&gt;&lt;/li&gt;
-            
             &lt;li&gt;&lt;a href=&quot;#linux&quot; aria-label=&quot;Child tag linux&quot;&gt;linux&lt;/a&gt;&lt;/li&gt;
-            
-            &lt;li&gt;&lt;a href=&quot;#software-linux&quot; aria-label=&quot;Child tag software&amp;gt;linux&quot;&gt;software&amp;gt;linux&lt;/a&gt;&lt;/li&gt;
-            
-            &lt;li&gt;&lt;a href=&quot;#mobile&quot; aria-label=&quot;Child tag mobile&quot;&gt;mobile&lt;/a&gt;&lt;/li&gt;
             
             
         &lt;/ul&gt;
@@ -51091,9 +51347,9 @@ Pense duas vezes antes de se envolver.
             
             &lt;h2&gt;Child tags:&lt;/h2&gt;
             
-            &lt;li&gt;&lt;a href=&quot;#iphone&quot; aria-label=&quot;Child tag iphone&quot;&gt;iphone&lt;/a&gt;&lt;/li&gt;
-            
             &lt;li&gt;&lt;a href=&quot;#tasks-iphone&quot; aria-label=&quot;Child tag tasks&amp;gt;iphone&quot;&gt;tasks&amp;gt;iphone&lt;/a&gt;&lt;/li&gt;
+            
+            &lt;li&gt;&lt;a href=&quot;#iphone&quot; aria-label=&quot;Child tag iphone&quot;&gt;iphone&lt;/a&gt;&lt;/li&gt;
             
             
         &lt;/ul&gt;
@@ -51151,6 +51407,14 @@ Pense duas vezes antes de se envolver.
         &lt;/h1&gt;
         &lt;ul class=&quot;search-link&quot;&gt;
         
+            
+            &lt;li&gt;&lt;a href=&quot;/building-a-file-storage-service-with-cloudflare-workers-and-r2&quot;&gt;
+                &lt;time datetime=&quot;2024-10-26T00:00:00+00:00&quot;&gt;&lt;strong&gt;October 26, 2024&lt;/strong&gt;&lt;/time&gt;
+                &amp;hArr;
+                
+                &lt;mark&gt;Building a File Storage Service with Cloudflare Workers and R2&lt;/mark&gt;
+                
+            &lt;/a&gt;&lt;/li&gt;
             
             &lt;li&gt;&lt;a href=&quot;/serverless-lift-gha&quot;&gt;
                 &lt;time datetime=&quot;2024-10-18T00:00:00+00:00&quot;&gt;&lt;strong&gt;October 18, 2024&lt;/strong&gt;&lt;/time&gt;
@@ -51264,11 +51528,11 @@ Pense duas vezes antes de se envolver.
             
             &lt;h2&gt;Child tags:&lt;/h2&gt;
             
+            &lt;li&gt;&lt;a href=&quot;#github-estudos&quot; aria-label=&quot;Child tag github&amp;gt;estudos&quot;&gt;github&amp;gt;estudos&lt;/a&gt;&lt;/li&gt;
+            
             &lt;li&gt;&lt;a href=&quot;#tools-github&quot; aria-label=&quot;Child tag tools&amp;gt;github&quot;&gt;tools&amp;gt;github&lt;/a&gt;&lt;/li&gt;
             
             &lt;li&gt;&lt;a href=&quot;#tools-github-estudos&quot; aria-label=&quot;Child tag tools&amp;gt;github&amp;gt;estudos&quot;&gt;tools&amp;gt;github&amp;gt;estudos&lt;/a&gt;&lt;/li&gt;
-            
-            &lt;li&gt;&lt;a href=&quot;#github-estudos&quot; aria-label=&quot;Child tag github&amp;gt;estudos&quot;&gt;github&amp;gt;estudos&lt;/a&gt;&lt;/li&gt;
             
             &lt;li&gt;&lt;a href=&quot;#github&quot; aria-label=&quot;Child tag github&quot;&gt;github&lt;/a&gt;&lt;/li&gt;
             
@@ -51276,6 +51540,13 @@ Pense duas vezes antes de se envolver.
         &lt;/ul&gt;
         &lt;ul class=&quot;search-link&quot;&gt;
         
+        &lt;h2&gt;Related tags:&lt;/h2&gt;
+            
+            &lt;li&gt;&lt;a href=&quot;#scripts-cloud&quot; aria-label=&quot;Related tag scripts&amp;gt;cloud&quot;&gt;
+                scripts&amp;gt;cloud (2)
+            &lt;/a&gt;&lt;/li&gt;
+            
+            
         &lt;/ul&gt;
     &lt;/div&gt;
     
@@ -51607,123 +51878,124 @@ Pense duas vezes antes de se envolver.
         parent scripts
     }
     scripts {
-        child scripts_AI
-        child scripts_mobile
         child google-apps-script
-        child powershell
-        child AI
+        child scripts_AI
         child cloud
-        child scripts_powershell
-        child scripts_cloud
         child mobile
+        child scripts_powershell
         child scripts_google-apps-script
+        child AI
+        child scripts_mobile
+        child scripts_cloud
+        child powershell
         related_2 estudos
         related_24 linux
     }
     scripts ||--|| scripts_AI : SUBSET_OF
-    scripts_mobile {
-        parent scripts
-        related_2 iphone
-    }
-    scripts ||--|| scripts_mobile : SUBSET_OF
     google-apps-script {
         parent scripts
     }
     scripts ||--|| google-apps-script : SUBSET_OF
-    powershell {
-        parent scripts
-    }
-    scripts ||--|| powershell : SUBSET_OF
-    AI {
-        parent scripts
-        child LLM
-        child AI_LLM
-        child AI_prompt
-        child prompt
-    }
-    scripts ||--|| AI : SUBSET_OF
     cloud {
         parent scripts
         related_2 software_linux
         related_2 software_windows
     }
     scripts ||--|| cloud : SUBSET_OF
-    scripts_powershell {
-        parent scripts
-        related_2 software_windows
-    }
-    scripts ||--|| scripts_powershell : SUBSET_OF
-    scripts_cloud {
-        parent scripts
-        related_2 tools_github
-    }
-    scripts ||--|| scripts_cloud : SUBSET_OF
     mobile {
         parent software
         parent scripts
     }
     scripts ||--|| mobile : SUBSET_OF
+    scripts_powershell {
+        parent scripts
+        related_2 software_windows
+    }
+    scripts ||--|| scripts_powershell : SUBSET_OF
     scripts_google-apps-script {
         parent scripts
     }
     scripts ||--|| scripts_google-apps-script : SUBSET_OF
-    LLM {
-        parent AI
+    AI {
+        parent scripts
+        child prompt
+        child AI_LLM
+        child LLM
+        child AI_prompt
     }
-    AI ||--|| LLM : SUBSET_OF
-    AI_LLM {
-        parent AI
+    scripts ||--|| AI : SUBSET_OF
+    scripts_mobile {
+        parent scripts
+        related_2 iphone
     }
-    AI ||--|| AI_LLM : SUBSET_OF
-    AI_prompt {
-        parent AI
+    scripts ||--|| scripts_mobile : SUBSET_OF
+    scripts_cloud {
+        parent scripts
+        related_2 tools_github
+        related_2 tools
     }
-    AI ||--|| AI_prompt : SUBSET_OF
+    scripts ||--|| scripts_cloud : SUBSET_OF
+    powershell {
+        parent scripts
+    }
+    scripts ||--|| powershell : SUBSET_OF
     prompt {
         parent AI
     }
     AI ||--|| prompt : SUBSET_OF
+    AI_LLM {
+        parent AI
+    }
+    AI ||--|| AI_LLM : SUBSET_OF
+    LLM {
+        parent AI
+    }
+    AI ||--|| LLM : SUBSET_OF
+    AI_prompt {
+        parent AI
+    }
+    AI ||--|| AI_prompt : SUBSET_OF
     linux {
         parent software
         related_2 software_mobile
         related_24 scripts
     }
     software {
+        child mobile
+        child software_mobile
+        child software_linux
         child software_windows
         child windows
-        child software_mobile
         child linux
-        child software_linux
-        child mobile
     }
     software ||--|| linux : SUBSET_OF
     calls {
     }
     edital {
-        child direito
         child edital_direito_processual-penal
-        child direito_processual-penal
         child edital_direito
+        child direito
+        child direito_processual-penal
     }
-    direito {
-        parent edital
-        child edital_direito_processual-penal
-    }
-    edital ||--|| direito : SUBSET_OF
     edital_direito_processual-penal {
-        parent direito
         parent edital
+        parent direito
     }
     edital ||--|| edital_direito_processual-penal : SUBSET_OF
-    direito_processual-penal {
-        parent edital
-    }
-    edital ||--|| direito_processual-penal : SUBSET_OF
     edital_direito {
         parent edital
         child processual-penal
     }
     edital ||--|| edital_direito : SUBSET_OF
+    direito {
+        parent edital
+        child edital_direito_processual-penal
+    }
+    edital ||--|| direito : SUBSET_OF
+    direito_processual-penal {
+        parent edital
+    }
+    edital ||--|| direito_processual-penal : SUBSET_OF
     fatherhood {
     }
     rendimentos {
@@ -51731,20 +52003,20 @@ Pense duas vezes antes de se envolver.
     sell {
     }
     tasks {
-        child iphone
         child tasks_iphone
+        child iphone
         related_2 mlo
     }
+    tasks_iphone {
+        parent tasks
+    }
+    tasks ||--|| tasks_iphone : SUBSET_OF
     iphone {
         parent tasks
         related_2 scripts_mobile
         related_2 software_mobile
     }
     tasks ||--|| iphone : SUBSET_OF
-    tasks_iphone {
-        parent tasks
-    }
-    tasks ||--|| tasks_iphone : SUBSET_OF
     estudos {
         parent tools_github
         related_2 scripts
@@ -51757,21 +52029,22 @@ Pense duas vezes antes de se envolver.
     }
     tools_github ||--|| estudos : SUBSET_OF
     tools {
+        child github_estudos
         child tools_github
         child tools_github_estudos
-        child github_estudos
         child github
+        related_2 scripts_cloud
     }
+    github_estudos {
+        parent tools
+    }
+    tools ||--|| github_estudos : SUBSET_OF
     tools ||--|| tools_github : SUBSET_OF
     tools_github_estudos {
         parent tools
         parent github
     }
     tools ||--|| tools_github_estudos : SUBSET_OF
-    github_estudos {
-        parent tools
-    }
-    tools ||--|| github_estudos : SUBSET_OF
     github {
         parent tools
         child github_jekyll
@@ -51804,6 +52077,12 @@ Pense duas vezes antes de se envolver.
         related_2 iphone
     }
     software ||--|| software_mobile : SUBSET_OF
+    software ||--|| mobile : SUBSET_OF
+    software_linux {
+        parent software
+        related_2 cloud
+    }
+    software ||--|| software_linux : SUBSET_OF
     software_windows {
         parent software
         related_2 cloud
@@ -51814,12 +52093,6 @@ Pense duas vezes antes de se envolver.
         parent software
     }
     software ||--|| windows : SUBSET_OF
-    software_linux {
-        parent software
-        related_2 cloud
-    }
-    software ||--|| software_linux : SUBSET_OF
-    software ||--|| mobile : SUBSET_OF
     saude {
     }
     despesas {
@@ -51997,6 +52270,24 @@ document.addEventListener(&apos;DOMContentLoaded&apos;, () =&gt; {
     
     
     
+    
+    &lt;div class=&quot;search-link&quot;&gt;
+      &lt;h3&gt;
+        &lt;a class=&quot;post-heading&quot; href=&quot;#&quot; id=&quot;back-to-top&quot; aria-label=&quot;Back to top&quot;&gt;
+          &lt;img src=&quot;/assets/gold.ico&quot; alt=&quot;gold icon&quot; /&gt;
+        &lt;/a&gt;
+        2024-10-26
+         &amp;rightarrowtail; 26 Oct 2024
+        
+      &lt;/h3&gt;
+      &lt;ul&gt;
+        &lt;a href=&quot;/building-a-file-storage-service-with-cloudflare-workers-and-r2/&quot;&gt;
+          &lt;h2&gt;
+            Building a File Storage Service with Cloudflare Workers and R2
+          &lt;/h2&gt;
+        &lt;/a&gt;
+      &lt;/ul&gt;
+    &lt;/div&gt;
     
     &lt;div class=&quot;search-link&quot;&gt;
       &lt;h3&gt;
@@ -57686,7 +57977,7 @@ this.diff_match_patch=diff_match_patch;this.DIFF_DELETE=DIFF_DELETE;this.DIFF_IN
         
         
         
-        2024-10-26 00:36:10
+        2024-10-26 01:01:59
         <a href="/" aria-label="Homepage">
           &#8505; infoBAG
         </a>

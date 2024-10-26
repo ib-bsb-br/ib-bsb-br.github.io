@@ -1,4 +1,223 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.4">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2024-10-26T03:36:10+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">categorized MIME types</title><link href="https://ib.bsb.br/categorized-mime-types/" rel="alternate" type="text/html" title="categorized MIME types" /><published>2024-10-26T00:00:00+00:00</published><updated>2024-10-26T03:33:50+00:00</updated><id>https://ib.bsb.br/categorized-mime-types</id><content type="html" xml:base="https://ib.bsb.br/categorized-mime-types/"><![CDATA[<table>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.4">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2024-10-26T04:01:59+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">Building a File Storage Service with Cloudflare Workers and R2</title><link href="https://ib.bsb.br/building-a-file-storage-service-with-cloudflare-workers-and-r2/" rel="alternate" type="text/html" title="Building a File Storage Service with Cloudflare Workers and R2" /><published>2024-10-26T00:00:00+00:00</published><updated>2024-10-26T04:01:12+00:00</updated><id>https://ib.bsb.br/building-a-file-storage-service-with-cloudflare-workers-and-r2</id><content type="html" xml:base="https://ib.bsb.br/building-a-file-storage-service-with-cloudflare-workers-and-r2/"><![CDATA[<p>How to create a file storage service that handles multiple file types using Cloudflare Workers for the RESTful API and Cloudflare R2 for storage. This implementation allows secure uploading, retrieving, and deleting of files.</p>
+
+<h3 id="introduction">Introduction</h3>
+
+<p>The goal is to build a self-hosted file storage solution (图床) that leverages Cloudflare Workers and R2, inspired by the tutorials:</p>
+
+<ul>
+  <li><a href="https://zhul.in/2024/08/12/new-picbed-based-on-cloudflare-and-upyun/">自建图床小记一——图床架构与 DNS 解析</a></li>
+  <li><a href="https://zhul.in/2024/08/13/build-restful-api-for-cloudflare-r2-with-cloudflare-workers/">自建图床小记二——使用 Workers 为 R2 构建 Restful API</a></li>
+</ul>
+
+<p>This service will:</p>
+
+<ul>
+  <li>Support multiple file types (images, documents, etc.).</li>
+  <li>Use Cloudflare R2 for object storage.</li>
+  <li>Provide a RESTful API for file operations.</li>
+  <li>Include basic authentication for secure access.</li>
+</ul>
+
+<h3 id="implementation">Implementation</h3>
+
+<p>Below is the Cloudflare Worker script with explanations and comments.</p>
+
+<div class="language-javascript highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// Cloudflare Worker Script for File Storage Service</span>
+
+<span class="k">export</span> <span class="k">default</span> <span class="p">{</span>
+  <span class="k">async</span> <span class="nf">fetch</span><span class="p">(</span><span class="nx">request</span><span class="p">,</span> <span class="nx">env</span><span class="p">,</span> <span class="nx">ctx</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="k">await</span> <span class="nf">handleRequest</span><span class="p">(</span><span class="nx">request</span><span class="p">,</span> <span class="nx">env</span><span class="p">);</span>
+  <span class="p">},</span>
+<span class="p">};</span>
+
+<span class="cm">/**
+ * Handles incoming requests and routes them based on the HTTP method.
+ * @param {Request} request - The incoming HTTP request.
+ * @param {Object} env - Environment bindings (e.g., R2 bucket).
+ */</span>
+<span class="k">async</span> <span class="kd">function</span> <span class="nf">handleRequest</span><span class="p">(</span><span class="nx">request</span><span class="p">,</span> <span class="nx">env</span><span class="p">)</span> <span class="p">{</span>
+  <span class="c1">// Parse the URL to get the file path</span>
+  <span class="kd">const</span> <span class="nx">url</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">URL</span><span class="p">(</span><span class="nx">request</span><span class="p">.</span><span class="nx">url</span><span class="p">);</span>
+  <span class="kd">const</span> <span class="nx">filePath</span> <span class="o">=</span> <span class="nf">decodeURIComponent</span><span class="p">(</span><span class="nx">url</span><span class="p">.</span><span class="nx">pathname</span><span class="p">.</span><span class="nf">slice</span><span class="p">(</span><span class="mi">1</span><span class="p">));</span> <span class="c1">// Remove leading '/'</span>
+
+  <span class="c1">// Authentication for write operations</span>
+  <span class="kd">const</span> <span class="nx">AUTH_KEY</span> <span class="o">=</span> <span class="nx">env</span><span class="p">.</span><span class="nx">AUTH_KEY_SECRET</span><span class="p">;</span>
+  <span class="kd">const</span> <span class="nx">method</span> <span class="o">=</span> <span class="nx">request</span><span class="p">.</span><span class="nx">method</span><span class="p">.</span><span class="nf">toUpperCase</span><span class="p">();</span>
+  <span class="k">if </span><span class="p">([</span><span class="dl">'</span><span class="s1">PUT</span><span class="dl">'</span><span class="p">,</span> <span class="dl">'</span><span class="s1">DELETE</span><span class="dl">'</span><span class="p">].</span><span class="nf">includes</span><span class="p">(</span><span class="nx">method</span><span class="p">))</span> <span class="p">{</span>
+    <span class="kd">const</span> <span class="nx">authHeader</span> <span class="o">=</span> <span class="nx">request</span><span class="p">.</span><span class="nx">headers</span><span class="p">.</span><span class="nf">get</span><span class="p">(</span><span class="dl">'</span><span class="s1">X-Custom-Auth-Key</span><span class="dl">'</span><span class="p">);</span>
+    <span class="k">if </span><span class="p">(</span><span class="nx">authHeader</span> <span class="o">!==</span> <span class="nx">AUTH_KEY</span><span class="p">)</span> <span class="p">{</span>
+      <span class="k">return</span> <span class="k">new</span> <span class="nc">Response</span><span class="p">(</span><span class="dl">'</span><span class="s1">Forbidden</span><span class="dl">'</span><span class="p">,</span> <span class="p">{</span> <span class="na">status</span><span class="p">:</span> <span class="mi">403</span> <span class="p">});</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+
+  <span class="k">switch </span><span class="p">(</span><span class="nx">method</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">case</span> <span class="dl">'</span><span class="s1">PUT</span><span class="dl">'</span><span class="p">:</span>
+      <span class="c1">// Handle file upload</span>
+      <span class="k">return</span> <span class="k">await</span> <span class="nf">uploadFile</span><span class="p">(</span><span class="nx">request</span><span class="p">,</span> <span class="nx">env</span><span class="p">,</span> <span class="nx">filePath</span><span class="p">);</span>
+    <span class="k">case</span> <span class="dl">'</span><span class="s1">GET</span><span class="dl">'</span><span class="p">:</span>
+      <span class="c1">// Handle file retrieval</span>
+      <span class="k">return</span> <span class="k">await</span> <span class="nf">getFile</span><span class="p">(</span><span class="nx">env</span><span class="p">,</span> <span class="nx">filePath</span><span class="p">);</span>
+    <span class="k">case</span> <span class="dl">'</span><span class="s1">DELETE</span><span class="dl">'</span><span class="p">:</span>
+      <span class="c1">// Handle file deletion</span>
+      <span class="k">return</span> <span class="k">await</span> <span class="nf">deleteFile</span><span class="p">(</span><span class="nx">env</span><span class="p">,</span> <span class="nx">filePath</span><span class="p">);</span>
+    <span class="nl">default</span><span class="p">:</span>
+      <span class="k">return</span> <span class="k">new</span> <span class="nc">Response</span><span class="p">(</span><span class="dl">'</span><span class="s1">Method Not Allowed</span><span class="dl">'</span><span class="p">,</span> <span class="p">{</span>
+        <span class="na">status</span><span class="p">:</span> <span class="mi">405</span><span class="p">,</span>
+        <span class="na">headers</span><span class="p">:</span> <span class="p">{</span> <span class="na">Allow</span><span class="p">:</span> <span class="dl">'</span><span class="s1">GET, PUT, DELETE</span><span class="dl">'</span> <span class="p">},</span>
+      <span class="p">});</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="cm">/**
+ * Uploads a file to the R2 bucket.
+ * @param {Request} request - The incoming HTTP request.
+ * @param {Object} env - Environment bindings.
+ * @param {string} key - The file path in the bucket.
+ */</span>
+<span class="k">async</span> <span class="kd">function</span> <span class="nf">uploadFile</span><span class="p">(</span><span class="nx">request</span><span class="p">,</span> <span class="nx">env</span><span class="p">,</span> <span class="nx">key</span><span class="p">)</span> <span class="p">{</span>
+  <span class="c1">// Optional: Validate file size, type, etc.</span>
+
+  <span class="c1">// Save the file to R2</span>
+  <span class="kd">const</span> <span class="nx">contentType</span> <span class="o">=</span>
+    <span class="nx">request</span><span class="p">.</span><span class="nx">headers</span><span class="p">.</span><span class="nf">get</span><span class="p">(</span><span class="dl">'</span><span class="s1">Content-Type</span><span class="dl">'</span><span class="p">)</span> <span class="o">||</span> <span class="dl">'</span><span class="s1">application/octet-stream</span><span class="dl">'</span><span class="p">;</span>
+  <span class="k">await</span> <span class="nx">env</span><span class="p">.</span><span class="nx">MY_BUCKET</span><span class="p">.</span><span class="nf">put</span><span class="p">(</span><span class="nx">key</span><span class="p">,</span> <span class="nx">request</span><span class="p">.</span><span class="nx">body</span><span class="p">,</span> <span class="p">{</span>
+    <span class="na">httpMetadata</span><span class="p">:</span> <span class="p">{</span> <span class="nx">contentType</span> <span class="p">},</span>
+    <span class="c1">// Optional: Set cache control</span>
+    <span class="na">httpMetadata</span><span class="p">:</span> <span class="p">{</span> <span class="na">cacheControl</span><span class="p">:</span> <span class="dl">'</span><span class="s1">public, max-age=31536000</span><span class="dl">'</span> <span class="p">},</span>
+  <span class="p">});</span>
+  <span class="k">return</span> <span class="k">new</span> <span class="nc">Response</span><span class="p">(</span><span class="s2">`File '</span><span class="p">${</span><span class="nx">key</span><span class="p">}</span><span class="s2">' uploaded successfully`</span><span class="p">,</span> <span class="p">{</span> <span class="na">status</span><span class="p">:</span> <span class="mi">200</span> <span class="p">});</span>
+<span class="p">}</span>
+
+<span class="cm">/**
+ * Retrieves a file from the R2 bucket.
+ * @param {Object} env - Environment bindings.
+ * @param {string} key - The file path in the bucket.
+ */</span>
+<span class="k">async</span> <span class="kd">function</span> <span class="nf">getFile</span><span class="p">(</span><span class="nx">env</span><span class="p">,</span> <span class="nx">key</span><span class="p">)</span> <span class="p">{</span>
+  <span class="kd">const</span> <span class="nx">object</span> <span class="o">=</span> <span class="k">await</span> <span class="nx">env</span><span class="p">.</span><span class="nx">MY_BUCKET</span><span class="p">.</span><span class="nf">get</span><span class="p">(</span><span class="nx">key</span><span class="p">);</span>
+  <span class="k">if </span><span class="p">(</span><span class="o">!</span><span class="nx">object</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="k">new</span> <span class="nc">Response</span><span class="p">(</span><span class="dl">'</span><span class="s1">File Not Found</span><span class="dl">'</span><span class="p">,</span> <span class="p">{</span> <span class="na">status</span><span class="p">:</span> <span class="mi">404</span> <span class="p">});</span>
+  <span class="p">}</span>
+
+  <span class="c1">// Return the file with appropriate headers</span>
+  <span class="kd">const</span> <span class="nx">headers</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">Headers</span><span class="p">();</span>
+  <span class="nx">object</span><span class="p">.</span><span class="nf">writeHttpMetadata</span><span class="p">(</span><span class="nx">headers</span><span class="p">);</span>
+  <span class="nx">headers</span><span class="p">.</span><span class="nf">set</span><span class="p">(</span><span class="dl">'</span><span class="s1">ETag</span><span class="dl">'</span><span class="p">,</span> <span class="nx">object</span><span class="p">.</span><span class="nx">httpEtag</span><span class="p">);</span>
+
+  <span class="k">return</span> <span class="k">new</span> <span class="nc">Response</span><span class="p">(</span><span class="nx">object</span><span class="p">.</span><span class="nx">body</span><span class="p">,</span> <span class="p">{</span> <span class="nx">headers</span> <span class="p">});</span>
+<span class="p">}</span>
+
+<span class="cm">/**
+ * Deletes a file from the R2 bucket.
+ * @param {Object} env - Environment bindings.
+ * @param {string} key - The file path in the bucket.
+ */</span>
+<span class="k">async</span> <span class="kd">function</span> <span class="nf">deleteFile</span><span class="p">(</span><span class="nx">env</span><span class="p">,</span> <span class="nx">key</span><span class="p">)</span> <span class="p">{</span>
+  <span class="k">await</span> <span class="nx">env</span><span class="p">.</span><span class="nx">MY_BUCKET</span><span class="p">.</span><span class="k">delete</span><span class="p">(</span><span class="nx">key</span><span class="p">);</span>
+  <span class="k">return</span> <span class="k">new</span> <span class="nc">Response</span><span class="p">(</span><span class="s2">`File '</span><span class="p">${</span><span class="nx">key</span><span class="p">}</span><span class="s2">' deleted successfully`</span><span class="p">,</span> <span class="p">{</span> <span class="na">status</span><span class="p">:</span> <span class="mi">200</span> <span class="p">});</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<h3 id="setup-instructions">Setup Instructions</h3>
+
+<h4 id="1-create-an-r2-bucket">1. Create an R2 Bucket</h4>
+
+<ul>
+  <li>Log in to your Cloudflare dashboard.</li>
+  <li>Navigate to <strong>R2</strong> and create a new bucket (e.g., <code class="language-plaintext highlighter-rouge">my-file-storage</code>).</li>
+</ul>
+
+<h4 id="2-write-the-worker-script">2. Write the Worker Script</h4>
+
+<ul>
+  <li>Use the script provided above.</li>
+  <li>Save it in your Cloudflare Workers dashboard or use the <a href="https://developers.cloudflare.com/workers/wrangler/">Wrangler CLI</a>.</li>
+</ul>
+
+<h4 id="3-bind-the-r2-bucket-to-the-worker">3. Bind the R2 Bucket to the Worker</h4>
+
+<ul>
+  <li>In your Worker settings, go to <strong>Variables &gt; R2 Buckets</strong>.</li>
+  <li>Bind the <code class="language-plaintext highlighter-rouge">MY_BUCKET</code> variable to your R2 bucket (<code class="language-plaintext highlighter-rouge">my-file-storage</code>).</li>
+</ul>
+
+<h4 id="4-set-the-authentication-key">4. Set the Authentication Key</h4>
+
+<ul>
+  <li>In <strong>Variables &gt; Environment Variables</strong>, add <code class="language-plaintext highlighter-rouge">AUTH_KEY_SECRET</code> with a secure value (your secret key).</li>
+</ul>
+
+<h4 id="5-deploy-the-worker">5. Deploy the Worker</h4>
+
+<ul>
+  <li>Assign a route or domain to your Worker (e.g., <code class="language-plaintext highlighter-rouge">https://files.example.com</code>).</li>
+  <li>Deploy the Worker.</li>
+</ul>
+
+<h3 id="usage-examples">Usage Examples</h3>
+
+<h4 id="uploading-a-file">Uploading a File</h4>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>curl <span class="nt">-X</span> PUT <span class="s1">'https://files.example.com/path/to/file.jpg'</span> <span class="se">\</span>
+  <span class="nt">-H</span> <span class="s1">'Content-Type: image/jpeg'</span> <span class="se">\</span>
+  <span class="nt">-H</span> <span class="s1">'X-Custom-Auth-Key: your_auth_key'</span> <span class="se">\</span>
+  <span class="nt">--data-binary</span> <span class="s1">'@local/path/to/file.jpg'</span>
+</code></pre></div></div>
+
+<h4 id="retrieving-a-file">Retrieving a File</h4>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>curl <span class="nt">-X</span> GET <span class="s1">'https://files.example.com/path/to/file.jpg'</span> <span class="nt">--output</span> file.jpg
+</code></pre></div></div>
+
+<h4 id="deleting-a-file">Deleting a File</h4>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>curl <span class="nt">-X</span> DELETE <span class="s1">'https://files.example.com/path/to/file.jpg'</span> <span class="se">\</span>
+  <span class="nt">-H</span> <span class="s1">'X-Custom-Auth-Key: your_auth_key'</span>
+</code></pre></div></div>
+
+<h3 id="notes-and-considerations">Notes and Considerations</h3>
+
+<ul>
+  <li>
+    <p><strong>Supported File Types:</strong></p>
+
+    <ul>
+      <li>All file types are supported. Ensure the <code class="language-plaintext highlighter-rouge">Content-Type</code> is correctly set when uploading.</li>
+    </ul>
+  </li>
+  <li>
+    <p><strong>Authentication:</strong></p>
+
+    <ul>
+      <li>Only <code class="language-plaintext highlighter-rouge">PUT</code> and <code class="language-plaintext highlighter-rouge">DELETE</code> requests require the <code class="language-plaintext highlighter-rouge">X-Custom-Auth-Key</code> header.</li>
+      <li><code class="language-plaintext highlighter-rouge">GET</code> requests are public. Implement additional checks if you need to restrict access.</li>
+    </ul>
+  </li>
+  <li>
+    <p><strong>Caching:</strong></p>
+
+    <ul>
+      <li>The <code class="language-plaintext highlighter-rouge">Cache-Control</code> header is set for one year (<code class="language-plaintext highlighter-rouge">max-age=31536000</code>).</li>
+      <li>Adjust caching policies as needed.</li>
+    </ul>
+  </li>
+  <li>
+    <p><strong>Error Handling:</strong></p>
+
+    <ul>
+      <li>The script provides basic error responses.</li>
+      <li>Expand error handling for production use.</li>
+    </ul>
+  </li>
+  <li>
+    <p><strong>Limits:</strong></p>
+
+    <ul>
+      <li>Cloudflare Workers have <a href="https://developers.cloudflare.com/workers/platform/limits/">limits</a> on request size, CPU time, etc.</li>
+      <li>For large files, consider using direct uploads to R2 or multipart uploads.</li>
+    </ul>
+  </li>
+</ul>]]></content><author><name></name></author><category term="scripts&gt;cloud," /><category term="tools" /><summary type="html"><![CDATA[How to create a file storage service that handles multiple file types using Cloudflare Workers for the RESTful API and Cloudflare R2 for storage. This implementation allows secure uploading, retrieving, and deleting of files.]]></summary></entry><entry><title type="html">categorized MIME types</title><link href="https://ib.bsb.br/categorized-mime-types/" rel="alternate" type="text/html" title="categorized MIME types" /><published>2024-10-26T00:00:00+00:00</published><updated>2024-10-26T03:33:50+00:00</updated><id>https://ib.bsb.br/categorized-mime-types</id><content type="html" xml:base="https://ib.bsb.br/categorized-mime-types/"><![CDATA[<table>
   <thead>
     <tr>
       <th>Category</th>
@@ -1752,121 +1971,4 @@ Begin your response with: "Based on our entire conversation, here is an extensiv
 This meticulously constructed chained query will provide a significant and detailed record, functioning as an extensive repository of our conversation history for thorough retrospective evaluation. It will offer valuable, reusable, and easily accessible insights into every aspect of our entire engagement, serving as a clear, extensive, and complete chain of our collaborative endeavor.  This query itself will represent a significant achievement, demonstrating our ability to collaboratively compile and analyze complex information to achieve a shared understanding.</code></section>]]></content><author><name></name></author><category term="AI&gt;prompt" /><summary type="html"><![CDATA[Based on our entire conversation, please provide an extensive chain of our queries and discussion, presented as a single comprehensive and coherent multi-paragraph query. Begin by thoroughly reviewing our entire interaction from the start, meticulously examining each query, prompt, and response. This involves understanding not just the surface-level meaning of each exchange but also the underlying intent, assumptions, and desired outcomes.]]></summary></entry><entry><title type="html">Serei um pai muito melhor</title><link href="https://ib.bsb.br/better-father/" rel="alternate" type="text/html" title="Serei um pai muito melhor" /><published>2024-10-15T00:00:00+00:00</published><updated>2024-10-15T14:29:36+00:00</updated><id>https://ib.bsb.br/better-father</id><content type="html" xml:base="https://ib.bsb.br/better-father/"><![CDATA[<video controls="">
   <source src="https://cdn.jsdelivr.net/gh/ib-bsb-br/ib-bsb-br.github.io@main/assets/Serei-Um-Pai-Muito-Melhor.mp4" type="video/mp4" />
   Seu navegador não suporta a reprodução de vídeos.
-</video>]]></content><author><name></name></author><category term="fatherhood" /><summary type="html"><![CDATA[Seu navegador não suporta a reprodução de vídeos.]]></summary></entry><entry><title type="html">Filen CLI sync: Setup Guide for Linux</title><link href="https://ib.bsb.br/filen-linux/" rel="alternate" type="text/html" title="Filen CLI sync: Setup Guide for Linux" /><published>2024-10-13T00:00:00+00:00</published><updated>2024-10-14T23:41:06+00:00</updated><id>https://ib.bsb.br/filen-linux</id><content type="html" xml:base="https://ib.bsb.br/filen-linux/"><![CDATA[<h1 id="setting-up-filen-cli-as-a-systemd-service-on-debian-bullseye-arm64">Setting up Filen CLI as a Systemd Service on Debian Bullseye ARM64</h1>
-
-<p>This guide outlines the process of installing and configuring the Filen CLI to run as a systemd service for continuous syncing on a Debian Bullseye ARM64 system.</p>
-
-<h2 id="1-install-filen-cli">1. Install Filen CLI</h2>
-
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Download the ARM64 version of filen-cli</span>
-wget https://cdn.filen.io/desktop/release/filen-cli_linux_arm64.tar.gz
-
-<span class="c"># Extract the archive</span>
-<span class="nb">tar</span> <span class="nt">-xzvf</span> filen-cli_linux_arm64.tar.gz
-
-<span class="c"># Move the binary to a location in your PATH</span>
-<span class="nb">sudo mv </span>filen-cli-v0.0.12-linux-arm64 /usr/bin/
-
-<span class="c"># Verify installation</span>
-/usr/bin/filen-cli-v0.0.12-linux-arm64 <span class="nt">--version</span>
-</code></pre></div></div>
-
-<h2 id="2-set-up-authentication">2. Set up Authentication</h2>
-
-<p>Create a file named <code class="language-plaintext highlighter-rouge">.filen-cli-credentials</code> in the root user’s home directory:</p>
-
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>nano /root/.filen-cli-credentials
-</code></pre></div></div>
-
-<p>Add your Filen credentials to this file:</p>
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>your_email@example.com
-your_password
-your_2fa_code  # If 2FA is enabled
-</code></pre></div></div>
-
-<p>Secure the credentials file:</p>
-
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo chmod </span>600 /root/.filen-cli-credentials
-</code></pre></div></div>
-
-<h2 id="3-create-systemd-service-file">3. Create Systemd Service File</h2>
-
-<p>Create a new systemd service file:</p>
-
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>nano /etc/systemd/system/filen-sync.service
-</code></pre></div></div>
-
-<p>Add the following content:</p>
-
-<div class="language-ini highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nn">[Unit]</span>
-<span class="py">Description</span><span class="p">=</span><span class="s">Filen CLI Sync Service</span>
-<span class="py">After</span><span class="p">=</span><span class="s">network-online.target</span>
-<span class="py">Wants</span><span class="p">=</span><span class="s">network-online.target</span>
-
-<span class="nn">[Service]</span>
-<span class="py">Type</span><span class="p">=</span><span class="s">simple</span>
-<span class="py">ExecStart</span><span class="p">=</span><span class="s">/usr/bin/filen-cli-v0.0.12-linux-arm64 sync /userdata/000_download/share/:twoWay:/999_SHARED --continuous</span>
-<span class="py">Restart</span><span class="p">=</span><span class="s">on-failure</span>
-<span class="py">RestartSec</span><span class="p">=</span><span class="s">5</span>
-<span class="py">User</span><span class="p">=</span><span class="s">root</span>
-<span class="py">WorkingDirectory</span><span class="p">=</span><span class="s">/root</span>
-
-<span class="nn">[Install]</span>
-<span class="py">WantedBy</span><span class="p">=</span><span class="s">multi-user.target</span>
-</code></pre></div></div>
-
-<p>Note: Adjust the paths in the <code class="language-plaintext highlighter-rouge">ExecStart</code> line to match your specific sync requirements.</p>
-
-<h2 id="4-enable-and-start-the-service">4. Enable and Start the Service</h2>
-
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Reload systemd configuration</span>
-<span class="nb">sudo </span>systemctl daemon-reload
-
-<span class="c"># Enable the service to start on boot</span>
-<span class="nb">sudo </span>systemctl <span class="nb">enable </span>filen-sync.service
-
-<span class="c"># Start the service</span>
-<span class="nb">sudo </span>systemctl start filen-sync.service
-</code></pre></div></div>
-
-<h2 id="5-verify-service-status">5. Verify Service Status</h2>
-
-<p>Check if the service is running correctly:</p>
-
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>systemctl status filen-sync.service
-</code></pre></div></div>
-
-<h2 id="6-monitor-logs">6. Monitor Logs</h2>
-
-<p>To view the service logs:</p>
-
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>journalctl <span class="nt">-u</span> filen-sync.service <span class="nt">-f</span>
-</code></pre></div></div>
-
-<h2 id="troubleshooting">Troubleshooting</h2>
-
-<p>If you encounter issues:</p>
-
-<ol>
-  <li>Check the service status and logs using the commands in steps 5 and 6.</li>
-  <li>Ensure the sync directories exist and have the correct permissions.</li>
-  <li>Verify the credentials in <code class="language-plaintext highlighter-rouge">/root/.filen-cli-credentials</code> are correct.</li>
-  <li>
-    <p>Try running the sync command manually to see if there are any errors:</p>
-
-    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo</span> /usr/bin/filen-cli-v0.0.12-linux-arm64 <span class="nb">sync</span> /userdata/000_download/share/:twoWay:/999_SHARED
-</code></pre></div>    </div>
-  </li>
-  <li>If problems persist, check for updates to the Filen CLI or consult the official Filen documentation.</li>
-</ol>
-
-<h2 id="maintenance">Maintenance</h2>
-
-<ul>
-  <li>Periodically check for updates to the Filen CLI.</li>
-  <li>To update, download the new version, replace the binary in <code class="language-plaintext highlighter-rouge">/usr/bin/</code>, and restart the service.</li>
-  <li>Regularly review and adjust your sync settings as needed.</li>
-</ul>
-
-<p>Remember to keep your <code class="language-plaintext highlighter-rouge">.filen-cli-credentials</code> file secure and update it if you change your Filen account password.</p>]]></content><author><name></name></author><category term="software&gt;linux," /><category term="cloud" /><summary type="html"><![CDATA[Setting up Filen CLI as a Systemd Service on Debian Bullseye ARM64]]></summary></entry></feed>
+</video>]]></content><author><name></name></author><category term="fatherhood" /><summary type="html"><![CDATA[Seu navegador não suporta a reprodução de vídeos.]]></summary></entry></feed>
