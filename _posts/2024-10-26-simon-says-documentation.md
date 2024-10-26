@@ -197,7 +197,8 @@ Present your findings and organized documentation in the following structured fo
 
 Please analyze the following unstructured project data:
 
-```
+~~~
 
-```
+~~~
+
 {% endcodeblock %}
