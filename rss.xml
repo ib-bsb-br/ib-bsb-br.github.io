@@ -54,7 +54,7 @@
     <title>infoBAG</title>
     <link href="https://ib.bsb.br/rss.xml" rel="self"/>
     <link href="https://ib.bsb.br/"/>
-    <updated>2024-10-27T12:51:15+00:00</updated>
+    <updated>2024-10-27T16:31:34+00:00</updated>
     <id>https://ib.bsb.br</id>
     <author>
         <name></name>
@@ -482,6 +482,294 @@ Zutty.bg: #222
   &lt;li&gt;&lt;strong&gt;Vttest Results:&lt;/strong&gt; &lt;a href=&quot;https://tomscii.sig7.se/zutty/doc/VTTEST.html&quot;&gt;https://tomscii.sig7.se/zutty/doc/VTTEST.html&lt;/a&gt;&lt;/li&gt;
   &lt;li&gt;&lt;strong&gt;FAQ:&lt;/strong&gt; &lt;a href=&quot;https://tomscii.sig7.se/zutty/wiki/FAQ.html&quot;&gt;https://tomscii.sig7.se/zutty/wiki/FAQ.html&lt;/a&gt;&lt;/li&gt;
 &lt;/ul&gt;
+</content>
+    </entry>
+    
+    <entry>
+        <title>iOS Shortcut for Linux Thermal Printing</title>
+        <link href="https://ib.bsb.br/a-shell-thermal/"/>
+        <updated>2024-10-27T00:00:00+00:00</updated>
+        <id>https://ib.bsb.br/a-shell-thermal/</id>
+        <content type="html">&lt;h2 id=&quot;introduction&quot;&gt;Introduction&lt;/h2&gt;
+
+&lt;p&gt;This solution leverages a-Shell, SSH, and embedded &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;dash&lt;/code&gt; scripts to automate tasks on a remote Debian server. It focuses on efficiency, security, and user feedback through notifications.&lt;/p&gt;
+
+&lt;h2 id=&quot;prerequisites&quot;&gt;Prerequisites&lt;/h2&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;An iPhone with a-Shell installed.&lt;/li&gt;
+  &lt;li&gt;A Debian server with SSH access enabled.&lt;/li&gt;
+  &lt;li&gt;Basic familiarity with SSH key management.&lt;/li&gt;
+  &lt;li&gt;A thermal printer configured on the Debian server.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h2 id=&quot;debian-server-setup&quot;&gt;Debian Server Setup&lt;/h2&gt;
+
+&lt;h3 id=&quot;ensure-thermalsh-functionality&quot;&gt;Ensure &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;thermal.sh&lt;/code&gt; Functionality&lt;/h3&gt;
+
+&lt;p&gt;Since we’ll be embedding the &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;thermal.sh&lt;/code&gt; scripts within the a-Shell script, you don’t need to have &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;thermal.sh&lt;/code&gt; files on the server. However, ensure that your server has:&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;The &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;lp&lt;/code&gt; command available (usually part of the CUPS system).&lt;/li&gt;
+  &lt;li&gt;The thermal printer correctly configured and accessible via the &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;lp&lt;/code&gt; command.&lt;/li&gt;
+  &lt;li&gt;Necessary utilities like &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;iconv&lt;/code&gt; installed.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;You can install &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;iconv&lt;/code&gt; if it’s not present:&lt;/p&gt;
+
+&lt;div class=&quot;language-sh highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nb&quot;&gt;sudo &lt;/span&gt;apt-get update
+&lt;span class=&quot;nb&quot;&gt;sudo &lt;/span&gt;apt-get &lt;span class=&quot;nb&quot;&gt;install &lt;/span&gt;libc-bin
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h2 id=&quot;ssh-configuration&quot;&gt;SSH Configuration&lt;/h2&gt;
+
+&lt;p&gt;Set up SSH key-based authentication to enable passwordless SSH connections from your iPhone to the Debian server.&lt;/p&gt;
+
+&lt;h3 id=&quot;generating-ssh-keys-on-a-shell&quot;&gt;Generating SSH Keys on a-Shell&lt;/h3&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;Open a-Shell on your iPhone.&lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;Generate an SSH key pair:&lt;/p&gt;
+
+    &lt;div class=&quot;language-sh highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;ssh-keygen &lt;span class=&quot;nt&quot;&gt;-t&lt;/span&gt; rsa &lt;span class=&quot;nt&quot;&gt;-b&lt;/span&gt; 2048
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;    &lt;/div&gt;
+  &lt;/li&gt;
+  &lt;li&gt;Accept the default file location and enter a passphrase if desired (leave empty for no passphrase).&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;h3 id=&quot;copying-your-public-key-to-the-debian-server&quot;&gt;Copying Your Public Key to the Debian Server&lt;/h3&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;
+    &lt;p&gt;Copy your public key to the server:&lt;/p&gt;
+
+    &lt;div class=&quot;language-sh highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;ssh-copy-id yourusername@your_server_ip
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;    &lt;/div&gt;
+
+    &lt;p&gt;Replace &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;yourusername&lt;/code&gt; with your actual username on the Debian server and &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;your_server_ip&lt;/code&gt; with the server’s IP address or hostname.&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;Test the SSH connection:&lt;/p&gt;
+
+    &lt;div class=&quot;language-sh highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;ssh yourusername@your_server_ip
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;    &lt;/div&gt;
+
+    &lt;p&gt;You should be able to connect without entering a password.&lt;/p&gt;
+  &lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;h2 id=&quot;create-the-a-shell-script&quot;&gt;Create the a-Shell Script&lt;/h2&gt;
+
+&lt;p&gt;Create the &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;remote_control.sh&lt;/code&gt; script on your iPhone to pass the text directly to the embedded &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;thermal.sh&lt;/code&gt; scripts on the server.&lt;/p&gt;
+
+&lt;h3 id=&quot;steps-to-create-remote_controlsh&quot;&gt;Steps to Create &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;remote_control.sh&lt;/code&gt;&lt;/h3&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;Open a-Shell on your iPhone.&lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;Run the following command to create the script:&lt;/p&gt;
+
+    &lt;div class=&quot;language-sh highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nb&quot;&gt;cat&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt; ~/.shortcuts/remote_control.sh &lt;span class=&quot;o&quot;&gt;&amp;lt;&amp;lt;&lt;/span&gt; &lt;span class=&quot;sh&quot;&gt;&apos;&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;EOL&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&apos;
+#!/bin/dash
+
+# Configuration (Update with your actual credentials)
+SSH_USER=&quot;yourusername&quot;
+SSH_HOST=&quot;your_server_ip&quot;
+
+# Function to display notification in a-Shell
+show_notification() {
+    message=&quot;&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;$1&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;
+    echo &quot;&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;$message&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot; &amp;gt;&amp;amp;2  # Print to stderr for visibility in a-Shell and Shortcuts
+}
+
+# Function to run command with error handling
+run_command() {
+    command=&quot;&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;$1&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;
+    error_message=&quot;&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;$2&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;
+    if ! eval &quot;&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;$command&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;; then
+        show_notification &quot;Error: &lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;$error_message&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;
+        exit 1
+    fi
+}
+
+# Main execution
+TEXT_CONTENT=&quot;&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;$1&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;
+
+# Check if text content is provided
+if [ -z &quot;&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;$TEXT_CONTENT&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot; ]; then
+    show_notification &quot;Error: No text content provided.&quot;
+    exit 1
+fi
+
+# SSH command with error handling and passing the text directly to thermal.sh
+SSH_COMMAND=&quot;ssh -o BatchMode=yes -o ConnectTimeout=5 &lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;$SSH_USER&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;@&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;$SSH_HOST&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;
+
+# Embedded Normal Thermal Script
+NORMAL_THERMAL_SCRIPT=&apos;#!/bin/dash
+
+# Check for input
+if [ -z &quot;&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;$1&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot; ]; then
+  echo &quot;Error: No text input provided.&quot;
+  exit 1
+fi
+
+# Escape % to prevent printf interpretation
+escaped_content=&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;$(&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;echo&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;$1&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;&lt;/span&gt; | &lt;span class=&quot;nb&quot;&gt;sed&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;s/%/%%/g&quot;&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;
+
+# Convert the encoding while suppressing specific iconv errors
+converted_text=&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;$(&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;echo&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;$escaped_content&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;&lt;/span&gt; | iconv &lt;span class=&quot;nt&quot;&gt;-f&lt;/span&gt; UTF-8 &lt;span class=&quot;nt&quot;&gt;-t&lt;/span&gt; CP850//TRANSLIT//IGNORE 2&amp;gt;/dev/null&lt;span class=&quot;si&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;
+
+# Print the formatted text to the thermal printer
+if ! printf &quot;&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;\0&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;33@%s&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;\n\n\n\0&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;33i&quot; &quot;&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;$converted_text&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot; | lp -d thermal -o raw; then
+  echo &quot;Failed to print. Please check the printer and its configuration.&quot;
+  exit 1
+fi
+
+echo &quot;Success: Text printed successfully.&quot;
+&apos;
+
+# Create and execute the normal thermal script on the server
+run_command &quot;echo &lt;/span&gt;&lt;span class=&quot;se&quot;&gt;\&quot;&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;$NORMAL_THERMAL_SCRIPT&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;\&quot;&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt; | &lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;$SSH_COMMAND&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt; &apos;cat &amp;gt; /tmp/normal_thermal.sh &amp;amp;&amp;amp; chmod +x /tmp/normal_thermal.sh&apos;&quot; &quot;Failed to transfer normal thermal script.&quot;
+run_command &quot;echo &lt;/span&gt;&lt;span class=&quot;se&quot;&gt;\&quot;&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;$TEXT_CONTENT&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;\&quot;&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt; | &lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;$SSH_COMMAND&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt; &apos;/tmp/normal_thermal.sh &lt;/span&gt;&lt;span class=&quot;se&quot;&gt;\&quot;\$&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;(cat -)&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;\&quot;&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&apos;&quot; &quot;Failed to execute normal thermal script.&quot;
+
+# Optionally, you can comment out the reverse thermal script execution if not needed
+# Embedded Reverse White Thermal Script
+REVERSE_THERMAL_SCRIPT=&apos;#!/bin/dash
+
+# Check for input
+if [ -z &quot;&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;$1&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot; ]; then
+  echo &quot;Error: No text input provided.&quot;
+  exit 1
+fi
+
+# Escape % to prevent printf interpretation
+escaped_content=&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;$(&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;echo&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;$1&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;&lt;/span&gt; | &lt;span class=&quot;nb&quot;&gt;sed&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;s/%/%%/g&quot;&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;
+
+# Convert the encoding while suppressing specific iconv errors
+converted_text=&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;$(&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;echo&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;$escaped_content&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;&lt;/span&gt; | iconv &lt;span class=&quot;nt&quot;&gt;-f&lt;/span&gt; UTF-8 &lt;span class=&quot;nt&quot;&gt;-t&lt;/span&gt; CP850//TRANSLIT//IGNORE 2&amp;gt;/dev/null&lt;span class=&quot;si&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;
+
+# Print the formatted text to the thermal printer with reverse white printing
+if ! printf &quot;&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;\0&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;32[&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;\0&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;01&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;\0&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;00&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;\0&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;00&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;\0&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;00&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;\0&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;00@&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;\0&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;02&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;\2&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;60&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;\0&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;04&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;\0&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;00&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;\0&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;32T&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;\0&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;01&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;\0&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;00&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;\0&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;00&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;\0&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;00&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;\0&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;00&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;\0&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;30&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;\0&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;00&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;\0&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;04&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;\0&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;00%s&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;\0&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;00&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;\0&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;32]&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;\0&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;00&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;\0&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;32O&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;\0&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;00&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;\0&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;33i&quot; &quot;&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;$converted_text&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot; | lp -d thermal -o raw; then
+  echo &quot;Failed to print. Please check the printer and its configuration.&quot;
+  exit 1
+fi
+
+echo &quot;Success: Reverse white text printed successfully.&quot;
+&apos;
+
+# Uncomment the following lines to execute the reverse thermal script
+# run_command &quot;echo &lt;/span&gt;&lt;span class=&quot;se&quot;&gt;\&quot;&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;$REVERSE_THERMAL_SCRIPT&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;\&quot;&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt; | &lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;$SSH_COMMAND&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt; &apos;cat &amp;gt; /tmp/reverse_thermal.sh &amp;amp;&amp;amp; chmod +x /tmp/reverse_thermal.sh&apos;&quot; &quot;Failed to transfer reverse thermal script.&quot;
+# run_command &quot;echo &lt;/span&gt;&lt;span class=&quot;se&quot;&gt;\&quot;&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;$TEXT_CONTENT&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;\&quot;&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt; | &lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;$SSH_COMMAND&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt; &apos;/tmp/reverse_thermal.sh &lt;/span&gt;&lt;span class=&quot;se&quot;&gt;\&quot;\$&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;(cat -)&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;\&quot;&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&apos;&quot; &quot;Failed to execute reverse thermal script.&quot;
+
+show_notification &quot;Success: Text printed successfully.&quot;
+&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;EOL
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;    &lt;/div&gt;
+  &lt;/li&gt;
+  &lt;li&gt;Replace &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;yourusername&lt;/code&gt; and &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;your_server_ip&lt;/code&gt; with your actual SSH username and server IP address or hostname.&lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;Make the script executable:&lt;/p&gt;
+
+    &lt;div class=&quot;language-sh highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nb&quot;&gt;chmod&lt;/span&gt; +x ~/.shortcuts/remote_control.sh
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;    &lt;/div&gt;
+  &lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;h3 id=&quot;script-explanation&quot;&gt;Script Explanation&lt;/h3&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;&lt;strong&gt;SSH Configuration&lt;/strong&gt;: The script uses &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;ssh&lt;/code&gt; with options &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;-o BatchMode=yes&lt;/code&gt; and &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;-o ConnectTimeout=5&lt;/code&gt; for non-interactive and timeout settings.&lt;/li&gt;
+  &lt;li&gt;&lt;strong&gt;Notifications&lt;/strong&gt;: The &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;show_notification&lt;/code&gt; function sends messages back to the Shortcuts app.&lt;/li&gt;
+  &lt;li&gt;&lt;strong&gt;Error Handling&lt;/strong&gt;: The &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;run_command&lt;/code&gt; function checks if each command executes successfully.&lt;/li&gt;
+  &lt;li&gt;&lt;strong&gt;Embedded Scripts&lt;/strong&gt;: Both the normal and reverse thermal scripts are embedded as strings within the &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;remote_control.sh&lt;/code&gt; script.&lt;/li&gt;
+  &lt;li&gt;&lt;strong&gt;Execution Flow&lt;/strong&gt;:
+    &lt;ul&gt;
+      &lt;li&gt;The embedded script is sent to the server and saved as a temporary file in &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;/tmp/&lt;/code&gt;.&lt;/li&gt;
+      &lt;li&gt;The script is made executable.&lt;/li&gt;
+      &lt;li&gt;The text content is passed to the script for printing.&lt;/li&gt;
+      &lt;li&gt;Cleanup of temporary scripts can be added if desired.&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h2 id=&quot;ios-shortcut-setup&quot;&gt;iOS Shortcut Setup&lt;/h2&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;Open the &lt;strong&gt;Shortcuts&lt;/strong&gt; app on your iPhone.&lt;/li&gt;
+  &lt;li&gt;Create a new shortcut and give it a descriptive name (e.g., “Print to Thermal Printer”).&lt;/li&gt;
+  &lt;li&gt;&lt;strong&gt;Add a Text action&lt;/strong&gt;:
+    &lt;ul&gt;
+      &lt;li&gt;Leave it blank to prompt for input when the shortcut runs.&lt;/li&gt;
+      &lt;li&gt;Or, enter the text you wish to print.&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+  &lt;li&gt;&lt;strong&gt;Add a Run Script Over SSH action&lt;/strong&gt; (note that this action is available in the Shortcuts app):
+    &lt;ul&gt;
+      &lt;li&gt;&lt;strong&gt;Host&lt;/strong&gt;: Enter &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;localhost&lt;/code&gt; (since we’re running the script locally on a-Shell).&lt;/li&gt;
+      &lt;li&gt;&lt;strong&gt;User&lt;/strong&gt;: Leave blank.&lt;/li&gt;
+      &lt;li&gt;&lt;strong&gt;Password&lt;/strong&gt;: Leave blank.&lt;/li&gt;
+      &lt;li&gt;
+        &lt;p&gt;&lt;strong&gt;Script&lt;/strong&gt;: Enter the following command:&lt;/p&gt;
+
+        &lt;div class=&quot;language-sh highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;shortcuts://run-shortcut?name&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;Run%20a-Shell%20Script&amp;amp;input&lt;span class=&quot;o&quot;&gt;={&lt;/span&gt;Text&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;        &lt;/div&gt;
+
+        &lt;p&gt;&lt;em&gt;(Note: Since a-Shell does not support running scripts over SSH directly from Shortcuts, we use the URL scheme to run the script via a-Shell.)&lt;/em&gt;&lt;/p&gt;
+      &lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+  &lt;li&gt;&lt;strong&gt;Add a URL action&lt;/strong&gt;:
+    &lt;ul&gt;
+      &lt;li&gt;
+        &lt;p&gt;Set the URL to:&lt;/p&gt;
+
+        &lt;div class=&quot;language-sh highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;a-shell://shortcut?text&lt;span class=&quot;o&quot;&gt;={&lt;/span&gt;Text&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;&amp;amp;command&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;~/.shortcuts/remote_control.sh%20&lt;span class=&quot;s2&quot;&gt;&quot;{Text}&quot;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;        &lt;/div&gt;
+
+        &lt;ul&gt;
+          &lt;li&gt;Replace &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;{Text}&lt;/code&gt; with the magic variable from the previous Text action.&lt;/li&gt;
+        &lt;/ul&gt;
+      &lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+  &lt;li&gt;&lt;strong&gt;Add an Open URLs action&lt;/strong&gt;:
+    &lt;ul&gt;
+      &lt;li&gt;Use the URL from the previous step.&lt;/li&gt;
+      &lt;li&gt;This will open a-Shell and run the &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;remote_control.sh&lt;/code&gt; script with the provided text.&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+  &lt;li&gt;&lt;strong&gt;Add a Show Notification action&lt;/strong&gt; (optional):
+    &lt;ul&gt;
+      &lt;li&gt;This will display the output from the script after it completes.&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;h3 id=&quot;shortcut-steps-summary&quot;&gt;Shortcut Steps Summary&lt;/h3&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;&lt;strong&gt;Text&lt;/strong&gt;: Input or specify the text to print.&lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;&lt;strong&gt;URL&lt;/strong&gt;: Build the URL to run the a-Shell script:&lt;/p&gt;
+
+    &lt;div class=&quot;language-sh highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;a-shell://shortcut?text&lt;span class=&quot;o&quot;&gt;={&lt;/span&gt;Text&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;&amp;amp;command&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;~/.shortcuts/remote_control.sh%20&lt;span class=&quot;s2&quot;&gt;&quot;{Text}&quot;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;    &lt;/div&gt;
+  &lt;/li&gt;
+  &lt;li&gt;&lt;strong&gt;Open URLs&lt;/strong&gt;: Opens a-Shell and runs the script.&lt;/li&gt;
+  &lt;li&gt;&lt;strong&gt;Wait&lt;/strong&gt;: (Optional) Pause to allow the script to execute.&lt;/li&gt;
+  &lt;li&gt;&lt;strong&gt;Show Notification&lt;/strong&gt;: Display success or error messages.&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;h2 id=&quot;testing-and-verification&quot;&gt;Testing and Verification&lt;/h2&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;Run the shortcut from the Shortcuts app or add it to your Home Screen for quick access.&lt;/li&gt;
+  &lt;li&gt;When prompted, enter the text you wish to print or use predefined text.&lt;/li&gt;
+  &lt;li&gt;The shortcut will open a-Shell, execute the script, and then return to Shortcuts.&lt;/li&gt;
+  &lt;li&gt;Observe any notifications for success or error messages.&lt;/li&gt;
+  &lt;li&gt;Verify that the text has been printed correctly by the thermal printer connected to your Debian server.&lt;/li&gt;
+&lt;/ol&gt;
+
 </content>
     </entry>
     
@@ -1384,133 +1672,6 @@ Please analyze the following unstructured project data:
 ~~~
 ~~~&lt;/code&gt;&lt;/section&gt;
 
-</content>
-    </entry>
-    
-    <entry>
-        <title>iOS Shortcut for Linux Remote Clipboard Management and Script Execution (thermal printer)</title>
-        <link href="https://ib.bsb.br/ios-shortcut-for-linux-remote-clipboard-management-and-script-execution-thermal-printer/"/>
-        <updated>2024-10-26T00:00:00+00:00</updated>
-        <id>https://ib.bsb.br/ios-shortcut-for-linux-remote-clipboard-management-and-script-execution-thermal-printer/</id>
-        <content type="html">&lt;p&gt;This document provides a comprehensive guide to creating an iOS Shortcut that uses a-Shell to copy text to a remote Debian server’s clipboard and execute a script named &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;thermal.sh&lt;/code&gt;.&lt;/p&gt;
-
-&lt;h2 id=&quot;introduction&quot;&gt;Introduction&lt;/h2&gt;
-
-&lt;p&gt;This solution leverages a-Shell, SSH, and a bash script to automate tasks on a remote Debian server.  It addresses potential issues like dependency management, error handling, and user feedback through notifications.&lt;/p&gt;
-
-&lt;h2 id=&quot;prerequisites&quot;&gt;Prerequisites&lt;/h2&gt;
-
-&lt;ul&gt;
-  &lt;li&gt;An iPhone with a-Shell installed.&lt;/li&gt;
-  &lt;li&gt;A Debian server with SSH access enabled.&lt;/li&gt;
-  &lt;li&gt;Basic familiarity with SSH key management.&lt;/li&gt;
-&lt;/ul&gt;
-
-&lt;h2 id=&quot;debian-server-setup&quot;&gt;Debian Server Setup&lt;/h2&gt;
-
-&lt;ol&gt;
-  &lt;li&gt;&lt;strong&gt;Install &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;xclip&lt;/code&gt;:&lt;/strong&gt;
-    &lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nb&quot;&gt;sudo &lt;/span&gt;apt update
-&lt;span class=&quot;nb&quot;&gt;sudo &lt;/span&gt;apt &lt;span class=&quot;nb&quot;&gt;install &lt;/span&gt;xclip &lt;span class=&quot;nt&quot;&gt;-y&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;    &lt;/div&gt;
-  &lt;/li&gt;
-  &lt;li&gt;&lt;strong&gt;Identify &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;thermal.sh&lt;/code&gt; Path:&lt;/strong&gt; Locate the full path to your &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;thermal.sh&lt;/code&gt; script.  This will be used in the a-Shell script.  For example, if the script is located in your home directory, the path would be &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;/home/yourusername/thermal.sh&lt;/code&gt;.  Replace &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;/path/to/thermal.sh&lt;/code&gt; in the script below with your actual path.  Ensure the script has execute permissions: &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;chmod +x /path/to/thermal.sh&lt;/code&gt;.&lt;/li&gt;
-&lt;/ol&gt;
-
-&lt;h2 id=&quot;ssh-configuration&quot;&gt;SSH Configuration&lt;/h2&gt;
-
-&lt;p&gt;This guide assumes you have SSH key-based authentication set up. If not, follow these steps:&lt;/p&gt;
-
-&lt;ol&gt;
-  &lt;li&gt;&lt;strong&gt;Generate SSH Key Pair (on your iPhone in a-Shell):&lt;/strong&gt;
-    &lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;ssh-keygen &lt;span class=&quot;nt&quot;&gt;-t&lt;/span&gt; rsa
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;    &lt;/div&gt;
-  &lt;/li&gt;
-  &lt;li&gt;&lt;strong&gt;Copy Public Key to Server:&lt;/strong&gt;
-    &lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;ssh-copy-id yourusername@debian-server
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;    &lt;/div&gt;
-  &lt;/li&gt;
-  &lt;li&gt;&lt;strong&gt;Test SSH Connection:&lt;/strong&gt;
-    &lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;ssh yourusername@debian-server
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;    &lt;/div&gt;
-  &lt;/li&gt;
-&lt;/ol&gt;
-
-&lt;h2 id=&quot;a-shell-script&quot;&gt;a-Shell Script&lt;/h2&gt;
-
-&lt;p&gt;Create a new script in a-Shell named &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;remote_control.sh&lt;/code&gt;:&lt;/p&gt;
-
-&lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nb&quot;&gt;cat&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt; ~/.shortcuts/remote_control.sh &lt;span class=&quot;o&quot;&gt;&amp;lt;&amp;lt;&lt;/span&gt; &lt;span class=&quot;sh&quot;&gt;&apos;&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;EOL&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&apos;
-#!/bin/bash
-
-# Configuration (Update with your actual path)
-THERMAL_SCRIPT_PATH=&quot;/path/to/thermal.sh&quot;
-
-# Function to display notification in a-Shell (Improved)
-show_notification() {
-    local message=&quot;&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;$1&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;
-    echo &quot;&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;\$&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;message&quot; &amp;gt;&amp;amp;2  # Print to stderr for visibility in a-Shell
-}
-
-# Function to run command with error handling
-run_command() {
-    local command=&quot;&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;$1&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;
-    local error_message=&quot;&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;$2&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;
-    if ! eval &quot;&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;$command&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;; then
-        show_notification &quot;Error: &lt;/span&gt;&lt;span class=&quot;se&quot;&gt;\$&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;error_message&quot;
-        exit 1
-    fi
-}
-
-# Main execution
-TEXT_CONTENT=&quot;&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;$1&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot;
-
-# Check if text content is provided
-if [ -z &quot;&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;$TEXT_CONTENT&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot; ]; then
-    show_notification &quot;Error: No text content provided.&quot;
-    exit 1
-fi
-
-# SSH command with error handling and escaping
-run_command &quot;ssh debian-server &lt;/span&gt;&lt;span class=&quot;se&quot;&gt;\&quot;&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;echo &lt;/span&gt;&lt;span class=&quot;se&quot;&gt;\\\&quot;\$&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;TEXT_CONTENT&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;\\\&quot;&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt; | xclip -selection clipboard&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;\&quot;&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot; &quot;Failed to copy to clipboard.&quot;
-run_command &quot;ssh debian-server &lt;/span&gt;&lt;span class=&quot;se&quot;&gt;\&quot;&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;bash -c &lt;/span&gt;&lt;span class=&quot;se&quot;&gt;\\\&quot;&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;$THERMAL_SCRIPT_PATH&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;\\\&quot;\&quot;&lt;/span&gt;&lt;span class=&quot;sh&quot;&gt;&quot; &quot;Failed to execute thermal.sh.&quot;
-
-show_notification &quot;Success: Operations completed successfully.&quot;
-&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;
-EOL
-&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;chmod&lt;/span&gt; +x ~/.shortcuts/remote_control.sh
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
-
-&lt;h2 id=&quot;ios-shortcut-setup&quot;&gt;iOS Shortcut Setup&lt;/h2&gt;
-
-&lt;ol&gt;
-  &lt;li&gt;Open the Shortcuts app.&lt;/li&gt;
-  &lt;li&gt;Create a new shortcut.&lt;/li&gt;
-  &lt;li&gt;Add “Text” action and set variable name to &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;clipboardText&lt;/code&gt;.&lt;/li&gt;
-  &lt;li&gt;Add “Run a-Shell Script” action.&lt;/li&gt;
-  &lt;li&gt;Set the command to: &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;~/.shortcuts/remote_control.sh &quot;{Shortcut Input}&quot;&lt;/code&gt;.&lt;/li&gt;
-  &lt;li&gt;Add “Show Notification” action to display the output of the a-Shell script.&lt;/li&gt;
-&lt;/ol&gt;
-
-&lt;p&gt;&lt;em&gt;(Ideally, include screenshots of each step here)&lt;/em&gt;&lt;/p&gt;
-
-&lt;h2 id=&quot;testing-and-verification&quot;&gt;Testing and Verification&lt;/h2&gt;
-
-&lt;ol&gt;
-  &lt;li&gt;Run the shortcut with some sample text.&lt;/li&gt;
-  &lt;li&gt;Verify that the text is copied to the Debian server’s clipboard.&lt;/li&gt;
-  &lt;li&gt;Check that &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;thermal.sh&lt;/code&gt; executes correctly.&lt;/li&gt;
-  &lt;li&gt;Observe the success/failure notification.&lt;/li&gt;
-&lt;/ol&gt;
-
-&lt;h2 id=&quot;troubleshooting&quot;&gt;Troubleshooting&lt;/h2&gt;
-
-&lt;ul&gt;
-  &lt;li&gt;&lt;strong&gt;SSH Connection Issues:&lt;/strong&gt; Verify SSH configuration and key setup.&lt;/li&gt;
-  &lt;li&gt;&lt;strong&gt;&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;xclip&lt;/code&gt; Issues:&lt;/strong&gt; Ensure &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;xclip&lt;/code&gt; is installed and functioning correctly on the Debian server.&lt;/li&gt;
-  &lt;li&gt;&lt;strong&gt;&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;thermal.sh&lt;/code&gt; Issues:&lt;/strong&gt; Check the script’s path, permissions, and logic.&lt;/li&gt;
-  &lt;li&gt;&lt;strong&gt;Notification Issues:&lt;/strong&gt; Review the notification settings in the shortcut and a-Shell.&lt;/li&gt;
-&lt;/ul&gt;
 </content>
     </entry>
     
@@ -49278,13 +49439,13 @@ Pense duas vezes antes de se envolver.
             
             &lt;h2&gt;Child tags:&lt;/h2&gt;
             
-            &lt;li&gt;&lt;a href=&quot;#prompt&quot; aria-label=&quot;Child tag prompt&quot;&gt;prompt&lt;/a&gt;&lt;/li&gt;
-            
-            &lt;li&gt;&lt;a href=&quot;#llm&quot; aria-label=&quot;Child tag LLM&quot;&gt;LLM&lt;/a&gt;&lt;/li&gt;
+            &lt;li&gt;&lt;a href=&quot;#ai-prompt&quot; aria-label=&quot;Child tag AI&amp;gt;prompt&quot;&gt;AI&amp;gt;prompt&lt;/a&gt;&lt;/li&gt;
             
             &lt;li&gt;&lt;a href=&quot;#ai-llm&quot; aria-label=&quot;Child tag AI&amp;gt;LLM&quot;&gt;AI&amp;gt;LLM&lt;/a&gt;&lt;/li&gt;
             
-            &lt;li&gt;&lt;a href=&quot;#ai-prompt&quot; aria-label=&quot;Child tag AI&amp;gt;prompt&quot;&gt;AI&amp;gt;prompt&lt;/a&gt;&lt;/li&gt;
+            &lt;li&gt;&lt;a href=&quot;#llm&quot; aria-label=&quot;Child tag LLM&quot;&gt;LLM&lt;/a&gt;&lt;/li&gt;
+            
+            &lt;li&gt;&lt;a href=&quot;#prompt&quot; aria-label=&quot;Child tag prompt&quot;&gt;prompt&lt;/a&gt;&lt;/li&gt;
             
             
         &lt;/ul&gt;
@@ -50153,11 +50314,11 @@ Pense duas vezes antes de se envolver.
             
             &lt;li&gt;&lt;a href=&quot;#direito-processual-penal&quot; aria-label=&quot;Child tag direito&amp;gt;processual-penal&quot;&gt;direito&amp;gt;processual-penal&lt;/a&gt;&lt;/li&gt;
             
-            &lt;li&gt;&lt;a href=&quot;#direito&quot; aria-label=&quot;Child tag direito&quot;&gt;direito&lt;/a&gt;&lt;/li&gt;
+            &lt;li&gt;&lt;a href=&quot;#edital-direito-processual-penal&quot; aria-label=&quot;Child tag edital&amp;gt;direito&amp;gt;processual-penal&quot;&gt;edital&amp;gt;direito&amp;gt;processual-penal&lt;/a&gt;&lt;/li&gt;
             
             &lt;li&gt;&lt;a href=&quot;#edital-direito&quot; aria-label=&quot;Child tag edital&amp;gt;direito&quot;&gt;edital&amp;gt;direito&lt;/a&gt;&lt;/li&gt;
             
-            &lt;li&gt;&lt;a href=&quot;#edital-direito-processual-penal&quot; aria-label=&quot;Child tag edital&amp;gt;direito&amp;gt;processual-penal&quot;&gt;edital&amp;gt;direito&amp;gt;processual-penal&lt;/a&gt;&lt;/li&gt;
+            &lt;li&gt;&lt;a href=&quot;#direito&quot; aria-label=&quot;Child tag direito&quot;&gt;direito&lt;/a&gt;&lt;/li&gt;
             
             
         &lt;/ul&gt;
@@ -50473,11 +50634,11 @@ Pense duas vezes antes de se envolver.
             
             &lt;h2&gt;Child tags:&lt;/h2&gt;
             
+            &lt;li&gt;&lt;a href=&quot;#github-jekyll&quot; aria-label=&quot;Child tag github&amp;gt;jekyll&quot;&gt;github&amp;gt;jekyll&lt;/a&gt;&lt;/li&gt;
+            
             &lt;li&gt;&lt;a href=&quot;#tools-github-estudos&quot; aria-label=&quot;Child tag tools&amp;gt;github&amp;gt;estudos&quot;&gt;tools&amp;gt;github&amp;gt;estudos&lt;/a&gt;&lt;/li&gt;
             
             &lt;li&gt;&lt;a href=&quot;#jekyll&quot; aria-label=&quot;Child tag jekyll&quot;&gt;jekyll&lt;/a&gt;&lt;/li&gt;
-            
-            &lt;li&gt;&lt;a href=&quot;#github-jekyll&quot; aria-label=&quot;Child tag github&amp;gt;jekyll&quot;&gt;github&amp;gt;jekyll&lt;/a&gt;&lt;/li&gt;
             
             
         &lt;/ul&gt;
@@ -50654,7 +50815,7 @@ Pense duas vezes antes de se envolver.
                 &lt;time datetime=&quot;2024-10-26T00:00:00+00:00&quot;&gt;&lt;strong&gt;October 26, 2024&lt;/strong&gt;&lt;/time&gt;
                 &amp;hArr;
                 
-                iOS Shortcut for Linux Remote Clipboard Management and Script Execution (thermal printer)
+                iOS Shortcut for Linux Thermal Printing
                 
             &lt;/a&gt;&lt;/li&gt;
             
@@ -50703,9 +50864,9 @@ Pense duas vezes antes de se envolver.
             
             &lt;h2&gt;Child tags:&lt;/h2&gt;
             
-            &lt;li&gt;&lt;a href=&quot;#iphone-shortcuts&quot; aria-label=&quot;Child tag iphone&amp;gt;shortcuts&quot;&gt;iphone&amp;gt;shortcuts&lt;/a&gt;&lt;/li&gt;
-            
             &lt;li&gt;&lt;a href=&quot;#shortcuts&quot; aria-label=&quot;Child tag shortcuts&quot;&gt;shortcuts&lt;/a&gt;&lt;/li&gt;
+            
+            &lt;li&gt;&lt;a href=&quot;#iphone-shortcuts&quot; aria-label=&quot;Child tag iphone&amp;gt;shortcuts&quot;&gt;iphone&amp;gt;shortcuts&lt;/a&gt;&lt;/li&gt;
             
             
         &lt;/ul&gt;
@@ -50742,7 +50903,7 @@ Pense duas vezes antes de se envolver.
                 &lt;time datetime=&quot;2024-10-26T00:00:00+00:00&quot;&gt;&lt;strong&gt;October 26, 2024&lt;/strong&gt;&lt;/time&gt;
                 &amp;hArr;
                 
-                &lt;mark&gt;iOS Shortcut for Linux Remote Clipboard Management and Script Execution (thermal printer)&lt;/mark&gt;
+                &lt;mark&gt;iOS Shortcut for Linux Thermal Printing&lt;/mark&gt;
                 
             &lt;/a&gt;&lt;/li&gt;
             
@@ -50886,7 +51047,7 @@ Pense duas vezes antes de se envolver.
                 &lt;time datetime=&quot;2024-10-26T00:00:00+00:00&quot;&gt;&lt;strong&gt;October 26, 2024&lt;/strong&gt;&lt;/time&gt;
                 &amp;hArr;
                 
-                &lt;mark&gt;iOS Shortcut for Linux Remote Clipboard Management and Script Execution (thermal printer)&lt;/mark&gt;
+                &lt;mark&gt;iOS Shortcut for Linux Thermal Printing&lt;/mark&gt;
                 
             &lt;/a&gt;&lt;/li&gt;
             
@@ -51373,9 +51534,9 @@ Pense duas vezes antes de se envolver.
         
         &lt;h2&gt;Parent tags:&lt;/h2&gt;
             
-            &lt;li&gt;&lt;a href=&quot;#software&quot; aria-label=&quot;Parent tag software&quot;&gt;software&lt;/a&gt;&lt;/li&gt;
-            
             &lt;li&gt;&lt;a href=&quot;#scripts&quot; aria-label=&quot;Parent tag scripts&quot;&gt;scripts&lt;/a&gt;&lt;/li&gt;
+            
+            &lt;li&gt;&lt;a href=&quot;#software&quot; aria-label=&quot;Parent tag software&quot;&gt;software&lt;/a&gt;&lt;/li&gt;
             
             
         &lt;/ul&gt;
@@ -52190,25 +52351,25 @@ Pense duas vezes antes de se envolver.
             
             &lt;h2&gt;Child tags:&lt;/h2&gt;
             
+            &lt;li&gt;&lt;a href=&quot;#google-apps-script&quot; aria-label=&quot;Child tag google-apps-script&quot;&gt;google-apps-script&lt;/a&gt;&lt;/li&gt;
+            
+            &lt;li&gt;&lt;a href=&quot;#scripts-mobile&quot; aria-label=&quot;Child tag scripts&amp;gt;mobile&quot;&gt;scripts&amp;gt;mobile&lt;/a&gt;&lt;/li&gt;
+            
             &lt;li&gt;&lt;a href=&quot;#scripts-ai&quot; aria-label=&quot;Child tag scripts&amp;gt;AI&quot;&gt;scripts&amp;gt;AI&lt;/a&gt;&lt;/li&gt;
-            
-            &lt;li&gt;&lt;a href=&quot;#scripts-powershell&quot; aria-label=&quot;Child tag scripts&amp;gt;powershell&quot;&gt;scripts&amp;gt;powershell&lt;/a&gt;&lt;/li&gt;
-            
-            &lt;li&gt;&lt;a href=&quot;#powershell&quot; aria-label=&quot;Child tag powershell&quot;&gt;powershell&lt;/a&gt;&lt;/li&gt;
-            
-            &lt;li&gt;&lt;a href=&quot;#cloud&quot; aria-label=&quot;Child tag cloud&quot;&gt;cloud&lt;/a&gt;&lt;/li&gt;
             
             &lt;li&gt;&lt;a href=&quot;#ai&quot; aria-label=&quot;Child tag AI&quot;&gt;AI&lt;/a&gt;&lt;/li&gt;
             
             &lt;li&gt;&lt;a href=&quot;#mobile&quot; aria-label=&quot;Child tag mobile&quot;&gt;mobile&lt;/a&gt;&lt;/li&gt;
             
-            &lt;li&gt;&lt;a href=&quot;#scripts-google-apps-script&quot; aria-label=&quot;Child tag scripts&amp;gt;google-apps-script&quot;&gt;scripts&amp;gt;google-apps-script&lt;/a&gt;&lt;/li&gt;
+            &lt;li&gt;&lt;a href=&quot;#cloud&quot; aria-label=&quot;Child tag cloud&quot;&gt;cloud&lt;/a&gt;&lt;/li&gt;
             
-            &lt;li&gt;&lt;a href=&quot;#scripts-mobile&quot; aria-label=&quot;Child tag scripts&amp;gt;mobile&quot;&gt;scripts&amp;gt;mobile&lt;/a&gt;&lt;/li&gt;
+            &lt;li&gt;&lt;a href=&quot;#powershell&quot; aria-label=&quot;Child tag powershell&quot;&gt;powershell&lt;/a&gt;&lt;/li&gt;
             
             &lt;li&gt;&lt;a href=&quot;#scripts-cloud&quot; aria-label=&quot;Child tag scripts&amp;gt;cloud&quot;&gt;scripts&amp;gt;cloud&lt;/a&gt;&lt;/li&gt;
             
-            &lt;li&gt;&lt;a href=&quot;#google-apps-script&quot; aria-label=&quot;Child tag google-apps-script&quot;&gt;google-apps-script&lt;/a&gt;&lt;/li&gt;
+            &lt;li&gt;&lt;a href=&quot;#scripts-google-apps-script&quot; aria-label=&quot;Child tag scripts&amp;gt;google-apps-script&quot;&gt;scripts&amp;gt;google-apps-script&lt;/a&gt;&lt;/li&gt;
+            
+            &lt;li&gt;&lt;a href=&quot;#scripts-powershell&quot; aria-label=&quot;Child tag scripts&amp;gt;powershell&quot;&gt;scripts&amp;gt;powershell&lt;/a&gt;&lt;/li&gt;
             
             
         &lt;/ul&gt;
@@ -52513,7 +52674,7 @@ Pense duas vezes antes de se envolver.
                 &lt;time datetime=&quot;2024-10-26T00:00:00+00:00&quot;&gt;&lt;strong&gt;October 26, 2024&lt;/strong&gt;&lt;/time&gt;
                 &amp;hArr;
                 
-                iOS Shortcut for Linux Remote Clipboard Management and Script Execution (thermal printer)
+                iOS Shortcut for Linux Thermal Printing
                 
             &lt;/a&gt;&lt;/li&gt;
             
@@ -52623,17 +52784,17 @@ Pense duas vezes antes de se envolver.
             
             &lt;h2&gt;Child tags:&lt;/h2&gt;
             
+            &lt;li&gt;&lt;a href=&quot;#software-mobile&quot; aria-label=&quot;Child tag software&amp;gt;mobile&quot;&gt;software&amp;gt;mobile&lt;/a&gt;&lt;/li&gt;
+            
+            &lt;li&gt;&lt;a href=&quot;#linux&quot; aria-label=&quot;Child tag linux&quot;&gt;linux&lt;/a&gt;&lt;/li&gt;
+            
             &lt;li&gt;&lt;a href=&quot;#software-linux&quot; aria-label=&quot;Child tag software&amp;gt;linux&quot;&gt;software&amp;gt;linux&lt;/a&gt;&lt;/li&gt;
             
             &lt;li&gt;&lt;a href=&quot;#windows&quot; aria-label=&quot;Child tag windows&quot;&gt;windows&lt;/a&gt;&lt;/li&gt;
             
-            &lt;li&gt;&lt;a href=&quot;#software-mobile&quot; aria-label=&quot;Child tag software&amp;gt;mobile&quot;&gt;software&amp;gt;mobile&lt;/a&gt;&lt;/li&gt;
-            
             &lt;li&gt;&lt;a href=&quot;#mobile&quot; aria-label=&quot;Child tag mobile&quot;&gt;mobile&lt;/a&gt;&lt;/li&gt;
             
             &lt;li&gt;&lt;a href=&quot;#software-windows&quot; aria-label=&quot;Child tag software&amp;gt;windows&quot;&gt;software&amp;gt;windows&lt;/a&gt;&lt;/li&gt;
-            
-            &lt;li&gt;&lt;a href=&quot;#linux&quot; aria-label=&quot;Child tag linux&quot;&gt;linux&lt;/a&gt;&lt;/li&gt;
             
             
         &lt;/ul&gt;
@@ -52978,9 +53139,9 @@ Pense duas vezes antes de se envolver.
             
             &lt;h2&gt;Child tags:&lt;/h2&gt;
             
-            &lt;li&gt;&lt;a href=&quot;#tasks-iphone&quot; aria-label=&quot;Child tag tasks&amp;gt;iphone&quot;&gt;tasks&amp;gt;iphone&lt;/a&gt;&lt;/li&gt;
-            
             &lt;li&gt;&lt;a href=&quot;#iphone&quot; aria-label=&quot;Child tag iphone&quot;&gt;iphone&lt;/a&gt;&lt;/li&gt;
+            
+            &lt;li&gt;&lt;a href=&quot;#tasks-iphone&quot; aria-label=&quot;Child tag tasks&amp;gt;iphone&quot;&gt;tasks&amp;gt;iphone&lt;/a&gt;&lt;/li&gt;
             
             
         &lt;/ul&gt;
@@ -53163,9 +53324,9 @@ Pense duas vezes antes de se envolver.
             
             &lt;li&gt;&lt;a href=&quot;#tools-github&quot; aria-label=&quot;Child tag tools&amp;gt;github&quot;&gt;tools&amp;gt;github&lt;/a&gt;&lt;/li&gt;
             
-            &lt;li&gt;&lt;a href=&quot;#github&quot; aria-label=&quot;Child tag github&quot;&gt;github&lt;/a&gt;&lt;/li&gt;
-            
             &lt;li&gt;&lt;a href=&quot;#github-estudos&quot; aria-label=&quot;Child tag github&amp;gt;estudos&quot;&gt;github&amp;gt;estudos&lt;/a&gt;&lt;/li&gt;
+            
+            &lt;li&gt;&lt;a href=&quot;#github&quot; aria-label=&quot;Child tag github&quot;&gt;github&lt;/a&gt;&lt;/li&gt;
             
             
         &lt;/ul&gt;
@@ -53509,83 +53670,83 @@ Pense duas vezes antes de se envolver.
         parent scripts
     }
     scripts {
+        child google-apps-script
+        child scripts_mobile
         child scripts_AI
-        child scripts_powershell
-        child powershell
-        child cloud
         child AI
         child mobile
-        child scripts_google-apps-script
-        child scripts_mobile
+        child cloud
+        child powershell
         child scripts_cloud
-        child google-apps-script
+        child scripts_google-apps-script
+        child scripts_powershell
         related_2 estudos
         related_24 linux
     }
     scripts ||--|| scripts_AI : SUBSET_OF
-    scripts_powershell {
-        parent scripts
-        related_2 software_windows
-    }
-    scripts ||--|| scripts_powershell : SUBSET_OF
-    powershell {
+    google-apps-script {
         parent scripts
     }
-    scripts ||--|| powershell : SUBSET_OF
+    scripts ||--|| google-apps-script : SUBSET_OF
+    scripts_mobile {
+        parent scripts
+        related_2 iphone
+    }
+    scripts ||--|| scripts_mobile : SUBSET_OF
+    AI {
+        parent scripts
+        child AI_prompt
+        child AI_LLM
+        child LLM
+        child prompt
+    }
+    scripts ||--|| AI : SUBSET_OF
+    mobile {
+        parent scripts
+        parent software
+    }
+    scripts ||--|| mobile : SUBSET_OF
     cloud {
         parent scripts
         related_2 software_linux
         related_2 software_windows
     }
     scripts ||--|| cloud : SUBSET_OF
-    AI {
-        parent scripts
-        child prompt
-        child LLM
-        child AI_LLM
-        child AI_prompt
-    }
-    scripts ||--|| AI : SUBSET_OF
-    mobile {
-        parent software
+    powershell {
         parent scripts
     }
-    scripts ||--|| mobile : SUBSET_OF
-    scripts_google-apps-script {
-        parent scripts
-    }
-    scripts ||--|| scripts_google-apps-script : SUBSET_OF
-    scripts_mobile {
-        parent scripts
-        related_2 iphone
-    }
-    scripts ||--|| scripts_mobile : SUBSET_OF
+    scripts ||--|| powershell : SUBSET_OF
     scripts_cloud {
         parent scripts
         related_2 tools_github
         related_2 tools
     }
     scripts ||--|| scripts_cloud : SUBSET_OF
-    google-apps-script {
+    scripts_google-apps-script {
         parent scripts
     }
-    scripts ||--|| google-apps-script : SUBSET_OF
-    prompt {
-        parent AI
+    scripts ||--|| scripts_google-apps-script : SUBSET_OF
+    scripts_powershell {
+        parent scripts
+        related_2 software_windows
     }
-    AI ||--|| prompt : SUBSET_OF
-    LLM {
-        parent AI
-    }
-    AI ||--|| LLM : SUBSET_OF
-    AI_LLM {
-        parent AI
-    }
-    AI ||--|| AI_LLM : SUBSET_OF
+    scripts ||--|| scripts_powershell : SUBSET_OF
     AI_prompt {
         parent AI
     }
     AI ||--|| AI_prompt : SUBSET_OF
+    AI_LLM {
+        parent AI
+    }
+    AI ||--|| AI_LLM : SUBSET_OF
+    LLM {
+        parent AI
+    }
+    AI ||--|| LLM : SUBSET_OF
+    prompt {
+        parent AI
+    }
+    AI ||--|| prompt : SUBSET_OF
     linux {
         parent software
         related_2 software_mobile
@@ -53594,41 +53755,41 @@ Pense duas vezes antes de se envolver.
         related_2 iphone_shortcuts
     }
     software {
+        child software_mobile
+        child linux
         child software_linux
         child windows
-        child software_mobile
         child mobile
         child software_windows
-        child linux
     }
     software ||--|| linux : SUBSET_OF
     calls {
     }
     edital {
         child direito_processual-penal
-        child direito
-        child edital_direito
         child edital_direito_processual-penal
+        child edital_direito
+        child direito
     }
     direito_processual-penal {
         parent edital
     }
     edital ||--|| direito_processual-penal : SUBSET_OF
-    direito {
-        parent edital
-        child edital_direito_processual-penal
-    }
-    edital ||--|| direito : SUBSET_OF
-    edital_direito {
-        parent edital
-        child processual-penal
-    }
-    edital ||--|| edital_direito : SUBSET_OF
     edital_direito_processual-penal {
         parent edital
         parent direito
     }
     edital ||--|| edital_direito_processual-penal : SUBSET_OF
+    edital_direito {
+        parent edital
+        child processual-penal
+    }
+    edital ||--|| edital_direito : SUBSET_OF
+    direito {
+        parent edital
+        child edital_direito_processual-penal
+    }
+    edital ||--|| direito : SUBSET_OF
     fatherhood {
     }
     rendimentos {
@@ -53636,23 +53797,23 @@ Pense duas vezes antes de se envolver.
     sell {
     }
     tasks {
-        child tasks_iphone
         child iphone
+        child tasks_iphone
         related_2 mlo
     }
-    tasks_iphone {
-        parent tasks
-    }
-    tasks ||--|| tasks_iphone : SUBSET_OF
     iphone {
         parent tasks
-        child iphone_shortcuts
         child shortcuts
+        child iphone_shortcuts
         related_2 linux
         related_2 scripts_mobile
         related_2 software_mobile
     }
     tasks ||--|| iphone : SUBSET_OF
+    tasks_iphone {
+        parent tasks
+    }
+    tasks ||--|| tasks_iphone : SUBSET_OF
     estudos {
         parent tools_github
         related_2 scripts
@@ -53669,16 +53830,16 @@ Pense duas vezes antes de se envolver.
         related_2 cloud
     }
     software ||--|| software_linux : SUBSET_OF
-    windows {
-        parent software
-    }
-    software ||--|| windows : SUBSET_OF
     software_mobile {
         parent software
         related_2 linux
         related_2 iphone
     }
     software ||--|| software_mobile : SUBSET_OF
+    windows {
+        parent software
+    }
+    software ||--|| windows : SUBSET_OF
     software ||--|| mobile : SUBSET_OF
     software_windows {
         parent software
@@ -53689,8 +53850,8 @@ Pense duas vezes antes de se envolver.
     tools {
         child tools_github_estudos
         child tools_github
-        child github
         child github_estudos
+        child github
         related_2 scripts_cloud
     }
     tools_github_estudos {
@@ -53699,17 +53860,17 @@ Pense duas vezes antes de se envolver.
     }
     tools ||--|| tools_github_estudos : SUBSET_OF
     tools ||--|| tools_github : SUBSET_OF
-    github {
-        parent tools
-        child tools_github_estudos
-        child jekyll
-        child github_jekyll
-    }
-    tools ||--|| github : SUBSET_OF
     github_estudos {
         parent tools
     }
     tools ||--|| github_estudos : SUBSET_OF
+    github {
+        parent tools
+        child github_jekyll
+        child tools_github_estudos
+        child jekyll
+    }
+    tools ||--|| github : SUBSET_OF
     spirit {
         related_2 admoestacao
     }
@@ -53743,15 +53904,15 @@ Pense duas vezes antes de se envolver.
     trabalho {
         related_4 estudos
     }
+    shortcuts {
+        parent iphone
+    }
+    iphone ||--|| shortcuts : SUBSET_OF
     iphone_shortcuts {
         parent iphone
         related_2 linux
     }
     iphone ||--|| iphone_shortcuts : SUBSET_OF
-    shortcuts {
-        parent iphone
-    }
-    iphone ||--|| shortcuts : SUBSET_OF
     hardware {
     }
     chess {
@@ -53926,6 +54087,24 @@ document.addEventListener(&apos;DOMContentLoaded&apos;, () =&gt; {
         
       &lt;/h3&gt;
       &lt;ul&gt;
+        &lt;a href=&quot;/a-shell-thermal/&quot;&gt;
+          &lt;h2&gt;
+            iOS Shortcut for Linux Thermal Printing
+          &lt;/h2&gt;
+        &lt;/a&gt;
+      &lt;/ul&gt;
+    &lt;/div&gt;
+    
+    &lt;div class=&quot;search-link&quot;&gt;
+      &lt;h3&gt;
+        &lt;a class=&quot;post-heading&quot; href=&quot;#&quot; id=&quot;back-to-top&quot; aria-label=&quot;Back to top&quot;&gt;
+          &lt;img src=&quot;/assets/gold.ico&quot; alt=&quot;gold icon&quot; /&gt;
+        &lt;/a&gt;
+        2024-10-27
+         &amp;rightarrowtail; 27 Oct 2024
+        
+      &lt;/h3&gt;
+      &lt;ul&gt;
         &lt;a href=&quot;/zutty-cheatsheet/&quot;&gt;
           &lt;h2&gt;
             Zutty Cheatsheet
@@ -53947,24 +54126,6 @@ document.addEventListener(&apos;DOMContentLoaded&apos;, () =&gt; {
         &lt;a href=&quot;/zutty-linux-terminal/&quot;&gt;
           &lt;h2&gt;
             Zutty Linux terminal
-          &lt;/h2&gt;
-        &lt;/a&gt;
-      &lt;/ul&gt;
-    &lt;/div&gt;
-    
-    &lt;div class=&quot;search-link&quot;&gt;
-      &lt;h3&gt;
-        &lt;a class=&quot;post-heading&quot; href=&quot;#&quot; id=&quot;back-to-top&quot; aria-label=&quot;Back to top&quot;&gt;
-          &lt;img src=&quot;/assets/gold.ico&quot; alt=&quot;gold icon&quot; /&gt;
-        &lt;/a&gt;
-        2024-10-26
-         &amp;rightarrowtail; 26 Oct 2024
-        
-      &lt;/h3&gt;
-      &lt;ul&gt;
-        &lt;a href=&quot;/ios-shortcut-for-linux-remote-clipboard-management-and-script-execution-thermal-printer/&quot;&gt;
-          &lt;h2&gt;
-            iOS Shortcut for Linux Remote Clipboard Management and Script Execution (thermal printer)
           &lt;/h2&gt;
         &lt;/a&gt;
       &lt;/ul&gt;
@@ -59712,7 +59873,7 @@ this.diff_match_patch=diff_match_patch;this.DIFF_DELETE=DIFF_DELETE;this.DIFF_IN
         
         
         
-        2024-10-27 09:51:15
+        2024-10-27 13:31:34
         <a href="/" aria-label="Homepage">
           &#8505; infoBAG
         </a>

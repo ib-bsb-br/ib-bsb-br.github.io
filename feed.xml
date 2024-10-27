@@ -1,4 +1,282 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.4">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2024-10-27T12:51:15+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">Zutty Cheatsheet</title><link href="https://ib.bsb.br/zutty-cheatsheet/" rel="alternate" type="text/html" title="Zutty Cheatsheet" /><published>2024-10-27T00:00:00+00:00</published><updated>2024-10-27T12:48:51+00:00</updated><id>https://ib.bsb.br/zutty-cheatsheet</id><content type="html" xml:base="https://ib.bsb.br/zutty-cheatsheet/"><![CDATA[<h2 id="overview">Overview</h2>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.4">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2024-10-27T16:31:34+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">iOS Shortcut for Linux Thermal Printing</title><link href="https://ib.bsb.br/a-shell-thermal/" rel="alternate" type="text/html" title="iOS Shortcut for Linux Thermal Printing" /><published>2024-10-27T00:00:00+00:00</published><updated>2024-10-27T16:31:00+00:00</updated><id>https://ib.bsb.br/a-shell_thermal</id><content type="html" xml:base="https://ib.bsb.br/a-shell-thermal/"><![CDATA[<h2 id="introduction">Introduction</h2>
+
+<p>This solution leverages a-Shell, SSH, and embedded <code class="language-plaintext highlighter-rouge">dash</code> scripts to automate tasks on a remote Debian server. It focuses on efficiency, security, and user feedback through notifications.</p>
+
+<h2 id="prerequisites">Prerequisites</h2>
+
+<ul>
+  <li>An iPhone with a-Shell installed.</li>
+  <li>A Debian server with SSH access enabled.</li>
+  <li>Basic familiarity with SSH key management.</li>
+  <li>A thermal printer configured on the Debian server.</li>
+</ul>
+
+<h2 id="debian-server-setup">Debian Server Setup</h2>
+
+<h3 id="ensure-thermalsh-functionality">Ensure <code class="language-plaintext highlighter-rouge">thermal.sh</code> Functionality</h3>
+
+<p>Since we’ll be embedding the <code class="language-plaintext highlighter-rouge">thermal.sh</code> scripts within the a-Shell script, you don’t need to have <code class="language-plaintext highlighter-rouge">thermal.sh</code> files on the server. However, ensure that your server has:</p>
+
+<ul>
+  <li>The <code class="language-plaintext highlighter-rouge">lp</code> command available (usually part of the CUPS system).</li>
+  <li>The thermal printer correctly configured and accessible via the <code class="language-plaintext highlighter-rouge">lp</code> command.</li>
+  <li>Necessary utilities like <code class="language-plaintext highlighter-rouge">iconv</code> installed.</li>
+</ul>
+
+<p>You can install <code class="language-plaintext highlighter-rouge">iconv</code> if it’s not present:</p>
+
+<div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>apt-get update
+<span class="nb">sudo </span>apt-get <span class="nb">install </span>libc-bin
+</code></pre></div></div>
+
+<h2 id="ssh-configuration">SSH Configuration</h2>
+
+<p>Set up SSH key-based authentication to enable passwordless SSH connections from your iPhone to the Debian server.</p>
+
+<h3 id="generating-ssh-keys-on-a-shell">Generating SSH Keys on a-Shell</h3>
+
+<ol>
+  <li>Open a-Shell on your iPhone.</li>
+  <li>
+    <p>Generate an SSH key pair:</p>
+
+    <div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code>ssh-keygen <span class="nt">-t</span> rsa <span class="nt">-b</span> 2048
+</code></pre></div>    </div>
+  </li>
+  <li>Accept the default file location and enter a passphrase if desired (leave empty for no passphrase).</li>
+</ol>
+
+<h3 id="copying-your-public-key-to-the-debian-server">Copying Your Public Key to the Debian Server</h3>
+
+<ol>
+  <li>
+    <p>Copy your public key to the server:</p>
+
+    <div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code>ssh-copy-id yourusername@your_server_ip
+</code></pre></div>    </div>
+
+    <p>Replace <code class="language-plaintext highlighter-rouge">yourusername</code> with your actual username on the Debian server and <code class="language-plaintext highlighter-rouge">your_server_ip</code> with the server’s IP address or hostname.</p>
+  </li>
+  <li>
+    <p>Test the SSH connection:</p>
+
+    <div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code>ssh yourusername@your_server_ip
+</code></pre></div>    </div>
+
+    <p>You should be able to connect without entering a password.</p>
+  </li>
+</ol>
+
+<h2 id="create-the-a-shell-script">Create the a-Shell Script</h2>
+
+<p>Create the <code class="language-plaintext highlighter-rouge">remote_control.sh</code> script on your iPhone to pass the text directly to the embedded <code class="language-plaintext highlighter-rouge">thermal.sh</code> scripts on the server.</p>
+
+<h3 id="steps-to-create-remote_controlsh">Steps to Create <code class="language-plaintext highlighter-rouge">remote_control.sh</code></h3>
+
+<ol>
+  <li>Open a-Shell on your iPhone.</li>
+  <li>
+    <p>Run the following command to create the script:</p>
+
+    <div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">cat</span> <span class="o">&gt;</span> ~/.shortcuts/remote_control.sh <span class="o">&lt;&lt;</span> <span class="sh">'</span><span class="no">EOL</span><span class="sh">'
+#!/bin/dash
+
+# Configuration (Update with your actual credentials)
+SSH_USER="yourusername"
+SSH_HOST="your_server_ip"
+
+# Function to display notification in a-Shell
+show_notification() {
+    message="</span><span class="nv">$1</span><span class="sh">"
+    echo "</span><span class="nv">$message</span><span class="sh">" &gt;&amp;2  # Print to stderr for visibility in a-Shell and Shortcuts
+}
+
+# Function to run command with error handling
+run_command() {
+    command="</span><span class="nv">$1</span><span class="sh">"
+    error_message="</span><span class="nv">$2</span><span class="sh">"
+    if ! eval "</span><span class="nv">$command</span><span class="sh">"; then
+        show_notification "Error: </span><span class="nv">$error_message</span><span class="sh">"
+        exit 1
+    fi
+}
+
+# Main execution
+TEXT_CONTENT="</span><span class="nv">$1</span><span class="sh">"
+
+# Check if text content is provided
+if [ -z "</span><span class="nv">$TEXT_CONTENT</span><span class="sh">" ]; then
+    show_notification "Error: No text content provided."
+    exit 1
+fi
+
+# SSH command with error handling and passing the text directly to thermal.sh
+SSH_COMMAND="ssh -o BatchMode=yes -o ConnectTimeout=5 </span><span class="nv">$SSH_USER</span><span class="sh">@</span><span class="nv">$SSH_HOST</span><span class="sh">"
+
+# Embedded Normal Thermal Script
+NORMAL_THERMAL_SCRIPT='#!/bin/dash
+
+# Check for input
+if [ -z "</span><span class="nv">$1</span><span class="sh">" ]; then
+  echo "Error: No text input provided."
+  exit 1
+fi
+
+# Escape % to prevent printf interpretation
+escaped_content=</span><span class="si">$(</span><span class="nb">echo</span> <span class="s2">"</span><span class="nv">$1</span><span class="s2">"</span> | <span class="nb">sed</span> <span class="s2">"s/%/%%/g"</span><span class="si">)</span><span class="sh">
+
+# Convert the encoding while suppressing specific iconv errors
+converted_text=</span><span class="si">$(</span><span class="nb">echo</span> <span class="s2">"</span><span class="nv">$escaped_content</span><span class="s2">"</span> | iconv <span class="nt">-f</span> UTF-8 <span class="nt">-t</span> CP850//TRANSLIT//IGNORE 2&gt;/dev/null<span class="si">)</span><span class="sh">
+
+# Print the formatted text to the thermal printer
+if ! printf "</span><span class="se">\0</span><span class="sh">33@%s</span><span class="se">\n\n\n\0</span><span class="sh">33i" "</span><span class="nv">$converted_text</span><span class="sh">" | lp -d thermal -o raw; then
+  echo "Failed to print. Please check the printer and its configuration."
+  exit 1
+fi
+
+echo "Success: Text printed successfully."
+'
+
+# Create and execute the normal thermal script on the server
+run_command "echo </span><span class="se">\"</span><span class="nv">$NORMAL_THERMAL_SCRIPT</span><span class="se">\"</span><span class="sh"> | </span><span class="nv">$SSH_COMMAND</span><span class="sh"> 'cat &gt; /tmp/normal_thermal.sh &amp;&amp; chmod +x /tmp/normal_thermal.sh'" "Failed to transfer normal thermal script."
+run_command "echo </span><span class="se">\"</span><span class="nv">$TEXT_CONTENT</span><span class="se">\"</span><span class="sh"> | </span><span class="nv">$SSH_COMMAND</span><span class="sh"> '/tmp/normal_thermal.sh </span><span class="se">\"\$</span><span class="sh">(cat -)</span><span class="se">\"</span><span class="sh">'" "Failed to execute normal thermal script."
+
+# Optionally, you can comment out the reverse thermal script execution if not needed
+# Embedded Reverse White Thermal Script
+REVERSE_THERMAL_SCRIPT='#!/bin/dash
+
+# Check for input
+if [ -z "</span><span class="nv">$1</span><span class="sh">" ]; then
+  echo "Error: No text input provided."
+  exit 1
+fi
+
+# Escape % to prevent printf interpretation
+escaped_content=</span><span class="si">$(</span><span class="nb">echo</span> <span class="s2">"</span><span class="nv">$1</span><span class="s2">"</span> | <span class="nb">sed</span> <span class="s2">"s/%/%%/g"</span><span class="si">)</span><span class="sh">
+
+# Convert the encoding while suppressing specific iconv errors
+converted_text=</span><span class="si">$(</span><span class="nb">echo</span> <span class="s2">"</span><span class="nv">$escaped_content</span><span class="s2">"</span> | iconv <span class="nt">-f</span> UTF-8 <span class="nt">-t</span> CP850//TRANSLIT//IGNORE 2&gt;/dev/null<span class="si">)</span><span class="sh">
+
+# Print the formatted text to the thermal printer with reverse white printing
+if ! printf "</span><span class="se">\0</span><span class="sh">32[</span><span class="se">\0</span><span class="sh">01</span><span class="se">\0</span><span class="sh">00</span><span class="se">\0</span><span class="sh">00</span><span class="se">\0</span><span class="sh">00</span><span class="se">\0</span><span class="sh">00@</span><span class="se">\0</span><span class="sh">02</span><span class="se">\2</span><span class="sh">60</span><span class="se">\0</span><span class="sh">04</span><span class="se">\0</span><span class="sh">00</span><span class="se">\0</span><span class="sh">32T</span><span class="se">\0</span><span class="sh">01</span><span class="se">\0</span><span class="sh">00</span><span class="se">\0</span><span class="sh">00</span><span class="se">\0</span><span class="sh">00</span><span class="se">\0</span><span class="sh">00</span><span class="se">\0</span><span class="sh">30</span><span class="se">\0</span><span class="sh">00</span><span class="se">\0</span><span class="sh">04</span><span class="se">\0</span><span class="sh">00%s</span><span class="se">\0</span><span class="sh">00</span><span class="se">\0</span><span class="sh">32]</span><span class="se">\0</span><span class="sh">00</span><span class="se">\0</span><span class="sh">32O</span><span class="se">\0</span><span class="sh">00</span><span class="se">\0</span><span class="sh">33i" "</span><span class="nv">$converted_text</span><span class="sh">" | lp -d thermal -o raw; then
+  echo "Failed to print. Please check the printer and its configuration."
+  exit 1
+fi
+
+echo "Success: Reverse white text printed successfully."
+'
+
+# Uncomment the following lines to execute the reverse thermal script
+# run_command "echo </span><span class="se">\"</span><span class="nv">$REVERSE_THERMAL_SCRIPT</span><span class="se">\"</span><span class="sh"> | </span><span class="nv">$SSH_COMMAND</span><span class="sh"> 'cat &gt; /tmp/reverse_thermal.sh &amp;&amp; chmod +x /tmp/reverse_thermal.sh'" "Failed to transfer reverse thermal script."
+# run_command "echo </span><span class="se">\"</span><span class="nv">$TEXT_CONTENT</span><span class="se">\"</span><span class="sh"> | </span><span class="nv">$SSH_COMMAND</span><span class="sh"> '/tmp/reverse_thermal.sh </span><span class="se">\"\$</span><span class="sh">(cat -)</span><span class="se">\"</span><span class="sh">'" "Failed to execute reverse thermal script."
+
+show_notification "Success: Text printed successfully."
+</span><span class="no">EOL
+</span></code></pre></div>    </div>
+  </li>
+  <li>Replace <code class="language-plaintext highlighter-rouge">yourusername</code> and <code class="language-plaintext highlighter-rouge">your_server_ip</code> with your actual SSH username and server IP address or hostname.</li>
+  <li>
+    <p>Make the script executable:</p>
+
+    <div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">chmod</span> +x ~/.shortcuts/remote_control.sh
+</code></pre></div>    </div>
+  </li>
+</ol>
+
+<h3 id="script-explanation">Script Explanation</h3>
+
+<ul>
+  <li><strong>SSH Configuration</strong>: The script uses <code class="language-plaintext highlighter-rouge">ssh</code> with options <code class="language-plaintext highlighter-rouge">-o BatchMode=yes</code> and <code class="language-plaintext highlighter-rouge">-o ConnectTimeout=5</code> for non-interactive and timeout settings.</li>
+  <li><strong>Notifications</strong>: The <code class="language-plaintext highlighter-rouge">show_notification</code> function sends messages back to the Shortcuts app.</li>
+  <li><strong>Error Handling</strong>: The <code class="language-plaintext highlighter-rouge">run_command</code> function checks if each command executes successfully.</li>
+  <li><strong>Embedded Scripts</strong>: Both the normal and reverse thermal scripts are embedded as strings within the <code class="language-plaintext highlighter-rouge">remote_control.sh</code> script.</li>
+  <li><strong>Execution Flow</strong>:
+    <ul>
+      <li>The embedded script is sent to the server and saved as a temporary file in <code class="language-plaintext highlighter-rouge">/tmp/</code>.</li>
+      <li>The script is made executable.</li>
+      <li>The text content is passed to the script for printing.</li>
+      <li>Cleanup of temporary scripts can be added if desired.</li>
+    </ul>
+  </li>
+</ul>
+
+<h2 id="ios-shortcut-setup">iOS Shortcut Setup</h2>
+
+<ol>
+  <li>Open the <strong>Shortcuts</strong> app on your iPhone.</li>
+  <li>Create a new shortcut and give it a descriptive name (e.g., “Print to Thermal Printer”).</li>
+  <li><strong>Add a Text action</strong>:
+    <ul>
+      <li>Leave it blank to prompt for input when the shortcut runs.</li>
+      <li>Or, enter the text you wish to print.</li>
+    </ul>
+  </li>
+  <li><strong>Add a Run Script Over SSH action</strong> (note that this action is available in the Shortcuts app):
+    <ul>
+      <li><strong>Host</strong>: Enter <code class="language-plaintext highlighter-rouge">localhost</code> (since we’re running the script locally on a-Shell).</li>
+      <li><strong>User</strong>: Leave blank.</li>
+      <li><strong>Password</strong>: Leave blank.</li>
+      <li>
+        <p><strong>Script</strong>: Enter the following command:</p>
+
+        <div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code>shortcuts://run-shortcut?name<span class="o">=</span>Run%20a-Shell%20Script&amp;input<span class="o">={</span>Text<span class="o">}</span>
+</code></pre></div>        </div>
+
+        <p><em>(Note: Since a-Shell does not support running scripts over SSH directly from Shortcuts, we use the URL scheme to run the script via a-Shell.)</em></p>
+      </li>
+    </ul>
+  </li>
+  <li><strong>Add a URL action</strong>:
+    <ul>
+      <li>
+        <p>Set the URL to:</p>
+
+        <div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code>a-shell://shortcut?text<span class="o">={</span>Text<span class="o">}</span>&amp;command<span class="o">=</span>~/.shortcuts/remote_control.sh%20<span class="s2">"{Text}"</span>
+</code></pre></div>        </div>
+
+        <ul>
+          <li>Replace <code class="language-plaintext highlighter-rouge">{Text}</code> with the magic variable from the previous Text action.</li>
+        </ul>
+      </li>
+    </ul>
+  </li>
+  <li><strong>Add an Open URLs action</strong>:
+    <ul>
+      <li>Use the URL from the previous step.</li>
+      <li>This will open a-Shell and run the <code class="language-plaintext highlighter-rouge">remote_control.sh</code> script with the provided text.</li>
+    </ul>
+  </li>
+  <li><strong>Add a Show Notification action</strong> (optional):
+    <ul>
+      <li>This will display the output from the script after it completes.</li>
+    </ul>
+  </li>
+</ol>
+
+<h3 id="shortcut-steps-summary">Shortcut Steps Summary</h3>
+
+<ol>
+  <li><strong>Text</strong>: Input or specify the text to print.</li>
+  <li>
+    <p><strong>URL</strong>: Build the URL to run the a-Shell script:</p>
+
+    <div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code>a-shell://shortcut?text<span class="o">={</span>Text<span class="o">}</span>&amp;command<span class="o">=</span>~/.shortcuts/remote_control.sh%20<span class="s2">"{Text}"</span>
+</code></pre></div>    </div>
+  </li>
+  <li><strong>Open URLs</strong>: Opens a-Shell and runs the script.</li>
+  <li><strong>Wait</strong>: (Optional) Pause to allow the script to execute.</li>
+  <li><strong>Show Notification</strong>: Display success or error messages.</li>
+</ol>
+
+<h2 id="testing-and-verification">Testing and Verification</h2>
+
+<ol>
+  <li>Run the shortcut from the Shortcuts app or add it to your Home Screen for quick access.</li>
+  <li>When prompted, enter the text you wish to print or use predefined text.</li>
+  <li>The shortcut will open a-Shell, execute the script, and then return to Shortcuts.</li>
+  <li>Observe any notifications for success or error messages.</li>
+  <li>Verify that the text has been printed correctly by the thermal printer connected to your Debian server.</li>
+</ol>]]></content><author><name></name></author><category term="iphone&gt;shortcuts," /><category term="linux" /><summary type="html"><![CDATA[Introduction]]></summary></entry><entry><title type="html">Zutty Cheatsheet</title><link href="https://ib.bsb.br/zutty-cheatsheet/" rel="alternate" type="text/html" title="Zutty Cheatsheet" /><published>2024-10-27T00:00:00+00:00</published><updated>2024-10-27T12:48:51+00:00</updated><id>https://ib.bsb.br/zutty-cheatsheet</id><content type="html" xml:base="https://ib.bsb.br/zutty-cheatsheet/"><![CDATA[<h2 id="overview">Overview</h2>
 
 <p>Zutty is a fast, lightweight terminal emulator for X Window System, optimized for low-end systems. It uses OpenGL ES 3.1 for rendering, offering high throughput and low latency.</p>
 
@@ -851,125 +1129,7 @@ Zutty.bg: #222
       <td>Dependent on specific sensor and application</td>
     </tr>
   </tbody>
-</table>]]></content><author><name></name></author><category term="software" /><summary type="html"><![CDATA[Category MIME Type File Extension(s) Example Text &amp; Documents text/plain .txt, .log Code, logs, configuration files   text/csv .csv Spreadsheets, data exchange   application/msword .doc, .docx Microsoft Word documents   application/vnd.openxmlformats-officedocument.wordprocessingml.document .docx Modern Word documents   application/vnd.oasis.opendocument.text .odt OpenDocument Text   application/pdf .pdf Documents, reports   text/html .html, .htm Web pages, email content   text/markdown .md Documentation, writing   application/rtf .rtf Rich Text Format Spreadsheets application/vnd.ms-excel .xls Microsoft Excel (older)   application/vnd.openxmlformats-officedocument.spreadsheetml.sheet .xlsx Microsoft Excel (modern) Images image/jpeg .jpg, .jpeg Photos, web graphics   image/png .png Graphics with transparency   image/gif .gif Animated images   image/webp .webp Web images   image/heic .heic Images from Apple devices Audio audio/mpeg .mp3 Music, audio files   audio/wav .wav Uncompressed audio   audio/ogg .ogg Ogg Vorbis audio   audio/aac .aac Advanced Audio Coding   audio/flac .flac Lossless audio Video video/mp4 .mp4 Video files   video/webm .webm Web video   video/x-matroska .mkv Matroska video container Archives application/zip .zip Compressed archives   application/x-gzip .gz Gzip compressed files   application/x-tar .tar Tar archives Web Content text/css .css Cascading Style Sheets   application/javascript .js JavaScript code Application Data application/json .json Data exchange   application/xml .xml Configuration, data interchange   application/octet-stream (various) Generic binary data Sensor/IoT Data application/json .json Sensor readings   application/vnd.geo+json .geojson Geospatial data   message/mqtt N/A MQTT messages   Often custom types Varies Dependent on specific sensor and application]]></summary></entry><entry><title type="html">iOS Shortcut for Linux Remote Clipboard Management and Script Execution (thermal printer)</title><link href="https://ib.bsb.br/ios-shortcut-for-linux-remote-clipboard-management-and-script-execution-thermal-printer/" rel="alternate" type="text/html" title="iOS Shortcut for Linux Remote Clipboard Management and Script Execution (thermal printer)" /><published>2024-10-26T00:00:00+00:00</published><updated>2024-10-26T21:45:53+00:00</updated><id>https://ib.bsb.br/ios-shortcut-for-linux-remote-clipboard-management-and-script-execution-thermal-printer</id><content type="html" xml:base="https://ib.bsb.br/ios-shortcut-for-linux-remote-clipboard-management-and-script-execution-thermal-printer/"><![CDATA[<p>This document provides a comprehensive guide to creating an iOS Shortcut that uses a-Shell to copy text to a remote Debian server’s clipboard and execute a script named <code class="language-plaintext highlighter-rouge">thermal.sh</code>.</p>
-
-<h2 id="introduction">Introduction</h2>
-
-<p>This solution leverages a-Shell, SSH, and a bash script to automate tasks on a remote Debian server.  It addresses potential issues like dependency management, error handling, and user feedback through notifications.</p>
-
-<h2 id="prerequisites">Prerequisites</h2>
-
-<ul>
-  <li>An iPhone with a-Shell installed.</li>
-  <li>A Debian server with SSH access enabled.</li>
-  <li>Basic familiarity with SSH key management.</li>
-</ul>
-
-<h2 id="debian-server-setup">Debian Server Setup</h2>
-
-<ol>
-  <li><strong>Install <code class="language-plaintext highlighter-rouge">xclip</code>:</strong>
-    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>apt update
-<span class="nb">sudo </span>apt <span class="nb">install </span>xclip <span class="nt">-y</span>
-</code></pre></div>    </div>
-  </li>
-  <li><strong>Identify <code class="language-plaintext highlighter-rouge">thermal.sh</code> Path:</strong> Locate the full path to your <code class="language-plaintext highlighter-rouge">thermal.sh</code> script.  This will be used in the a-Shell script.  For example, if the script is located in your home directory, the path would be <code class="language-plaintext highlighter-rouge">/home/yourusername/thermal.sh</code>.  Replace <code class="language-plaintext highlighter-rouge">/path/to/thermal.sh</code> in the script below with your actual path.  Ensure the script has execute permissions: <code class="language-plaintext highlighter-rouge">chmod +x /path/to/thermal.sh</code>.</li>
-</ol>
-
-<h2 id="ssh-configuration">SSH Configuration</h2>
-
-<p>This guide assumes you have SSH key-based authentication set up. If not, follow these steps:</p>
-
-<ol>
-  <li><strong>Generate SSH Key Pair (on your iPhone in a-Shell):</strong>
-    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>ssh-keygen <span class="nt">-t</span> rsa
-</code></pre></div>    </div>
-  </li>
-  <li><strong>Copy Public Key to Server:</strong>
-    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>ssh-copy-id yourusername@debian-server
-</code></pre></div>    </div>
-  </li>
-  <li><strong>Test SSH Connection:</strong>
-    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>ssh yourusername@debian-server
-</code></pre></div>    </div>
-  </li>
-</ol>
-
-<h2 id="a-shell-script">a-Shell Script</h2>
-
-<p>Create a new script in a-Shell named <code class="language-plaintext highlighter-rouge">remote_control.sh</code>:</p>
-
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">cat</span> <span class="o">&gt;</span> ~/.shortcuts/remote_control.sh <span class="o">&lt;&lt;</span> <span class="sh">'</span><span class="no">EOL</span><span class="sh">'
-#!/bin/bash
-
-# Configuration (Update with your actual path)
-THERMAL_SCRIPT_PATH="/path/to/thermal.sh"
-
-# Function to display notification in a-Shell (Improved)
-show_notification() {
-    local message="</span><span class="nv">$1</span><span class="sh">"
-    echo "</span><span class="se">\$</span><span class="sh">message" &gt;&amp;2  # Print to stderr for visibility in a-Shell
-}
-
-# Function to run command with error handling
-run_command() {
-    local command="</span><span class="nv">$1</span><span class="sh">"
-    local error_message="</span><span class="nv">$2</span><span class="sh">"
-    if ! eval "</span><span class="nv">$command</span><span class="sh">"; then
-        show_notification "Error: </span><span class="se">\$</span><span class="sh">error_message"
-        exit 1
-    fi
-}
-
-# Main execution
-TEXT_CONTENT="</span><span class="nv">$1</span><span class="sh">"
-
-# Check if text content is provided
-if [ -z "</span><span class="nv">$TEXT_CONTENT</span><span class="sh">" ]; then
-    show_notification "Error: No text content provided."
-    exit 1
-fi
-
-# SSH command with error handling and escaping
-run_command "ssh debian-server </span><span class="se">\"</span><span class="sh">echo </span><span class="se">\\\"\$</span><span class="sh">TEXT_CONTENT</span><span class="se">\\\"</span><span class="sh"> | xclip -selection clipboard</span><span class="se">\"</span><span class="sh">" "Failed to copy to clipboard."
-run_command "ssh debian-server </span><span class="se">\"</span><span class="sh">bash -c </span><span class="se">\\\"</span><span class="nv">$THERMAL_SCRIPT_PATH</span><span class="se">\\\"\"</span><span class="sh">" "Failed to execute thermal.sh."
-
-show_notification "Success: Operations completed successfully."
-</span><span class="no">
-EOL
-</span><span class="nb">chmod</span> +x ~/.shortcuts/remote_control.sh
-</code></pre></div></div>
-
-<h2 id="ios-shortcut-setup">iOS Shortcut Setup</h2>
-
-<ol>
-  <li>Open the Shortcuts app.</li>
-  <li>Create a new shortcut.</li>
-  <li>Add “Text” action and set variable name to <code class="language-plaintext highlighter-rouge">clipboardText</code>.</li>
-  <li>Add “Run a-Shell Script” action.</li>
-  <li>Set the command to: <code class="language-plaintext highlighter-rouge">~/.shortcuts/remote_control.sh "{Shortcut Input}"</code>.</li>
-  <li>Add “Show Notification” action to display the output of the a-Shell script.</li>
-</ol>
-
-<p><em>(Ideally, include screenshots of each step here)</em></p>
-
-<h2 id="testing-and-verification">Testing and Verification</h2>
-
-<ol>
-  <li>Run the shortcut with some sample text.</li>
-  <li>Verify that the text is copied to the Debian server’s clipboard.</li>
-  <li>Check that <code class="language-plaintext highlighter-rouge">thermal.sh</code> executes correctly.</li>
-  <li>Observe the success/failure notification.</li>
-</ol>
-
-<h2 id="troubleshooting">Troubleshooting</h2>
-
-<ul>
-  <li><strong>SSH Connection Issues:</strong> Verify SSH configuration and key setup.</li>
-  <li><strong><code class="language-plaintext highlighter-rouge">xclip</code> Issues:</strong> Ensure <code class="language-plaintext highlighter-rouge">xclip</code> is installed and functioning correctly on the Debian server.</li>
-  <li><strong><code class="language-plaintext highlighter-rouge">thermal.sh</code> Issues:</strong> Check the script’s path, permissions, and logic.</li>
-  <li><strong>Notification Issues:</strong> Review the notification settings in the shortcut and a-Shell.</li>
-</ul>]]></content><author><name></name></author><category term="iphone&gt;shortcuts," /><category term="linux" /><summary type="html"><![CDATA[This document provides a comprehensive guide to creating an iOS Shortcut that uses a-Shell to copy text to a remote Debian server’s clipboard and execute a script named thermal.sh.]]></summary></entry><entry><title type="html">Simon says: Documentation</title><link href="https://ib.bsb.br/simon-says-documentation/" rel="alternate" type="text/html" title="Simon says: Documentation" /><published>2024-10-26T00:00:00+00:00</published><updated>2024-10-26T21:09:23+00:00</updated><id>https://ib.bsb.br/simon-says-documentation</id><content type="html" xml:base="https://ib.bsb.br/simon-says-documentation/"><![CDATA[<section data-filename="markdown_code-block.md" data-code="**Task Overview:**
+</table>]]></content><author><name></name></author><category term="software" /><summary type="html"><![CDATA[Category MIME Type File Extension(s) Example Text &amp; Documents text/plain .txt, .log Code, logs, configuration files   text/csv .csv Spreadsheets, data exchange   application/msword .doc, .docx Microsoft Word documents   application/vnd.openxmlformats-officedocument.wordprocessingml.document .docx Modern Word documents   application/vnd.oasis.opendocument.text .odt OpenDocument Text   application/pdf .pdf Documents, reports   text/html .html, .htm Web pages, email content   text/markdown .md Documentation, writing   application/rtf .rtf Rich Text Format Spreadsheets application/vnd.ms-excel .xls Microsoft Excel (older)   application/vnd.openxmlformats-officedocument.spreadsheetml.sheet .xlsx Microsoft Excel (modern) Images image/jpeg .jpg, .jpeg Photos, web graphics   image/png .png Graphics with transparency   image/gif .gif Animated images   image/webp .webp Web images   image/heic .heic Images from Apple devices Audio audio/mpeg .mp3 Music, audio files   audio/wav .wav Uncompressed audio   audio/ogg .ogg Ogg Vorbis audio   audio/aac .aac Advanced Audio Coding   audio/flac .flac Lossless audio Video video/mp4 .mp4 Video files   video/webm .webm Web video   video/x-matroska .mkv Matroska video container Archives application/zip .zip Compressed archives   application/x-gzip .gz Gzip compressed files   application/x-tar .tar Tar archives Web Content text/css .css Cascading Style Sheets   application/javascript .js JavaScript code Application Data application/json .json Data exchange   application/xml .xml Configuration, data interchange   application/octet-stream (various) Generic binary data Sensor/IoT Data application/json .json Sensor readings   application/vnd.geo+json .geojson Geospatial data   message/mqtt N/A MQTT messages   Often custom types Varies Dependent on specific sensor and application]]></summary></entry><entry><title type="html">Simon says: Documentation</title><link href="https://ib.bsb.br/simon-says-documentation/" rel="alternate" type="text/html" title="Simon says: Documentation" /><published>2024-10-26T00:00:00+00:00</published><updated>2024-10-26T21:09:23+00:00</updated><id>https://ib.bsb.br/simon-says-documentation</id><content type="html" xml:base="https://ib.bsb.br/simon-says-documentation/"><![CDATA[<section data-filename="markdown_code-block.md" data-code="**Task Overview:**
 You are required to analyze and organize unstructured project data to create comprehensive and effective documentation that ensures project and task maintainability. The goal is to transform the provided unstructured data into well-organized, detailed documentation that can be easily understood and used for future reference, even after significant downtime or by third parties unfamiliar with the project.
 ---
 **Instructions:**
