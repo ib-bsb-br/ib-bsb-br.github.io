@@ -1,10 +1,7 @@
 ---
 title: "/root/.xsessionrc"
-date: 2024-03-10 00:00:00 -03:00
-categories:
-- Dotfiles
-tags:
-- linux
+date: 2024-03-10
+tags: linux>dotfile
 comment: 
 info: aberto.
 type: post
