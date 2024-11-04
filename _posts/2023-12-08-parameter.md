@@ -1,10 +1,7 @@
 ---
 title: parameter.txt
-date: 2023-12-08 01:00:00 -02:00
-categories:
-- Dotfiles
-tags:
-- linux
+date: 2023-12-08
+tags: linux>dotfile, hardware
 comment: 
 info: fechado.
 type: post
