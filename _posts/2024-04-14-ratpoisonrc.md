@@ -1,18 +1,15 @@
 ---
 title: "/.ratpoisonrc"
-date: 2024-04-14 00:00:00 -03:00
-categories:
-- Dotfiles
-tags:
-- linux
+date: 2024-04-14
+tags: linux>dotfile
 comment: 
 info: aberto.
 type: post
 layout: post
-sha: 
 ---
 
-```
+{% codeblock %}
+
 set fgcolor black
 set bgcolor silver
 set framesels 123456789
@@ -40,7 +37,6 @@ exec brightnessctl s 7
 exec unclutter
 exec rpws init 9 -k
 exec systemctl start performance_governors.service
-exec ferdium --no-sandbox
 
 definekey top M-Tab next
 definekey top M-ISO_Left_Tab prev
@@ -49,17 +45,17 @@ bind F1 only
 bind F2 hsplit
 bind F3 vsplit
 bind F4 resize
-bind y exec freetube --no-sandbox 
 bind apostrophe exec zutty -saveLines 50000 -border 0 -font 10x20
 bind s-apostrophe exec zutty -saveLines 50000 -border 0 -font 12x24
-bind e exec xnc
+bind e exec xnedit
+bind s-e exec xnc
 bind f exec thorium-browser
-bind s-f exec ferdium --no-sandbox
 bind g exec gsimplecal
 bind c exec write_clipboard_to_file.sh
 bind s-c exec galculator
 bind i exec zutty -saveLines 50000 -border 0 -font 10x20 -e wifish
 bind p exec xfce4-screenshooter
+bind s-p exec scrot -s -e 'xclip -selection clipboard -t image/png -i $f && rm $f'
 bind Prior exec thermal.sh
 bind Next exec reverse-thermal.sh
 bind r remove
@@ -88,8 +84,6 @@ bind F10 exec amixer set Master 25%-
 bind F11 exec amixer set Master 25%+
 bind KP_0 exec xdotool key apostrophe key apostrophe key apostrophe
 bind KP_Separator exec xdotool key quotedbl key quotedbl key quotedbl
-bind Home exec xdotool key shift+1 key m key u key l key t key i
-bind End exec xdotool key shift+1 key e key n key d
 bind KP_1 exec rpws 1
 bind KP_2 exec rpws 2
 bind KP_3 exec rpws 3
@@ -99,9 +93,10 @@ bind KP_6 exec rpws 6
 bind KP_7 exec rpws 7
 bind KP_8 exec rpws 8
 bind KP_9 exec rpws 9
-bind s-0 exec flatpak run com.github.tenderowl.frog
-bind s-1 exec flatpak run com.rtosta.zapzap
+bind Home exec flatpak run com.github.tenderowl.frog
+bind s-1 exec flatpak run org.telegram.desktop
 bind s-2 exec flatpak run com.strlen.TreeSheets
 bind s-3 exec flatpak run io.github.zaps166.QMPlay2
 bind s-4 exec flatpak run com.github.ryonakano.reco
-```
+
+{% endcodeblock %}
