@@ -8,6 +8,39 @@ published: true
 slug: etcinitdperformance_governorssh
 title: '/etc/init.d/performance_governors.sh'
 ---
+
+First, remove the init.d script registration: `sudo update-rc.d performance_governors.sh remove`
+
+Create a systemd service file: `sudo nano /etc/systemd/system/performance_governors.service`
+
+Add this content:
+
+{% codeblock %}
+[Unit]
+Description=Set CPU and GPU governor to performance
+After=multi-user.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/etc/init.d/performance_governors.sh start
+ExecStop=/etc/init.d/performance_governors.sh stop
+
+[Install]
+WantedBy=multi-user.target
+Reload systemd to recognize the new service:
+sudo systemctl daemon-reload
+
+{% endcodeblock %}
+
+Reload systemd to recognize the new service: `sudo systemctl daemon-reload`
+
+Enable and start the service:
+`sudo systemctl enable performance_governors`
+`sudo systemctl start performance_governors`
+
+Check the status: `sudo systemctl status performance_governors`
+
 {% codeblock bash %}
 
 #!/bin/bash
