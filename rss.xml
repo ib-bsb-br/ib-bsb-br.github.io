@@ -54,11 +54,270 @@
     <title>infoBAG</title>
     <link href="https://ib.bsb.br/rss.xml" rel="self"/>
     <link href="https://ib.bsb.br/"/>
-    <updated>2024-11-20T15:16:39+00:00</updated>
+    <updated>2024-11-21T17:36:42+00:00</updated>
     <id>https://ib.bsb.br</id>
     <author>
         <name></name>
     </author>
+    
+    <entry>
+        <title>Setup FTP Server on Debian and Connect a Windows Machine</title>
+        <link href="https://ib.bsb.br/ftpd/"/>
+        <updated>2024-11-21T00:00:00+00:00</updated>
+        <id>https://ib.bsb.br/ftpd/</id>
+        <content type="html">&lt;h3 id=&quot;setup-ftp-server-using-pure-ftpd-on-debian-bullseye&quot;&gt;Setup FTP Server Using &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;pure-ftpd&lt;/code&gt; on Debian Bullseye&lt;/h3&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;&lt;strong&gt;Update Your System&lt;/strong&gt;
+    &lt;ul&gt;
+      &lt;li&gt;Ensure your Debian system is up-to-date to avoid any compatibility issues. Open a terminal and execute the following commands:
+        &lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nb&quot;&gt;sudo &lt;/span&gt;apt-get update
+&lt;span class=&quot;nb&quot;&gt;sudo &lt;/span&gt;apt-get upgrade
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;        &lt;/div&gt;
+      &lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+  &lt;li&gt;&lt;strong&gt;Install &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;pure-ftpd&lt;/code&gt;&lt;/strong&gt;
+    &lt;ul&gt;
+      &lt;li&gt;Install the &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;pure-ftpd&lt;/code&gt; package by running:
+        &lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nb&quot;&gt;sudo &lt;/span&gt;apt-get &lt;span class=&quot;nb&quot;&gt;install &lt;/span&gt;pure-ftpd
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;        &lt;/div&gt;
+      &lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+  &lt;li&gt;&lt;strong&gt;Basic Configuration&lt;/strong&gt;
+    &lt;ul&gt;
+      &lt;li&gt;&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;pure-ftpd&lt;/code&gt; comes with a sensible set of defaults, but you can customize its behavior by creating configuration files in &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;/etc/pure-ftpd/conf/&lt;/code&gt;.&lt;/li&gt;
+      &lt;li&gt;&lt;strong&gt;Enable Passive Mode Ports:&lt;/strong&gt;
+        &lt;ul&gt;
+          &lt;li&gt;Define a range of ports for passive mode to enhance firewall compatibility.
+            &lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nb&quot;&gt;echo&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;30000 35000&quot;&lt;/span&gt; | &lt;span class=&quot;nb&quot;&gt;sudo tee&lt;/span&gt; /etc/pure-ftpd/conf/PassivePortRange
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;            &lt;/div&gt;
+          &lt;/li&gt;
+        &lt;/ul&gt;
+      &lt;/li&gt;
+      &lt;li&gt;&lt;strong&gt;Restrict to Local Users:&lt;/strong&gt;
+        &lt;ul&gt;
+          &lt;li&gt;Ensure only local system users can access the FTP server.
+            &lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nb&quot;&gt;echo&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;yes&quot;&lt;/span&gt; | &lt;span class=&quot;nb&quot;&gt;sudo tee&lt;/span&gt; /etc/pure-ftpd/conf/NoAnonymous
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;            &lt;/div&gt;
+          &lt;/li&gt;
+        &lt;/ul&gt;
+      &lt;/li&gt;
+      &lt;li&gt;&lt;strong&gt;Enable TLS (Optional for FTPS):&lt;/strong&gt;
+        &lt;ul&gt;
+          &lt;li&gt;For encrypted connections, generate a TLS certificate.
+            &lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nb&quot;&gt;sudo &lt;/span&gt;openssl req &lt;span class=&quot;nt&quot;&gt;-x509&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;-nodes&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;-days&lt;/span&gt; 365 &lt;span class=&quot;nt&quot;&gt;-newkey&lt;/span&gt; rsa:2048 &lt;span class=&quot;nt&quot;&gt;-keyout&lt;/span&gt; /etc/ssl/private/pure-ftpd.pem &lt;span class=&quot;nt&quot;&gt;-out&lt;/span&gt; /etc/ssl/private/pure-ftpd.pem
+&lt;span class=&quot;nb&quot;&gt;sudo chmod &lt;/span&gt;600 /etc/ssl/private/pure-ftpd.pem
+&lt;span class=&quot;nb&quot;&gt;echo&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;2&quot;&lt;/span&gt; | &lt;span class=&quot;nb&quot;&gt;sudo tee&lt;/span&gt; /etc/pure-ftpd/conf/TLS
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;            &lt;/div&gt;
+          &lt;/li&gt;
+        &lt;/ul&gt;
+      &lt;/li&gt;
+      &lt;li&gt;&lt;strong&gt;Restart &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;pure-ftpd&lt;/code&gt; to Apply Changes:&lt;/strong&gt;
+        &lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nb&quot;&gt;sudo &lt;/span&gt;systemctl restart pure-ftpd
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;        &lt;/div&gt;
+      &lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+  &lt;li&gt;&lt;strong&gt;Creating an FTP User&lt;/strong&gt;
+    &lt;ul&gt;
+      &lt;li&gt;It’s a good practice to create a dedicated user for FTP access to limit system exposure and enhance security.&lt;/li&gt;
+      &lt;li&gt;&lt;strong&gt;Create a New User &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;ftpuser&lt;/code&gt; with a Home Directory:&lt;/strong&gt;
+        &lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nb&quot;&gt;sudo &lt;/span&gt;useradd &lt;span class=&quot;nt&quot;&gt;-m&lt;/span&gt; ftpuser &lt;span class=&quot;nt&quot;&gt;-d&lt;/span&gt; /home/ftpuser &lt;span class=&quot;nt&quot;&gt;-s&lt;/span&gt; /usr/sbin/nologin
+&lt;span class=&quot;nb&quot;&gt;sudo &lt;/span&gt;passwd ftpuser
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;        &lt;/div&gt;
+      &lt;/li&gt;
+      &lt;li&gt;&lt;strong&gt;Set Appropriate Permissions:&lt;/strong&gt;
+        &lt;ul&gt;
+          &lt;li&gt;Ensure the FTP user has necessary permissions on their home directory.
+            &lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nb&quot;&gt;sudo chown&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;-R&lt;/span&gt; ftpuser:ftpuser /home/ftpuser
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;            &lt;/div&gt;
+          &lt;/li&gt;
+        &lt;/ul&gt;
+      &lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+  &lt;li&gt;&lt;strong&gt;Adjust Firewall Settings&lt;/strong&gt;
+    &lt;ul&gt;
+      &lt;li&gt;If you have a firewall enabled, ensure it allows traffic on the FTP port (&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;21&lt;/code&gt; by default) and the passive mode port range defined earlier.&lt;/li&gt;
+      &lt;li&gt;&lt;strong&gt;Using UFW:&lt;/strong&gt;
+        &lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nb&quot;&gt;sudo &lt;/span&gt;ufw allow 21/tcp
+&lt;span class=&quot;nb&quot;&gt;sudo &lt;/span&gt;ufw allow 30000:35000/tcp
+&lt;span class=&quot;nb&quot;&gt;sudo &lt;/span&gt;ufw reload
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;        &lt;/div&gt;
+      &lt;/li&gt;
+      &lt;li&gt;&lt;strong&gt;Using iptables:&lt;/strong&gt;
+        &lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nb&quot;&gt;sudo &lt;/span&gt;iptables &lt;span class=&quot;nt&quot;&gt;-A&lt;/span&gt; INPUT &lt;span class=&quot;nt&quot;&gt;-p&lt;/span&gt; tcp &lt;span class=&quot;nt&quot;&gt;--dport&lt;/span&gt; 21 &lt;span class=&quot;nt&quot;&gt;-j&lt;/span&gt; ACCEPT
+&lt;span class=&quot;nb&quot;&gt;sudo &lt;/span&gt;iptables &lt;span class=&quot;nt&quot;&gt;-A&lt;/span&gt; INPUT &lt;span class=&quot;nt&quot;&gt;-p&lt;/span&gt; tcp &lt;span class=&quot;nt&quot;&gt;--dport&lt;/span&gt; 30000:35000 &lt;span class=&quot;nt&quot;&gt;-j&lt;/span&gt; ACCEPT
+&lt;span class=&quot;nb&quot;&gt;sudo &lt;/span&gt;netfilter-persistent save
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;        &lt;/div&gt;
+      &lt;/li&gt;
+      &lt;li&gt;&lt;em&gt;Ensure that your server’s firewall rules are configured correctly to allow FTP traffic.&lt;/em&gt;&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+  &lt;li&gt;&lt;strong&gt;Start and Enable &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;pure-ftpd&lt;/code&gt;&lt;/strong&gt;
+    &lt;ul&gt;
+      &lt;li&gt;To ensure &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;pure-ftpd&lt;/code&gt; starts automatically at boot, enable it using:
+        &lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nb&quot;&gt;sudo &lt;/span&gt;systemctl &lt;span class=&quot;nb&quot;&gt;enable &lt;/span&gt;pure-ftpd
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;        &lt;/div&gt;
+      &lt;/li&gt;
+      &lt;li&gt;Start the &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;pure-ftpd&lt;/code&gt; service:
+        &lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nb&quot;&gt;sudo &lt;/span&gt;systemctl start pure-ftpd
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;        &lt;/div&gt;
+      &lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;h3 id=&quot;connect-a-windows-11-machine-to-the-debian-ftp-server-using-filezilla&quot;&gt;Connect a Windows 11 Machine to the Debian FTP Server Using FileZilla&lt;/h3&gt;
+
+&lt;h4 id=&quot;prerequisites&quot;&gt;Prerequisites&lt;/h4&gt;
+&lt;ul&gt;
+  &lt;li&gt;&lt;strong&gt;FTP Server Details:&lt;/strong&gt; Ensure you have the Debian server’s IP address, FTP username (&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;ftpuser&lt;/code&gt;), and password.&lt;/li&gt;
+  &lt;li&gt;&lt;strong&gt;FileZilla Client Installed:&lt;/strong&gt; Download and install the &lt;a href=&quot;https://filezilla-project.org/download.php?platform=win64&quot;&gt;FileZilla Client&lt;/a&gt; on your Windows machine.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h4 id=&quot;step-by-step-process&quot;&gt;Step-by-Step Process&lt;/h4&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;&lt;strong&gt;Download and Install FileZilla&lt;/strong&gt;
+    &lt;ul&gt;
+      &lt;li&gt;Visit the &lt;a href=&quot;https://filezilla-project.org/download.php?platform=win64&quot;&gt;FileZilla download page&lt;/a&gt; to download the FileZilla FTP client for Windows.&lt;/li&gt;
+      &lt;li&gt;Run the installer and follow the on-screen instructions to complete the installation.&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+  &lt;li&gt;&lt;strong&gt;Launch FileZilla&lt;/strong&gt;
+    &lt;ul&gt;
+      &lt;li&gt;Open the FileZilla application. Upon first launch, a welcome pop-up may appear; click &lt;strong&gt;OK&lt;/strong&gt; to proceed.&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+  &lt;li&gt;&lt;strong&gt;Configure FTP Connection&lt;/strong&gt;
+    &lt;ul&gt;
+      &lt;li&gt;At the top of the FileZilla window, locate the &lt;strong&gt;Quickconnect&lt;/strong&gt; bar with fields for &lt;strong&gt;Host&lt;/strong&gt;, &lt;strong&gt;Username&lt;/strong&gt;, &lt;strong&gt;Password&lt;/strong&gt;, and &lt;strong&gt;Port&lt;/strong&gt;.&lt;/li&gt;
+      &lt;li&gt;&lt;strong&gt;Enter the Following Details:&lt;/strong&gt;
+        &lt;ul&gt;
+          &lt;li&gt;&lt;strong&gt;Host:&lt;/strong&gt; &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;&amp;lt;IP-of-the-FTP-Server&amp;gt;&lt;/code&gt; (e.g., &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;192.168.1.100&lt;/code&gt;)&lt;/li&gt;
+          &lt;li&gt;&lt;strong&gt;Username:&lt;/strong&gt; &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;ftpuser&lt;/code&gt;&lt;/li&gt;
+          &lt;li&gt;&lt;strong&gt;Password:&lt;/strong&gt; &lt;em&gt;Your FTP user’s password&lt;/em&gt;&lt;/li&gt;
+          &lt;li&gt;&lt;strong&gt;Port:&lt;/strong&gt; &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;21&lt;/code&gt; for FTP or &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;22&lt;/code&gt; for SFTP (if configured)&lt;/li&gt;
+        &lt;/ul&gt;
+      &lt;/li&gt;
+      &lt;li&gt;&lt;strong&gt;Example:&lt;/strong&gt;
+        &lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;Host: 192.168.1.100
+Username: ftpuser
+Password: yourpassword
+Port: 21
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;        &lt;/div&gt;
+        &lt;p&gt;&lt;em&gt;Note: Do not include &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;ftp://&lt;/code&gt; in the Host field.&lt;/em&gt;&lt;/p&gt;
+      &lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+  &lt;li&gt;&lt;strong&gt;Connect to the FTP Server&lt;/strong&gt;
+    &lt;ul&gt;
+      &lt;li&gt;Click the &lt;strong&gt;Quickconnect&lt;/strong&gt; button.&lt;/li&gt;
+      &lt;li&gt;&lt;strong&gt;Security Prompt:&lt;/strong&gt; If connecting via FTPS, a certificate warning may appear. Verify the certificate details and click &lt;strong&gt;Yes&lt;/strong&gt; to trust the connection.&lt;/li&gt;
+      &lt;li&gt;&lt;strong&gt;Successful Connection Indicators:&lt;/strong&gt;
+        &lt;ul&gt;
+          &lt;li&gt;The &lt;strong&gt;Remote Site&lt;/strong&gt; pane (right side) will populate with directories from the Debian FTP server.&lt;/li&gt;
+          &lt;li&gt;The &lt;strong&gt;Local Site&lt;/strong&gt; pane (left side) displays your Windows machine’s directories.&lt;/li&gt;
+        &lt;/ul&gt;
+      &lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+  &lt;li&gt;&lt;strong&gt;Browse and Transfer Files&lt;/strong&gt;
+    &lt;ul&gt;
+      &lt;li&gt;&lt;strong&gt;Uploading Files:&lt;/strong&gt;
+        &lt;ul&gt;
+          &lt;li&gt;Navigate to the desired local directory in the &lt;strong&gt;Local Site&lt;/strong&gt; pane.&lt;/li&gt;
+          &lt;li&gt;Drag and drop files or folders to the desired location in the &lt;strong&gt;Remote Site&lt;/strong&gt; pane.&lt;/li&gt;
+        &lt;/ul&gt;
+      &lt;/li&gt;
+      &lt;li&gt;&lt;strong&gt;Downloading Files:&lt;/strong&gt;
+        &lt;ul&gt;
+          &lt;li&gt;Navigate to the desired directory in the &lt;strong&gt;Remote Site&lt;/strong&gt; pane.&lt;/li&gt;
+          &lt;li&gt;Drag and drop files or folders to the desired location in the &lt;strong&gt;Local Site&lt;/strong&gt; pane.&lt;/li&gt;
+        &lt;/ul&gt;
+      &lt;/li&gt;
+      &lt;li&gt;&lt;em&gt;File transfers will display progress and status in the bottom pane.&lt;/em&gt;&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+  &lt;li&gt;&lt;strong&gt;Using Site Manager for Future Connections (Optional)&lt;/strong&gt;
+    &lt;ul&gt;
+      &lt;li&gt;&lt;strong&gt;Save Connection Details for Easy Access:&lt;/strong&gt;
+        &lt;ul&gt;
+          &lt;li&gt;Go to &lt;strong&gt;File&lt;/strong&gt; &amp;gt; &lt;strong&gt;Site Manager&lt;/strong&gt;.&lt;/li&gt;
+          &lt;li&gt;Click &lt;strong&gt;New Site&lt;/strong&gt; and enter a name (e.g., &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;Debian FTP Server&lt;/code&gt;).&lt;/li&gt;
+          &lt;li&gt;&lt;strong&gt;Enter Connection Details:&lt;/strong&gt;
+            &lt;ul&gt;
+              &lt;li&gt;&lt;strong&gt;Host:&lt;/strong&gt; &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;&amp;lt;IP-of-the-FTP-Server&amp;gt;&lt;/code&gt;&lt;/li&gt;
+              &lt;li&gt;&lt;strong&gt;Port:&lt;/strong&gt; &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;21&lt;/code&gt; for FTP or &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;22&lt;/code&gt; for SFTP&lt;/li&gt;
+              &lt;li&gt;&lt;strong&gt;Protocol:&lt;/strong&gt; Choose &lt;strong&gt;FTP - File Transfer Protocol&lt;/strong&gt; or &lt;strong&gt;SFTP - SSH File Transfer Protocol&lt;/strong&gt; based on your server configuration.&lt;/li&gt;
+              &lt;li&gt;&lt;strong&gt;Encryption:&lt;/strong&gt; Select &lt;strong&gt;Use explicit FTP over TLS if available&lt;/strong&gt; for FTPS or &lt;strong&gt;Only use plain FTP (not recommended)&lt;/strong&gt;.&lt;/li&gt;
+              &lt;li&gt;&lt;strong&gt;Logon Type:&lt;/strong&gt; Select &lt;strong&gt;Normal&lt;/strong&gt;.&lt;/li&gt;
+              &lt;li&gt;&lt;strong&gt;User:&lt;/strong&gt; &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;ftpuser&lt;/code&gt;&lt;/li&gt;
+              &lt;li&gt;&lt;strong&gt;Password:&lt;/strong&gt; &lt;em&gt;Your FTP user’s password&lt;/em&gt;&lt;/li&gt;
+            &lt;/ul&gt;
+          &lt;/li&gt;
+          &lt;li&gt;Click &lt;strong&gt;Connect&lt;/strong&gt; to save and establish the connection.&lt;/li&gt;
+        &lt;/ul&gt;
+      &lt;/li&gt;
+      &lt;li&gt;&lt;strong&gt;Access Saved Sites Quickly:&lt;/strong&gt;
+        &lt;ul&gt;
+          &lt;li&gt;Launch FileZilla and open &lt;strong&gt;Site Manager&lt;/strong&gt;.&lt;/li&gt;
+          &lt;li&gt;Select your saved site and click &lt;strong&gt;Connect&lt;/strong&gt; to establish a connection without re-entering credentials.&lt;/li&gt;
+        &lt;/ul&gt;
+      &lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;h3 id=&quot;security-best-practices&quot;&gt;Security Best Practices&lt;/h3&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;&lt;strong&gt;Use SFTP or FTPS:&lt;/strong&gt; To secure your FTP connections, consider using SFTP (which uses SSH) or FTPS (FTP over TLS). This encrypts data transfers, protecting sensitive information.&lt;/li&gt;
+  &lt;li&gt;&lt;strong&gt;Strong Passwords:&lt;/strong&gt; Ensure that FTP user accounts use strong, unique passwords to prevent unauthorized access.&lt;/li&gt;
+  &lt;li&gt;&lt;strong&gt;Limit User Permissions:&lt;/strong&gt; Restrict FTP users to only the directories they need access to, minimizing potential security risks.&lt;/li&gt;
+  &lt;li&gt;&lt;strong&gt;Regular Updates:&lt;/strong&gt; Keep both the FTP server (&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;pure-ftpd&lt;/code&gt;) and FileZilla client updated to the latest versions to benefit from security patches and new features.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h3 id=&quot;troubleshooting-common-issues&quot;&gt;Troubleshooting Common Issues&lt;/h3&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;&lt;strong&gt;Cannot Connect to FTP Server:&lt;/strong&gt;
+    &lt;ul&gt;
+      &lt;li&gt;&lt;strong&gt;Check Server Status:&lt;/strong&gt; Ensure that the &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;pure-ftpd&lt;/code&gt; service is running on the Debian server.
+        &lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nb&quot;&gt;sudo &lt;/span&gt;systemctl status pure-ftpd
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;        &lt;/div&gt;
+      &lt;/li&gt;
+      &lt;li&gt;&lt;strong&gt;Verify Firewall Settings:&lt;/strong&gt; Confirm that the firewall allows traffic on the FTP and passive ports.&lt;/li&gt;
+      &lt;li&gt;&lt;strong&gt;Confirm Credentials:&lt;/strong&gt; Double-check the FTP username and password for accuracy.&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+  &lt;li&gt;&lt;strong&gt;Connection Times Out:&lt;/strong&gt;
+    &lt;ul&gt;
+      &lt;li&gt;&lt;strong&gt;Network Issues:&lt;/strong&gt; Verify that both machines are on the same network or that the server is accessible over the internet.&lt;/li&gt;
+      &lt;li&gt;&lt;strong&gt;Port Blocking:&lt;/strong&gt; Ensure that no intermediate firewalls or network policies are blocking FTP ports.&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+  &lt;li&gt;&lt;strong&gt;Permission Denied Errors:&lt;/strong&gt;
+    &lt;ul&gt;
+      &lt;li&gt;&lt;strong&gt;User Permissions:&lt;/strong&gt; Ensure the FTP user has the necessary permissions for the target directories.&lt;/li&gt;
+      &lt;li&gt;&lt;strong&gt;Directory Ownership:&lt;/strong&gt; Verify that directories are owned by the FTP user.
+        &lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nb&quot;&gt;sudo chown&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;-R&lt;/span&gt; ftpuser:ftpuser /home/ftpuser
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;        &lt;/div&gt;
+      &lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+  &lt;li&gt;&lt;strong&gt;Encryption Errors with FTPS/SFTP:&lt;/strong&gt;
+    &lt;ul&gt;
+      &lt;li&gt;&lt;strong&gt;Certificate Validity:&lt;/strong&gt; Ensure that the TLS certificate is correctly configured and not expired.&lt;/li&gt;
+      &lt;li&gt;&lt;strong&gt;Protocol Compatibility:&lt;/strong&gt; Confirm that both FileZilla and &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;pure-ftpd&lt;/code&gt; are configured to use compatible encryption settings.&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+&lt;/ol&gt;
+</content>
+    </entry>
     
     <entry>
         <title>Meta-Prompt for Better API Integration</title>
@@ -14432,105 +14691,6 @@ Detailed Process:
 Example:
 Considering the complexity and specificity required for an example, it is important to understand that the final output will directly mirror the sophisticated nature of the input subject matter, the guidelines of the structured schema, and the refined content created to fill the complex placeholders. The content will be specifically designed to address the focus of the subject matter, whether it involves a detailed environmental analysis, a complex philosophical debate, a comprehensive meta-analysis of studies etc., ensuring both depth and nuanced relevance in the discussion.&lt;/code&gt;&lt;/section&gt;
 
-</content>
-    </entry>
-    
-    <entry>
-        <title>Setup FTP Server on Debian and Connect a Windows machine</title>
-        <link href="https://ib.bsb.br/ftpd/"/>
-        <updated>2024-02-06T03:00:00+00:00</updated>
-        <id>https://ib.bsb.br/ftpd/</id>
-        <content type="html">&lt;h3 id=&quot;setup-ftp-server-using-pure-ftpd-on-debian-bullseye&quot;&gt;Setup FTP Server Using &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;pure-ftpd&lt;/code&gt; on Debian Bullseye&lt;/h3&gt;
-
-&lt;ol&gt;
-  &lt;li&gt;&lt;strong&gt;Update Your System&lt;/strong&gt;:
-    &lt;ul&gt;
-      &lt;li&gt;Ensure your Debian system is up-to-date to avoid any compatibility issues. Open a terminal and execute the following commands:
-        &lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;sudo apt-get update
-sudo apt-get upgrade
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;        &lt;/div&gt;
-      &lt;/li&gt;
-    &lt;/ul&gt;
-  &lt;/li&gt;
-  &lt;li&gt;&lt;strong&gt;Install &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;pure-ftpd&lt;/code&gt;&lt;/strong&gt;:
-    &lt;ul&gt;
-      &lt;li&gt;Install the &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;pure-ftpd&lt;/code&gt; package by running:
-        &lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;sudo apt-get install pure-ftpd
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;        &lt;/div&gt;
-      &lt;/li&gt;
-    &lt;/ul&gt;
-  &lt;/li&gt;
-  &lt;li&gt;&lt;strong&gt;Basic Configuration&lt;/strong&gt;:
-    &lt;ul&gt;
-      &lt;li&gt;&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;pure-ftpd&lt;/code&gt; comes with a sensible set of defaults, but you can customize its behavior by creating configuration files in &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;/etc/pure-ftpd/conf/&lt;/code&gt;. For example, to enable passive mode ports, create a file named &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;PassivePortRange&lt;/code&gt;:
-        &lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;echo &quot;30000 35000&quot; | sudo tee /etc/pure-ftpd/conf/PassivePortRange
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;        &lt;/div&gt;
-      &lt;/li&gt;
-      &lt;li&gt;Restart &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;pure-ftpd&lt;/code&gt; to apply the changes:
-        &lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;sudo systemctl restart pure-ftpd
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;        &lt;/div&gt;
-      &lt;/li&gt;
-    &lt;/ul&gt;
-  &lt;/li&gt;
-  &lt;li&gt;&lt;strong&gt;Creating an FTP User&lt;/strong&gt;:
-    &lt;ul&gt;
-      &lt;li&gt;It’s a good practice to create a dedicated user for FTP access. This limits access to the system and enhances security. To create a new user &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;ftpuser&lt;/code&gt; with a home directory &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;/home/ftpuser&lt;/code&gt;, execute:
-        &lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;sudo useradd -m ftpuser -d /home/ftpuser -s /usr/sbin/nologin
-sudo passwd ftpuser
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;        &lt;/div&gt;
-      &lt;/li&gt;
-      &lt;li&gt;Follow the prompts to set a password for &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;ftpuser&lt;/code&gt;.&lt;/li&gt;
-    &lt;/ul&gt;
-  &lt;/li&gt;
-  &lt;li&gt;&lt;strong&gt;Adjust Firewall Settings&lt;/strong&gt; (if applicable):
-    &lt;ul&gt;
-      &lt;li&gt;If you have a firewall enabled, ensure that it allows traffic on the FTP port (21 by default) and the passive mode port range defined earlier. For &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;ufw&lt;/code&gt;, you can do this by running:
-        &lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;sudo ufw allow 21/tcp
-sudo ufw allow 30000:35000/tcp
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;        &lt;/div&gt;
-      &lt;/li&gt;
-    &lt;/ul&gt;
-  &lt;/li&gt;
-  &lt;li&gt;&lt;strong&gt;Start and Enable &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;pure-ftpd&lt;/code&gt;&lt;/strong&gt;:
-    &lt;ul&gt;
-      &lt;li&gt;To ensure &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;pure-ftpd&lt;/code&gt; starts automatically at boot, enable it using:
-        &lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;sudo systemctl enable pure-ftpd
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;        &lt;/div&gt;
-      &lt;/li&gt;
-      &lt;li&gt;Start the &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;pure-ftpd&lt;/code&gt; service:
-        &lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;sudo systemctl start pure-ftpd
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;        &lt;/div&gt;
-      &lt;/li&gt;
-    &lt;/ul&gt;
-  &lt;/li&gt;
-&lt;/ol&gt;
-
-&lt;h3 id=&quot;connect-a-windows-11-machine-to-the-debian-ftp-server&quot;&gt;Connect a Windows 11 Machine to the Debian FTP Server&lt;/h3&gt;
-
-&lt;h4 id=&quot;using-built-in-windows-ftp&quot;&gt;Using Built-In Windows FTP&lt;/h4&gt;
-
-&lt;ol&gt;
-  &lt;li&gt;&lt;strong&gt;Open File Explorer&lt;/strong&gt;:
-    &lt;ul&gt;
-      &lt;li&gt;Press &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;Win + E&lt;/code&gt; to open the File Explorer.&lt;/li&gt;
-    &lt;/ul&gt;
-  &lt;/li&gt;
-  &lt;li&gt;&lt;strong&gt;Access the FTP Server&lt;/strong&gt;:
-    &lt;ul&gt;
-      &lt;li&gt;In the address bar, type &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;ftp://&amp;lt;IP-of-the-FTP-Server&amp;gt;&lt;/code&gt; (replace &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;&amp;lt;IP-of-the-FTP-Server&amp;gt;&lt;/code&gt; with the actual IP address of your Debian server) and press &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;Enter&lt;/code&gt;.&lt;/li&gt;
-    &lt;/ul&gt;
-  &lt;/li&gt;
-  &lt;li&gt;&lt;strong&gt;Login&lt;/strong&gt;:
-    &lt;ul&gt;
-      &lt;li&gt;A prompt will appear asking for the username and password. Enter the credentials for the &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;ftpuser&lt;/code&gt; you created earlier on the Debian server.&lt;/li&gt;
-    &lt;/ul&gt;
-  &lt;/li&gt;
-  &lt;li&gt;&lt;strong&gt;Browse and Transfer Files&lt;/strong&gt;:
-    &lt;ul&gt;
-      &lt;li&gt;If the credentials are correct, you should now be able to see and interact with the files on the Debian FTP server from your Windows 11 machine.&lt;/li&gt;
-    &lt;/ul&gt;
-  &lt;/li&gt;
-&lt;/ol&gt;
 </content>
     </entry>
     
@@ -51699,13 +51859,13 @@ Pense duas vezes antes de se envolver.
             
             &lt;h2&gt;Child tags:&lt;/h2&gt;
             
-            &lt;li&gt;&lt;a href=&quot;#edital-direito&quot; aria-label=&quot;Child tag edital&amp;gt;direito&quot;&gt;edital&amp;gt;direito&lt;/a&gt;&lt;/li&gt;
-            
             &lt;li&gt;&lt;a href=&quot;#direito-processual-penal&quot; aria-label=&quot;Child tag direito&amp;gt;processual-penal&quot;&gt;direito&amp;gt;processual-penal&lt;/a&gt;&lt;/li&gt;
+            
+            &lt;li&gt;&lt;a href=&quot;#edital-direito-processual-penal&quot; aria-label=&quot;Child tag edital&amp;gt;direito&amp;gt;processual-penal&quot;&gt;edital&amp;gt;direito&amp;gt;processual-penal&lt;/a&gt;&lt;/li&gt;
             
             &lt;li&gt;&lt;a href=&quot;#direito&quot; aria-label=&quot;Child tag direito&quot;&gt;direito&lt;/a&gt;&lt;/li&gt;
             
-            &lt;li&gt;&lt;a href=&quot;#edital-direito-processual-penal&quot; aria-label=&quot;Child tag edital&amp;gt;direito&amp;gt;processual-penal&quot;&gt;edital&amp;gt;direito&amp;gt;processual-penal&lt;/a&gt;&lt;/li&gt;
+            &lt;li&gt;&lt;a href=&quot;#edital-direito&quot; aria-label=&quot;Child tag edital&amp;gt;direito&quot;&gt;edital&amp;gt;direito&lt;/a&gt;&lt;/li&gt;
             
             
         &lt;/ul&gt;
@@ -51783,9 +51943,9 @@ Pense duas vezes antes de se envolver.
         
         &lt;h2&gt;Parent tags:&lt;/h2&gt;
             
-            &lt;li&gt;&lt;a href=&quot;#direito&quot; aria-label=&quot;Parent tag direito&quot;&gt;direito&lt;/a&gt;&lt;/li&gt;
-            
             &lt;li&gt;&lt;a href=&quot;#edital&quot; aria-label=&quot;Parent tag edital&quot;&gt;edital&lt;/a&gt;&lt;/li&gt;
+            
+            &lt;li&gt;&lt;a href=&quot;#direito&quot; aria-label=&quot;Parent tag direito&quot;&gt;direito&lt;/a&gt;&lt;/li&gt;
             
             
         &lt;/ul&gt;
@@ -52057,9 +52217,9 @@ Pense duas vezes antes de se envolver.
             
             &lt;li&gt;&lt;a href=&quot;#github-jekyll&quot; aria-label=&quot;Child tag github&amp;gt;jekyll&quot;&gt;github&amp;gt;jekyll&lt;/a&gt;&lt;/li&gt;
             
-            &lt;li&gt;&lt;a href=&quot;#jekyll&quot; aria-label=&quot;Child tag jekyll&quot;&gt;jekyll&lt;/a&gt;&lt;/li&gt;
-            
             &lt;li&gt;&lt;a href=&quot;#tools-github-estudos&quot; aria-label=&quot;Child tag tools&amp;gt;github&amp;gt;estudos&quot;&gt;tools&amp;gt;github&amp;gt;estudos&lt;/a&gt;&lt;/li&gt;
+            
+            &lt;li&gt;&lt;a href=&quot;#jekyll&quot; aria-label=&quot;Child tag jekyll&quot;&gt;jekyll&lt;/a&gt;&lt;/li&gt;
             
             
         &lt;/ul&gt;
@@ -52471,6 +52631,14 @@ Pense duas vezes antes de se envolver.
         &lt;ul class=&quot;search-link&quot;&gt;
         
             
+            &lt;li&gt;&lt;a href=&quot;/ftpd&quot;&gt;
+                &lt;time datetime=&quot;2024-11-21T00:00:00+00:00&quot;&gt;&lt;strong&gt;November 21, 2024&lt;/strong&gt;&lt;/time&gt;
+                &amp;hArr;
+                
+                &lt;mark&gt;Setup FTP Server on Debian and Connect a Windows Machine&lt;/mark&gt;
+                
+            &lt;/a&gt;&lt;/li&gt;
+            
             &lt;li&gt;&lt;a href=&quot;/troubleshooting-debian-11&quot;&gt;
                 &lt;time datetime=&quot;2024-11-16T00:00:00+00:00&quot;&gt;&lt;strong&gt;November 16, 2024&lt;/strong&gt;&lt;/time&gt;
                 &amp;hArr;
@@ -52663,14 +52831,6 @@ Pense duas vezes antes de se envolver.
                 
             &lt;/a&gt;&lt;/li&gt;
             
-            &lt;li&gt;&lt;a href=&quot;/ftpd&quot;&gt;
-                &lt;time datetime=&quot;2024-02-06T00:00:00+00:00&quot;&gt;&lt;strong&gt;February 06, 2024&lt;/strong&gt;&lt;/time&gt;
-                &amp;hArr;
-                
-                &lt;mark&gt;Setup FTP Server on Debian and Connect a Windows machine&lt;/mark&gt;
-                
-            &lt;/a&gt;&lt;/li&gt;
-            
             &lt;li&gt;&lt;a href=&quot;/gummi&quot;&gt;
                 &lt;time datetime=&quot;2024-01-31T00:00:00+00:00&quot;&gt;&lt;strong&gt;January 31, 2024&lt;/strong&gt;&lt;/time&gt;
                 &amp;hArr;
@@ -52852,9 +53012,9 @@ Pense duas vezes antes de se envolver.
             
             &lt;h2&gt;Child tags:&lt;/h2&gt;
             
-            &lt;li&gt;&lt;a href=&quot;#dotfile&quot; aria-label=&quot;Child tag dotfile&quot;&gt;dotfile&lt;/a&gt;&lt;/li&gt;
-            
             &lt;li&gt;&lt;a href=&quot;#linux-dotfile&quot; aria-label=&quot;Child tag linux&amp;gt;dotfile&quot;&gt;linux&amp;gt;dotfile&lt;/a&gt;&lt;/li&gt;
+            
+            &lt;li&gt;&lt;a href=&quot;#dotfile&quot; aria-label=&quot;Child tag dotfile&quot;&gt;dotfile&lt;/a&gt;&lt;/li&gt;
             
             
         &lt;/ul&gt;
@@ -53706,9 +53866,9 @@ Pense duas vezes antes de se envolver.
             
             &lt;h2&gt;Child tags:&lt;/h2&gt;
             
-            &lt;li&gt;&lt;a href=&quot;#scratchpad-gemini&quot; aria-label=&quot;Child tag scratchpad&amp;gt;gemini&quot;&gt;scratchpad&amp;gt;gemini&lt;/a&gt;&lt;/li&gt;
-            
             &lt;li&gt;&lt;a href=&quot;#gemini&quot; aria-label=&quot;Child tag gemini&quot;&gt;gemini&lt;/a&gt;&lt;/li&gt;
+            
+            &lt;li&gt;&lt;a href=&quot;#scratchpad-gemini&quot; aria-label=&quot;Child tag scratchpad&amp;gt;gemini&quot;&gt;scratchpad&amp;gt;gemini&lt;/a&gt;&lt;/li&gt;
             
             
         &lt;/ul&gt;
@@ -54016,25 +54176,25 @@ Pense duas vezes antes de se envolver.
             
             &lt;h2&gt;Child tags:&lt;/h2&gt;
             
-            &lt;li&gt;&lt;a href=&quot;#scripts-cloud&quot; aria-label=&quot;Child tag scripts&amp;gt;cloud&quot;&gt;scripts&amp;gt;cloud&lt;/a&gt;&lt;/li&gt;
+            &lt;li&gt;&lt;a href=&quot;#scripts-mobile&quot; aria-label=&quot;Child tag scripts&amp;gt;mobile&quot;&gt;scripts&amp;gt;mobile&lt;/a&gt;&lt;/li&gt;
             
             &lt;li&gt;&lt;a href=&quot;#ai&quot; aria-label=&quot;Child tag AI&quot;&gt;AI&lt;/a&gt;&lt;/li&gt;
             
-            &lt;li&gt;&lt;a href=&quot;#cloud&quot; aria-label=&quot;Child tag cloud&quot;&gt;cloud&lt;/a&gt;&lt;/li&gt;
-            
-            &lt;li&gt;&lt;a href=&quot;#google-apps-script&quot; aria-label=&quot;Child tag google-apps-script&quot;&gt;google-apps-script&lt;/a&gt;&lt;/li&gt;
-            
-            &lt;li&gt;&lt;a href=&quot;#scripts-mobile&quot; aria-label=&quot;Child tag scripts&amp;gt;mobile&quot;&gt;scripts&amp;gt;mobile&lt;/a&gt;&lt;/li&gt;
-            
-            &lt;li&gt;&lt;a href=&quot;#mobile&quot; aria-label=&quot;Child tag mobile&quot;&gt;mobile&lt;/a&gt;&lt;/li&gt;
-            
-            &lt;li&gt;&lt;a href=&quot;#scripts-powershell&quot; aria-label=&quot;Child tag scripts&amp;gt;powershell&quot;&gt;scripts&amp;gt;powershell&lt;/a&gt;&lt;/li&gt;
-            
             &lt;li&gt;&lt;a href=&quot;#powershell&quot; aria-label=&quot;Child tag powershell&quot;&gt;powershell&lt;/a&gt;&lt;/li&gt;
+            
+            &lt;li&gt;&lt;a href=&quot;#cloud&quot; aria-label=&quot;Child tag cloud&quot;&gt;cloud&lt;/a&gt;&lt;/li&gt;
             
             &lt;li&gt;&lt;a href=&quot;#scripts-google-apps-script&quot; aria-label=&quot;Child tag scripts&amp;gt;google-apps-script&quot;&gt;scripts&amp;gt;google-apps-script&lt;/a&gt;&lt;/li&gt;
             
+            &lt;li&gt;&lt;a href=&quot;#scripts-powershell&quot; aria-label=&quot;Child tag scripts&amp;gt;powershell&quot;&gt;scripts&amp;gt;powershell&lt;/a&gt;&lt;/li&gt;
+            
             &lt;li&gt;&lt;a href=&quot;#scripts-ai&quot; aria-label=&quot;Child tag scripts&amp;gt;AI&quot;&gt;scripts&amp;gt;AI&lt;/a&gt;&lt;/li&gt;
+            
+            &lt;li&gt;&lt;a href=&quot;#scripts-cloud&quot; aria-label=&quot;Child tag scripts&amp;gt;cloud&quot;&gt;scripts&amp;gt;cloud&lt;/a&gt;&lt;/li&gt;
+            
+            &lt;li&gt;&lt;a href=&quot;#google-apps-script&quot; aria-label=&quot;Child tag google-apps-script&quot;&gt;google-apps-script&lt;/a&gt;&lt;/li&gt;
+            
+            &lt;li&gt;&lt;a href=&quot;#mobile&quot; aria-label=&quot;Child tag mobile&quot;&gt;mobile&lt;/a&gt;&lt;/li&gt;
             
             
         &lt;/ul&gt;
@@ -54469,17 +54629,17 @@ Pense duas vezes antes de se envolver.
             
             &lt;h2&gt;Child tags:&lt;/h2&gt;
             
-            &lt;li&gt;&lt;a href=&quot;#software-linux&quot; aria-label=&quot;Child tag software&amp;gt;linux&quot;&gt;software&amp;gt;linux&lt;/a&gt;&lt;/li&gt;
+            &lt;li&gt;&lt;a href=&quot;#software-windows&quot; aria-label=&quot;Child tag software&amp;gt;windows&quot;&gt;software&amp;gt;windows&lt;/a&gt;&lt;/li&gt;
             
             &lt;li&gt;&lt;a href=&quot;#linux&quot; aria-label=&quot;Child tag linux&quot;&gt;linux&lt;/a&gt;&lt;/li&gt;
             
-            &lt;li&gt;&lt;a href=&quot;#mobile&quot; aria-label=&quot;Child tag mobile&quot;&gt;mobile&lt;/a&gt;&lt;/li&gt;
+            &lt;li&gt;&lt;a href=&quot;#software-linux&quot; aria-label=&quot;Child tag software&amp;gt;linux&quot;&gt;software&amp;gt;linux&lt;/a&gt;&lt;/li&gt;
             
             &lt;li&gt;&lt;a href=&quot;#software-mobile&quot; aria-label=&quot;Child tag software&amp;gt;mobile&quot;&gt;software&amp;gt;mobile&lt;/a&gt;&lt;/li&gt;
             
-            &lt;li&gt;&lt;a href=&quot;#windows&quot; aria-label=&quot;Child tag windows&quot;&gt;windows&lt;/a&gt;&lt;/li&gt;
+            &lt;li&gt;&lt;a href=&quot;#mobile&quot; aria-label=&quot;Child tag mobile&quot;&gt;mobile&lt;/a&gt;&lt;/li&gt;
             
-            &lt;li&gt;&lt;a href=&quot;#software-windows&quot; aria-label=&quot;Child tag software&amp;gt;windows&quot;&gt;software&amp;gt;windows&lt;/a&gt;&lt;/li&gt;
+            &lt;li&gt;&lt;a href=&quot;#windows&quot; aria-label=&quot;Child tag windows&quot;&gt;windows&lt;/a&gt;&lt;/li&gt;
             
             
         &lt;/ul&gt;
@@ -55032,13 +55192,13 @@ Pense duas vezes antes de se envolver.
             
             &lt;h2&gt;Child tags:&lt;/h2&gt;
             
-            &lt;li&gt;&lt;a href=&quot;#tools-github&quot; aria-label=&quot;Child tag tools&amp;gt;github&quot;&gt;tools&amp;gt;github&lt;/a&gt;&lt;/li&gt;
-            
             &lt;li&gt;&lt;a href=&quot;#github&quot; aria-label=&quot;Child tag github&quot;&gt;github&lt;/a&gt;&lt;/li&gt;
+            
+            &lt;li&gt;&lt;a href=&quot;#tools-github-estudos&quot; aria-label=&quot;Child tag tools&amp;gt;github&amp;gt;estudos&quot;&gt;tools&amp;gt;github&amp;gt;estudos&lt;/a&gt;&lt;/li&gt;
             
             &lt;li&gt;&lt;a href=&quot;#github-estudos&quot; aria-label=&quot;Child tag github&amp;gt;estudos&quot;&gt;github&amp;gt;estudos&lt;/a&gt;&lt;/li&gt;
             
-            &lt;li&gt;&lt;a href=&quot;#tools-github-estudos&quot; aria-label=&quot;Child tag tools&amp;gt;github&amp;gt;estudos&quot;&gt;tools&amp;gt;github&amp;gt;estudos&lt;/a&gt;&lt;/li&gt;
+            &lt;li&gt;&lt;a href=&quot;#tools-github&quot; aria-label=&quot;Child tag tools&amp;gt;github&quot;&gt;tools&amp;gt;github&lt;/a&gt;&lt;/li&gt;
             
             
         &lt;/ul&gt;
@@ -55130,9 +55290,9 @@ Pense duas vezes antes de se envolver.
         
         &lt;h2&gt;Parent tags:&lt;/h2&gt;
             
-            &lt;li&gt;&lt;a href=&quot;#tools&quot; aria-label=&quot;Parent tag tools&quot;&gt;tools&lt;/a&gt;&lt;/li&gt;
-            
             &lt;li&gt;&lt;a href=&quot;#github&quot; aria-label=&quot;Parent tag github&quot;&gt;github&lt;/a&gt;&lt;/li&gt;
+            
+            &lt;li&gt;&lt;a href=&quot;#tools&quot; aria-label=&quot;Parent tag tools&quot;&gt;tools&lt;/a&gt;&lt;/li&gt;
             
             
         &lt;/ul&gt;
@@ -55390,27 +55550,26 @@ Pense duas vezes antes de se envolver.
         parent scripts
     }
     scripts {
-        child scripts_cloud
-        child AI
-        child cloud
-        child google-apps-script
         child scripts_mobile
-        child mobile
-        child scripts_powershell
+        child AI
         child powershell
+        child cloud
         child scripts_google-apps-script
+        child scripts_powershell
         child scripts_AI
+        child scripts_cloud
+        child google-apps-script
+        child mobile
         related_2 estudos
         related_22 linux
         related_2 linux_dotfile
     }
     scripts ||--|| scripts_AI : SUBSET_OF
-    scripts_cloud {
+    scripts_mobile {
         parent scripts
-        related_2 tools_github
-        related_2 tools
+        related_2 iphone
     }
-    scripts ||--|| scripts_cloud : SUBSET_OF
+    scripts ||--|| scripts_mobile : SUBSET_OF
     AI {
         parent scripts
         child prompt
@@ -55419,39 +55578,40 @@ Pense duas vezes antes de se envolver.
         child LLM
     }
     scripts ||--|| AI : SUBSET_OF
+    powershell {
+        parent scripts
+    }
+    scripts ||--|| powershell : SUBSET_OF
     cloud {
         parent scripts
         related_2 software_linux
         related_2 software_windows
     }
     scripts ||--|| cloud : SUBSET_OF
-    google-apps-script {
+    scripts_google-apps-script {
         parent scripts
     }
-    scripts ||--|| google-apps-script : SUBSET_OF
-    scripts_mobile {
-        parent scripts
-        related_2 iphone
-    }
-    scripts ||--|| scripts_mobile : SUBSET_OF
-    mobile {
-        parent software
-        parent scripts
-    }
-    scripts ||--|| mobile : SUBSET_OF
+    scripts ||--|| scripts_google-apps-script : SUBSET_OF
     scripts_powershell {
         parent scripts
         related_2 software_windows
     }
     scripts ||--|| scripts_powershell : SUBSET_OF
-    powershell {
+    scripts_cloud {
+        parent scripts
+        related_2 tools_github
+        related_2 tools
+    }
+    scripts ||--|| scripts_cloud : SUBSET_OF
+    google-apps-script {
         parent scripts
     }
-    scripts ||--|| powershell : SUBSET_OF
-    scripts_google-apps-script {
+    scripts ||--|| google-apps-script : SUBSET_OF
+    mobile {
+        parent software
         parent scripts
     }
-    scripts ||--|| scripts_google-apps-script : SUBSET_OF
+    scripts ||--|| mobile : SUBSET_OF
     prompt {
         parent AI
     }
@@ -55470,60 +55630,60 @@ Pense duas vezes antes de se envolver.
     AI ||--|| LLM : SUBSET_OF
     linux {
         parent software
-        child dotfile
         child linux_dotfile
+        child dotfile
         related_2 software_mobile
         related_22 scripts
         related_2 iphone
         related_2 iphone_shortcuts
     }
     software {
-        child software_linux
-        child linux
-        child mobile
-        child software_mobile
-        child windows
         child software_windows
+        child linux
+        child software_linux
+        child software_mobile
+        child mobile
+        child windows
         related_2 tasks
     }
     software ||--|| linux : SUBSET_OF
-    dotfile {
-        parent linux
-    }
-    linux ||--|| dotfile : SUBSET_OF
     linux_dotfile {
         parent linux
         related_2 scripts
         related_2 hardware
     }
     linux ||--|| linux_dotfile : SUBSET_OF
+    dotfile {
+        parent linux
+    }
+    linux ||--|| dotfile : SUBSET_OF
     calls {
     }
     edital {
-        child edital_direito
         child direito_processual-penal
-        child direito
         child edital_direito_processual-penal
+        child direito
+        child edital_direito
     }
-    edital_direito {
-        parent edital
-        child processual-penal
-    }
-    edital ||--|| edital_direito : SUBSET_OF
     direito_processual-penal {
         parent edital
     }
     edital ||--|| direito_processual-penal : SUBSET_OF
+    edital_direito_processual-penal {
+        parent edital
+        parent direito
+    }
+    edital ||--|| edital_direito_processual-penal : SUBSET_OF
     direito {
         parent edital
         child edital_direito_processual-penal
     }
     edital ||--|| direito : SUBSET_OF
-    edital_direito_processual-penal {
-        parent direito
+    edital_direito {
         parent edital
+        child processual-penal
     }
-    edital ||--|| edital_direito_processual-penal : SUBSET_OF
+    edital ||--|| edital_direito : SUBSET_OF
     fatherhood {
     }
     rendimentos {
@@ -55565,47 +55725,47 @@ Pense duas vezes antes de se envolver.
         related_2 cloud
     }
     software ||--|| software_linux : SUBSET_OF
-    software ||--|| mobile : SUBSET_OF
-    software_mobile {
-        parent software
-        related_2 linux
-        related_2 iphone
-    }
-    software ||--|| software_mobile : SUBSET_OF
-    windows {
-        parent software
-    }
-    software ||--|| windows : SUBSET_OF
     software_windows {
         parent software
         related_2 cloud
         related_2 scripts_powershell
     }
     software ||--|| software_windows : SUBSET_OF
+    software_mobile {
+        parent software
+        related_2 linux
+        related_2 iphone
+    }
+    software ||--|| software_mobile : SUBSET_OF
+    software ||--|| mobile : SUBSET_OF
+    windows {
+        parent software
+    }
+    software ||--|| windows : SUBSET_OF
     tools {
-        child tools_github
         child github
-        child github_estudos
         child tools_github_estudos
+        child github_estudos
+        child tools_github
         related_2 scripts_cloud
     }
-    tools ||--|| tools_github : SUBSET_OF
     github {
         parent tools
         child github_jekyll
-        child jekyll
         child tools_github_estudos
+        child jekyll
     }
     tools ||--|| github : SUBSET_OF
+    tools_github_estudos {
+        parent github
+        parent tools
+    }
+    tools ||--|| tools_github_estudos : SUBSET_OF
     github_estudos {
         parent tools
     }
     tools ||--|| github_estudos : SUBSET_OF
-    tools_github_estudos {
-        parent tools
-        parent github
-    }
-    tools ||--|| tools_github_estudos : SUBSET_OF
+    tools ||--|| tools_github : SUBSET_OF
     spirit {
         related_2 admoestacao
     }
@@ -55618,11 +55778,11 @@ Pense duas vezes antes de se envolver.
         parent github
     }
     github ||--|| github_jekyll : SUBSET_OF
+    github ||--|| tools_github_estudos : SUBSET_OF
     jekyll {
         parent github
     }
     github ||--|| jekyll : SUBSET_OF
-    github ||--|| tools_github_estudos : SUBSET_OF
     saude {
     }
     despesas {
@@ -55653,8 +55813,8 @@ Pense duas vezes antes de se envolver.
         parent scratchpad
     }
     scratchpad {
-        child scratchpad_gemini
         child gemini
+        child scratchpad_gemini
     }
     scratchpad ||--|| scratchpad_gemini : SUBSET_OF
     gemini {
@@ -55822,6 +55982,24 @@ document.addEventListener(&apos;DOMContentLoaded&apos;, () =&gt; {
     
     
     
+    
+    &lt;div class=&quot;search-link&quot;&gt;
+      &lt;h3&gt;
+        &lt;a class=&quot;post-heading&quot; href=&quot;#&quot; id=&quot;back-to-top&quot; aria-label=&quot;Back to top&quot;&gt;
+          &lt;img src=&quot;/assets/gold.ico&quot; alt=&quot;gold icon&quot; /&gt;
+        &lt;/a&gt;
+        2024-11-21
+         &amp;rightarrowtail; 21 Nov 2024
+        
+      &lt;/h3&gt;
+      &lt;ul&gt;
+        &lt;a href=&quot;/ftpd/&quot;&gt;
+          &lt;h2&gt;
+            Setup FTP Server on Debian and Connect a Windows Machine
+          &lt;/h2&gt;
+        &lt;/a&gt;
+      &lt;/ul&gt;
+    &lt;/div&gt;
     
     &lt;div class=&quot;search-link&quot;&gt;
       &lt;h3&gt;
@@ -58482,24 +58660,6 @@ document.addEventListener(&apos;DOMContentLoaded&apos;, () =&gt; {
         &lt;a href=&quot;/pyragraphs/&quot;&gt;
           &lt;h2&gt;
             PYragraphs
-          &lt;/h2&gt;
-        &lt;/a&gt;
-      &lt;/ul&gt;
-    &lt;/div&gt;
-    
-    &lt;div class=&quot;search-link&quot;&gt;
-      &lt;h3&gt;
-        &lt;a class=&quot;post-heading&quot; href=&quot;#&quot; id=&quot;back-to-top&quot; aria-label=&quot;Back to top&quot;&gt;
-          &lt;img src=&quot;/assets/gold.ico&quot; alt=&quot;gold icon&quot; /&gt;
-        &lt;/a&gt;
-        2024-02-06
-         &amp;rightarrowtail; 20 Sep 2024
-        
-      &lt;/h3&gt;
-      &lt;ul&gt;
-        &lt;a href=&quot;/ftpd/&quot;&gt;
-          &lt;h2&gt;
-            Setup FTP Server on Debian and Connect a Windows machine
           &lt;/h2&gt;
         &lt;/a&gt;
       &lt;/ul&gt;
@@ -61709,7 +61869,7 @@ this.diff_match_patch=diff_match_patch;this.DIFF_DELETE=DIFF_DELETE;this.DIFF_IN
         
         
         
-        2024-11-20 12:16:39
+        2024-11-21 14:36:42
         <a href="/" aria-label="Homepage">
           &#8505; infoBAG
         </a>
