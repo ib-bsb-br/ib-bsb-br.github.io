@@ -54,11 +54,217 @@
     <title>infoBAG</title>
     <link href="https://ib.bsb.br/rss.xml" rel="self"/>
     <link href="https://ib.bsb.br/"/>
-    <updated>2024-11-21T18:44:51+00:00</updated>
+    <updated>2024-11-21T19:13:17+00:00</updated>
     <id>https://ib.bsb.br</id>
     <author>
         <name></name>
     </author>
+    
+    <entry>
+        <title>Setting Up GPU Drivers on RK3588</title>
+        <link href="https://ib.bsb.br/setting-up-gpu-drivers-on-rk3588/"/>
+        <updated>2024-11-21T00:00:00+00:00</updated>
+        <id>https://ib.bsb.br/setting-up-gpu-drivers-on-rk3588/</id>
+        <content type="html">&lt;p&gt;MLC LLM is a universal deployment solution that allows efficient CPU/GPU code generation without AutoTVM-based performance tuning. This guide focuses on setting up a generic GPU environment and troubleshooting common issues on the RK3588 (RK3588 based SBC).&lt;/p&gt;
+
+&lt;h2 id=&quot;table-of-contents&quot;&gt;Table of Contents&lt;/h2&gt;
+&lt;ol&gt;
+  &lt;li&gt;&lt;a href=&quot;#prerequisites&quot;&gt;Prerequisites&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;#opencl-sdk-installation&quot;&gt;OpenCL SDK Installation&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;#orange-pi-5-setup&quot;&gt;RK3588 Setup&lt;/a&gt;
+    &lt;ul&gt;
+      &lt;li&gt;&lt;a href=&quot;#installing-ubuntu-2204&quot;&gt;Installing Ubuntu 22.04&lt;/a&gt;&lt;/li&gt;
+      &lt;li&gt;&lt;a href=&quot;#installing-mali-gpu-driver&quot;&gt;Installing Mali GPU Driver&lt;/a&gt;&lt;/li&gt;
+      &lt;li&gt;&lt;a href=&quot;#configuring-opencl-icd-loader&quot;&gt;Configuring OpenCL ICD Loader&lt;/a&gt;&lt;/li&gt;
+      &lt;li&gt;&lt;a href=&quot;#installing-opencl-libraries&quot;&gt;Installing OpenCL Libraries&lt;/a&gt;&lt;/li&gt;
+      &lt;li&gt;&lt;a href=&quot;#installing-dependencies&quot;&gt;Installing Dependencies&lt;/a&gt;&lt;/li&gt;
+      &lt;li&gt;&lt;a href=&quot;#verifying-installation-with-clinfo&quot;&gt;Verifying Installation with clinfo&lt;/a&gt;&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;#troubleshooting&quot;&gt;Troubleshooting&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;#references&quot;&gt;References&lt;/a&gt;&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;h2 id=&quot;prerequisites&quot;&gt;Prerequisites&lt;/h2&gt;
+
+&lt;p&gt;Before beginning the installation process, ensure that you have:&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;An RK3588 (RK3588 based Single Board Computer)&lt;/li&gt;
+  &lt;li&gt;A stable internet connection&lt;/li&gt;
+  &lt;li&gt;Basic knowledge of using the Linux command line&lt;/li&gt;
+  &lt;li&gt;Physical access to the RK3588 for setup&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h2 id=&quot;opencl-sdk-installation&quot;&gt;OpenCL SDK Installation&lt;/h2&gt;
+
+&lt;p&gt;The OpenCL SDK is essential if you plan to build your own models for the OpenCL backend. Follow the steps below to install the OpenCL SDK:&lt;/p&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;
+    &lt;p&gt;&lt;strong&gt;Access OpenCL’s GitHub Repository:&lt;/strong&gt;&lt;/p&gt;
+
+    &lt;p&gt;Visit the &lt;a href=&quot;https://github.com/KhronosGroup/OpenCL-SDK&quot;&gt;OpenCL SDK GitHub Repository&lt;/a&gt; for detailed installation instructions and resources.&lt;/p&gt;
+  &lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;h2 id=&quot;rk3588-setup&quot;&gt;RK3588 Setup&lt;/h2&gt;
+
+&lt;p&gt;This section guides you through setting up the RK3588 for running models using the OpenCL backend.&lt;/p&gt;
+
+&lt;h3 id=&quot;installing-ubuntu-2204&quot;&gt;Installing Ubuntu 22.04&lt;/h3&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;
+    &lt;p&gt;&lt;strong&gt;Download Ubuntu 22.04 Image:&lt;/strong&gt;&lt;/p&gt;
+
+    &lt;p&gt;Download the Ubuntu 22.04 image tailored for the RK3588 from &lt;a href=&quot;https://github.com/Joshua-Riek/ubuntu-rockchip/releases/tag/v1.22&quot;&gt;here&lt;/a&gt;.&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;&lt;strong&gt;Flash Ubuntu to SD Card:&lt;/strong&gt;&lt;/p&gt;
+
+    &lt;p&gt;Use a tool like &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;balenaEtcher&lt;/code&gt; or &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;Rufus&lt;/code&gt; to flash the downloaded image onto an SD card.&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;&lt;strong&gt;Boot RK3588:&lt;/strong&gt;&lt;/p&gt;
+
+    &lt;p&gt;Insert the SD card into your RK3588 and power it on. Follow the on-screen instructions to complete the initial setup.&lt;/p&gt;
+  &lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;h3 id=&quot;installing-mali-gpu-driver&quot;&gt;Installing Mali GPU Driver&lt;/h3&gt;
+
+&lt;p&gt;To enable the Mali GPU for OpenCL operations, install the Mali GPU driver.&lt;/p&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;
+    &lt;p&gt;&lt;strong&gt;Download &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;libmali-g610.so&lt;/code&gt;:&lt;/strong&gt;&lt;/p&gt;
+
+    &lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nb&quot;&gt;cd&lt;/span&gt; /usr/lib
+&lt;span class=&quot;nb&quot;&gt;sudo &lt;/span&gt;wget https://github.com/JeffyCN/mirrors/raw/libmali/lib/aarch64-linux-gnu/libmali-valhall-g610-g6p0-x11-wayland-gbm.so &lt;span class=&quot;nt&quot;&gt;-O&lt;/span&gt; libmali-g610.so
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;    &lt;/div&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;&lt;strong&gt;Ensure Firmware File Exists:&lt;/strong&gt;&lt;/p&gt;
+
+    &lt;p&gt;Verify if &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;mali_csffw.bin&lt;/code&gt; exists in the &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;/lib/firmware&lt;/code&gt; directory:&lt;/p&gt;
+
+    &lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nb&quot;&gt;cd&lt;/span&gt; /lib/firmware
+&lt;span class=&quot;nb&quot;&gt;ls &lt;/span&gt;mali_csffw.bin
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;    &lt;/div&gt;
+
+    &lt;p&gt;If the file does not exist, download it:&lt;/p&gt;
+
+    &lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nb&quot;&gt;sudo &lt;/span&gt;wget https://github.com/JeffyCN/mirrors/raw/libmali/firmware/g610/mali_csffw.bin
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;    &lt;/div&gt;
+  &lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;h3 id=&quot;configuring-opencl-icd-loader&quot;&gt;Configuring OpenCL ICD Loader&lt;/h3&gt;
+
+&lt;p&gt;Set up the OpenCL Installable Client Driver (ICD) loader to recognize the Mali GPU.&lt;/p&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;
+    &lt;p&gt;&lt;strong&gt;Update Package List:&lt;/strong&gt;&lt;/p&gt;
+
+    &lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nb&quot;&gt;sudo &lt;/span&gt;apt update
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;    &lt;/div&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;&lt;strong&gt;Install Mesa OpenCL ICD:&lt;/strong&gt;&lt;/p&gt;
+
+    &lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nb&quot;&gt;sudo &lt;/span&gt;apt &lt;span class=&quot;nb&quot;&gt;install &lt;/span&gt;mesa-opencl-icd &lt;span class=&quot;nt&quot;&gt;-y&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;    &lt;/div&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;&lt;strong&gt;Create OpenCL Vendors Directory:&lt;/strong&gt;&lt;/p&gt;
+
+    &lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nb&quot;&gt;sudo mkdir&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;-p&lt;/span&gt; /etc/OpenCL/vendors
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;    &lt;/div&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;&lt;strong&gt;Add Mali ICD Configuration:&lt;/strong&gt;&lt;/p&gt;
+
+    &lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nb&quot;&gt;echo&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;/usr/lib/libmali-g610.so&quot;&lt;/span&gt; | &lt;span class=&quot;nb&quot;&gt;sudo tee&lt;/span&gt; /etc/OpenCL/vendors/mali.icd
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;    &lt;/div&gt;
+  &lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;h3 id=&quot;installing-opencl-libraries&quot;&gt;Installing OpenCL Libraries&lt;/h3&gt;
+
+&lt;p&gt;Install the OpenCL development libraries required for compiling OpenCL applications.&lt;/p&gt;
+
+&lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nb&quot;&gt;sudo &lt;/span&gt;apt &lt;span class=&quot;nb&quot;&gt;install &lt;/span&gt;ocl-icd-opencl-dev &lt;span class=&quot;nt&quot;&gt;-y&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h3 id=&quot;installing-dependencies&quot;&gt;Installing Dependencies&lt;/h3&gt;
+
+&lt;p&gt;Install necessary dependencies for the Mali OpenCL backend.&lt;/p&gt;
+
+&lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nb&quot;&gt;sudo &lt;/span&gt;apt &lt;span class=&quot;nb&quot;&gt;install &lt;/span&gt;libxcb-dri2-0 libxcb-dri3-0 libwayland-client0 libwayland-server0 libx11-xcb1 &lt;span class=&quot;nt&quot;&gt;-y&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h3 id=&quot;verifying-installation-with-clinfo&quot;&gt;Verifying Installation with clinfo&lt;/h3&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;
+    &lt;p&gt;&lt;strong&gt;Install clinfo:&lt;/strong&gt;&lt;/p&gt;
+
+    &lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nb&quot;&gt;sudo &lt;/span&gt;apt &lt;span class=&quot;nb&quot;&gt;install &lt;/span&gt;clinfo &lt;span class=&quot;nt&quot;&gt;-y&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;    &lt;/div&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;&lt;strong&gt;Run clinfo to Validate Installation:&lt;/strong&gt;&lt;/p&gt;
+
+    &lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;clinfo
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;    &lt;/div&gt;
+
+    &lt;p&gt;&lt;strong&gt;Expected Output:&lt;/strong&gt;&lt;/p&gt;
+
+    &lt;p&gt;Look for GPU information similar to the following in the output:&lt;/p&gt;
+
+    &lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;arm_release_ver: g13p0-01eac0, rk_so_ver: 3
+Number of platforms: 2
+Platform Name: ARM Platform
+Platform Vendor: ARM
+Platform Version: OpenCL 2.1 v1.g6p0-01eac0.2819f9d4dbe0b5a2f89c835d8484f9cd
+Platform Profile: FULL_PROFILE
+...
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;    &lt;/div&gt;
+
+    &lt;p&gt;This output confirms that the OpenCL runtime and Mali GPU driver are correctly installed and recognized by the system.&lt;/p&gt;
+  &lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;h2 id=&quot;troubleshooting&quot;&gt;Troubleshooting&lt;/h2&gt;
+
+&lt;p&gt;If you encounter issues during the installation process, consider the following steps:&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;&lt;strong&gt;Check Network Connectivity:&lt;/strong&gt; Ensure that your RK3588 has a stable internet connection for downloading packages and dependencies.&lt;/li&gt;
+  &lt;li&gt;&lt;strong&gt;Verify File Downloads:&lt;/strong&gt; Re-download any files if the download was interrupted or corrupted.&lt;/li&gt;
+  &lt;li&gt;&lt;strong&gt;Review Command Outputs:&lt;/strong&gt; Carefully read any error messages during command execution to identify missing dependencies or permissions issues.&lt;/li&gt;
+  &lt;li&gt;&lt;strong&gt;Consult Logs:&lt;/strong&gt; Check system logs for detailed error information using &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;dmesg&lt;/code&gt; or reviewing logs in &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;/var/log/&lt;/code&gt;.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h2 id=&quot;references&quot;&gt;References&lt;/h2&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;&lt;a href=&quot;https://github.com/KhronosGroup/OpenCL-SDK&quot;&gt;OpenCL SDK GitHub Repository&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://github.com/mlc-ai/mlc-llm&quot;&gt;MLC LLM GitHub Repository&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://github.com/Joshua-Riek/ubuntu-rockchip/releases/tag/v1.22&quot;&gt;Ubuntu Rockchip Releases&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://github.com/JeffyCN/mirrors/raw/libmali/lib/aarch64-linux-gnu/&quot;&gt;Mali GPU Drivers&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://www.orangepi.org/&quot;&gt;Orange Pi Official Website&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://github.com/obfuscated12/clinfo&quot;&gt;clinfo Documentation&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://ubuntu.com/tutorials&quot;&gt;Ubuntu Official Documentation&lt;/a&gt;&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;hr /&gt;
+
+&lt;p&gt;By following this comprehensive guide, you should be able to successfully set up GPU drivers and SDKs on your RK3588, enabling efficient OpenCL backend operations with MLC LLM.&lt;/p&gt;
+</content>
+    </entry>
     
     <entry>
         <title>Setup FTP Server on Debian and Connect a Windows Machine</title>
@@ -50241,8 +50447,8 @@ Pense duas vezes antes de se envolver.
         
         
         &lt;ul class=&quot;search-link&quot;&gt;
-            &lt;a href=&quot;#hardware&quot; aria-label=&quot;Tag hardware with 5 posts&quot;&gt;
-                hardware (5)
+            &lt;a href=&quot;#hardware&quot; aria-label=&quot;Tag hardware with 6 posts&quot;&gt;
+                hardware (6)
             &lt;/a&gt;
         &lt;/ul&gt;
         
@@ -50296,8 +50502,8 @@ Pense duas vezes antes de se envolver.
         
         
         &lt;ul class=&quot;search-link&quot;&gt;
-            &lt;a href=&quot;#linux&quot; aria-label=&quot;Tag linux with 46 posts&quot;&gt;
-                linux (46)
+            &lt;a href=&quot;#linux&quot; aria-label=&quot;Tag linux with 47 posts&quot;&gt;
+                linux (47)
             &lt;/a&gt;
         &lt;/ul&gt;
         
@@ -50800,13 +51006,13 @@ Pense duas vezes antes de se envolver.
             
             &lt;h2&gt;Child tags:&lt;/h2&gt;
             
+            &lt;li&gt;&lt;a href=&quot;#prompt&quot; aria-label=&quot;Child tag prompt&quot;&gt;prompt&lt;/a&gt;&lt;/li&gt;
+            
             &lt;li&gt;&lt;a href=&quot;#ai-llm&quot; aria-label=&quot;Child tag AI&amp;gt;LLM&quot;&gt;AI&amp;gt;LLM&lt;/a&gt;&lt;/li&gt;
             
             &lt;li&gt;&lt;a href=&quot;#ai-prompt&quot; aria-label=&quot;Child tag AI&amp;gt;prompt&quot;&gt;AI&amp;gt;prompt&lt;/a&gt;&lt;/li&gt;
             
             &lt;li&gt;&lt;a href=&quot;#llm&quot; aria-label=&quot;Child tag LLM&quot;&gt;LLM&lt;/a&gt;&lt;/li&gt;
-            
-            &lt;li&gt;&lt;a href=&quot;#prompt&quot; aria-label=&quot;Child tag prompt&quot;&gt;prompt&lt;/a&gt;&lt;/li&gt;
             
             
         &lt;/ul&gt;
@@ -51859,13 +52065,13 @@ Pense duas vezes antes de se envolver.
             
             &lt;h2&gt;Child tags:&lt;/h2&gt;
             
-            &lt;li&gt;&lt;a href=&quot;#edital-direito&quot; aria-label=&quot;Child tag edital&amp;gt;direito&quot;&gt;edital&amp;gt;direito&lt;/a&gt;&lt;/li&gt;
+            &lt;li&gt;&lt;a href=&quot;#edital-direito-processual-penal&quot; aria-label=&quot;Child tag edital&amp;gt;direito&amp;gt;processual-penal&quot;&gt;edital&amp;gt;direito&amp;gt;processual-penal&lt;/a&gt;&lt;/li&gt;
             
-            &lt;li&gt;&lt;a href=&quot;#direito-processual-penal&quot; aria-label=&quot;Child tag direito&amp;gt;processual-penal&quot;&gt;direito&amp;gt;processual-penal&lt;/a&gt;&lt;/li&gt;
+            &lt;li&gt;&lt;a href=&quot;#edital-direito&quot; aria-label=&quot;Child tag edital&amp;gt;direito&quot;&gt;edital&amp;gt;direito&lt;/a&gt;&lt;/li&gt;
             
             &lt;li&gt;&lt;a href=&quot;#direito&quot; aria-label=&quot;Child tag direito&quot;&gt;direito&lt;/a&gt;&lt;/li&gt;
             
-            &lt;li&gt;&lt;a href=&quot;#edital-direito-processual-penal&quot; aria-label=&quot;Child tag edital&amp;gt;direito&amp;gt;processual-penal&quot;&gt;edital&amp;gt;direito&amp;gt;processual-penal&lt;/a&gt;&lt;/li&gt;
+            &lt;li&gt;&lt;a href=&quot;#direito-processual-penal&quot; aria-label=&quot;Child tag direito&amp;gt;processual-penal&quot;&gt;direito&amp;gt;processual-penal&lt;/a&gt;&lt;/li&gt;
             
             
         &lt;/ul&gt;
@@ -52215,9 +52421,9 @@ Pense duas vezes antes de se envolver.
             
             &lt;h2&gt;Child tags:&lt;/h2&gt;
             
-            &lt;li&gt;&lt;a href=&quot;#jekyll&quot; aria-label=&quot;Child tag jekyll&quot;&gt;jekyll&lt;/a&gt;&lt;/li&gt;
-            
             &lt;li&gt;&lt;a href=&quot;#github-jekyll&quot; aria-label=&quot;Child tag github&amp;gt;jekyll&quot;&gt;github&amp;gt;jekyll&lt;/a&gt;&lt;/li&gt;
+            
+            &lt;li&gt;&lt;a href=&quot;#jekyll&quot; aria-label=&quot;Child tag jekyll&quot;&gt;jekyll&lt;/a&gt;&lt;/li&gt;
             
             &lt;li&gt;&lt;a href=&quot;#tools-github-estudos&quot; aria-label=&quot;Child tag tools&amp;gt;github&amp;gt;estudos&quot;&gt;tools&amp;gt;github&amp;gt;estudos&lt;/a&gt;&lt;/li&gt;
             
@@ -52347,6 +52553,14 @@ Pense duas vezes antes de se envolver.
         &lt;ul class=&quot;search-link&quot;&gt;
         
             
+            &lt;li&gt;&lt;a href=&quot;/setting-up-gpu-drivers-on-rk3588&quot;&gt;
+                &lt;time datetime=&quot;2024-11-21T00:00:00+00:00&quot;&gt;&lt;strong&gt;November 21, 2024&lt;/strong&gt;&lt;/time&gt;
+                &amp;hArr;
+                
+                &lt;mark&gt;Setting Up GPU Drivers on RK3588&lt;/mark&gt;
+                
+            &lt;/a&gt;&lt;/li&gt;
+            
             &lt;li&gt;&lt;a href=&quot;/rockchip-devices&quot;&gt;
                 &lt;time datetime=&quot;2024-08-18T00:00:00+00:00&quot;&gt;&lt;strong&gt;August 18, 2024&lt;/strong&gt;&lt;/time&gt;
                 &amp;hArr;
@@ -52397,6 +52611,10 @@ Pense duas vezes antes de se envolver.
         &lt;ul class=&quot;search-link&quot;&gt;
         
         &lt;h2&gt;Related tags:&lt;/h2&gt;
+            
+            &lt;li&gt;&lt;a href=&quot;#linux&quot; aria-label=&quot;Related tag linux&quot;&gt;
+                linux (2)
+            &lt;/a&gt;&lt;/li&gt;
             
             &lt;li&gt;&lt;a href=&quot;#linux-dotfile&quot; aria-label=&quot;Related tag linux&amp;gt;dotfile&quot;&gt;
                 linux&amp;gt;dotfile (2)
@@ -52636,6 +52854,14 @@ Pense duas vezes antes de se envolver.
                 &amp;hArr;
                 
                 &lt;mark&gt;Setup FTP Server on Debian and Connect a Windows Machine&lt;/mark&gt;
+                
+            &lt;/a&gt;&lt;/li&gt;
+            
+            &lt;li&gt;&lt;a href=&quot;/setting-up-gpu-drivers-on-rk3588&quot;&gt;
+                &lt;time datetime=&quot;2024-11-21T00:00:00+00:00&quot;&gt;&lt;strong&gt;November 21, 2024&lt;/strong&gt;&lt;/time&gt;
+                &amp;hArr;
+                
+                &lt;mark&gt;Setting Up GPU Drivers on RK3588&lt;/mark&gt;
                 
             &lt;/a&gt;&lt;/li&gt;
             
@@ -53012,9 +53238,9 @@ Pense duas vezes antes de se envolver.
             
             &lt;h2&gt;Child tags:&lt;/h2&gt;
             
-            &lt;li&gt;&lt;a href=&quot;#dotfile&quot; aria-label=&quot;Child tag dotfile&quot;&gt;dotfile&lt;/a&gt;&lt;/li&gt;
-            
             &lt;li&gt;&lt;a href=&quot;#linux-dotfile&quot; aria-label=&quot;Child tag linux&amp;gt;dotfile&quot;&gt;linux&amp;gt;dotfile&lt;/a&gt;&lt;/li&gt;
+            
+            &lt;li&gt;&lt;a href=&quot;#dotfile&quot; aria-label=&quot;Child tag dotfile&quot;&gt;dotfile&lt;/a&gt;&lt;/li&gt;
             
             
         &lt;/ul&gt;
@@ -53028,6 +53254,10 @@ Pense duas vezes antes de se envolver.
             
             &lt;li&gt;&lt;a href=&quot;#scripts&quot; aria-label=&quot;Related tag scripts&quot;&gt;
                 scripts (22)
+            &lt;/a&gt;&lt;/li&gt;
+            
+            &lt;li&gt;&lt;a href=&quot;#hardware&quot; aria-label=&quot;Related tag hardware&quot;&gt;
+                hardware (2)
             &lt;/a&gt;&lt;/li&gt;
             
             &lt;li&gt;&lt;a href=&quot;#iphone&quot; aria-label=&quot;Related tag iphone&quot;&gt;
@@ -53866,9 +54096,9 @@ Pense duas vezes antes de se envolver.
             
             &lt;h2&gt;Child tags:&lt;/h2&gt;
             
-            &lt;li&gt;&lt;a href=&quot;#scratchpad-gemini&quot; aria-label=&quot;Child tag scratchpad&amp;gt;gemini&quot;&gt;scratchpad&amp;gt;gemini&lt;/a&gt;&lt;/li&gt;
-            
             &lt;li&gt;&lt;a href=&quot;#gemini&quot; aria-label=&quot;Child tag gemini&quot;&gt;gemini&lt;/a&gt;&lt;/li&gt;
+            
+            &lt;li&gt;&lt;a href=&quot;#scratchpad-gemini&quot; aria-label=&quot;Child tag scratchpad&amp;gt;gemini&quot;&gt;scratchpad&amp;gt;gemini&lt;/a&gt;&lt;/li&gt;
             
             
         &lt;/ul&gt;
@@ -54176,25 +54406,25 @@ Pense duas vezes antes de se envolver.
             
             &lt;h2&gt;Child tags:&lt;/h2&gt;
             
-            &lt;li&gt;&lt;a href=&quot;#powershell&quot; aria-label=&quot;Child tag powershell&quot;&gt;powershell&lt;/a&gt;&lt;/li&gt;
-            
-            &lt;li&gt;&lt;a href=&quot;#scripts-cloud&quot; aria-label=&quot;Child tag scripts&amp;gt;cloud&quot;&gt;scripts&amp;gt;cloud&lt;/a&gt;&lt;/li&gt;
-            
-            &lt;li&gt;&lt;a href=&quot;#google-apps-script&quot; aria-label=&quot;Child tag google-apps-script&quot;&gt;google-apps-script&lt;/a&gt;&lt;/li&gt;
-            
-            &lt;li&gt;&lt;a href=&quot;#cloud&quot; aria-label=&quot;Child tag cloud&quot;&gt;cloud&lt;/a&gt;&lt;/li&gt;
-            
-            &lt;li&gt;&lt;a href=&quot;#ai&quot; aria-label=&quot;Child tag AI&quot;&gt;AI&lt;/a&gt;&lt;/li&gt;
-            
-            &lt;li&gt;&lt;a href=&quot;#scripts-google-apps-script&quot; aria-label=&quot;Child tag scripts&amp;gt;google-apps-script&quot;&gt;scripts&amp;gt;google-apps-script&lt;/a&gt;&lt;/li&gt;
-            
-            &lt;li&gt;&lt;a href=&quot;#scripts-mobile&quot; aria-label=&quot;Child tag scripts&amp;gt;mobile&quot;&gt;scripts&amp;gt;mobile&lt;/a&gt;&lt;/li&gt;
-            
-            &lt;li&gt;&lt;a href=&quot;#scripts-ai&quot; aria-label=&quot;Child tag scripts&amp;gt;AI&quot;&gt;scripts&amp;gt;AI&lt;/a&gt;&lt;/li&gt;
-            
             &lt;li&gt;&lt;a href=&quot;#scripts-powershell&quot; aria-label=&quot;Child tag scripts&amp;gt;powershell&quot;&gt;scripts&amp;gt;powershell&lt;/a&gt;&lt;/li&gt;
             
             &lt;li&gt;&lt;a href=&quot;#mobile&quot; aria-label=&quot;Child tag mobile&quot;&gt;mobile&lt;/a&gt;&lt;/li&gt;
+            
+            &lt;li&gt;&lt;a href=&quot;#ai&quot; aria-label=&quot;Child tag AI&quot;&gt;AI&lt;/a&gt;&lt;/li&gt;
+            
+            &lt;li&gt;&lt;a href=&quot;#scripts-cloud&quot; aria-label=&quot;Child tag scripts&amp;gt;cloud&quot;&gt;scripts&amp;gt;cloud&lt;/a&gt;&lt;/li&gt;
+            
+            &lt;li&gt;&lt;a href=&quot;#scripts-google-apps-script&quot; aria-label=&quot;Child tag scripts&amp;gt;google-apps-script&quot;&gt;scripts&amp;gt;google-apps-script&lt;/a&gt;&lt;/li&gt;
+            
+            &lt;li&gt;&lt;a href=&quot;#cloud&quot; aria-label=&quot;Child tag cloud&quot;&gt;cloud&lt;/a&gt;&lt;/li&gt;
+            
+            &lt;li&gt;&lt;a href=&quot;#google-apps-script&quot; aria-label=&quot;Child tag google-apps-script&quot;&gt;google-apps-script&lt;/a&gt;&lt;/li&gt;
+            
+            &lt;li&gt;&lt;a href=&quot;#scripts-ai&quot; aria-label=&quot;Child tag scripts&amp;gt;AI&quot;&gt;scripts&amp;gt;AI&lt;/a&gt;&lt;/li&gt;
+            
+            &lt;li&gt;&lt;a href=&quot;#scripts-mobile&quot; aria-label=&quot;Child tag scripts&amp;gt;mobile&quot;&gt;scripts&amp;gt;mobile&lt;/a&gt;&lt;/li&gt;
+            
+            &lt;li&gt;&lt;a href=&quot;#powershell&quot; aria-label=&quot;Child tag powershell&quot;&gt;powershell&lt;/a&gt;&lt;/li&gt;
             
             
         &lt;/ul&gt;
@@ -54621,17 +54851,17 @@ Pense duas vezes antes de se envolver.
             
             &lt;h2&gt;Child tags:&lt;/h2&gt;
             
-            &lt;li&gt;&lt;a href=&quot;#software-windows&quot; aria-label=&quot;Child tag software&amp;gt;windows&quot;&gt;software&amp;gt;windows&lt;/a&gt;&lt;/li&gt;
+            &lt;li&gt;&lt;a href=&quot;#mobile&quot; aria-label=&quot;Child tag mobile&quot;&gt;mobile&lt;/a&gt;&lt;/li&gt;
             
             &lt;li&gt;&lt;a href=&quot;#software-mobile&quot; aria-label=&quot;Child tag software&amp;gt;mobile&quot;&gt;software&amp;gt;mobile&lt;/a&gt;&lt;/li&gt;
-            
-            &lt;li&gt;&lt;a href=&quot;#linux&quot; aria-label=&quot;Child tag linux&quot;&gt;linux&lt;/a&gt;&lt;/li&gt;
             
             &lt;li&gt;&lt;a href=&quot;#software-linux&quot; aria-label=&quot;Child tag software&amp;gt;linux&quot;&gt;software&amp;gt;linux&lt;/a&gt;&lt;/li&gt;
             
             &lt;li&gt;&lt;a href=&quot;#windows&quot; aria-label=&quot;Child tag windows&quot;&gt;windows&lt;/a&gt;&lt;/li&gt;
             
-            &lt;li&gt;&lt;a href=&quot;#mobile&quot; aria-label=&quot;Child tag mobile&quot;&gt;mobile&lt;/a&gt;&lt;/li&gt;
+            &lt;li&gt;&lt;a href=&quot;#linux&quot; aria-label=&quot;Child tag linux&quot;&gt;linux&lt;/a&gt;&lt;/li&gt;
+            
+            &lt;li&gt;&lt;a href=&quot;#software-windows&quot; aria-label=&quot;Child tag software&amp;gt;windows&quot;&gt;software&amp;gt;windows&lt;/a&gt;&lt;/li&gt;
             
             
         &lt;/ul&gt;
@@ -54991,9 +55221,9 @@ Pense duas vezes antes de se envolver.
             
             &lt;h2&gt;Child tags:&lt;/h2&gt;
             
-            &lt;li&gt;&lt;a href=&quot;#tasks-iphone&quot; aria-label=&quot;Child tag tasks&amp;gt;iphone&quot;&gt;tasks&amp;gt;iphone&lt;/a&gt;&lt;/li&gt;
-            
             &lt;li&gt;&lt;a href=&quot;#iphone&quot; aria-label=&quot;Child tag iphone&quot;&gt;iphone&lt;/a&gt;&lt;/li&gt;
+            
+            &lt;li&gt;&lt;a href=&quot;#tasks-iphone&quot; aria-label=&quot;Child tag tasks&amp;gt;iphone&quot;&gt;tasks&amp;gt;iphone&lt;/a&gt;&lt;/li&gt;
             
             
         &lt;/ul&gt;
@@ -55176,11 +55406,11 @@ Pense duas vezes antes de se envolver.
             
             &lt;h2&gt;Child tags:&lt;/h2&gt;
             
-            &lt;li&gt;&lt;a href=&quot;#github-estudos&quot; aria-label=&quot;Child tag github&amp;gt;estudos&quot;&gt;github&amp;gt;estudos&lt;/a&gt;&lt;/li&gt;
-            
             &lt;li&gt;&lt;a href=&quot;#github&quot; aria-label=&quot;Child tag github&quot;&gt;github&lt;/a&gt;&lt;/li&gt;
             
             &lt;li&gt;&lt;a href=&quot;#tools-github-estudos&quot; aria-label=&quot;Child tag tools&amp;gt;github&amp;gt;estudos&quot;&gt;tools&amp;gt;github&amp;gt;estudos&lt;/a&gt;&lt;/li&gt;
+            
+            &lt;li&gt;&lt;a href=&quot;#github-estudos&quot; aria-label=&quot;Child tag github&amp;gt;estudos&quot;&gt;github&amp;gt;estudos&lt;/a&gt;&lt;/li&gt;
             
             &lt;li&gt;&lt;a href=&quot;#tools-github&quot; aria-label=&quot;Child tag tools&amp;gt;github&quot;&gt;tools&amp;gt;github&lt;/a&gt;&lt;/li&gt;
             
@@ -55274,9 +55504,9 @@ Pense duas vezes antes de se envolver.
         
         &lt;h2&gt;Parent tags:&lt;/h2&gt;
             
-            &lt;li&gt;&lt;a href=&quot;#tools&quot; aria-label=&quot;Parent tag tools&quot;&gt;tools&lt;/a&gt;&lt;/li&gt;
-            
             &lt;li&gt;&lt;a href=&quot;#github&quot; aria-label=&quot;Parent tag github&quot;&gt;github&lt;/a&gt;&lt;/li&gt;
+            
+            &lt;li&gt;&lt;a href=&quot;#tools&quot; aria-label=&quot;Parent tag tools&quot;&gt;tools&lt;/a&gt;&lt;/li&gt;
             
             
         &lt;/ul&gt;
@@ -55534,58 +55764,21 @@ Pense duas vezes antes de se envolver.
         parent scripts
     }
     scripts {
-        child powershell
-        child scripts_cloud
-        child google-apps-script
-        child cloud
-        child AI
-        child scripts_google-apps-script
-        child scripts_mobile
-        child scripts_AI
         child scripts_powershell
         child mobile
+        child AI
+        child scripts_cloud
+        child scripts_google-apps-script
+        child cloud
+        child google-apps-script
+        child scripts_AI
+        child scripts_mobile
+        child powershell
         related_2 estudos
         related_22 linux
         related_2 linux_dotfile
     }
     scripts ||--|| scripts_AI : SUBSET_OF
-    powershell {
-        parent scripts
-    }
-    scripts ||--|| powershell : SUBSET_OF
-    scripts_cloud {
-        parent scripts
-        related_2 tools_github
-        related_2 tools
-    }
-    scripts ||--|| scripts_cloud : SUBSET_OF
-    google-apps-script {
-        parent scripts
-    }
-    scripts ||--|| google-apps-script : SUBSET_OF
-    cloud {
-        parent scripts
-        related_2 software_linux
-        related_2 software_windows
-    }
-    scripts ||--|| cloud : SUBSET_OF
-    AI {
-        parent scripts
-        child AI_LLM
-        child AI_prompt
-        child LLM
-        child prompt
-    }
-    scripts ||--|| AI : SUBSET_OF
-    scripts_google-apps-script {
-        parent scripts
-    }
-    scripts ||--|| scripts_google-apps-script : SUBSET_OF
-    scripts_mobile {
-        parent scripts
-        related_2 iphone
-    }
-    scripts ||--|| scripts_mobile : SUBSET_OF
     scripts_powershell {
         parent scripts
         related_2 software_windows
@@ -55596,6 +55789,47 @@ Pense duas vezes antes de se envolver.
         parent scripts
     }
     scripts ||--|| mobile : SUBSET_OF
+    AI {
+        parent scripts
+        child prompt
+        child AI_LLM
+        child AI_prompt
+        child LLM
+    }
+    scripts ||--|| AI : SUBSET_OF
+    scripts_cloud {
+        parent scripts
+        related_2 tools_github
+        related_2 tools
+    }
+    scripts ||--|| scripts_cloud : SUBSET_OF
+    scripts_google-apps-script {
+        parent scripts
+    }
+    scripts ||--|| scripts_google-apps-script : SUBSET_OF
+    cloud {
+        parent scripts
+        related_2 software_linux
+        related_2 software_windows
+    }
+    scripts ||--|| cloud : SUBSET_OF
+    google-apps-script {
+        parent scripts
+    }
+    scripts ||--|| google-apps-script : SUBSET_OF
+    scripts_mobile {
+        parent scripts
+        related_2 iphone
+    }
+    scripts ||--|| scripts_mobile : SUBSET_OF
+    powershell {
+        parent scripts
+    }
+    scripts ||--|| powershell : SUBSET_OF
+    prompt {
+        parent AI
+    }
+    AI ||--|| prompt : SUBSET_OF
     AI_LLM {
         parent AI
     }
@@ -55608,66 +55842,63 @@ Pense duas vezes antes de se envolver.
         parent AI
     }
     AI ||--|| LLM : SUBSET_OF
-    prompt {
-        parent AI
-    }
-    AI ||--|| prompt : SUBSET_OF
     linux {
         parent software
-        child dotfile
         child linux_dotfile
+        child dotfile
         related_2 software_mobile
         related_22 scripts
+        related_2 hardware
         related_2 iphone
         related_2 iphone_shortcuts
     }
     software {
-        child software_windows
+        child mobile
         child software_mobile
-        child linux
         child software_linux
         child windows
-        child mobile
+        child linux
+        child software_windows
         related_2 tasks
     }
     software ||--|| linux : SUBSET_OF
-    dotfile {
-        parent linux
-    }
-    linux ||--|| dotfile : SUBSET_OF
     linux_dotfile {
         parent linux
         related_2 scripts
         related_2 hardware
     }
     linux ||--|| linux_dotfile : SUBSET_OF
+    dotfile {
+        parent linux
+    }
+    linux ||--|| dotfile : SUBSET_OF
     calls {
     }
     edital {
+        child edital_direito_processual-penal
         child edital_direito
-        child direito_processual-penal
         child direito
-        child edital_direito_processual-penal
+        child direito_processual-penal
     }
-    edital_direito {
-        parent edital
-        child processual-penal
-    }
-    edital ||--|| edital_direito : SUBSET_OF
-    direito_processual-penal {
-        parent edital
-    }
-    edital ||--|| direito_processual-penal : SUBSET_OF
-    direito {
-        parent edital
-        child edital_direito_processual-penal
-    }
-    edital ||--|| direito : SUBSET_OF
     edital_direito_processual-penal {
         parent edital
         parent direito
     }
     edital ||--|| edital_direito_processual-penal : SUBSET_OF
+    edital_direito {
+        parent edital
+        child processual-penal
+    }
+    edital ||--|| edital_direito : SUBSET_OF
+    direito {
+        parent edital
+        child edital_direito_processual-penal
+    }
+    edital ||--|| direito : SUBSET_OF
+    direito_processual-penal {
+        parent edital
+    }
+    edital ||--|| direito_processual-penal : SUBSET_OF
     fatherhood {
     }
     rendimentos {
@@ -55675,15 +55906,11 @@ Pense duas vezes antes de se envolver.
     sell {
     }
     tasks {
-        child tasks_iphone
         child iphone
+        child tasks_iphone
         related_2 mlo
         related_2 software
     }
-    tasks_iphone {
-        parent tasks
-    }
-    tasks ||--|| tasks_iphone : SUBSET_OF
     iphone {
         parent tasks
         child iphone_shortcuts
@@ -55693,6 +55920,10 @@ Pense duas vezes antes de se envolver.
         related_2 software_mobile
     }
     tasks ||--|| iphone : SUBSET_OF
+    tasks_iphone {
+        parent tasks
+    }
+    tasks ||--|| tasks_iphone : SUBSET_OF
     estudos {
         parent tools_github
         related_2 scripts
@@ -55709,12 +55940,7 @@ Pense duas vezes antes de se envolver.
         related_2 cloud
     }
     software ||--|| software_linux : SUBSET_OF
-    software_windows {
-        parent software
-        related_2 cloud
-        related_2 scripts_powershell
-    }
-    software ||--|| software_windows : SUBSET_OF
+    software ||--|| mobile : SUBSET_OF
     software_mobile {
         parent software
         related_2 linux
@@ -55725,30 +55951,35 @@ Pense duas vezes antes de se envolver.
         parent software
     }
     software ||--|| windows : SUBSET_OF
-    software ||--|| mobile : SUBSET_OF
+    software_windows {
+        parent software
+        related_2 cloud
+        related_2 scripts_powershell
+    }
+    software ||--|| software_windows : SUBSET_OF
     tools {
-        child github_estudos
         child github
         child tools_github_estudos
+        child github_estudos
         child tools_github
         related_2 scripts_cloud
     }
-    github_estudos {
-        parent tools
-    }
-    tools ||--|| github_estudos : SUBSET_OF
     github {
         parent tools
-        child jekyll
         child github_jekyll
+        child jekyll
         child tools_github_estudos
     }
     tools ||--|| github : SUBSET_OF
     tools_github_estudos {
-        parent tools
         parent github
+        parent tools
     }
     tools ||--|| tools_github_estudos : SUBSET_OF
+    github_estudos {
+        parent tools
+    }
+    tools ||--|| github_estudos : SUBSET_OF
     tools ||--|| tools_github : SUBSET_OF
     spirit {
         related_2 admoestacao
@@ -55773,6 +56004,10 @@ Pense duas vezes antes de se envolver.
     }
     misc {
     }
+    hardware {
+        related_2 linux
+        related_2 linux_dotfile
+    }
     direito ||--|| edital_direito_processual-penal : SUBSET_OF
     processual-penal {
         parent edital_direito
@@ -55790,15 +56025,12 @@ Pense duas vezes antes de se envolver.
         parent iphone
     }
     iphone ||--|| shortcuts : SUBSET_OF
-    hardware {
-        related_2 linux_dotfile
-    }
     scratchpad_gemini {
         parent scratchpad
     }
     scratchpad {
-        child scratchpad_gemini
         child gemini
+        child scratchpad_gemini
     }
     scratchpad ||--|| scratchpad_gemini : SUBSET_OF
     gemini {
@@ -55966,6 +56198,24 @@ document.addEventListener(&apos;DOMContentLoaded&apos;, () =&gt; {
     
     
     
+    
+    &lt;div class=&quot;search-link&quot;&gt;
+      &lt;h3&gt;
+        &lt;a class=&quot;post-heading&quot; href=&quot;#&quot; id=&quot;back-to-top&quot; aria-label=&quot;Back to top&quot;&gt;
+          &lt;img src=&quot;/assets/gold.ico&quot; alt=&quot;gold icon&quot; /&gt;
+        &lt;/a&gt;
+        2024-11-21
+         &amp;rightarrowtail; 21 Nov 2024
+        
+      &lt;/h3&gt;
+      &lt;ul&gt;
+        &lt;a href=&quot;/setting-up-gpu-drivers-on-rk3588/&quot;&gt;
+          &lt;h2&gt;
+            Setting Up GPU Drivers on RK3588
+          &lt;/h2&gt;
+        &lt;/a&gt;
+      &lt;/ul&gt;
+    &lt;/div&gt;
     
     &lt;div class=&quot;search-link&quot;&gt;
       &lt;h3&gt;
@@ -61853,7 +62103,7 @@ this.diff_match_patch=diff_match_patch;this.DIFF_DELETE=DIFF_DELETE;this.DIFF_IN
         
         
         
-        2024-11-21 15:44:51
+        2024-11-21 16:13:17
         <a href="/" aria-label="Homepage">
           &#8505; infoBAG
         </a>
