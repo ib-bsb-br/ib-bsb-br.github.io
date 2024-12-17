@@ -85,12 +85,13 @@
               <button type="submit" class="btn btn-danger">Improve this page? aberto.</button>
             </form>
             
-            &hArr;<a class="btn-primary">228</a>
             <form action="https://github.com/ib-bsb-br/ib-bsb-br.github.io/commits/main/_posts/2024-05-06-storj-sync.md" method="POST" target="_blank" rel="noopener noreferrer">
               <button type="submit" class="btn btn-danger">View revision history</button>
             </form>
-            &hArr;<a class="btn-secondary">2267</a>
           </p>
+            <a class="btn-primary">
+              2267&hArr;228
+            </a>
           </div>
         </div>
   </header>
@@ -162,7 +163,14 @@ fi
 </code></section></div></div>
 
       </div>
+      URL: https://ib.bsb.br/storj-sync
     </article>
+    
+    
+    
+    
+    
+    
     <nav class="post-navigation" aria-label="Post navigation">
       
       <div class="nav-arrow prev">
@@ -178,17 +186,74 @@ fi
         </a>
       </div>
       
-    </nav>    
+    </nav>
+    <pre>
+      #!/bin/bash
+
+# Define directories and log file locations
+LOG_DIR="/var/log/rclone/"
+SYNC_LOG="${LOG_DIR}/rclone_sync.log"
+ERROR_LOG="${LOG_DIR}/rclone_errors.log"
+
+# Ensure the log directory exists
+mkdir -p "${LOG_DIR}"
+
+# Define source, destination, and compare-dest directories
+SOURCE_DIR="/userdata/"
+DEST_DIR="Storj:transfer/999_SHARED/"
+COMPARE_DEST="Storj:transfer/999_SHARED/previous_backups"
+
+# Check if the initial sync has been done
+if [ ! -f "${LOG_DIR}/initial_sync_done" ]; then
+    # Perform the initial synchronization
+    rclone sync "${SOURCE_DIR}" "${DEST_DIR}" --progress -v --log-file="${SYNC_LOG}" 2&gt;&gt;"${ERROR_LOG}"
+
+    # Check the exit status and create a marker file if successful
+    if [ $? -eq 0 ]; then
+        touch "${LOG_DIR}/initial_sync_done"
+        echo "Initial sync completed successfully." &gt;&gt; "${SYNC_LOG}"
+    else
+        echo "Initial sync encountered an error. Check log for details." &gt;&gt; "${SYNC_LOG}"
+        exit 1
+    fi
+fi
+
+# Perform daily incremental backups using --copy-dest
+rclone sync "${SOURCE_DIR}" "${DEST_DIR}" --copy-dest="${COMPARE_DEST}" --progress -v --log-file="${SYNC_LOG}" 2&gt;&gt;"${ERROR_LOG}"
+
+# Check the exit status and log appropriately
+if [ $? -eq 0 ]; then
+    echo "Incremental sync operation completed successfully."
+    echo "Incremental sync operation completed successfully." &gt;&gt; "${SYNC_LOG}"
+else
+    echo "Incremental sync operation encountered an error. Check log for details."
+    echo "Incremental sync operation encountered an error. Check log for details." &gt;&gt; "${SYNC_LOG}"
+fi
+
+
+
+Automation with Cron
+
+For regular updates, you can automate the synchronization process through a cron job:
+
+crontab -e
+
+
+Add the following entries to execute the synchronization daily at 9 AM:
+
+0 9 * * * /usr/bin/rstorj.sh
+
+
+    </pre>    
     
     <div class="comment-box">
       Reference:
       <a href="https://rclone.org/s3/#storj" title="https://rclone.org/s3/#storj">https://rclone.org/s3/#storj</a>
-      https://ib.bsb.br/storj-sync
     </div>
     
   </main>
   <footer class="site-footer">
-    <p><a href="#" aria-label="Back to top"><img src="/assets/Rope_(Old).gif" alt="Back to top" width="32" height="32" loading="lazy"></a>2024-12-17 18:16:01<a href="/" aria-label="Homepage">&#8505; infoBAG</a></p>
+    <p><a href="#" aria-label="Back to top"><img src="/assets/Rope_(Old).gif" alt="Back to top" width="32" height="32" loading="lazy"></a>2024-12-17 20:45:31<a href="/" aria-label="Homepage">&#8505; infoBAG</a></p>
   </footer>
   <script type="application/ld+json">
   {
