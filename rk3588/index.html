@@ -91,6 +91,12 @@
         </div>
   </header>
   <main class="content">
+    
+    
+    
+    
+    
+      
     <article class="post-wrapper">      
       <div class="post-content">
         
@@ -414,12 +420,6 @@ pip <span class="nb">install</span> <span class="nt">--user</span> rknn_toolkit_
       </div>
       URL: https://ib.bsb.br/rk3588
     </article>
-    
-    
-    
-    
-    
-    
     <nav class="post-navigation" aria-label="Post navigation">
       
       <div class="nav-arrow prev">
@@ -435,264 +435,7 @@ pip <span class="nb">install</span> <span class="nt">--user</span> rknn_toolkit_
         </a>
       </div>
       
-    </nav>
-    <pre>
-      RK3588 Development Board Demo
-
-RK3588/RK3588S is a high-performance ARM64 SoC released by Rockchip, with the following configurations:
-
-
-  8C (A764 + A554)
-  GPU (4 cores, Mali-G610) with 8K hardware decoding support
-  NPU (2Tops * 3)
-
-
-The RK3588 has some additional external modules, supporting more interfaces, while the RK3588S lacks these modules, but its price is slightly lower.
-
-My Hardware
-
-
-  Orange Pi 5 8G (RK3588S)
-  Rock 5A 4G (RK3588S)
-  Orange Pi 5 Plus 16G (RK3588)
-
-
-According to Orange Pi’s documentation and ecosystem, it seems to be a bit better than Rock Pi; in my experience, Orange Pi’s documentation is really well-made, very clear, and comes in two languages, Chinese and English.
-On the other hand, the Rock Pi WIKI, despite looking more modern, seems to have more criticism in the community, and I’ve also seen people commenting on issues with the Rock 5’s PD power supply.
-
-Therefore, at the moment, my perception is that, in terms of software ecosystem, Raspberry Pi » Orange Pi &gt; Rock Pi; and, in terms of cost-effectiveness, Orange Pi &gt; Rock Pi » Raspberry Pi (now the difference is not so significant, since Raspberry Pi prices have dropped).
-
-Other RK3588 boards or boards with other ARM SoCs are either too expensive or have subpar performance. For now, the Chinese boards that offer the best value and are most “hackable” are Orange Pi and Rock Pi.
-
-
-  FriendlyELEC (formerly known as FriendlyARM) has also released products with RK3588 and RK3588S, however, this company’s products seem to be primarily aimed at OpenWRT, with a router-oriented design. I’m not interested for now.
-Wildfire, another company that comes from embedded systems education, also plans to release a board with RK3588S (from the LubanMao series), which seems to have an OK price and was announced to be available on 2023/8/8. However, I already have enough RK3588S boards and I’m not considering buying more at the moment.
-
-
-Other community reference materials:
-
-
-  Rock 5B (RK3588) Experience and Issue Records - Also a Getting Started Tutorial
-  Comparison of Main Chinese Products - Zhihu (a Chinese Q&amp;A social network)
-
-
-What Can You Do with an RK3588 Development Board
-
-
-  Play with embedded systems via GPIO
-  Install the Android system and use it as a live streaming machine with OBS, for example, to stream looped local videos or live camera feeds.
-  Use it to automatically record live streams of your favorite UPs (content creators), automatically recording when they start and being able to review them at any time.
-  Use it as a live streaming server/video chat room, with support for real-time encoding and decoding at different resolutions.
-  Use it as a virtual server or for Docker, virtualizing multiple ARM hosts, and even running Android.
-  Use it as an ARM node in a Proxmox virtual machine cluster.
-
-
-Examples of NPU Usage
-
-
-  If you are going to use the NPU, I recommend directly installing the official Orange Pi 5 Debian image, which should present fewer problems.
-
-
-Rockchip provides two NPU-related repositories, which include user manuals, examples, and drivers:
-
-
-  rknn-toolkit2: This repository actually contains two Python packages, described below
-    
-      rknn-toolkit2 x64: located in the docs/examples/packages folder at the root of the repository, includes documentation, examples, and “wheel” packages for the x64 version that can only be installed on x64 hosts and depend on AI frameworks like ONNX, TensorFlow, and PyTorch.  It supports AI inference with NPU, local emulator AI inference, and conversion of ONNX models to the rknn format compatible with NPU.
-        
-          Mainly used for model debugging on PCs
-          Attention: according to the official documentation, up to version 1.4, this SDK is only compatible with Ubuntu18.04(x64) / Ubuntu20.04(x64) systems, and with Python versions 3.6/3.8
-        
-      
-      rknn-toolkit2 lite2 arm64: found in the rknn_toolkit_lite2 folder of the repository, depends only on OpenCV and NumPy, and provides Python APIs for the NPU
-        
-          Can be used to deploy models through the Python API
-          Attention: according to the official documentation, up to version 1.4, this SDK is only compatible with Debian 10(arm64) / Debian 11(arm64) systems, and with Python versions 3.7/3.9
-        
-      
-    
-  
-  rknpu2: The rknpu2 provides a C API for the NPU, mainly used to deploy models in C language.
-
-
-
-  Attention: the development environment on the PC is different from the system requirements on the device, so pay attention to the differences!
-
-
-Although both repositories use git repositories, all underlying content is in the form of binaries, such as “.so”, “.whl”, docker images, and the source code is not open.
-
-In addition, the officially provided closed x64 docker image is very large and was only shared through the slow Baidu Cloud sharing service. Based on the documentation, I wrote a Dockerfile.rknn_toolkit2_1.4.0 myself that works normally.
-
-The development and testing process is like this: first run the container and map my working directory into it, also adding X11 Forwarding features with --net=host --env="DISPLAY" --volume="$HOME/.Xauthority:/root/.Xauthority:rw" so that GUI programs inside the container can be displayed through the host’s X11 Server:
-
-docker run --name rknn -d \
-  --net=host --env="DISPLAY" --volume="$HOME/.Xauthority:/root/.Xauthority:rw" \
-  -v /home/ryan/Downloads/rk3588s/:/work \
-  rknn-toolkit2:1.4.0 \
-  bash -c 'while true; do sleep 1000000; done'
-
-
-Then I simply remotely access the container via vscode for development~
-
-First I made an object detection demo in videos, the code is here yolov5_rknn_toolkit2_demo
-
-1. Running an official rknn-toolkit2-lite2 demo on orangepi
-
-The installation process is the same as rknn_toolkit2:
-
-# Install basic python packages
-sudo apt-get update
-sudo apt-get install -y python3 python3-dev python3-pip gcc
-
-# Install rknn-toolkit2-lite2 dependencies
-sudo apt-get install -y python3-opencv python3-numpy
-
-# Enter the folder where the rknn_toolkit_lite2 package is stored
-cd rknn_toolkit_lite2/packages
-# Use the BFSU mirror to speed up the download of Python packages
-pip config set global.index-url https://mirrors.bfsu.edu.cn/pypi/web/simple
-# Install rknn_toolkit_lite2 in the user folder, for debian 11 install the cpython3.9 whl
-pip install --user rknn_toolkit_lite2-1.4.0-cp39-cp39-linux_aarch64.whl
-
-
-That’s it, now you can start running npu tasks.
-
-The API is almost identical to rknn_toolkit2, but it can only load rknn models that are compatible with the SoC model and does not have the model conversion functionality.
-
-If you want to deploy a program based on rknpu2, the process is similar, just look at the official documentation in the repository.
-
-2. NPU Performance Debugging
-
-
-  The official rknpu2 document Rockchip_RKNPU_User_Guide_RKNN_API_V1.4.0_CN.pdf includes a section at the end that talks about performance debugging. The following content is a main copy of that document
-
-
-Normally, the frequencies of the various units on the device are dynamically adjusted, which can cause variation in the model performance results. To avoid inconsistencies in performance test results, it is recommended to fix the frequencies of the relevant units before performing the tests. The commands for viewing and configuring these frequencies are:
-
-1. CPU Debug Commands
-
-
-  Check CPU frequency:
-    # Method 1
-cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq
-# Method 2
-cat /sys/kernel/debug/clk/clk_summary | grep arm
-    
-  
-  Fix CPU frequency (supported by rk3588)
-    # See available CPU frequencies
-cat /sys/devices/system/cpu/cpufreq/policy0/scaling_available_frequencies
-# Outputs =&gt; 408000 600000 816000 1008000 1200000 1416000 1608000 1800000
-
-# Set CPU frequency, for example, to the maximum of 1.8GHz
-echo userspace &gt; /sys/devices/system/cpu/cpufreq/policy0/scaling_governor
-echo 1800000 &gt; /sys/devices/system/cpu/cpufreq/policy0/scaling_setspeed
-    
-    2. Memory (DDR) Debug Commands
-  
-  Check memory (DDR) frequency
-    cat /sys/kernel/debug/clk/clk_summary | grep ddr
-    
-  
-  Fix memory (DDR) frequency
-    
-      Requires firmware support, the following command does not work on orangepi5, probably because it is not supported
-      # See available frequencies for DDR
-cat /sys/class/devfreq/dmc/available_frequencies
-# Set DDR frequency, for example, to 1560MHz
-echo userspace &gt; /sys/class/devfreq/dmc/governor
-echo 1560000000 &gt; /sys/class/devfreq/dmc/userspace/set_freq
-      
-    
-  
-
-
-3. NPU Debug Commands
-
-
-  
-    Check NPU frequency (specific to rk3588)
-
-    cat /sys/class/devfreq/fdab0000.npu/cur_freq
-    
-  
-  
-    Fix NPU frequency (specific to rk3588)
-    
-      Note: in versions later than 0.7.2 of the NPU driver, it is necessary to turn on the NPU power before configuring the frequency
-      # See available NPU frequencies
-cat /sys/class/devfreq/fdab0000.npu/available_frequencies
-# =&gt; 300000000 400000000 500000000 600000000 700000000 800000000 900000000 1000000000
-# Set NPU frequency, for example, to the maximum of 1 GHz
-echo userspace &gt; /sys/class/devfreq/fdab0000.npu/governor
-echo 1000000000 &gt; /sys/kernel/debug/clk/clk_npu_dsu0/clk_rate
-      
-    
-  
-
-
-4. Supported NPU Query Settings
-
-For NPU driver versions 0.7.2 and later, it is possible to query the NPU version, the utilization of the different NPU cores, and manually control the NPU power through nodes.
-
-# 1. Query the NPU driver version
-## Corrected the command, the official document had a mistake and gave an error
-cat /sys/kernel/debug/rknpu/version
-
-# 2. Query NPU utilization
-cat /sys/kernel/debug/rknpu/load
-
-# 3. Query NPU power status
-cat /sys/kernel/debug/rknpu/power
-
-# 4. Turn on NPU power
-echo on &gt; /sys/kernel/debug/rknpu/power
-
-# 5. Turn off NPU power
-echo off &gt; /sys/kernel/debug/rknpu/power
-
-
-For NPU driver versions 0.8.2 and later, functionalities such as frequency adjustment, voltage, and dynamic power control have been added:
-
-# 1. Query NPU operating frequency
-cat /sys/kernel/debug/rknpu/freq
-
-# 2. Set NPU operating frequency
-## Check available frequencies for RK3588 NPU
-cat /sys/class/devfreq/fdab0000.npu/available_frequencies
-## Set RK3588 NPU frequency, for example, to 1 GHz
-echo 1000000000 &gt; /sys/kernel/debug/rknpu/freq
-
-# 3. Query NPU operating voltage
-## Note: it is not supported to modify it directly, it is only possible to modify the frequency, the voltage is adjusted accordingly
-cat /sys/kernel/debug/rknpu/volt
-
-# 4. Query NPU dynamic power control and power off delay time (in ms)
-cat /sys/kernel/debug/rknpu/delayms
-
-# 5. Set NPU dynamic power control and power off delay time (in ms)
-## Set 2s delay to turn off the power
-echo 2000 &gt; /sys/kernel/debug/rknpu/delayms
-
-
-GPU Drivers
-
-Until March 2023, the Orange Pi 5 was behind on GPU drivers and it was only possible to use the GPU to decode 8K videos with community wayland systems called armbian.
-
-However, now the official Orange Pi 5 Ubuntu 22.04 image already comes with integrated GPU drivers.
-
-
-  Compared to the official Ubuntu/Debian systems provided by armbian, orangepi5/rock5 to armbian has a more open-source and active environment, with faster ARM driver updates and consistent experience across multiple ARM boards.
-
-
-Armbian GPU driver related documents:
-
-
-  Video Acceleration Drivers
-  Kodi on Orange Pi 5 with GPU Hardware Acceleration and HDMI Audio
-
-
-    </pre>    
+    </nav>  
     
     <div class="comment-box">
       Reference:
@@ -701,7 +444,7 @@ Armbian GPU driver related documents:
     
   </main>
   <footer class="site-footer">
-    <p><a href="#" aria-label="Back to top"><img src="/assets/Rope_(Old).gif" alt="Back to top" width="32" height="32" loading="lazy"></a>2024-12-17 20:45:31<a href="/" aria-label="Homepage">&#8505; infoBAG</a></p>
+    <p><a href="#" aria-label="Back to top"><img src="/assets/Rope_(Old).gif" alt="Back to top" width="32" height="32" loading="lazy"></a>2024-12-17 21:20:15<a href="/" aria-label="Homepage">&#8505; infoBAG</a></p>
   </footer>
   <script type="application/ld+json">
   {
