@@ -5,7 +5,7 @@ date: 2024-12-19
 type: post
 layout: post
 published: true
-slug: configuring-chromium-based-browser-launch-parameters
+slug: chromium-parameters
 title: 'Configuring chromium-based browser launch parameters'
 ---
 1. **Create Local Configuration File**
