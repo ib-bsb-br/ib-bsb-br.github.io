@@ -1,11 +1,12 @@
 ---
-title: About Thorium Flags
-date: 2024-03-02
-tags: linux
-comment: https://thorium.rocks/
+tags: software>linux
 info: aberto.
+date: 2024-03-02
 type: post
 layout: post
+published: true
+slug: browser-thorium
+title: 'Thorium Browser Flags'
 ---
 
 # enclose flags within Thorium Binary
