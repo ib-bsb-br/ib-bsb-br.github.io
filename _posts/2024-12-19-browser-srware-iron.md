@@ -5,7 +5,7 @@ date: 2024-12-19
 type: post
 layout: post
 published: true
-slug: browser-srware_iron
+slug: browser-srware-iron
 title: 'SRWare Iron Browser Flags'
 ---
 # Modifying Browser Executable for Permanent Flag Integration
