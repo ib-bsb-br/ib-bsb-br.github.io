@@ -1,0 +1,296 @@
+<ol>
+  <li><strong>Access Gmail’s Search Functionality</strong>:
+    <ul>
+      <li>In the search bar at the top of your Gmail interface, enter the search operator <code class="language-plaintext highlighter-rouge">is:unread</code> to filter all unread emails.</li>
+    </ul>
+  </li>
+  <li><strong>Select All Unread Emails</strong>:
+    <ul>
+      <li>After executing the search, click the checkbox at the top left corner of the email list to select all displayed unread emails.</li>
+      <li>If you have multiple pages of unread emails, a prompt will appear allowing you to select all conversations matching the search criteria. Click on this option to ensure all unread emails are selected.</li>
+    </ul>
+  </li>
+  <li><strong>Apply a Label to Selected Emails</strong>:
+    <ul>
+      <li>With all unread emails selected, click on the “Labels” icon (it resembles a tag) and choose “Create new” to assign a new label, such as “Unread_Senders.” This action helps in organizing and retrieving these emails easily.</li>
+    </ul>
+  </li>
+  <li><strong>Export Emails Using Google Takeout</strong>:
+    <ul>
+      <li>Navigate to <a href="https://takeout.google.com/">Google Takeout</a>, Google’s data export tool.</li>
+      <li>Deselect all data types, then scroll down to select “Mail.”</li>
+      <li>Click on “All Mail data included,” deselect all labels, and select only the “Unread_Senders” label you created.</li>
+      <li>Proceed to create the export. Once the export is ready, download the file, which will be in MBOX format.</li>
+    </ul>
+  </li>
+  <li><strong>Extract Sender Email Addresses</strong>:</li>
+</ol>
+
+<p>###python</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">from</span> <span class="n">typing</span> <span class="kn">import</span> <span class="n">Set</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Generator</span>
+<span class="kn">import</span> <span class="n">mailbox</span>
+<span class="kn">import</span> <span class="n">email.utils</span>
+<span class="kn">import</span> <span class="n">re</span>
+<span class="kn">from</span> <span class="n">email.header</span> <span class="kn">import</span> <span class="n">decode_header</span>
+<span class="kn">import</span> <span class="n">logging</span>
+<span class="kn">from</span> <span class="n">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">import</span> <span class="n">chardet</span>
+<span class="kn">from</span> <span class="n">email.errors</span> <span class="kn">import</span> <span class="n">HeaderParseError</span>
+
+<span class="n">logging</span><span class="p">.</span><span class="nf">basicConfig</span><span class="p">(</span><span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="p">.</span><span class="n">INFO</span><span class="p">)</span>
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="p">.</span><span class="nf">getLogger</span><span class="p">(</span><span class="n">__name__</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">decode_text</span><span class="p">(</span><span class="n">text</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">,</span> <span class="n">suggested_encoding</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="bp">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="sh">"""</span><span class="s">
+    Decode bytes to string, attempting multiple encodings.
+    
+    Args:
+        text: Bytes to decode
+        suggested_encoding: Optional encoding to try first
+        
+    Returns:
+        Decoded string
+    </span><span class="sh">"""</span>
+    <span class="n">encodings</span> <span class="o">=</span> <span class="p">[</span><span class="n">suggested_encoding</span><span class="p">]</span> <span class="k">if</span> <span class="n">suggested_encoding</span> <span class="k">else</span> <span class="p">[]</span>
+    <span class="n">encodings</span><span class="p">.</span><span class="nf">extend</span><span class="p">([</span><span class="sh">'</span><span class="s">utf-8</span><span class="sh">'</span><span class="p">,</span> <span class="sh">'</span><span class="s">iso-8859-1</span><span class="sh">'</span><span class="p">,</span> <span class="sh">'</span><span class="s">ascii</span><span class="sh">'</span><span class="p">])</span>
+    
+    <span class="k">for</span> <span class="n">encoding</span> <span class="ow">in</span> <span class="n">encodings</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">encoding</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">text</span><span class="p">.</span><span class="nf">decode</span><span class="p">(</span><span class="n">encoding</span><span class="p">)</span>
+        <span class="nf">except </span><span class="p">(</span><span class="nb">UnicodeDecodeError</span><span class="p">,</span> <span class="nb">LookupError</span><span class="p">):</span>
+            <span class="k">continue</span>
+            
+    <span class="c1"># Last resort: detect encoding
+</span>    <span class="n">detected</span> <span class="o">=</span> <span class="n">chardet</span><span class="p">.</span><span class="nf">detect</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">text</span><span class="p">.</span><span class="nf">decode</span><span class="p">(</span><span class="n">detected</span><span class="p">[</span><span class="sh">'</span><span class="s">encoding</span><span class="sh">'</span><span class="p">]</span> <span class="ow">or</span> <span class="sh">'</span><span class="s">ascii</span><span class="sh">'</span><span class="p">,</span> <span class="n">errors</span><span class="o">=</span><span class="sh">'</span><span class="s">replace</span><span class="sh">'</span><span class="p">)</span>
+    <span class="nf">except </span><span class="p">(</span><span class="nb">UnicodeDecodeError</span><span class="p">,</span> <span class="nb">LookupError</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">text</span><span class="p">.</span><span class="nf">decode</span><span class="p">(</span><span class="sh">'</span><span class="s">ascii</span><span class="sh">'</span><span class="p">,</span> <span class="n">errors</span><span class="o">=</span><span class="sh">'</span><span class="s">replace</span><span class="sh">'</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">validate_email</span><span class="p">(</span><span class="n">email</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+    <span class="sh">"""</span><span class="s">
+    Validate email address format.
+    
+    Args:
+        email: Email address to validate
+        
+    Returns:
+        True if valid, False otherwise
+    </span><span class="sh">"""</span>
+    <span class="n">pattern</span> <span class="o">=</span> <span class="sa">r</span><span class="sh">'</span><span class="s">^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$</span><span class="sh">'</span>
+    <span class="k">return</span> <span class="nf">bool</span><span class="p">(</span><span class="n">re</span><span class="p">.</span><span class="nf">match</span><span class="p">(</span><span class="n">pattern</span><span class="p">,</span> <span class="n">email</span><span class="p">))</span>
+
+<span class="k">def</span> <span class="nf">extract_email_streaming</span><span class="p">(</span><span class="n">mbox_path</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Generator</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="bp">None</span><span class="p">]:</span>
+    <span class="sh">"""</span><span class="s">
+    Memory-efficient streaming extraction of sender emails.
+    
+    Args:
+        mbox_path: Path to MBOX file
+        
+    Yields:
+        Extracted email addresses
+    </span><span class="sh">"""</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">mbox</span> <span class="o">=</span> <span class="n">mailbox</span><span class="p">.</span><span class="nf">mbox</span><span class="p">(</span><span class="nf">str</span><span class="p">(</span><span class="n">mbox_path</span><span class="p">))</span>
+        <span class="k">for</span> <span class="n">message</span> <span class="ow">in</span> <span class="n">mbox</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">from_header</span> <span class="o">=</span> <span class="n">message</span><span class="p">.</span><span class="nf">get</span><span class="p">(</span><span class="sh">'</span><span class="s">From</span><span class="sh">'</span><span class="p">)</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">from_header</span><span class="p">:</span>
+                    <span class="k">continue</span>
+                    
+                <span class="c1"># Decode header
+</span>                <span class="n">decoded_parts</span> <span class="o">=</span> <span class="nf">decode_header</span><span class="p">(</span><span class="n">from_header</span><span class="p">)</span>
+                <span class="n">sender_str</span> <span class="o">=</span> <span class="sh">''</span>
+                <span class="k">for</span> <span class="n">part</span><span class="p">,</span> <span class="n">encoding</span> <span class="ow">in</span> <span class="n">decoded_parts</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="nf">isinstance</span><span class="p">(</span><span class="n">part</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">):</span>
+                        <span class="n">sender_str</span> <span class="o">+=</span> <span class="nf">decode_text</span><span class="p">(</span><span class="n">part</span><span class="p">,</span> <span class="n">encoding</span><span class="p">)</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">sender_str</span> <span class="o">+=</span> <span class="nf">str</span><span class="p">(</span><span class="n">part</span><span class="p">)</span>
+                
+                <span class="c1"># Extract email
+</span>                <span class="n">match</span> <span class="o">=</span> <span class="n">re</span><span class="p">.</span><span class="nf">search</span><span class="p">(</span><span class="sa">r</span><span class="sh">'</span><span class="s">&lt;([^&gt;]+)&gt;</span><span class="sh">'</span><span class="p">,</span> <span class="n">sender_str</span><span class="p">)</span>
+                <span class="n">email</span> <span class="o">=</span> <span class="n">match</span><span class="p">.</span><span class="nf">group</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="k">if</span> <span class="n">match</span> <span class="k">else</span> <span class="n">re</span><span class="p">.</span><span class="nf">search</span><span class="p">(</span><span class="sa">r</span><span class="sh">'</span><span class="s">[\w\.-]+@[\w\.-]+</span><span class="sh">'</span><span class="p">,</span> <span class="n">sender_str</span><span class="p">).</span><span class="nf">group</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+                
+                <span class="k">if</span> <span class="n">email</span> <span class="ow">and</span> <span class="nf">validate_email</span><span class="p">(</span><span class="n">email</span><span class="p">):</span>
+                    <span class="k">yield</span> <span class="n">email</span><span class="p">.</span><span class="nf">lower</span><span class="p">()</span>
+                    
+            <span class="nf">except </span><span class="p">(</span><span class="n">HeaderParseError</span><span class="p">,</span> <span class="nb">AttributeError</span><span class="p">)</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="n">logger</span><span class="p">.</span><span class="nf">warning</span><span class="p">(</span><span class="sa">f</span><span class="sh">"</span><span class="s">Error processing message: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="sh">"</span><span class="p">)</span>
+                <span class="k">continue</span>
+                
+    <span class="k">except</span> <span class="nb">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="n">logger</span><span class="p">.</span><span class="nf">error</span><span class="p">(</span><span class="sa">f</span><span class="sh">"</span><span class="s">Error processing MBOX file: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="sh">"</span><span class="p">)</span>
+        <span class="k">raise</span>
+
+<span class="k">def</span> <span class="nf">extract_sender_emails_batch</span><span class="p">(</span>
+    <span class="n">mbox_path</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
+    <span class="n">batch_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1000</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Generator</span><span class="p">[</span><span class="n">Set</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="bp">None</span><span class="p">,</span> <span class="bp">None</span><span class="p">]:</span>
+    <span class="sh">"""</span><span class="s">
+    Extract sender emails in batches to manage memory usage.
+    
+    Args:
+        mbox_path: Path to MBOX file
+        batch_size: Number of messages to process per batch
+        
+    Yields:
+        Sets of unique email addresses
+    </span><span class="sh">"""</span>
+    <span class="n">current_batch</span><span class="p">:</span> <span class="n">Set</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="nf">set</span><span class="p">()</span>
+    <span class="n">processed</span> <span class="o">=</span> <span class="mi">0</span>
+    
+    <span class="k">for</span> <span class="n">email</span> <span class="ow">in</span> <span class="nf">extract_email_streaming</span><span class="p">(</span><span class="n">mbox_path</span><span class="p">):</span>
+        <span class="n">current_batch</span><span class="p">.</span><span class="nf">add</span><span class="p">(</span><span class="n">email</span><span class="p">)</span>
+        <span class="n">processed</span> <span class="o">+=</span> <span class="mi">1</span>
+        
+        <span class="k">if</span> <span class="n">processed</span> <span class="o">%</span> <span class="n">batch_size</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">yield</span> <span class="n">current_batch</span>
+            <span class="n">current_batch</span> <span class="o">=</span> <span class="nf">set</span><span class="p">()</span>
+            
+    <span class="k">if</span> <span class="n">current_batch</span><span class="p">:</span>
+        <span class="k">yield</span> <span class="n">current_batch</span>
+
+<span class="c1"># Usage example with error handling and progress tracking
+</span><span class="k">def</span> <span class="nf">process_mbox_file</span><span class="p">(</span><span class="n">mbox_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">output_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="bp">None</span><span class="p">:</span>
+    <span class="sh">"""</span><span class="s">
+    Process MBOX file and save unique sender emails.
+    
+    Args:
+        mbox_path: Path to input MBOX file
+        output_path: Path to output file
+    </span><span class="sh">"""</span>
+    <span class="n">mbox_path</span> <span class="o">=</span> <span class="nc">Path</span><span class="p">(</span><span class="n">mbox_path</span><span class="p">)</span>
+    <span class="n">output_path</span> <span class="o">=</span> <span class="nc">Path</span><span class="p">(</span><span class="n">output_path</span><span class="p">)</span>
+    
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">mbox_path</span><span class="p">.</span><span class="nf">exists</span><span class="p">():</span>
+        <span class="k">raise</span> <span class="nc">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="sh">"</span><span class="s">MBOX file not found: </span><span class="si">{</span><span class="n">mbox_path</span><span class="si">}</span><span class="sh">"</span><span class="p">)</span>
+        
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">unique_emails</span><span class="p">:</span> <span class="n">Set</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="nf">set</span><span class="p">()</span>
+        <span class="n">total_processed</span> <span class="o">=</span> <span class="mi">0</span>
+        
+        <span class="n">logger</span><span class="p">.</span><span class="nf">info</span><span class="p">(</span><span class="sh">"</span><span class="s">Starting MBOX processing...</span><span class="sh">"</span><span class="p">)</span>
+        
+        <span class="k">for</span> <span class="n">batch</span> <span class="ow">in</span> <span class="nf">extract_sender_emails_batch</span><span class="p">(</span><span class="n">mbox_path</span><span class="p">):</span>
+            <span class="n">unique_emails</span><span class="p">.</span><span class="nf">update</span><span class="p">(</span><span class="n">batch</span><span class="p">)</span>
+            <span class="n">total_processed</span> <span class="o">+=</span> <span class="nf">len</span><span class="p">(</span><span class="n">batch</span><span class="p">)</span>
+            <span class="n">logger</span><span class="p">.</span><span class="nf">info</span><span class="p">(</span><span class="sa">f</span><span class="sh">"</span><span class="s">Processed </span><span class="si">{</span><span class="n">total_processed</span><span class="si">}</span><span class="s"> messages...</span><span class="sh">"</span><span class="p">)</span>
+            
+        <span class="n">logger</span><span class="p">.</span><span class="nf">info</span><span class="p">(</span><span class="sa">f</span><span class="sh">"</span><span class="s">Writing </span><span class="si">{</span><span class="nf">len</span><span class="p">(</span><span class="n">unique_emails</span><span class="p">)</span><span class="si">}</span><span class="s"> unique emails to </span><span class="si">{</span><span class="n">output_path</span><span class="si">}</span><span class="sh">"</span><span class="p">)</span>
+        
+        <span class="k">with</span> <span class="n">output_path</span><span class="p">.</span><span class="nf">open</span><span class="p">(</span><span class="sh">'</span><span class="s">w</span><span class="sh">'</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="sh">'</span><span class="s">utf-8</span><span class="sh">'</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">email</span> <span class="ow">in</span> <span class="nf">sorted</span><span class="p">(</span><span class="n">unique_emails</span><span class="p">):</span>
+                <span class="n">f</span><span class="p">.</span><span class="nf">write</span><span class="p">(</span><span class="sa">f</span><span class="sh">"</span><span class="si">{</span><span class="n">email</span><span class="si">}</span><span class="se">\n</span><span class="sh">"</span><span class="p">)</span>
+                
+        <span class="n">logger</span><span class="p">.</span><span class="nf">info</span><span class="p">(</span><span class="sh">"</span><span class="s">Processing completed successfully</span><span class="sh">"</span><span class="p">)</span>
+        
+    <span class="k">except</span> <span class="nb">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="n">logger</span><span class="p">.</span><span class="nf">error</span><span class="p">(</span><span class="sa">f</span><span class="sh">"</span><span class="s">Error processing MBOX file: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="sh">"</span><span class="p">)</span>
+        <span class="k">raise</span>
+
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="sh">"</span><span class="s">__main__</span><span class="sh">"</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="n">argparse</span>
+    
+    <span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="p">.</span><span class="nc">ArgumentParser</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="sh">"</span><span class="s">Extract sender emails from MBOX file</span><span class="sh">"</span><span class="p">)</span>
+    <span class="n">parser</span><span class="p">.</span><span class="nf">add_argument</span><span class="p">(</span><span class="sh">"</span><span class="s">mbox_path</span><span class="sh">"</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="sh">"</span><span class="s">Path to MBOX file</span><span class="sh">"</span><span class="p">)</span>
+    <span class="n">parser</span><span class="p">.</span><span class="nf">add_argument</span><span class="p">(</span><span class="sh">"</span><span class="s">output_path</span><span class="sh">"</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="sh">"</span><span class="s">Path to output file</span><span class="sh">"</span><span class="p">)</span>
+    <span class="n">args</span> <span class="o">=</span> <span class="n">parser</span><span class="p">.</span><span class="nf">parse_args</span><span class="p">()</span>
+    
+    <span class="nf">process_mbox_file</span><span class="p">(</span><span class="n">args</span><span class="p">.</span><span class="n">mbox_path</span><span class="p">,</span> <span class="n">args</span><span class="p">.</span><span class="n">output_path</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>a. <strong>Create the Script File:</strong></p>
+<ul>
+  <li>Open a text editor (e.g., Notepad, VS Code) and paste the above script.</li>
+  <li>Save the file with a <code class="language-plaintext highlighter-rouge">.py</code> extension, such as <code class="language-plaintext highlighter-rouge">extract_senders.py</code>.</li>
+</ul>
+
+<p>b. <strong>Customize the Script:</strong></p>
+<ul>
+  <li>Replace <code class="language-plaintext highlighter-rouge">'C:\path\to\your\emails.mbox'</code> with the actual path to your MBOX file.</li>
+  <li>Ensure the path uses raw string notation (<code class="language-plaintext highlighter-rouge">r'path'</code>) or double backslashes to avoid escape character issues.</li>
+</ul>
+
+<p>c. <strong>Execute the Script:</strong></p>
+<ul>
+  <li>Open <strong>Command Prompt</strong>:
+    <ul>
+      <li>Press <code class="language-plaintext highlighter-rouge">Win + R</code>, type <code class="language-plaintext highlighter-rouge">cmd</code>, and press <code class="language-plaintext highlighter-rouge">Enter</code>.</li>
+    </ul>
+  </li>
+  <li>Navigate to the script’s directory:
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">cd </span>C:<span class="se">\p</span>ath<span class="se">\t</span>o<span class="se">\y</span>our<span class="se">\s</span>cript
+</code></pre></div>    </div>
+  </li>
+  <li>Run the script:
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>python extract_senders.py
+</code></pre></div>    </div>
+  </li>
+  <li><strong>Output:</strong> A file named <code class="language-plaintext highlighter-rouge">senders.txt</code> containing all unique sender email addresses.</li>
+</ul>
+
+<p>###powershell</p>
+
+<pre><code class="language-ps1">$mboxPath = 'C:\path\to\your\mboxfile.mbox'
+$outputPath = 'C:\path\to\your\senders_powershell.txt'
+
+try {
+    # Read the MBOX file
+    $mbox = Get-Content $mboxPath
+    
+    # Initialize an array to hold sender emails
+    $senderEmails = @()
+    
+    foreach ($line in $mbox) {
+        if ($line -like "From: *") {
+            # Extract email using regex
+            if ($line -match '&lt;([\w\.-]+@[\w\.-]+)&gt;') {
+                $senderEmails += $matches[1]
+            }
+            elseif ($line -match '([\w\.-]+@[\w\.-]+)') {
+                $senderEmails += $matches[1]
+            }
+        }
+    }
+    
+    # Remove duplicates and sort
+    $uniqueSenders = $senderEmails | Sort-Object -Unique
+    
+    # Output to file
+    $uniqueSenders | Out-File -FilePath $outputPath -Encoding utf8
+    
+    Write-Host "Sender email addresses have been saved to $outputPath"
+}
+catch {
+    Write-Host "An error occurred: $_"
+}
+</code></pre>
+
+<p><strong>Steps to Run the Script:</strong></p>
+
+<p>a. <strong>Create the Script File:</strong></p>
+<ul>
+  <li>Open Notepad or another text editor and paste the above script.</li>
+  <li>Save the file with a <code class="language-plaintext highlighter-rouge">.ps1</code> extension, e.g., <code class="language-plaintext highlighter-rouge">extract_senders.ps1</code>.</li>
+</ul>
+
+<p>b. <strong>Customize the Script:</strong></p>
+<ul>
+  <li>Replace <code class="language-plaintext highlighter-rouge">'C:\path\to\your\mboxfile.mbox'</code> with the path to your MBOX file.</li>
+  <li>Ensure the output path is correctly specified.</li>
+</ul>
+
+<p>c. <strong>Execute the Script:</strong></p>
+<ul>
+  <li>Open PowerShell with administrative privileges.</li>
+  <li>Navigate to the script’s directory:
+    <div class="language-powershell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">cd</span><span class="w"> </span><span class="nx">C:\path\to\your\script</span><span class="w">
+</span></code></pre></div>    </div>
+  </li>
+  <li>Run the script:
+    <div class="language-powershell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">.</span><span class="n">\extract_senders.ps1</span><span class="w">
+</span></code></pre></div>    </div>
+  </li>
+</ul>
