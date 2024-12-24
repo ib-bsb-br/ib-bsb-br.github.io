@@ -13,7 +13,7 @@ title: 'gmail2mailgrip'
 Here is the list of email domains and senders to be categorized:
 
 <email_list>
-{{<!--_placeholder_-->}}
+<!--_placeholder_-->
 </email_list>
 
 You are an email management assistant tasked with creating Gmail filters to categorize and forward incoming emails based on specified domains and senders. Your goal is to improve organization and efficiency in the user's Gmail inbox.
