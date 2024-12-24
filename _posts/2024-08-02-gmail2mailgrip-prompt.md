@@ -1,7 +1,7 @@
 ---
 tags: AI>prompt, tasks
 info: aberto.
-date: 2024-08-02
+date: 2024-12-24
 type: post
 layout: post
 published: true
