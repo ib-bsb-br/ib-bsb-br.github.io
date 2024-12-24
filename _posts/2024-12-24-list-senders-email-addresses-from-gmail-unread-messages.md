@@ -28,7 +28,7 @@ title: "List sender's email addresses from Gmail unread messages"
 
 ### python
 
-```python
+{% codeblock python %}
 from typing import Set, Optional, Generator
 import mailbox
 import email.utils
@@ -200,7 +200,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     
     process_mbox_file(args.mbox_path, args.output_path)
-```
+{% endcodeblock %}
 
 a. **Create the Script File:**
    - Open a text editor (e.g., Notepad, VS Code) and paste the above script.
@@ -225,7 +225,7 @@ c. **Execute the Script:**
 
 ### powershell
 
-```ps1
+{% codeblock powershell %}
 $mboxPath = 'C:\path\to\your\mboxfile.mbox'
 $outputPath = 'C:\path\to\your\senders_powershell.txt'
 
@@ -259,7 +259,7 @@ try {
 catch {
     Write-Host "An error occurred: $_"
 }
-```
+{% endcodeblock %}
 
 **Steps to Run the Script:**
 
