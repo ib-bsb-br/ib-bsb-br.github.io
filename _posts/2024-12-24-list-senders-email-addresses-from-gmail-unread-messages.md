@@ -5,8 +5,8 @@ date: 2024-12-24
 type: post
 layout: post
 published: true
-slug: list-senders-email-addresses-from-gmail-unread-messages
-title: 'List sender's email addresses from Gmail unread messages'
+slug: list-senders
+title: "List sender's email addresses from Gmail unread messages"
 ---
 1. **Access Gmail's Search Functionality**:
    - In the search bar at the top of your Gmail interface, enter the search operator `is:unread` to filter all unread emails. 
