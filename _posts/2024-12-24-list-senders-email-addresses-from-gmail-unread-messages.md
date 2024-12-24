@@ -26,7 +26,7 @@ title: "List sender's email addresses from Gmail unread messages"
 
 5. **Extract Sender Email Addresses**:
 
-###python
+### python
 
 ```python
 from typing import Set, Optional, Generator
@@ -223,7 +223,7 @@ c. **Execute the Script:**
      ```
    - **Output:** A file named `senders.txt` containing all unique sender email addresses.
 
-###powershell
+### powershell
 
 ```ps1
 $mboxPath = 'C:\path\to\your\mboxfile.mbox'
