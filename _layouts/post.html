@@ -55,23 +55,22 @@
 <body class="post-content-body">
 
   {% assign source_line = '' %}
-  {% capture processed_lines %}
-    {% for line in content | split: '
-' %}
-      {% if source_line == '' and line startswith 'source:' %}
-        {% assign source_line = line %}
+  {% assign normalized_content = content | replace: '\r\n', '\n' | replace: '\r', '\n' %}
+  {% capture processed_content %}
+    {% assign lines = normalized_content | split: '\n' %}
+    {% for line in lines %}
+      {% if source_line == '' and line | strip | downcase starts_with: 'source:' %}
+        {% assign source_line = line | strip %}
       {% else %}
-        {{ line }}{% unless forloop.last %}{% endunless %}
+        {{ line }}
       {% endif %}
     {% endfor %}
   {% endcapture %}
 
-  {% assign processed_content = processed_lines | strip %}
-
   {% if source_line != '' %}
     {% assign my_comment = source_line | remove: 'source:' | strip %}
   {% else %}
-    {% assign my_comment = '' %}
+    {% assign my_comment = page.comment %}
   {% endif %}
 
   <header class="header-container">
@@ -110,8 +109,8 @@
           Tags:
           {% for tag in page.tags %}
             <a href="{{ site.url }}{{ site.baseurl }}/tags/#{{ tag | slugify }}" class="tag">{{ tag }}</a>
-            {% unless forloop.last %}
-            {% endunless %}
+          {% unless forloop.last %}
+          {% endunless %}
           {% endfor %}
         </p>
       {% endif %}
@@ -119,11 +118,11 @@
     <div class="post-actions">
       <div class="page-stats mt-3" role="status" aria-label="Page statistics">
         <span class="badge bg-primary">
-          {{ content | size }} characters
+          {{ page.content | size }} characters
         </span>
         <span class="separator mx-2" aria-hidden="true">•</span>
         <span class="badge bg-primary">
-          {{ content | number_of_words }} words
+          {{ page.content | number_of_words }} words
         </span>
       </div>
       <div class="action-buttons d-flex flex-wrap gap-2">
@@ -160,7 +159,6 @@
             </button>
           </form>
         {% else %}
-          <!-- Fallback for when page.path is not available -->
           <div class="alert alert-warning" role="alert">
             Page information unavailable
           </div>
@@ -196,7 +194,7 @@
         </div>
       {% endif %}
     </nav>
-    {% if my_comment != '' %}
+    {% if my_comment %}
       <div class="comment-box">
         Reference:
         <a href="{{ my_comment }}" title="{{ my_comment }}">{{ my_comment }}</a>
