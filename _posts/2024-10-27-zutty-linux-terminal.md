@@ -6,8 +6,10 @@ type: post
 layout: post
 published: true
 slug: zutty-linux-terminal
-title: 'Zutty Linux terminal'
+title: Zutty Linux terminal
+comment: '[https://git.hq.sig7.se/zutty.git](https://git.hq.sig7.se/zutty.git)'
 ---
+
 >Homepage: `https://tomscii.sig7.se/zutty/`
 
 Zutty - Zero-cost Unicode Teletype
@@ -15,7 +17,6 @@ Zutty - Zero-cost Unicode Teletype
 
 **A high-end terminal for low-end systems**
 
-Source: [https://git.hq.sig7.se/zutty.git](https://git.hq.sig7.se/zutty.git)
 
 Zutty is a terminal emulator for the X Window System, functionally similar to several other X terminal emulators such as `xterm`, `rxvt` and countless others. It is also similar to other, much more modern, GPU-accelerated terminal emulators such as Alacritty and Kitty. What really sets Zutty apart is its radically simple, yet extremely efficient rendering implementation, coupled with a sufficiently complete feature set to make it useful for a wide range of users. Zutty offers high throughput with low latency, and strives to conform to relevant (published or de-facto) standards.
 

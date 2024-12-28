@@ -1,15 +1,14 @@
 ---
-title: 'Ecclesiastes 9'
+title: Ecclesiastes 9
 date: 2024-12-26
 tags: fatherhood
 type: post
 layout: post
 published: true
 slug: ecclesiastes
-comment: <!-- placeholder5 -->
+comment: https://www.easyenglish.bible/bible/easy/ecclesiastes/9:1-12/
 ---
 
-source: https://www.easyenglish.bible/bible/easy/ecclesiastes/9:1-12/
 
 Everyone will die
 -----------------

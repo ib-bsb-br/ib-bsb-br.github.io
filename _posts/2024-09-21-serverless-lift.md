@@ -6,7 +6,8 @@ type: post
 layout: post
 published: true
 slug: serverless-lift
-title: 'Webhooks using `Serverless.com` Lift plugin'
+title: Webhooks using `Serverless.com` Lift plugin
+comment: ''
 ---
 
 # serverless.yml
@@ -39,7 +40,6 @@ functions:
       - eventBridge:
           eventBus: ${construct:webhook.busName}
           pattern:
-            source:
               - webhook
             detail-type:
               - new_comment

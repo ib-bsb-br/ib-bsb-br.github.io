@@ -6,7 +6,8 @@ type: post
 layout: post
 published: true
 slug: serverless-lift-gha
-title: 'Github actions workflow dispatch + Webhooks using `Serverless.com` Lift plugin'
+title: Github actions workflow dispatch + Webhooks using `Serverless.com` Lift plugin
+comment: ''
 ---
 
 # 1. `serverless.yml` Configuration:
@@ -37,7 +38,6 @@ functions:
       - eventBridge:
           eventBus: ${construct:webhook.busName}
           pattern:
-            source:
               - webhook
             detail-type:
               - new_comment
