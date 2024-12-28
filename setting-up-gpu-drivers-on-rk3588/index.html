@@ -44,605 +44,7 @@
 
   <link href="/style.css" rel="stylesheet">
 </head>
-  <body class="post-content-body">
-    
-    
-    
-    
-        
-        
-        "<p>MLC LLM is a universal deployment solution that allows efficient CPU/GPU code generation without AutoTVM-based performance tuning. This guide focuses on setting up a generic GPU environment and troubleshooting common issues on the RK3588 (RK3588 based SBC).</p>\n    
-        
-        
-        "\n    
-        
-        
-        "<h2 id="table-of-contents">Table of Contents</h2>\n    
-        
-        
-        "<ol>\n    
-        
-        
-        "  <li><a href="#prerequisites">Prerequisites</a></li>\n    
-        
-        
-        "  <li><a href="#opencl-sdk-installation">OpenCL SDK Installation</a></li>\n    
-        
-        
-        "  <li><a href="#orange-pi-5-setup">RK3588 Setup</a>\n    
-        
-        
-        "    <ul>\n    
-        
-        
-        "      <li><a href="#installing-ubuntu-2204">Installing Ubuntu 22.04</a></li>\n    
-        
-        
-        "      <li><a href="#installing-mali-gpu-driver">Installing Mali GPU Driver</a></li>\n    
-        
-        
-        "      <li><a href="#configuring-opencl-icd-loader">Configuring OpenCL ICD Loader</a></li>\n    
-        
-        
-        "      <li><a href="#installing-opencl-libraries">Installing OpenCL Libraries</a></li>\n    
-        
-        
-        "      <li><a href="#installing-dependencies">Installing Dependencies</a></li>\n    
-        
-        
-        "      <li><a href="#verifying-installation-with-clinfo">Verifying Installation with clinfo</a></li>\n    
-        
-        
-        "    </ul>\n    
-        
-        
-        "  </li>\n    
-        
-        
-        "  <li><a href="#troubleshooting">Troubleshooting</a></li>\n    
-        
-        
-        "  <li><a href="#references">References</a></li>\n    
-        
-        
-        "</ol>\n    
-        
-        
-        "\n    
-        
-        
-        "<h2 id="prerequisites">Prerequisites</h2>\n    
-        
-        
-        "\n    
-        
-        
-        "<p>Before beginning the installation process, ensure that you have:</p>\n    
-        
-        
-        "\n    
-        
-        
-        "<ul>\n    
-        
-        
-        "  <li>An RK3588 (RK3588 based Single Board Computer)</li>\n    
-        
-        
-        "  <li>A stable internet connection</li>\n    
-        
-        
-        "  <li>Basic knowledge of using the Linux command line</li>\n    
-        
-        
-        "  <li>Physical access to the RK3588 for setup</li>\n    
-        
-        
-        "</ul>\n    
-        
-        
-        "\n    
-        
-        
-        "<h2 id="opencl-sdk-installation">OpenCL SDK Installation</h2>\n    
-        
-        
-        "\n    
-        
-        
-        "<p>The OpenCL SDK is essential if you plan to build your own models for the OpenCL backend. Follow the steps below to install the OpenCL SDK:</p>\n    
-        
-        
-        "\n    
-        
-        
-        "<ol>\n    
-        
-        
-        "  <li>\n    
-        
-        
-        "    <p><strong>Access OpenCL’s GitHub Repository:</strong></p>\n    
-        
-        
-        "\n    
-        
-        
-        "    <p>Visit the <a href="https://github.com/KhronosGroup/OpenCL-SDK">OpenCL SDK GitHub Repository</a> for detailed installation instructions and resources.</p>\n    
-        
-        
-        "  </li>\n    
-        
-        
-        "</ol>\n    
-        
-        
-        "\n    
-        
-        
-        "<h2 id="rk3588-setup">RK3588 Setup</h2>\n    
-        
-        
-        "\n    
-        
-        
-        "<p>This section guides you through setting up the RK3588 for running models using the OpenCL backend.</p>\n    
-        
-        
-        "\n    
-        
-        
-        "<h3 id="installing-ubuntu-2204">Installing Ubuntu 22.04</h3>\n    
-        
-        
-        "\n    
-        
-        
-        "<ol>\n    
-        
-        
-        "  <li>\n    
-        
-        
-        "    <p><strong>Download Ubuntu 22.04 Image:</strong></p>\n    
-        
-        
-        "\n    
-        
-        
-        "    <p>Download the Ubuntu 22.04 image tailored for the RK3588 from <a href="https://github.com/Joshua-Riek/ubuntu-rockchip/releases/tag/v1.22">here</a>.</p>\n    
-        
-        
-        "  </li>\n    
-        
-        
-        "  <li>\n    
-        
-        
-        "    <p><strong>Flash Ubuntu to SD Card:</strong></p>\n    
-        
-        
-        "\n    
-        
-        
-        "    <p>Use a tool like <code class="language-plaintext highlighter-rouge">balenaEtcher</code> or <code class="language-plaintext highlighter-rouge">Rufus</code> to flash the downloaded image onto an SD card.</p>\n    
-        
-        
-        "  </li>\n    
-        
-        
-        "  <li>\n    
-        
-        
-        "    <p><strong>Boot RK3588:</strong></p>\n    
-        
-        
-        "\n    
-        
-        
-        "    <p>Insert the SD card into your RK3588 and power it on. Follow the on-screen instructions to complete the initial setup.</p>\n    
-        
-        
-        "  </li>\n    
-        
-        
-        "</ol>\n    
-        
-        
-        "\n    
-        
-        
-        "<h3 id="installing-mali-gpu-driver">Installing Mali GPU Driver</h3>\n    
-        
-        
-        "\n    
-        
-        
-        "<p>To enable the Mali GPU for OpenCL operations, install the Mali GPU driver.</p>\n    
-        
-        
-        "\n    
-        
-        
-        "<ol>\n    
-        
-        
-        "  <li>\n    
-        
-        
-        "    <p><strong>Download <code class="language-plaintext highlighter-rouge">libmali-g610.so</code>:</strong></p>\n    
-        
-        
-        "\n    
-        
-        
-        "    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">cd</span> /usr/lib\n    
-        
-        
-        "<span class="nb">sudo </span>wget https://github.com/JeffyCN/mirrors/raw/libmali/lib/aarch64-linux-gnu/libmali-valhall-g610-g6p0-x11-wayland-gbm.so <span class="nt">-O</span> libmali-g610.so\n    
-        
-        
-        "</code></pre></div>    </div>\n    
-        
-        
-        "  </li>\n    
-        
-        
-        "  <li>\n    
-        
-        
-        "    <p><strong>Ensure Firmware File Exists:</strong></p>\n    
-        
-        
-        "\n    
-        
-        
-        "    <p>Verify if <code class="language-plaintext highlighter-rouge">mali_csffw.bin</code> exists in the <code class="language-plaintext highlighter-rouge">/lib/firmware</code> directory:</p>\n    
-        
-        
-        "\n    
-        
-        
-        "    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">cd</span> /lib/firmware\n    
-        
-        
-        "<span class="nb">ls </span>mali_csffw.bin\n    
-        
-        
-        "</code></pre></div>    </div>\n    
-        
-        
-        "\n    
-        
-        
-        "    <p>If the file does not exist, download it:</p>\n    
-        
-        
-        "\n    
-        
-        
-        "    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>wget https://github.com/JeffyCN/mirrors/raw/libmali/firmware/g610/mali_csffw.bin\n    
-        
-        
-        "</code></pre></div>    </div>\n    
-        
-        
-        "  </li>\n    
-        
-        
-        "</ol>\n    
-        
-        
-        "\n    
-        
-        
-        "<h3 id="configuring-opencl-icd-loader">Configuring OpenCL ICD Loader</h3>\n    
-        
-        
-        "\n    
-        
-        
-        "<p>Set up the OpenCL Installable Client Driver (ICD) loader to recognize the Mali GPU.</p>\n    
-        
-        
-        "\n    
-        
-        
-        "<ol>\n    
-        
-        
-        "  <li>\n    
-        
-        
-        "    <p><strong>Update Package List:</strong></p>\n    
-        
-        
-        "\n    
-        
-        
-        "    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>apt update\n    
-        
-        
-        "</code></pre></div>    </div>\n    
-        
-        
-        "  </li>\n    
-        
-        
-        "  <li>\n    
-        
-        
-        "    <p><strong>Install Mesa OpenCL ICD:</strong></p>\n    
-        
-        
-        "\n    
-        
-        
-        "    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>apt <span class="nb">install </span>mesa-opencl-icd <span class="nt">-y</span>\n    
-        
-        
-        "</code></pre></div>    </div>\n    
-        
-        
-        "  </li>\n    
-        
-        
-        "  <li>\n    
-        
-        
-        "    <p><strong>Create OpenCL Vendors Directory:</strong></p>\n    
-        
-        
-        "\n    
-        
-        
-        "    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo mkdir</span> <span class="nt">-p</span> /etc/OpenCL/vendors\n    
-        
-        
-        "</code></pre></div>    </div>\n    
-        
-        
-        "  </li>\n    
-        
-        
-        "  <li>\n    
-        
-        
-        "    <p><strong>Add Mali ICD Configuration:</strong></p>\n    
-        
-        
-        "\n    
-        
-        
-        "    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">echo</span> <span class="s2">"/usr/lib/libmali-g610.so"</span> | <span class="nb">sudo tee</span> /etc/OpenCL/vendors/mali.icd\n    
-        
-        
-        "</code></pre></div>    </div>\n    
-        
-        
-        "  </li>\n    
-        
-        
-        "</ol>\n    
-        
-        
-        "\n    
-        
-        
-        "<h3 id="installing-opencl-libraries">Installing OpenCL Libraries</h3>\n    
-        
-        
-        "\n    
-        
-        
-        "<p>Install the OpenCL development libraries required for compiling OpenCL applications.</p>\n    
-        
-        
-        "\n    
-        
-        
-        "<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>apt <span class="nb">install </span>ocl-icd-opencl-dev <span class="nt">-y</span>\n    
-        
-        
-        "</code></pre></div></div>\n    
-        
-        
-        "\n    
-        
-        
-        "<h3 id="installing-dependencies">Installing Dependencies</h3>\n    
-        
-        
-        "\n    
-        
-        
-        "<p>Install necessary dependencies for the Mali OpenCL backend.</p>\n    
-        
-        
-        "\n    
-        
-        
-        "<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>apt <span class="nb">install </span>libxcb-dri2-0 libxcb-dri3-0 libwayland-client0 libwayland-server0 libx11-xcb1 <span class="nt">-y</span>\n    
-        
-        
-        "</code></pre></div></div>\n    
-        
-        
-        "\n    
-        
-        
-        "<h3 id="verifying-installation-with-clinfo">Verifying Installation with clinfo</h3>\n    
-        
-        
-        "\n    
-        
-        
-        "<ol>\n    
-        
-        
-        "  <li>\n    
-        
-        
-        "    <p><strong>Install clinfo:</strong></p>\n    
-        
-        
-        "\n    
-        
-        
-        "    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>apt <span class="nb">install </span>clinfo <span class="nt">-y</span>\n    
-        
-        
-        "</code></pre></div>    </div>\n    
-        
-        
-        "  </li>\n    
-        
-        
-        "  <li>\n    
-        
-        
-        "    <p><strong>Run clinfo to Validate Installation:</strong></p>\n    
-        
-        
-        "\n    
-        
-        
-        "    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>clinfo\n    
-        
-        
-        "</code></pre></div>    </div>\n    
-        
-        
-        "\n    
-        
-        
-        "    <p><strong>Expected Output:</strong></p>\n    
-        
-        
-        "\n    
-        
-        
-        "    <p>Look for GPU information similar to the following in the output:</p>\n    
-        
-        
-        "\n    
-        
-        
-        "    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>arm_release_ver: g13p0-01eac0, rk_so_ver: 3\n    
-        
-        
-        "Number of platforms: 2\n    
-        
-        
-        "Platform Name: ARM Platform\n    
-        
-        
-        "Platform Vendor: ARM\n    
-        
-        
-        "Platform Version: OpenCL 2.1 v1.g6p0-01eac0.2819f9d4dbe0b5a2f89c835d8484f9cd\n    
-        
-        
-        "Platform Profile: FULL_PROFILE\n    
-        
-        
-        "...\n    
-        
-        
-        "</code></pre></div>    </div>\n    
-        
-        
-        "\n    
-        
-        
-        "    <p>This output confirms that the OpenCL runtime and Mali GPU driver are correctly installed and recognized by the system.</p>\n    
-        
-        
-        "  </li>\n    
-        
-        
-        "</ol>\n    
-        
-        
-        "\n    
-        
-        
-        "<h2 id="troubleshooting">Troubleshooting</h2>\n    
-        
-        
-        "\n    
-        
-        
-        "<p>If you encounter issues during the installation process, consider the following steps:</p>\n    
-        
-        
-        "\n    
-        
-        
-        "<ul>\n    
-        
-        
-        "  <li><strong>Check Network Connectivity:</strong> Ensure that your RK3588 has a stable internet connection for downloading packages and dependencies.</li>\n    
-        
-        
-        "  <li><strong>Verify File Downloads:</strong> Re-download any files if the download was interrupted or corrupted.</li>\n    
-        
-        
-        "  <li><strong>Review Command Outputs:</strong> Carefully read any error messages during command execution to identify missing dependencies or permissions issues.</li>\n    
-        
-        
-        "  <li><strong>Consult Logs:</strong> Check system logs for detailed error information using <code class="language-plaintext highlighter-rouge">dmesg</code> or reviewing logs in <code class="language-plaintext highlighter-rouge">/var/log/</code>.</li>\n    
-        
-        
-        "</ul>\n    
-        
-        
-        "\n    
-        
-        
-        "<h2 id="references">References</h2>\n    
-        
-        
-        "\n    
-        
-        
-        "<ol>\n    
-        
-        
-        "  <li><a href="https://github.com/KhronosGroup/OpenCL-SDK">OpenCL SDK GitHub Repository</a></li>\n    
-        
-        
-        "  <li><a href="https://github.com/mlc-ai/mlc-llm">MLC LLM GitHub Repository</a></li>\n    
-        
-        
-        "  <li><a href="https://github.com/Joshua-Riek/ubuntu-rockchip/releases/tag/v1.22">Ubuntu Rockchip Releases</a></li>\n    
-        
-        
-        "  <li><a href="https://github.com/JeffyCN/mirrors/raw/libmali/lib/aarch64-linux-gnu/">Mali GPU Drivers</a></li>\n    
-        
-        
-        "  <li><a href="https://www.orangepi.org/">Orange Pi Official Website</a></li>\n    
-        
-        
-        "  <li><a href="https://github.com/obfuscated12/clinfo">clinfo Documentation</a></li>\n    
-        
-        
-        "  <li><a href="https://ubuntu.com/tutorials">Ubuntu Official Documentation</a></li>\n    
-        
-        
-        "</ol>\n    
-        
-        
-        "\n    
-        
-        
-        "<hr />\n    
-        
-        
-        "\n    
-        
-        
-        "<p>By following this comprehensive guide, you should be able to successfully set up GPU drivers and SDKs on your RK3588, enabling efficient OpenCL backend operations with MLC LLM.</p>\n    "
+<body class="post-content-body">
   <header class="header-container">
     <nav aria-label="Main navigation" class="header-content">
       <a href="/" aria-label="Home">
@@ -679,8 +81,10 @@
           Tags:
           
             <a href="https://ib.bsb.br/tags/#linux" class="tag">linux,</a>
+            
           
             <a href="https://ib.bsb.br/tags/#hardware" class="tag">hardware</a>
+            
           
         </p>
       
@@ -726,8 +130,275 @@
     <article class="post-wrapper">
       <div class="post-content-body">
         
-
+<ul><li><a href="#table-of-contents">Table of Contents</a></li><li><a href="#prerequisites">Prerequisites</a></li><li><a href="#opencl-sdk-installation">OpenCL SDK Installation</a></li><li><a href="#rk3588-setup">RK3588 Setup</a><ul><li><a href="#installing-ubuntu-2204">Installing Ubuntu 22.04</a></li><li><a href="#installing-mali-gpu-driver">Installing Mali GPU Driver</a></li><li><a href="#configuring-opencl-icd-loader">Configuring OpenCL ICD Loader</a></li><li><a href="#installing-opencl-libraries">Installing OpenCL Libraries</a></li><li><a href="#installing-dependencies">Installing Dependencies</a></li><li><a href="#verifying-installation-with-clinfo">Verifying Installation with clinfo</a></li></ul></li><li><a href="#troubleshooting">Troubleshooting</a></li><li><a href="#references">References</a></li></ul>
+        <p>MLC LLM is a universal deployment solution that allows efficient CPU/GPU code generation without AutoTVM-based performance tuning. This guide focuses on setting up a generic GPU environment and troubleshooting common issues on the RK3588 (RK3588 based SBC).</p>
+  <h2 id="table-of-contents">
+    
+    
+     <a href="#table-of-contents">#</a><a href="#" aria-label="Back to top">Table of Contents</a>
         
+    
+  </h2>
+      
+<ol>
+  <li><a href="#prerequisites">Prerequisites</a></li>
+  <li><a href="#opencl-sdk-installation">OpenCL SDK Installation</a></li>
+  <li><a href="#orange-pi-5-setup">RK3588 Setup</a>
+    <ul>
+      <li><a href="#installing-ubuntu-2204">Installing Ubuntu 22.04</a></li>
+      <li><a href="#installing-mali-gpu-driver">Installing Mali GPU Driver</a></li>
+      <li><a href="#configuring-opencl-icd-loader">Configuring OpenCL ICD Loader</a></li>
+      <li><a href="#installing-opencl-libraries">Installing OpenCL Libraries</a></li>
+      <li><a href="#installing-dependencies">Installing Dependencies</a></li>
+      <li><a href="#verifying-installation-with-clinfo">Verifying Installation with clinfo</a></li>
+    </ul>
+  </li>
+  <li><a href="#troubleshooting">Troubleshooting</a></li>
+  <li><a href="#references">References</a></li>
+</ol>
+  <h2 id="prerequisites">
+    
+    
+     <a href="#prerequisites">#</a><a href="#" aria-label="Back to top">Prerequisites</a>
+        
+    
+  </h2>
+      
+
+<p>Before beginning the installation process, ensure that you have:</p>
+
+<ul>
+  <li>An RK3588 (RK3588 based Single Board Computer)</li>
+  <li>A stable internet connection</li>
+  <li>Basic knowledge of using the Linux command line</li>
+  <li>Physical access to the RK3588 for setup</li>
+</ul>
+  <h2 id="opencl-sdk-installation">
+    
+    
+     <a href="#opencl-sdk-installation">#</a><a href="#" aria-label="Back to top">OpenCL SDK Installation</a>
+        
+    
+  </h2>
+      
+
+<p>The OpenCL SDK is essential if you plan to build your own models for the OpenCL backend. Follow the steps below to install the OpenCL SDK:</p>
+
+<ol>
+  <li>
+    <p><strong>Access OpenCL’s GitHub Repository:</strong></p>
+
+    <p>Visit the <a href="https://github.com/KhronosGroup/OpenCL-SDK">OpenCL SDK GitHub Repository</a> for detailed installation instructions and resources.</p>
+  </li>
+</ol>
+  <h2 id="rk3588-setup">
+    
+    
+     <a href="#rk3588-setup">#</a><a href="#" aria-label="Back to top">RK3588 Setup</a>
+        
+    
+  </h2>
+      
+
+<p>This section guides you through setting up the RK3588 for running models using the OpenCL backend.</p>
+  <h3 id="installing-ubuntu-2204">
+    
+    
+     <a href="#installing-ubuntu-2204">#</a><a href="#" aria-label="Back to top">Installing Ubuntu 22.04</a>
+        
+    
+  </h3>
+      
+
+<ol>
+  <li>
+    <p><strong>Download Ubuntu 22.04 Image:</strong></p>
+
+    <p>Download the Ubuntu 22.04 image tailored for the RK3588 from <a href="https://github.com/Joshua-Riek/ubuntu-rockchip/releases/tag/v1.22">here</a>.</p>
+  </li>
+  <li>
+    <p><strong>Flash Ubuntu to SD Card:</strong></p>
+
+    <p>Use a tool like <code class="language-plaintext highlighter-rouge">balenaEtcher</code> or <code class="language-plaintext highlighter-rouge">Rufus</code> to flash the downloaded image onto an SD card.</p>
+  </li>
+  <li>
+    <p><strong>Boot RK3588:</strong></p>
+
+    <p>Insert the SD card into your RK3588 and power it on. Follow the on-screen instructions to complete the initial setup.</p>
+  </li>
+</ol>
+  <h3 id="installing-mali-gpu-driver">
+    
+    
+     <a href="#installing-mali-gpu-driver">#</a><a href="#" aria-label="Back to top">Installing Mali GPU Driver</a>
+        
+    
+  </h3>
+      
+
+<p>To enable the Mali GPU for OpenCL operations, install the Mali GPU driver.</p>
+
+<ol>
+  <li>
+    <p><strong>Download <code class="language-plaintext highlighter-rouge">libmali-g610.so</code>:</strong></p>
+
+    <div class="language-bash highlighter-rouge"><div class="highlight"><section><code><span class="nb">cd</span> /usr/lib
+<span class="nb">sudo </span>wget https://github.com/JeffyCN/mirrors/raw/libmali/lib/aarch64-linux-gnu/libmali-valhall-g610-g6p0-x11-wayland-gbm.so <span class="nt">-O</span> libmali-g610.so
+</code></section></div>    </div>
+  </li>
+  <li>
+    <p><strong>Ensure Firmware File Exists:</strong></p>
+
+    <p>Verify if <code class="language-plaintext highlighter-rouge">mali_csffw.bin</code> exists in the <code class="language-plaintext highlighter-rouge">/lib/firmware</code> directory:</p>
+
+    <div class="language-bash highlighter-rouge"><div class="highlight"><section><code><span class="nb">cd</span> /lib/firmware
+<span class="nb">ls </span>mali_csffw.bin
+</code></section></div>    </div>
+
+    <p>If the file does not exist, download it:</p>
+
+    <div class="language-bash highlighter-rouge"><div class="highlight"><section><code><span class="nb">sudo </span>wget https://github.com/JeffyCN/mirrors/raw/libmali/firmware/g610/mali_csffw.bin
+</code></section></div>    </div>
+  </li>
+</ol>
+  <h3 id="configuring-opencl-icd-loader">
+    
+    
+     <a href="#configuring-opencl-icd-loader">#</a><a href="#" aria-label="Back to top">Configuring OpenCL ICD Loader</a>
+        
+    
+  </h3>
+      
+
+<p>Set up the OpenCL Installable Client Driver (ICD) loader to recognize the Mali GPU.</p>
+
+<ol>
+  <li>
+    <p><strong>Update Package List:</strong></p>
+
+    <div class="language-bash highlighter-rouge"><div class="highlight"><section><code><span class="nb">sudo </span>apt update
+</code></section></div>    </div>
+  </li>
+  <li>
+    <p><strong>Install Mesa OpenCL ICD:</strong></p>
+
+    <div class="language-bash highlighter-rouge"><div class="highlight"><section><code><span class="nb">sudo </span>apt <span class="nb">install </span>mesa-opencl-icd <span class="nt">-y</span>
+</code></section></div>    </div>
+  </li>
+  <li>
+    <p><strong>Create OpenCL Vendors Directory:</strong></p>
+
+    <div class="language-bash highlighter-rouge"><div class="highlight"><section><code><span class="nb">sudo mkdir</span> <span class="nt">-p</span> /etc/OpenCL/vendors
+</code></section></div>    </div>
+  </li>
+  <li>
+    <p><strong>Add Mali ICD Configuration:</strong></p>
+
+    <div class="language-bash highlighter-rouge"><div class="highlight"><section><code><span class="nb">echo</span> <span class="s2">"/usr/lib/libmali-g610.so"</span> | <span class="nb">sudo tee</span> /etc/OpenCL/vendors/mali.icd
+</code></section></div>    </div>
+  </li>
+</ol>
+  <h3 id="installing-opencl-libraries">
+    
+    
+     <a href="#installing-opencl-libraries">#</a><a href="#" aria-label="Back to top">Installing OpenCL Libraries</a>
+        
+    
+  </h3>
+      
+
+<p>Install the OpenCL development libraries required for compiling OpenCL applications.</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><section><code><span class="nb">sudo </span>apt <span class="nb">install </span>ocl-icd-opencl-dev <span class="nt">-y</span>
+</code></section></div></div>
+  <h3 id="installing-dependencies">
+    
+    
+     <a href="#installing-dependencies">#</a><a href="#" aria-label="Back to top">Installing Dependencies</a>
+        
+    
+  </h3>
+      
+
+<p>Install necessary dependencies for the Mali OpenCL backend.</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><section><code><span class="nb">sudo </span>apt <span class="nb">install </span>libxcb-dri2-0 libxcb-dri3-0 libwayland-client0 libwayland-server0 libx11-xcb1 <span class="nt">-y</span>
+</code></section></div></div>
+  <h3 id="verifying-installation-with-clinfo">
+    
+    
+     <a href="#verifying-installation-with-clinfo">#</a><a href="#" aria-label="Back to top">Verifying Installation with clinfo</a>
+        
+    
+  </h3>
+      
+
+<ol>
+  <li>
+    <p><strong>Install clinfo:</strong></p>
+
+    <div class="language-bash highlighter-rouge"><div class="highlight"><section><code><span class="nb">sudo </span>apt <span class="nb">install </span>clinfo <span class="nt">-y</span>
+</code></section></div>    </div>
+  </li>
+  <li>
+    <p><strong>Run clinfo to Validate Installation:</strong></p>
+
+    <div class="language-bash highlighter-rouge"><div class="highlight"><section><code>clinfo
+</code></section></div>    </div>
+
+    <p><strong>Expected Output:</strong></p>
+
+    <p>Look for GPU information similar to the following in the output:</p>
+
+    <div class="language-bash highlighter-rouge"><div class="highlight"><section><code>arm_release_ver: g13p0-01eac0, rk_so_ver: 3
+Number of platforms: 2
+Platform Name: ARM Platform
+Platform Vendor: ARM
+Platform Version: OpenCL 2.1 v1.g6p0-01eac0.2819f9d4dbe0b5a2f89c835d8484f9cd
+Platform Profile: FULL_PROFILE
+...
+</code></section></div>    </div>
+
+    <p>This output confirms that the OpenCL runtime and Mali GPU driver are correctly installed and recognized by the system.</p>
+  </li>
+</ol>
+  <h2 id="troubleshooting">
+    
+    
+     <a href="#troubleshooting">#</a><a href="#" aria-label="Back to top">Troubleshooting</a>
+        
+    
+  </h2>
+      
+
+<p>If you encounter issues during the installation process, consider the following steps:</p>
+
+<ul>
+  <li><strong>Check Network Connectivity:</strong> Ensure that your RK3588 has a stable internet connection for downloading packages and dependencies.</li>
+  <li><strong>Verify File Downloads:</strong> Re-download any files if the download was interrupted or corrupted.</li>
+  <li><strong>Review Command Outputs:</strong> Carefully read any error messages during command execution to identify missing dependencies or permissions issues.</li>
+  <li><strong>Consult Logs:</strong> Check system logs for detailed error information using <code class="language-plaintext highlighter-rouge">dmesg</code> or reviewing logs in <code class="language-plaintext highlighter-rouge">/var/log/</code>.</li>
+</ul>
+  <h2 id="references">
+    
+    
+     <a href="#references">#</a><a href="#" aria-label="Back to top">References</a>
+        
+    
+  </h2>
+      
+
+<ol>
+  <li><a href="https://github.com/KhronosGroup/OpenCL-SDK">OpenCL SDK GitHub Repository</a></li>
+  <li><a href="https://github.com/mlc-ai/mlc-llm">MLC LLM GitHub Repository</a></li>
+  <li><a href="https://github.com/Joshua-Riek/ubuntu-rockchip/releases/tag/v1.22">Ubuntu Rockchip Releases</a></li>
+  <li><a href="https://github.com/JeffyCN/mirrors/raw/libmali/lib/aarch64-linux-gnu/">Mali GPU Drivers</a></li>
+  <li><a href="https://www.orangepi.org/">Orange Pi Official Website</a></li>
+  <li><a href="https://github.com/obfuscated12/clinfo">clinfo Documentation</a></li>
+  <li><a href="https://ubuntu.com/tutorials">Ubuntu Official Documentation</a></li>
+</ol><hr />
+
+<p>By following this comprehensive guide, you should be able to successfully set up GPU drivers and SDKs on your RK3588, enabling efficient OpenCL backend operations with MLC LLM.</p>
 
       </div>
       
@@ -756,7 +427,7 @@
     <p>
       <a href="#" aria-label="Back to top">
         <img src="/assets/Rope_(Old).gif" alt="Back to top" width="32" height="32" loading="lazy">
-      </a><a href="https://ib.bsb.br/404" aria-label="404">2024-12-28 18:06:39</a>‎ ⇔‎ <a href="https://github.com/ib-bsb-br/ib-bsb-br.github.io" aria-label="GitHub">ℹ</a>‎ <a href="/" aria-label="Homepage">infoBAG</a>
+      </a><a href="https://ib.bsb.br/404" aria-label="404">2024-12-28 18:09:15</a>‎ ⇔‎ <a href="https://github.com/ib-bsb-br/ib-bsb-br.github.io" aria-label="GitHub">ℹ</a>‎ <a href="/" aria-label="Homepage">infoBAG</a>
     </p>
   </footer>
   <script type="application/ld+json">

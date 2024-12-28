@@ -42,1226 +42,7 @@
 
   <link href="/style.css" rel="stylesheet">
 </head>
-  <body class="post-content-body">
-    
-    
-    
-    
-        
-        
-        "<p>How to Get Around OpenAI GPT-3 Token Limits\n    
-        
-        
-        "Python Developer’s Guide to OpenAI GPT-3 API\n    
-        
-        
-        "UPDATED: The article includes the ChatGPT API option (model=”gpt-3.5-turbo”).</p>\n    
-        
-        
-        "\n    
-        
-        
-        "<p>If you are reading this article, you have encountered the token limits of OpenAI’s GPT-3 models. The limits for various models are provided here.</p>\n    
-        
-        
-        "\n    
-        
-        
-        "<p>https://platform.openai.com/docs/models/gpt-3\n    
-        
-        
-        "To overcome this limitation, OpenAI offers a great example with the Summarizing Books with Human Feedback (https://openai.com/blog/summarizing-books/) solution as provided below.</p>\n    
-        
-        
-        "\n    
-        
-        
-        "<p>The original text is divided into sections, and each section is summarized.\n    
-        
-        
-        "Section summaries are summarized again into higher-level summaries.\n    
-        
-        
-        "The summarizing process continues until a complete summary is achieved.\n    
-        
-        
-        "I faced a similar issue while working on the article “Creating Meeting Minutes using OpenAI GPT-3 API” because most meeting transcripts exceed 4,000 tokens.</p>\n    
-        
-        
-        "\n    
-        
-        
-        "<p>This, like everything, has many different ways to be completed. For now, I am providing three options:</p>\n    
-        
-        
-        "\n    
-        
-        
-        "<p>NLTK (Natural Language Toolkit). Token count using this option does not match OpenAI tokenizer, but the difference is nominal.\n    
-        
-        
-        "Transformers. Token count using this option matches OpenAI tokenizer.\n    
-        
-        
-        "Tiktoken. Token count using this option matches OpenAI tokenizer and is faster than Transformers.\n    
-        
-        
-        "NLTK\n    
-        
-        
-        "NLTK is a leading platform for building Python programs to work with human language data. This code was developed using Google Colab, but you can use any IDE of your choice. Some codes are specific to Goole Colab, though.</p>\n    
-        
-        
-        "\n    
-        
-        
-        "<p>Prerequisites\n    
-        
-        
-        "The following are prerequisites for this tutorial:</p>\n    
-        
-        
-        "\n    
-        
-        
-        "<p>Python Package: nltk (Natural Language Toolkit)\n    
-        
-        
-        "Python Package: openai\n    
-        
-        
-        "Install Python Packages\n    
-        
-        
-        "%%writefile requirements.txt\n    
-        
-        
-        "openai\n    
-        
-        
-        "nltk\n    
-        
-        
-        "%pip install -r requirements.txt\n    
-        
-        
-        "Import Python Packages\n    
-        
-        
-        "import platform\n    
-        
-        
-        "import os\n    
-        
-        
-        "import openai\n    
-        
-        
-        "import os</p>\n    
-        
-        
-        "\n    
-        
-        
-        "<p>import nltk\n    
-        
-        
-        "nltk.download(‘punkt’)\n    
-        
-        
-        "from nltk.tokenize import word_tokenize</p>\n    
-        
-        
-        "\n    
-        
-        
-        "<p>print(‘Python: ‘, platform.python_version())\n    
-        
-        
-        "print(‘re: ‘, re.<strong>version</strong>)\n    
-        
-        
-        "print(‘nltk: ‘, nltk.<strong>version</strong>)</p>\n    
-        
-        
-        "\n    
-        
-        
-        "<p>(Optional) Count the Number of Tokens\n    
-        
-        
-        "OpenAI GPT-3 is limited to 4,001 tokens per request, encompassing both the request (i.e., prompt) and response. We will be determining the number of tokens present in the meeting transcript.</p>\n    
-        
-        
-        "\n    
-        
-        
-        "<p>def count_tokens(filename):\n    
-        
-        
-        "    with open(filename, ‘r’) as f:\n    
-        
-        
-        "        text = f.read()\n    
-        
-        
-        "    tokens = word_tokenize(text)\n    
-        
-        
-        "    return len(tokens)\n    
-        
-        
-        "filename = “/content/drive/MyDrive/Colab Notebooks/minutes/data/Round_22_Online_Kickoff_Meeting.txt”\n    
-        
-        
-        "token_count = count_tokens(filename)\n    
-        
-        
-        "print(f”Number of tokens: {token_count}”)</p>\n    
-        
-        
-        "\n    
-        
-        
-        "<p>(Optional for the second block of code) Break up the Meeting Transcript into chunks of 2,000 tokens with an overlap of 100 tokens\n    
-        
-        
-        "We will be dividing the meeting transcript into segments of 2,000 tokens, with an overlap of 100 tokens to avoid losing any information from the split.</p>\n    
-        
-        
-        "\n    
-        
-        
-        "<p>def break_up_file(tokens, chunk_size, overlap_size):\n    
-        
-        
-        "    if len(tokens) &lt;= chunk_size:\n    
-        
-        
-        "        yield tokens\n    
-        
-        
-        "    else:\n    
-        
-        
-        "        chunk = tokens[:chunk_size]\n    
-        
-        
-        "        yield chunk\n    
-        
-        
-        "        yield from break_up_file(tokens[chunk_size-overlap_size:], chunk_size, overlap_size)</p>\n    
-        
-        
-        "\n    
-        
-        
-        "<p>def break_up_file_to_chunks(filename, chunk_size=2000, overlap_size=100):\n    
-        
-        
-        "    with open(filename, ‘r’) as f:\n    
-        
-        
-        "        text = f.read()\n    
-        
-        
-        "    tokens = word_tokenize(text)\n    
-        
-        
-        "    return list(break_up_file(tokens, chunk_size, overlap_size))\n    
-        
-        
-        "filename = “/content/drive/MyDrive/Colab Notebooks/minutes/data/Round_22_Online_Kickoff_Meeting.txt”</p>\n    
-        
-        
-        "\n    
-        
-        
-        "<p>chunks = break_up_file_to_chunks(filename)\n    
-        
-        
-        "for i, chunk in enumerate(chunks):\n    
-        
-        
-        "    print(f”Chunk {i}: {len(chunk)} tokens”)</p>\n    
-        
-        
-        "\n    
-        
-        
-        "<p>Function to Convert the NLTK Tokenized Text to Non-Tokenized Text\n    
-        
-        
-        "We will need to convert the tokenized text from NLTK to non-tokenized text, as the OpenAI GPT-3 API does not handle tokenized text very well, which can result in a higher token count exceeding 2,000.</p>\n    
-        
-        
-        "\n    
-        
-        
-        "<p>def convert_to_detokenized_text(tokenized_text):\n    
-        
-        
-        "    prompt_text = “ “.join(tokenized_text)\n    
-        
-        
-        "    prompt_text = prompt_text.replace(“ ‘s”, “‘s”)\n    
-        
-        
-        "    return detokenized_text\n    
-        
-        
-        "Set OpenAI API Key\n    
-        
-        
-        "Set an environment variable called “OPEN_API_KEY” and assign a secret API key from OpenAI (https://beta.openai.com/account/api-keys).</p>\n    
-        
-        
-        "\n    
-        
-        
-        "<p>os.environ[“OPENAI_API_KEY”] = ‘your openai api key’\n    
-        
-        
-        "openai.api_key = os.getenv(“OPENAI_API_KEY”)\n    
-        
-        
-        "Summarize the Meeting Transcript one chunk (of 2,000 tokens) at a time\n    
-        
-        
-        "Option 1: model=”text-davinci-003”</p>\n    
-        
-        
-        "\n    
-        
-        
-        "<p>filename = “/content/drive/MyDrive/Colab Notebooks/minutes/data/Round_22_Online_Kickoff_Meeting.txt”</p>\n    
-        
-        
-        "\n    
-        
-        
-        "<p>prompt_response = []\n    
-        
-        
-        "chunks = break_up_file_to_chunks(filename)</p>\n    
-        
-        
-        "\n    
-        
-        
-        "<p>for i, chunk in enumerate(chunks):\n    
-        
-        
-        "    prompt_request = “Summarize this meeting transcript: “ + convert_to_detokenized_text(chunks[i])\n    
-        
-        
-        "    response = openai.Completion.create(\n    
-        
-        
-        "            model=”text-davinci-003”,\n    
-        
-        
-        "            prompt=prompt_request,\n    
-        
-        
-        "            temperature=.5,\n    
-        
-        
-        "            max_tokens=500,\n    
-        
-        
-        "            top_p=1,\n    
-        
-        
-        "            frequency_penalty=0,\n    
-        
-        
-        "            presence_penalty=0\n    
-        
-        
-        "    )</p>\n    
-        
-        
-        "\n    
-        
-        
-        "<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>prompt_response.append(response["choices"][0]["text"].strip()) Option 2: model=”gpt-3.5-turbo”\n    
-        
-        
-        "</code></pre></div></div>\n    
-        
-        
-        "\n    
-        
-        
-        "<p>filename = “/content/drive/MyDrive/Colab Notebooks/minutes/data/Round_22_Online_Kickoff_Meeting.txt”</p>\n    
-        
-        
-        "\n    
-        
-        
-        "<p>prompt_response = []\n    
-        
-        
-        "chunks = break_up_file_to_chunks(filename)</p>\n    
-        
-        
-        "\n    
-        
-        
-        "<p>for i, chunk in enumerate(chunks):</p>\n    
-        
-        
-        "\n    
-        
-        
-        "<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>prompt_request = "Summarize this meeting transcript: " + convert_to_prompt_text(chunks[i])\n    
-        
-        
-        "\n    
-        
-        
-        "messages = [{"role": "system", "content": "This is text summarization."}]    \n    
-        
-        
-        "messages.append({"role": "user", "content": prompt_request})\n    
-        
-        
-        "\n    
-        
-        
-        "response = openai.ChatCompletion.create(\n    
-        
-        
-        "        model="gpt-3.5-turbo",\n    
-        
-        
-        "        messages=messages,\n    
-        
-        
-        "        temperature=.5,\n    
-        
-        
-        "        max_tokens=500,\n    
-        
-        
-        "        top_p=1,\n    
-        
-        
-        "        frequency_penalty=0,\n    
-        
-        
-        "        presence_penalty=0\n    
-        
-        
-        ")\n    
-        
-        
-        "\n    
-        
-        
-        "prompt_response.append(response["choices"][0]["message"]['content'].strip()) Consolidate the Meeting Transcript Summaries prompt_request = "Consoloidate these meeting summaries: " + str(prompt_response) response = openai.Completion.create(\n    
-        
-        
-        "    model="text-davinci-003",\n    
-        
-        
-        "    prompt=prompt_request,\n    
-        
-        
-        "    temperature=.5,\n    
-        
-        
-        "    max_tokens=1000,\n    
-        
-        
-        "    top_p=1,\n    
-        
-        
-        "    frequency_penalty=0,\n    
-        
-        
-        "    presence_penalty=0\n    
-        
-        
-        ") meeting_summary = response["choices"][0]["text"].strip() print(meeting_summary) Transformers Transformers provides APIs and tools to easily download and train state-of-the-art pretrained models. This code was developed using Google Colab, but you can use any IDE of your choice. Some codes are specific to Goole Colab, though.\n    
-        
-        
-        "</code></pre></div></div>\n    
-        
-        
-        "\n    
-        
-        
-        "<p>Prerequisites\n    
-        
-        
-        "The following are prerequisites for this tutorial:</p>\n    
-        
-        
-        "\n    
-        
-        
-        "<p>Python Package: torch\n    
-        
-        
-        "Python Package: transformers\n    
-        
-        
-        "Python Package: openai\n    
-        
-        
-        "Install Python Packages\n    
-        
-        
-        "%%writefile requirements.txt\n    
-        
-        
-        "openai\n    
-        
-        
-        "torch\n    
-        
-        
-        "transformers\n    
-        
-        
-        "%pip install -r requirements.txt\n    
-        
-        
-        "Import Python Packages\n    
-        
-        
-        "import platform\n    
-        
-        
-        "import os\n    
-        
-        
-        "import openai</p>\n    
-        
-        
-        "\n    
-        
-        
-        "<p>import torch\n    
-        
-        
-        "import transformers\n    
-        
-        
-        "from transformers import AutoTokenizer</p>\n    
-        
-        
-        "\n    
-        
-        
-        "<p>print(‘Python: ‘, platform.python_version())\n    
-        
-        
-        "print(‘re: ‘, re.<strong>version</strong>)\n    
-        
-        
-        "print(‘torch: ‘, torch.<strong>version</strong>)\n    
-        
-        
-        "print(‘transformers: ‘, transformers.<strong>version</strong>)</p>\n    
-        
-        
-        "\n    
-        
-        
-        "<p>(Optional) Count the Number of Tokens\n    
-        
-        
-        "OpenAI GPT-3 is limited to 4,001 tokens per request, encompassing both the request (i.e., prompt) and response. We will be determining the number of tokens present in the meeting transcript.</p>\n    
-        
-        
-        "\n    
-        
-        
-        "<p>def count_tokens(filename):\n    
-        
-        
-        "    tokenizer = AutoTokenizer.from_pretrained(“gpt2”)\n    
-        
-        
-        "    with open(filename, ‘r’) as f:\n    
-        
-        
-        "        text = f.read()</p>\n    
-        
-        
-        "\n    
-        
-        
-        "<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>input_ids = torch.tensor(tokenizer.encode(text)).unsqueeze(0)\n    
-        
-        
-        "num_tokens = input_ids.shape[1]\n    
-        
-        
-        "return num_tokens filename = "/content/drive/MyDrive/Colab Notebooks/minutes/data/Round_22_Online_Kickoff_Meeting.txt" token_count = count_tokens(filename) print(f"Number of tokens: {token_count}")\n    
-        
-        
-        "</code></pre></div></div>\n    
-        
-        
-        "\n    
-        
-        
-        "<p>(Optional for the second block of code) Break up text into chunks of 2000 tokens with an overlap of 100 tokens\n    
-        
-        
-        "We will be breaking up the text into chunks of 2,000 tokens with an overlapping 100 tokens to ensure any information is not lost from breaking up the text.</p>\n    
-        
-        
-        "\n    
-        
-        
-        "<p>def break_up_file_to_chunks(filename, chunk_size=2000, overlap=100):\n    
-        
-        
-        "    tokenizer = AutoTokenizer.from_pretrained(“gpt2”)\n    
-        
-        
-        "    with open(filename, ‘r’) as f:\n    
-        
-        
-        "        text = f.read()</p>\n    
-        
-        
-        "\n    
-        
-        
-        "<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>tokens = tokenizer.encode(text)\n    
-        
-        
-        "num_tokens = len(tokens)\n    
-        
-        
-        "\n    
-        
-        
-        "chunks = []\n    
-        
-        
-        "for i in range(0, num_tokens, chunk_size - overlap):\n    
-        
-        
-        "    chunk = tokens[i:i + chunk_size]\n    
-        
-        
-        "    chunks.append(chunk)\n    
-        
-        
-        "\n    
-        
-        
-        "return chunks filename = "/content/drive/MyDrive/Colab Notebooks/minutes/data/Round_22_Online_Kickoff_Meeting.txt"\n    
-        
-        
-        "</code></pre></div></div>\n    
-        
-        
-        "\n    
-        
-        
-        "<p>chunks = break_up_file_to_chunks(filename)\n    
-        
-        
-        "for i, chunk in enumerate(chunks):\n    
-        
-        
-        "    print(f”Chunk {i}: {len(chunk)} tokens”)</p>\n    
-        
-        
-        "\n    
-        
-        
-        "<p>Set OpenAI API Key\n    
-        
-        
-        "Set an environment variable called “OPEN_API_KEY” and assign a secret API key from OpenAI (https://beta.openai.com/account/api-keys).</p>\n    
-        
-        
-        "\n    
-        
-        
-        "<p>os.environ[“OPENAI_API_KEY”] = ‘paste your openai api key here’\n    
-        
-        
-        "openai.api_key = os.getenv(“OPENAI_API_KEY”)\n    
-        
-        
-        "Summarize the text one chunk at a time\n    
-        
-        
-        "Option 1: model=”text-davinci-003”</p>\n    
-        
-        
-        "\n    
-        
-        
-        "<p>filename = “/content/drive/MyDrive/Colab Notebooks/minutes/data/Round_22_Online_Kickoff_Meeting.txt”</p>\n    
-        
-        
-        "\n    
-        
-        
-        "<p>prompt_response = []</p>\n    
-        
-        
-        "\n    
-        
-        
-        "<p>tokenizer = AutoTokenizer.from_pretrained(“gpt2”)</p>\n    
-        
-        
-        "\n    
-        
-        
-        "<p>chunks = break_up_file_to_chunks(filename)</p>\n    
-        
-        
-        "\n    
-        
-        
-        "<p>for i, chunk in enumerate(chunks):</p>\n    
-        
-        
-        "\n    
-        
-        
-        "<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>prompt_request = "Summarize this meeting transcript: " + tokenizer.decode(chunks[i])\n    
-        
-        
-        "response = openai.Completion.create(\n    
-        
-        
-        "        model="text-davinci-003",\n    
-        
-        
-        "        prompt=prompt_request,\n    
-        
-        
-        "        temperature=.5,\n    
-        
-        
-        "        max_tokens=500,\n    
-        
-        
-        "        top_p=1,\n    
-        
-        
-        "        frequency_penalty=0,\n    
-        
-        
-        "        presence_penalty=0\n    
-        
-        
-        ")\n    
-        
-        
-        "\n    
-        
-        
-        "prompt_response.append(response["choices"][0]["text"].strip()) Option 2: model=”gpt-3.5-turbo”\n    
-        
-        
-        "</code></pre></div></div>\n    
-        
-        
-        "\n    
-        
-        
-        "<p>filename = “/content/drive/MyDrive/Colab Notebooks/minutes/data/Round_22_Online_Kickoff_Meeting.txt”</p>\n    
-        
-        
-        "\n    
-        
-        
-        "<p>prompt_response = []</p>\n    
-        
-        
-        "\n    
-        
-        
-        "<p>tokenizer = AutoTokenizer.from_pretrained(“gpt2”)</p>\n    
-        
-        
-        "\n    
-        
-        
-        "<p>chunks = break_up_file_to_chunks(filename)</p>\n    
-        
-        
-        "\n    
-        
-        
-        "<p>for i, chunk in enumerate(chunks):</p>\n    
-        
-        
-        "\n    
-        
-        
-        "<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>prompt_request = "Summarize this meeting transcript: " + tokenizer.decode(chunks[i])\n    
-        
-        
-        "\n    
-        
-        
-        "messages = [{"role": "system", "content": "This is text summarization."}]    \n    
-        
-        
-        "messages.append({"role": "user", "content": prompt_request})\n    
-        
-        
-        "\n    
-        
-        
-        "response = openai.ChatCompletion.create(\n    
-        
-        
-        "        model="gpt-3.5-turbo",\n    
-        
-        
-        "        messages=messages,\n    
-        
-        
-        "        temperature=.5,\n    
-        
-        
-        "        max_tokens=500,\n    
-        
-        
-        "        top_p=1,\n    
-        
-        
-        "        frequency_penalty=0,\n    
-        
-        
-        "        presence_penalty=0\n    
-        
-        
-        ")\n    
-        
-        
-        "\n    
-        
-        
-        "prompt_response.append(response["choices"][0]["message"]['content'].strip()) Consolidate the summaries prompt_request = "Consoloidate these meeting summaries: " + str(prompt_response) response = openai.Completion.create(\n    
-        
-        
-        "    model="text-davinci-003",\n    
-        
-        
-        "    prompt=prompt_request,\n    
-        
-        
-        "    temperature=.5,\n    
-        
-        
-        "    max_tokens=1000,\n    
-        
-        
-        "    top_p=1,\n    
-        
-        
-        "    frequency_penalty=0,\n    
-        
-        
-        "    presence_penalty=0\n    
-        
-        
-        ") Summary of summaries meeting_summary = response["choices"][0]["text"].strip() print(meeting_summary) Tiktoken tiktoken is a fast BPE tokeniser for use with OpenAI’s models. This code was developed using Google Colab, but you can use any IDE of your choice. Some codes are specific to Goole Colab, though.\n    
-        
-        
-        "</code></pre></div></div>\n    
-        
-        
-        "\n    
-        
-        
-        "<p>Prerequisites\n    
-        
-        
-        "The following are prerequisites for this tutorial:</p>\n    
-        
-        
-        "\n    
-        
-        
-        "<p>Python Package: tiktoken\n    
-        
-        
-        "Python Package: openai\n    
-        
-        
-        "Install Python Packages\n    
-        
-        
-        "%%writefile requirements.txt\n    
-        
-        
-        "openai\n    
-        
-        
-        "tiktoken\n    
-        
-        
-        "%pip install -r requirements.txt\n    
-        
-        
-        "Import Python Packages\n    
-        
-        
-        "import platform\n    
-        
-        
-        "import os\n    
-        
-        
-        "import openai\n    
-        
-        
-        "import tiktoken</p>\n    
-        
-        
-        "\n    
-        
-        
-        "<p>print(‘Python: ‘, platform.python_version())\n    
-        
-        
-        "(Optional) Count the Number of Tokens\n    
-        
-        
-        "OpenAI GPT-3 is limited to 4,001 tokens per request, encompassing both the request (i.e., prompt) and response. We will be determining the number of tokens present in the meeting transcript.</p>\n    
-        
-        
-        "\n    
-        
-        
-        "<p>def count_tokens(filename):\n    
-        
-        
-        "    encoding = tiktoken.get_encoding(“gpt2”)\n    
-        
-        
-        "    with open(filename, ‘r’) as f:\n    
-        
-        
-        "        text = f.read()</p>\n    
-        
-        
-        "\n    
-        
-        
-        "<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>input_ids = encoding.encode(text)\n    
-        
-        
-        "num_tokens = len(input_ids)\n    
-        
-        
-        "return num_tokens filename = "/content/drive/MyDrive/Colab Notebooks/minutes/data/Round_22_Online_Kickoff_Meeting.txt"\n    
-        
-        
-        "</code></pre></div></div>\n    
-        
-        
-        "\n    
-        
-        
-        "<p>num_tokens = count_tokens(filename=filename)\n    
-        
-        
-        "print(“Number of tokens:  “, num_tokens)</p>\n    
-        
-        
-        "\n    
-        
-        
-        "<p>(Optional for the second block of code) Break up text into chunks of 2000 tokens with an overlap of 100 tokens\n    
-        
-        
-        "We will be breaking up the text into chunks of 2,000 tokens with an overlapping 100 tokens to ensure any information is not lost from breaking up the text.</p>\n    
-        
-        
-        "\n    
-        
-        
-        "<p>def break_up_file_to_chunks(filename, chunk_size=2000, overlap=100):</p>\n    
-        
-        
-        "\n    
-        
-        
-        "<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>encoding = tiktoken.get_encoding("gpt2")\n    
-        
-        
-        "with open(filename, 'r') as f:\n    
-        
-        
-        "    text = f.read()\n    
-        
-        
-        "\n    
-        
-        
-        "tokens = encoding.encode(text)\n    
-        
-        
-        "num_tokens = len(tokens)\n    
-        
-        
-        "\n    
-        
-        
-        "chunks = []\n    
-        
-        
-        "for i in range(0, num_tokens, chunk_size - overlap):\n    
-        
-        
-        "    chunk = tokens[i:i + chunk_size]\n    
-        
-        
-        "    chunks.append(chunk)\n    
-        
-        
-        "\n    
-        
-        
-        "return chunks filename = "/content/drive/MyDrive/Colab Notebooks/minutes/data/Round_22_Online_Kickoff_Meeting.txt"\n    
-        
-        
-        "</code></pre></div></div>\n    
-        
-        
-        "\n    
-        
-        
-        "<p>chunks = break_up_file_to_chunks(filename)\n    
-        
-        
-        "for i, chunk in enumerate(chunks):\n    
-        
-        
-        "    print(f”Chunk {i}: {len(chunk)} tokens”)</p>\n    
-        
-        
-        "\n    
-        
-        
-        "<p>Set OpenAI API Key\n    
-        
-        
-        "Set an environment variable called “OPEN_API_KEY” and assign a secret API key from OpenAI (https://beta.openai.com/account/api-keys).</p>\n    
-        
-        
-        "\n    
-        
-        
-        "<p>os.environ[“OPENAI_API_KEY”] = ‘paste your openai api key here’\n    
-        
-        
-        "openai.api_key = os.getenv(“OPENAI_API_KEY”)\n    
-        
-        
-        "Summarize the text one chunk at a time\n    
-        
-        
-        "Option 1: model=”text-davinci-003”</p>\n    
-        
-        
-        "\n    
-        
-        
-        "<p>filename = “/content/drive/MyDrive/Colab Notebooks/minutes/data/Round_22_Online_Kickoff_Meeting.txt”</p>\n    
-        
-        
-        "\n    
-        
-        
-        "<p>prompt_response = []</p>\n    
-        
-        
-        "\n    
-        
-        
-        "<p>encoding = tiktoken.get_encoding(“gpt2”)\n    
-        
-        
-        "chunks = break_up_file_to_chunks(filename)</p>\n    
-        
-        
-        "\n    
-        
-        
-        "<p>for i, chunk in enumerate(chunks):\n    
-        
-        
-        "    prompt_request = “Summarize this meeting transcript: “ + encoding.decode(chunks[i])</p>\n    
-        
-        
-        "\n    
-        
-        
-        "<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>response = openai.Completion.create(\n    
-        
-        
-        "        model="text-davinci-003",\n    
-        
-        
-        "        prompt=prompt_request,\n    
-        
-        
-        "        temperature=.5,\n    
-        
-        
-        "        max_tokens=500,\n    
-        
-        
-        "        top_p=1,\n    
-        
-        
-        "        frequency_penalty=0,\n    
-        
-        
-        "        presence_penalty=0\n    
-        
-        
-        ")\n    
-        
-        
-        "\n    
-        
-        
-        "prompt_response.append(response["choices"][0]["text"].strip()) Option 2: model=”gpt-3.5-turbo”\n    
-        
-        
-        "</code></pre></div></div>\n    
-        
-        
-        "\n    
-        
-        
-        "<p>filename = “/content/drive/MyDrive/Colab Notebooks/minutes/data/Round_22_Online_Kickoff_Meeting.txt”</p>\n    
-        
-        
-        "\n    
-        
-        
-        "<p>prompt_response = []</p>\n    
-        
-        
-        "\n    
-        
-        
-        "<p>encoding = tiktoken.get_encoding(“gpt2”)\n    
-        
-        
-        "chunks = break_up_file_to_chunks(filename)</p>\n    
-        
-        
-        "\n    
-        
-        
-        "<p>for i, chunk in enumerate(chunks):</p>\n    
-        
-        
-        "\n    
-        
-        
-        "<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>prompt_request = "Summarize this meeting transcript: " + encoding.decode(chunks[i])\n    
-        
-        
-        "messages = [{"role": "system", "content": "This is text summarization."}]    \n    
-        
-        
-        "messages.append({"role": "user", "content": prompt_request})\n    
-        
-        
-        "\n    
-        
-        
-        "response = openai.ChatCompletion.create(\n    
-        
-        
-        "        model="gpt-3.5-turbo",\n    
-        
-        
-        "        messages=messages,\n    
-        
-        
-        "        temperature=.5,\n    
-        
-        
-        "        max_tokens=500,\n    
-        
-        
-        "        top_p=1,\n    
-        
-        
-        "        frequency_penalty=0,\n    
-        
-        
-        "        presence_penalty=0\n    
-        
-        
-        ")\n    
-        
-        
-        "\n    
-        
-        
-        "prompt_response.append(response["choices"][0]["message"]['content'].strip()) Consolidate the summaries prompt_request = "Consoloidate these meeting summaries: " + str(prompt_response)\n    
-        
-        
-        "</code></pre></div></div>\n    
-        
-        
-        "\n    
-        
-        
-        "<p>response = openai.Completion.create(\n    
-        
-        
-        "        model=”text-davinci-003”,\n    
-        
-        
-        "        prompt=prompt_request,\n    
-        
-        
-        "        temperature=.5,\n    
-        
-        
-        "        max_tokens=1000,\n    
-        
-        
-        "        top_p=1,\n    
-        
-        
-        "        frequency_penalty=0,\n    
-        
-        
-        "        presence_penalty=0\n    
-        
-        
-        "    )\n    
-        
-        
-        "Summary of Summaries\n    
-        
-        
-        "meeting_summary = response[“choices”][0][“text”].strip()\n    
-        
-        
-        "print(meeting_summary)\n    
-        
-        
-        "I hope you have enjoyed this tutorial. If you have any questions or comments, please provide them here.</p>\n    "
+<body class="post-content-body">
   <header class="header-container">
     <nav aria-label="Main navigation" class="header-content">
       <a href="/" aria-label="Home">
@@ -1298,6 +79,7 @@
           Tags:
           
             <a href="https://ib.bsb.br/tags/#ai" class="tag">AI</a>
+            
           
         </p>
       
@@ -1344,7 +126,411 @@
       <div class="post-content-body">
         
 
-        
+        <p>How to Get Around OpenAI GPT-3 Token Limits
+Python Developer’s Guide to OpenAI GPT-3 API
+UPDATED: The article includes the ChatGPT API option (model=”gpt-3.5-turbo”).</p>
+
+<p>If you are reading this article, you have encountered the token limits of OpenAI’s GPT-3 models. The limits for various models are provided here.</p>
+
+<p>https://platform.openai.com/docs/models/gpt-3
+To overcome this limitation, OpenAI offers a great example with the Summarizing Books with Human Feedback (https://openai.com/blog/summarizing-books/) solution as provided below.</p>
+
+<p>The original text is divided into sections, and each section is summarized.
+Section summaries are summarized again into higher-level summaries.
+The summarizing process continues until a complete summary is achieved.
+I faced a similar issue while working on the article “Creating Meeting Minutes using OpenAI GPT-3 API” because most meeting transcripts exceed 4,000 tokens.</p>
+
+<p>This, like everything, has many different ways to be completed. For now, I am providing three options:</p>
+
+<p>NLTK (Natural Language Toolkit). Token count using this option does not match OpenAI tokenizer, but the difference is nominal.
+Transformers. Token count using this option matches OpenAI tokenizer.
+Tiktoken. Token count using this option matches OpenAI tokenizer and is faster than Transformers.
+NLTK
+NLTK is a leading platform for building Python programs to work with human language data. This code was developed using Google Colab, but you can use any IDE of your choice. Some codes are specific to Goole Colab, though.</p>
+
+<p>Prerequisites
+The following are prerequisites for this tutorial:</p>
+
+<p>Python Package: nltk (Natural Language Toolkit)
+Python Package: openai
+Install Python Packages
+%%writefile requirements.txt
+openai
+nltk
+%pip install -r requirements.txt
+Import Python Packages
+import platform
+import os
+import openai
+import os</p>
+
+<p>import nltk
+nltk.download(‘punkt’)
+from nltk.tokenize import word_tokenize</p>
+
+<p>print(‘Python: ‘, platform.python_version())
+print(‘re: ‘, re.<strong>version</strong>)
+print(‘nltk: ‘, nltk.<strong>version</strong>)</p>
+
+<p>(Optional) Count the Number of Tokens
+OpenAI GPT-3 is limited to 4,001 tokens per request, encompassing both the request (i.e., prompt) and response. We will be determining the number of tokens present in the meeting transcript.</p>
+
+<p>def count_tokens(filename):
+    with open(filename, ‘r’) as f:
+        text = f.read()
+    tokens = word_tokenize(text)
+    return len(tokens)
+filename = “/content/drive/MyDrive/Colab Notebooks/minutes/data/Round_22_Online_Kickoff_Meeting.txt”
+token_count = count_tokens(filename)
+print(f”Number of tokens: {token_count}”)</p>
+
+<p>(Optional for the second block of code) Break up the Meeting Transcript into chunks of 2,000 tokens with an overlap of 100 tokens
+We will be dividing the meeting transcript into segments of 2,000 tokens, with an overlap of 100 tokens to avoid losing any information from the split.</p>
+
+<p>def break_up_file(tokens, chunk_size, overlap_size):
+    if len(tokens) &lt;= chunk_size:
+        yield tokens
+    else:
+        chunk = tokens[:chunk_size]
+        yield chunk
+        yield from break_up_file(tokens[chunk_size-overlap_size:], chunk_size, overlap_size)</p>
+
+<p>def break_up_file_to_chunks(filename, chunk_size=2000, overlap_size=100):
+    with open(filename, ‘r’) as f:
+        text = f.read()
+    tokens = word_tokenize(text)
+    return list(break_up_file(tokens, chunk_size, overlap_size))
+filename = “/content/drive/MyDrive/Colab Notebooks/minutes/data/Round_22_Online_Kickoff_Meeting.txt”</p>
+
+<p>chunks = break_up_file_to_chunks(filename)
+for i, chunk in enumerate(chunks):
+    print(f”Chunk {i}: {len(chunk)} tokens”)</p>
+
+<p>Function to Convert the NLTK Tokenized Text to Non-Tokenized Text
+We will need to convert the tokenized text from NLTK to non-tokenized text, as the OpenAI GPT-3 API does not handle tokenized text very well, which can result in a higher token count exceeding 2,000.</p>
+
+<p>def convert_to_detokenized_text(tokenized_text):
+    prompt_text = “ “.join(tokenized_text)
+    prompt_text = prompt_text.replace(“ ‘s”, “‘s”)
+    return detokenized_text
+Set OpenAI API Key
+Set an environment variable called “OPEN_API_KEY” and assign a secret API key from OpenAI (https://beta.openai.com/account/api-keys).</p>
+
+<p>os.environ[“OPENAI_API_KEY”] = ‘your openai api key’
+openai.api_key = os.getenv(“OPENAI_API_KEY”)
+Summarize the Meeting Transcript one chunk (of 2,000 tokens) at a time
+Option 1: model=”text-davinci-003”</p>
+
+<p>filename = “/content/drive/MyDrive/Colab Notebooks/minutes/data/Round_22_Online_Kickoff_Meeting.txt”</p>
+
+<p>prompt_response = []
+chunks = break_up_file_to_chunks(filename)</p>
+
+<p>for i, chunk in enumerate(chunks):
+    prompt_request = “Summarize this meeting transcript: “ + convert_to_detokenized_text(chunks[i])
+    response = openai.Completion.create(
+            model=”text-davinci-003”,
+            prompt=prompt_request,
+            temperature=.5,
+            max_tokens=500,
+            top_p=1,
+            frequency_penalty=0,
+            presence_penalty=0
+    )</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><section><code>prompt_response.append(response["choices"][0]["text"].strip()) Option 2: model=”gpt-3.5-turbo”
+</code></section></div></div>
+
+<p>filename = “/content/drive/MyDrive/Colab Notebooks/minutes/data/Round_22_Online_Kickoff_Meeting.txt”</p>
+
+<p>prompt_response = []
+chunks = break_up_file_to_chunks(filename)</p>
+
+<p>for i, chunk in enumerate(chunks):</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><section><code>prompt_request = "Summarize this meeting transcript: " + convert_to_prompt_text(chunks[i])
+
+messages = [{"role": "system", "content": "This is text summarization."}]    
+messages.append({"role": "user", "content": prompt_request})
+
+response = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        messages=messages,
+        temperature=.5,
+        max_tokens=500,
+        top_p=1,
+        frequency_penalty=0,
+        presence_penalty=0
+)
+
+prompt_response.append(response["choices"][0]["message"]['content'].strip()) Consolidate the Meeting Transcript Summaries prompt_request = "Consoloidate these meeting summaries: " + str(prompt_response) response = openai.Completion.create(
+    model="text-davinci-003",
+    prompt=prompt_request,
+    temperature=.5,
+    max_tokens=1000,
+    top_p=1,
+    frequency_penalty=0,
+    presence_penalty=0
+) meeting_summary = response["choices"][0]["text"].strip() print(meeting_summary) Transformers Transformers provides APIs and tools to easily download and train state-of-the-art pretrained models. This code was developed using Google Colab, but you can use any IDE of your choice. Some codes are specific to Goole Colab, though.
+</code></section></div></div>
+
+<p>Prerequisites
+The following are prerequisites for this tutorial:</p>
+
+<p>Python Package: torch
+Python Package: transformers
+Python Package: openai
+Install Python Packages
+%%writefile requirements.txt
+openai
+torch
+transformers
+%pip install -r requirements.txt
+Import Python Packages
+import platform
+import os
+import openai</p>
+
+<p>import torch
+import transformers
+from transformers import AutoTokenizer</p>
+
+<p>print(‘Python: ‘, platform.python_version())
+print(‘re: ‘, re.<strong>version</strong>)
+print(‘torch: ‘, torch.<strong>version</strong>)
+print(‘transformers: ‘, transformers.<strong>version</strong>)</p>
+
+<p>(Optional) Count the Number of Tokens
+OpenAI GPT-3 is limited to 4,001 tokens per request, encompassing both the request (i.e., prompt) and response. We will be determining the number of tokens present in the meeting transcript.</p>
+
+<p>def count_tokens(filename):
+    tokenizer = AutoTokenizer.from_pretrained(“gpt2”)
+    with open(filename, ‘r’) as f:
+        text = f.read()</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><section><code>input_ids = torch.tensor(tokenizer.encode(text)).unsqueeze(0)
+num_tokens = input_ids.shape[1]
+return num_tokens filename = "/content/drive/MyDrive/Colab Notebooks/minutes/data/Round_22_Online_Kickoff_Meeting.txt" token_count = count_tokens(filename) print(f"Number of tokens: {token_count}")
+</code></section></div></div>
+
+<p>(Optional for the second block of code) Break up text into chunks of 2000 tokens with an overlap of 100 tokens
+We will be breaking up the text into chunks of 2,000 tokens with an overlapping 100 tokens to ensure any information is not lost from breaking up the text.</p>
+
+<p>def break_up_file_to_chunks(filename, chunk_size=2000, overlap=100):
+    tokenizer = AutoTokenizer.from_pretrained(“gpt2”)
+    with open(filename, ‘r’) as f:
+        text = f.read()</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><section><code>tokens = tokenizer.encode(text)
+num_tokens = len(tokens)
+
+chunks = []
+for i in range(0, num_tokens, chunk_size - overlap):
+    chunk = tokens[i:i + chunk_size]
+    chunks.append(chunk)
+
+return chunks filename = "/content/drive/MyDrive/Colab Notebooks/minutes/data/Round_22_Online_Kickoff_Meeting.txt"
+</code></section></div></div>
+
+<p>chunks = break_up_file_to_chunks(filename)
+for i, chunk in enumerate(chunks):
+    print(f”Chunk {i}: {len(chunk)} tokens”)</p>
+
+<p>Set OpenAI API Key
+Set an environment variable called “OPEN_API_KEY” and assign a secret API key from OpenAI (https://beta.openai.com/account/api-keys).</p>
+
+<p>os.environ[“OPENAI_API_KEY”] = ‘paste your openai api key here’
+openai.api_key = os.getenv(“OPENAI_API_KEY”)
+Summarize the text one chunk at a time
+Option 1: model=”text-davinci-003”</p>
+
+<p>filename = “/content/drive/MyDrive/Colab Notebooks/minutes/data/Round_22_Online_Kickoff_Meeting.txt”</p>
+
+<p>prompt_response = []</p>
+
+<p>tokenizer = AutoTokenizer.from_pretrained(“gpt2”)</p>
+
+<p>chunks = break_up_file_to_chunks(filename)</p>
+
+<p>for i, chunk in enumerate(chunks):</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><section><code>prompt_request = "Summarize this meeting transcript: " + tokenizer.decode(chunks[i])
+response = openai.Completion.create(
+        model="text-davinci-003",
+        prompt=prompt_request,
+        temperature=.5,
+        max_tokens=500,
+        top_p=1,
+        frequency_penalty=0,
+        presence_penalty=0
+)
+
+prompt_response.append(response["choices"][0]["text"].strip()) Option 2: model=”gpt-3.5-turbo”
+</code></section></div></div>
+
+<p>filename = “/content/drive/MyDrive/Colab Notebooks/minutes/data/Round_22_Online_Kickoff_Meeting.txt”</p>
+
+<p>prompt_response = []</p>
+
+<p>tokenizer = AutoTokenizer.from_pretrained(“gpt2”)</p>
+
+<p>chunks = break_up_file_to_chunks(filename)</p>
+
+<p>for i, chunk in enumerate(chunks):</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><section><code>prompt_request = "Summarize this meeting transcript: " + tokenizer.decode(chunks[i])
+
+messages = [{"role": "system", "content": "This is text summarization."}]    
+messages.append({"role": "user", "content": prompt_request})
+
+response = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        messages=messages,
+        temperature=.5,
+        max_tokens=500,
+        top_p=1,
+        frequency_penalty=0,
+        presence_penalty=0
+)
+
+prompt_response.append(response["choices"][0]["message"]['content'].strip()) Consolidate the summaries prompt_request = "Consoloidate these meeting summaries: " + str(prompt_response) response = openai.Completion.create(
+    model="text-davinci-003",
+    prompt=prompt_request,
+    temperature=.5,
+    max_tokens=1000,
+    top_p=1,
+    frequency_penalty=0,
+    presence_penalty=0
+) Summary of summaries meeting_summary = response["choices"][0]["text"].strip() print(meeting_summary) Tiktoken tiktoken is a fast BPE tokeniser for use with OpenAI’s models. This code was developed using Google Colab, but you can use any IDE of your choice. Some codes are specific to Goole Colab, though.
+</code></section></div></div>
+
+<p>Prerequisites
+The following are prerequisites for this tutorial:</p>
+
+<p>Python Package: tiktoken
+Python Package: openai
+Install Python Packages
+%%writefile requirements.txt
+openai
+tiktoken
+%pip install -r requirements.txt
+Import Python Packages
+import platform
+import os
+import openai
+import tiktoken</p>
+
+<p>print(‘Python: ‘, platform.python_version())
+(Optional) Count the Number of Tokens
+OpenAI GPT-3 is limited to 4,001 tokens per request, encompassing both the request (i.e., prompt) and response. We will be determining the number of tokens present in the meeting transcript.</p>
+
+<p>def count_tokens(filename):
+    encoding = tiktoken.get_encoding(“gpt2”)
+    with open(filename, ‘r’) as f:
+        text = f.read()</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><section><code>input_ids = encoding.encode(text)
+num_tokens = len(input_ids)
+return num_tokens filename = "/content/drive/MyDrive/Colab Notebooks/minutes/data/Round_22_Online_Kickoff_Meeting.txt"
+</code></section></div></div>
+
+<p>num_tokens = count_tokens(filename=filename)
+print(“Number of tokens:  “, num_tokens)</p>
+
+<p>(Optional for the second block of code) Break up text into chunks of 2000 tokens with an overlap of 100 tokens
+We will be breaking up the text into chunks of 2,000 tokens with an overlapping 100 tokens to ensure any information is not lost from breaking up the text.</p>
+
+<p>def break_up_file_to_chunks(filename, chunk_size=2000, overlap=100):</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><section><code>encoding = tiktoken.get_encoding("gpt2")
+with open(filename, 'r') as f:
+    text = f.read()
+
+tokens = encoding.encode(text)
+num_tokens = len(tokens)
+
+chunks = []
+for i in range(0, num_tokens, chunk_size - overlap):
+    chunk = tokens[i:i + chunk_size]
+    chunks.append(chunk)
+
+return chunks filename = "/content/drive/MyDrive/Colab Notebooks/minutes/data/Round_22_Online_Kickoff_Meeting.txt"
+</code></section></div></div>
+
+<p>chunks = break_up_file_to_chunks(filename)
+for i, chunk in enumerate(chunks):
+    print(f”Chunk {i}: {len(chunk)} tokens”)</p>
+
+<p>Set OpenAI API Key
+Set an environment variable called “OPEN_API_KEY” and assign a secret API key from OpenAI (https://beta.openai.com/account/api-keys).</p>
+
+<p>os.environ[“OPENAI_API_KEY”] = ‘paste your openai api key here’
+openai.api_key = os.getenv(“OPENAI_API_KEY”)
+Summarize the text one chunk at a time
+Option 1: model=”text-davinci-003”</p>
+
+<p>filename = “/content/drive/MyDrive/Colab Notebooks/minutes/data/Round_22_Online_Kickoff_Meeting.txt”</p>
+
+<p>prompt_response = []</p>
+
+<p>encoding = tiktoken.get_encoding(“gpt2”)
+chunks = break_up_file_to_chunks(filename)</p>
+
+<p>for i, chunk in enumerate(chunks):
+    prompt_request = “Summarize this meeting transcript: “ + encoding.decode(chunks[i])</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><section><code>response = openai.Completion.create(
+        model="text-davinci-003",
+        prompt=prompt_request,
+        temperature=.5,
+        max_tokens=500,
+        top_p=1,
+        frequency_penalty=0,
+        presence_penalty=0
+)
+
+prompt_response.append(response["choices"][0]["text"].strip()) Option 2: model=”gpt-3.5-turbo”
+</code></section></div></div>
+
+<p>filename = “/content/drive/MyDrive/Colab Notebooks/minutes/data/Round_22_Online_Kickoff_Meeting.txt”</p>
+
+<p>prompt_response = []</p>
+
+<p>encoding = tiktoken.get_encoding(“gpt2”)
+chunks = break_up_file_to_chunks(filename)</p>
+
+<p>for i, chunk in enumerate(chunks):</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><section><code>prompt_request = "Summarize this meeting transcript: " + encoding.decode(chunks[i])
+messages = [{"role": "system", "content": "This is text summarization."}]    
+messages.append({"role": "user", "content": prompt_request})
+
+response = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        messages=messages,
+        temperature=.5,
+        max_tokens=500,
+        top_p=1,
+        frequency_penalty=0,
+        presence_penalty=0
+)
+
+prompt_response.append(response["choices"][0]["message"]['content'].strip()) Consolidate the summaries prompt_request = "Consoloidate these meeting summaries: " + str(prompt_response)
+</code></section></div></div>
+
+<p>response = openai.Completion.create(
+        model=”text-davinci-003”,
+        prompt=prompt_request,
+        temperature=.5,
+        max_tokens=1000,
+        top_p=1,
+        frequency_penalty=0,
+        presence_penalty=0
+    )
+Summary of Summaries
+meeting_summary = response[“choices”][0][“text”].strip()
+print(meeting_summary)
+I hope you have enjoyed this tutorial. If you have any questions or comments, please provide them here.</p>
 
       </div>
       
@@ -1368,16 +554,17 @@
       
     </nav>
     
-    <div class="comment-box">
-        Reference: <a href="github.com/Ighina/DeepTiling" title="github.com/Ighina/DeepTiling">github.com/Ighina/DeepTiling</a>
-    </div>
+      <div class="comment-box">
+        Reference:
+        <a href="github.com/Ighina/DeepTiling" title="github.com/Ighina/DeepTiling">github.com/Ighina/DeepTiling</a>
+      </div>
     
   </main>
   <footer class="site-footer">
     <p>
       <a href="#" aria-label="Back to top">
         <img src="/assets/Rope_(Old).gif" alt="Back to top" width="32" height="32" loading="lazy">
-      </a><a href="https://ib.bsb.br/404" aria-label="404">2024-12-28 18:06:39</a>‎ ⇔‎ <a href="https://github.com/ib-bsb-br/ib-bsb-br.github.io" aria-label="GitHub">ℹ</a>‎ <a href="/" aria-label="Homepage">infoBAG</a>
+      </a><a href="https://ib.bsb.br/404" aria-label="404">2024-12-28 18:09:15</a>‎ ⇔‎ <a href="https://github.com/ib-bsb-br/ib-bsb-br.github.io" aria-label="GitHub">ℹ</a>‎ <a href="/" aria-label="Homepage">infoBAG</a>
     </p>
   </footer>
   <script type="application/ld+json">
