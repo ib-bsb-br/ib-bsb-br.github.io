@@ -147,32 +147,27 @@
       </div>
     </div>
   </header>
-
-  <!-- Begin extracting the 'Source:' line -->
-  {% assign first_line = "" %}
-  {% assign cleaned_content = page.content | strip_html | replace: "\r\n", "\n" | replace: "\r", "\n" %}
-  {% assign lines = cleaned_content | split: "\n" %}
-
-  {% for line in lines %}
-    {% assign trimmed_line = line | strip %}
-    {% if trimmed_line != "" %}
-      {% assign test_line = trimmed_line | downcase %}
-      {% assign test_slice = test_line | slice: 0,7 %}
-      {% if test_slice == "source:" %}
-        {% assign first_line = trimmed_line %}
-        {% break %}
-      {% endif %}
+{% assign source_url = "" %}
+{% assign cleaned_content = page.content | strip_html | replace: "\r\n", "\n" | replace: "\r", "\n" %}
+{% assign lines = cleaned_content | split: "\n" %}
+{% for line in lines %}
+  {% assign trimmed_line = line | strip %}
+  {% if trimmed_line != "" %}
+    {% assign test_line = trimmed_line | downcase %}
+    {% assign test_slice = test_line | slice: 0,7 %}
+    {% if test_slice == 'source:' %}
+      {% assign source_url = trimmed_line | slice:7 | strip %}
+      {% break %}
     {% endif %}
-  {% endfor %}
-  <!-- End extracting the 'Source:' line -->
-
+  {% endif %}
+{% endfor %}
   <main class="content">
     <article class="post-wrapper">
       <div class="post-content-body">
         {% include toc.html html=content %}
         {% include anchor_headings.html html=content anchorBody="#" %}
       </div>
-      URL: {{ page.slug | absolute_url }}
+      URL: {{ page.url | absolute_url }}
     </article>
     <nav class="post-navigation" aria-label="Post navigation">
       {% if page.previous %}
@@ -190,18 +185,22 @@
         </div>
       {% endif %}
     </nav>
-    {% if page.comment %}
-      <div class="comment-box">
-        Reference:
-        <a href="{{ page.comment | strip }}" title="{{ page.comment | strip }}">{{ page.comment | strip }}</a>
-      </div>
-    {% else %}
-      {% if first_line %}
-        <div class="comment-box">
-          <p>{{ first_line }}</p>
-        </div>
-      {% endif %}
-    {% endif %}
+{% if page.comment %}
+  <div class="comment-box">
+    Reference:
+    <a href="{{ page.comment | strip_html | strip }}" title="{{ page.comment | strip_html | strip }}">{{ page.comment | strip_html | strip }}</a>
+  </div>
+{% else %}
+  {% if source_url != "" %}
+    <div class="comment-box">
+      <p>Reference: {{ source_url }}</p>
+    </div>
+  {% else %}
+    <div class="comment-box">
+      <p>Reference: Source information not found.</p>
+    </div>
+  {% endif %}
+{% endif %}
   </main>
   <footer class="site-footer">
     <p>
