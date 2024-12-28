@@ -8,7 +8,7 @@ published: true
 slug: virtus-escola-crist-clssica
 title: 'Virtus - Escola Cristã Clássica'
 ---
-URL Source: https://virtusecc.com.br/
+Source: https://virtusecc.com.br/
 
 Markdown Content:
 *   [• Piedade](https://virtusecc.com.br/#section-iconbox-0-3ee1f7d)
