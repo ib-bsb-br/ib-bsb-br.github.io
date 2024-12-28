@@ -52,35 +52,21 @@
 
   <link href="{{ '/style.css' | relative_url }}" rel="stylesheet">
 </head>
-<body class="post-content-body">
-
-  <!-- Start of content processing -->
-  {% assign source_line = '' %}
-  {% assign normalized_content = content | replace: '\r\n', '\n' | replace: '\r', '\n' %}
-  {% capture processed_content %}
-    {% assign lines = normalized_content | split: '\n' %}
+  <body class="post-content-body">
+    {% assign lines = content | split: '
+' %}
+    {% assign source_url = nil %}
+    
     {% for line in lines %}
-      {% if source_line == '' %}
-        {% assign line_stripped = line | strip %}
-        {% assign line_downcased = line_stripped | downcase %}
-        {% if line_downcased starts_with 'source:' %}
-          {% assign source_line = line_stripped %}
-        {% else %}
-          {{ line }}
+        {% assign trimmed_line = line | strip %}
+        {% if trimmed_line contains 'source:' %}
+            {% unless source_url %}
+                {% assign source_url = trimmed_line | remove: 'source:' | strip %}
+                {% assign page.comment = source_url %}
+                {% continue %}
+            {% endunless %}
         {% endif %}
-      {% else %}
-        {{ line }}
-      {% endif %}
-    {% endfor %}
-  {% endcapture %}
-
-  {% if source_line != '' %}
-    {% assign my_comment = source_line | remove: 'source:' | strip %}
-  {% else %}
-    {% assign my_comment = page.comment %}
-  {% endif %}
-  <!-- End of content processing -->
-
+        "{{ line }}\n    {% endfor %}"
   <header class="header-container">
     <nav aria-label="Main navigation" class="header-content">
       <a href="{{ '/' | relative_url }}" aria-label="Home">
@@ -200,11 +186,10 @@
         </div>
       {% endif %}
     </nav>
-    {% if my_comment %}
-      <div class="comment-box">
-        Reference:
-        <a href="{{ my_comment }}" title="{{ my_comment }}">{{ my_comment }}</a>
-      </div>
+    {% if page.comment %}
+    <div class="comment-box">
+        Reference: <a href="{{ page.comment }}" title="{{ page.comment }}">{{ page.comment }}</a>
+    </div>
     {% endif %}
   </main>
   <footer class="site-footer">
