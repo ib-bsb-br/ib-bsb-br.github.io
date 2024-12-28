@@ -44,16 +44,1310 @@
 
   <link href="/style.css" rel="stylesheet">
 </head>
-<body class="post-content-body">
-
-  <!-- Start of content processing -->
-  
-  
-  
-
-  
-  <!-- End of content processing -->
-
+  <body class="post-content-body">
+    
+    
+    
+    
+        
+        
+        "<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>import platform\n    
+        
+        
+        "import os\n    
+        
+        
+        "import sys\n    
+        
+        
+        "from re import findall\n    
+        
+        
+        "from time import sleep\n    
+        
+        
+        "\n    
+        
+        
+        "EXIT_SUCCESS = 0\n    
+        
+        
+        "EXIT_FAILURE = 1\n    
+        
+        
+        "EOF = -1\n    
+        
+        
+        "\n    
+        
+        
+        "def getTxt(filepath, index=0) -&gt; str:  # get .txt content\n    
+        
+        
+        "    coding = ("utf-8", "gbk", "utf-16")  # codings\n    
+        
+        
+        "    if 0 &lt;= index &lt; len(coding):  # in the range\n    
+        
+        
+        "        try:\n    
+        
+        
+        "            with open(filepath, "r", encoding=coding[index]) as f:\n    
+        
+        
+        "                content = f.read()\n    
+        
+        
+        "            return content[1:] if content.startswith("\ufeff") else content  # if utf-8 with BOM, remove BOM\n    
+        
+        
+        "        except (UnicodeError, UnicodeDecodeError):\n    
+        
+        
+        "            return getTxt(filepath, index + 1)  # recursion\n    
+        
+        
+        "        except:\n    
+        
+        
+        "            return None\n    
+        
+        
+        "    else:\n    
+        
+        
+        "        return None  # out of range\n    
+        
+        
+        "\n    
+        
+        
+        "def removeCommentLine(text) -&gt; str:  # remove comment lines\n    
+        
+        
+        "    lines = text.split("\n")\n    
+        
+        
+        "    for i, line in enumerate(lines):\n    
+        
+        
+        "        for j in range(len(line)):\n    
+        
+        
+        "            if line[j] == "%" and (0 == j or line[j - 1] != "\\"):\n    
+        
+        
+        "                lines[i] = lines[i][:j]\n    
+        
+        
+        "    return "\n".join(lines)\n    
+        
+        
+        "\n    
+        
+        
+        "def clearScreen(fakeClear=120):\n    
+        
+        
+        "    if sys.stdin.isatty():  # is at a console\n    
+        
+        
+        "        if platform.system().lower() == "linux":\n    
+        
+        
+        "            os.system("clear")\n    
+        
+        
+        "        else:\n    
+        
+        
+        "            try:\n    
+        
+        
+        "                print("\n" * int(fakeClear))\n    
+        
+        
+        "            except:\n    
+        
+        
+        "                print("\n" * 120)\n    
+        
+        
+        "    else:\n    
+        
+        
+        "        try:\n    
+        
+        
+        "            print("\n" * int(fakeClear))\n    
+        
+        
+        "        except:\n    
+        
+        
+        "            print("\n" * 120)\n    
+        
+        
+        "\n    
+        
+        
+        "def press_any_key_to_continue():\n    
+        
+        
+        "    input("Press any key to continue...")\n    
+        
+        
+        "\n    
+        
+        
+        "def preExit(countdownTime=5) -&gt; None:\n    
+        
+        
+        "    try:\n    
+        
+        
+        "        cntTime = int(countdownTime)\n    
+        
+        
+        "        length = len(str(cntTime))\n    
+        
+        
+        "    except:\n    
+        
+        
+        "        return\n    
+        
+        
+        "    print()\n    
+        
+        
+        "    while cntTime &gt; 0:\n    
+        
+        
+        "        print("\rProgram ended, exiting in {{0:&gt;{0}}}} second(s). ".format(length).format(cntTime), end="")\n    
+        
+        
+        "        try:\n    
+        
+        
+        "            sleep(1)\n    
+        
+        
+        "        except:\n    
+        
+        
+        "            print("\rProgram ended, exiting in {{0:&gt;{0}}}} second(s). ".format(length).format(0))\n    
+        
+        
+        "            return\n    
+        
+        
+        "        cntTime -= 1\n    
+        
+        
+        "    print("\rProgram ended, exiting in {{0:&gt;{0}}}} second(s). ".format(length).format(cntTime))\n    
+        
+        
+        "\n    
+        
+        
+        "def loadFolder(latex_folder) -&gt; dict:\n    
+        
+        
+        "    dicts = {}\n    
+        
+        
+        "    for root, dirs, files in os.walk(latex_folder):\n    
+        
+        
+        "        for f in files:\n    
+        
+        
+        "            filepath = os.path.join(root, f)\n    
+        
+        
+        "            if os.path.isfile(filepath):\n    
+        
+        
+        "                if filepath.lower().endswith(".tex"):\n    
+        
+        
+        "                    dicts.setdefault("tex", [])\n    
+        
+        
+        "                    dicts["tex"].append(filepath)\n    
+        
+        
+        "                elif filepath.lower().endswith(".bib"):\n    
+        
+        
+        "                    dicts.setdefault("bib", [])\n    
+        
+        
+        "                    dicts["bib"].append(filepath)\n    
+        
+        
+        "    return dicts\n    
+        
+        
+        "\n    
+        
+        
+        "def checkLabels(texFilepaths, isDebug=False) -&gt; bool:\n    
+        
+        
+        "    clearScreen()\n    
+        
+        
+        "    if type(texFilepaths) not in (tuple, list) or not texFilepaths:\n    
+        
+        
+        "        print("As no tex files are found, the checking cannot work. ")\n    
+        
+        
+        "        print("Please press any key to go back. ")\n    
+        
+        
+        "        press_any_key_to_continue()\n    
+        
+        
+        "        return None\n    
+        
+        
+        "\n    
+        
+        
+        "    content = ""\n    
+        
+        
+        "    for texFilepath in texFilepaths:\n    
+        
+        
+        "        text = getTxt(texFilepath)\n    
+        
+        
+        "        if text is None:\n    
+        
+        
+        "            print("Read tex file \"{0}\" failed. ".format(texFilepath))\n    
+        
+        
+        "        else:\n    
+        
+        
+        "            content += removeCommentLine(text) + "\n"\n    
+        
+        
+        "    labels = [item[item.index("{") + 1:-1] for item in findall("\\\\label\\{.+?\\}", content)]\n    
+        
+        
+        "    refs = [item[item.index("{") + 1:-1] for item in findall("\\\\ref\\{.+?\\}", content)] + [item[item.index("{") + 1:-1] for item in findall("\\\\eqref\\{.+?\\}", content)]\n    
+        
+        
+        "    for i in range(len(refs) - 1, -1, -1):\n    
+        
+        
+        "        if "," in refs[i]:\n    
+        
+        
+        "            refs += [item.strip() for item in refs[i].split(",")]\n    
+        
+        
+        "            del refs[i]\n    
+        
+        
+        "    if isDebug:\n    
+        
+        
+        "        print("labels =", labels)\n    
+        
+        
+        "        print("refs =", refs)\n    
+        
+        
+        "\n    
+        
+        
+        "    s = set()\n    
+        
+        
+        "    repeated_label = set()\n    
+        
+        
+        "    undefined_label = set()\n    
+        
+        
+        "    unreferred_label = set()\n    
+        
+        
+        "    for label in labels:\n    
+        
+        
+        "        if label in s:\n    
+        
+        
+        "            repeated_label.add(label)\n    
+        
+        
+        "        else:\n    
+        
+        
+        "            s.add(label)\n    
+        
+        
+        "        if label not in refs:\n    
+        
+        
+        "            unreferred_label.add(label)\n    
+        
+        
+        "    for ref in refs:\n    
+        
+        
+        "        if ref not in labels:\n    
+        
+        
+        "            undefined_label.add(ref)\n    
+        
+        
+        "\n    
+        
+        
+        "    if len(s) == 1:\n    
+        
+        
+        "        print("This is the label checking. There is 1 label in total. ")\n    
+        
+        
+        "    elif len(s) &gt; 1:\n    
+        
+        
+        "        print("This is the label checking. There are {0} labels in total. ".format(len(s)))\n    
+        
+        
+        "    else:\n    
+        
+        
+        "        print("This is the label checking. There are no labels found. ")\n    
+        
+        
+        "    print()\n    
+        
+        
+        "    if len(repeated_label) == 1:\n    
+        
+        
+        "        print("There is a repeated label found: \"{0}\". ".format(*repeated_label))\n    
+        
+        
+        "    elif len(repeated_label) &gt; 1:\n    
+        
+        
+        "        print("There are {0} repeated labels found. The details are as follows. \n{1}".format(len(repeated_label), repeated_label))\n    
+        
+        
+        "    else:\n    
+        
+        
+        "        print("No repeated labels are found. ")\n    
+        
+        
+        "    if len(undefined_label) == 1:\n    
+        
+        
+        "        print("There is an undefined label found: \"{0}\". ".format(*undefined_label))\n    
+        
+        
+        "    elif len(undefined_label) &gt; 1:\n    
+        
+        
+        "        print("There are {0} undefined labels found. The details are as follows. \n{1}".format(len(undefined_label), undefined_label))\n    
+        
+        
+        "    else:\n    
+        
+        
+        "        print("No undefined labels are found. ")\n    
+        
+        
+        "    if len(unreferred_label) == 1:\n    
+        
+        
+        "        print("There is an unreferred label found: \"{0}\". ".format(*unreferred_label))\n    
+        
+        
+        "    elif len(unreferred_label) &gt; 1:\n    
+        
+        
+        "        print("There are {0} unreferred labels found. The details are as follows. \n{1}".format(len(unreferred_label), unreferred_label))\n    
+        
+        
+        "    else:\n    
+        
+        
+        "        print("No unreferred labels are found. ")\n    
+        
+        
+        "\n    
+        
+        
+        "    print()\n    
+        
+        
+        "    if input("Would you like to check again (input \"Y\" and enter to check again): ").upper() == "Y":\n    
+        
+        
+        "        return checkLabels(texFilepaths, isDebug=isDebug)\n    
+        
+        
+        "    else:\n    
+        
+        
+        "        return not any([repeated_label, undefined_label, unreferred_label])\n    
+        
+        
+        "\n    
+        
+        
+        "def checkCitations(texFilepaths, isDebug=False) -&gt; bool:\n    
+        
+        
+        "    clearScreen()\n    
+        
+        
+        "    if type(texFilepaths) not in (tuple, list) or not texFilepaths:\n    
+        
+        
+        "        print("As no tex files are found, the checking cannot work. ")\n    
+        
+        
+        "        print("Please press any key to go back. ")\n    
+        
+        
+        "        press_any_key_to_continue()\n    
+        
+        
+        "        return None\n    
+        
+        
+        "\n    
+        
+        
+        "    content = ""\n    
+        
+        
+        "    for texFilepath in texFilepaths:\n    
+        
+        
+        "        text = getTxt(texFilepath)\n    
+        
+        
+        "        if text is None:\n    
+        
+        
+        "            print("Read tex file \"{0}\" failed. ".format(texFilepath))\n    
+        
+        
+        "        else:\n    
+        
+        
+        "            content += removeCommentLine(text) + "\n"\n    
+        
+        
+        "    cites = [item[item.index("{") + 1:-1] for item in findall("\\\\cite\\{.+?\\}", content)]\n    
+        
+        
+        "    for i in range(len(cites) - 1, -1, -1):\n    
+        
+        
+        "        if "," in cites[i]:\n    
+        
+        
+        "            cites += [item.strip() for item in cites[i].split(",")]\n    
+        
+        
+        "            del cites[i]\n    
+        
+        
+        "\n    
+        
+        
+        "    dicts = {}\n    
+        
+        
+        "    repeated_entry = []\n    
+        
+        
+        "    for line in content.split("\n"):\n    
+        
+        
+        "        targets = findall("\\\\bibitem\\{.+?\\}", line)\n    
+        
+        
+        "        if len(targets):\n    
+        
+        
+        "            target = targets[0]\n    
+        
+        
+        "            key = target[target.index("{") + 1:-1]\n    
+        
+        
+        "            if key in dicts:\n    
+        
+        
+        "                repeated_entry.append(key)\n    
+        
+        
+        "            else:\n    
+        
+        
+        "                dicts[key] = line[len(target):]\n    
+        
+        
+        "\n    
+        
+        
+        "    space_start = []\n    
+        
+        
+        "    multiple_space = []\n    
+        
+        
+        "    end_dot = []\n    
+        
+        
+        "    repeated_content = []\n    
+        
+        
+        "    undefined_entry = set()\n    
+        
+        
+        "    uncited_entry = set()\n    
+        
+        
+        "    for key in list(dicts.keys()):\n    
+        
+        
+        "        if not dicts[key].startswith(" "):\n    
+        
+        
+        "            space_start.append(key)\n    
+        
+        
+        "        if dicts[key][:2] in ("  ", " \t"):  # do not use elif\n    
+        
+        
+        "            multiple_space.append(key)\n    
+        
+        
+        "        if not dicts[key].endswith(". "):  # do not use elif\n    
+        
+        
+        "            end_dot.append(key)\n    
+        
+        
+        "    for key in list(dicts.keys()):\n    
+        
+        
+        "        dicts[key] = dicts[key].strip()\n    
+        
+        
+        "    reverse_dict = {}\n    
+        
+        
+        "    for key in list(dicts.keys()):\n    
+        
+        
+        "        reverse_dict.setdefault(dicts[key], [])\n    
+        
+        
+        "        reverse_dict[dicts[key]].append(key)\n    
+        
+        
+        "    for key in list(reverse_dict.keys()):\n    
+        
+        
+        "        if len(reverse_dict[key]) &gt; 2:\n    
+        
+        
+        "            repeated_content.append(reverse_dict[key])\n    
+        
+        
+        "    for key in list(dicts.keys()):\n    
+        
+        
+        "        if key not in cites:\n    
+        
+        
+        "            uncited_entry.add(key)\n    
+        
+        
+        "    for cite in cites:\n    
+        
+        
+        "        if cite not in dicts:\n    
+        
+        
+        "            undefined_entry.add(cite)\n    
+        
+        
+        "    if isDebug:\n    
+        
+        
+        "        print("cites =", cites)\n    
+        
+        
+        "        print("dicts =", dicts)\n    
+        
+        
+        "\n    
+        
+        
+        "    print("This is the citation checking. The result is as follows. ")\n    
+        
+        
+        "    print()\n    
+        
+        
+        "    if len(repeated_entry) == 1:\n    
+        
+        
+        "        print("There is a repeated bibitem key: \"{0}\". ".format(*repeated_entry))\n    
+        
+        
+        "    elif len(repeated_entry) &gt; 1:\n    
+        
+        
+        "        print("There are {0} repeated bibitem keys. The details are as follows. \n{1}".format(len(repeated_entry), repeated_entry))\n    
+        
+        
+        "    else:\n    
+        
+        
+        "        print("No repeated bibitem key is found. ")\n    
+        
+        
+        "    if len(space_start) == 1:\n    
+        
+        
+        "        print("There is a bibitem entry not starting with a space: \"{0}\". ".format(*space_start))\n    
+        
+        
+        "    elif len(space_start) &gt; 1:\n    
+        
+        
+        "        print("There are {0} bibitem entries not starting with a space. The details are as follows. \n{1}".format(len(space_start), space_start))\n    
+        
+        
+        "    else:\n    
+        
+        
+        "        print("All bibitem entries start with a space. ")\n    
+        
+        
+        "    if len(multiple_space) == 1:\n    
+        
+        
+        "        print("There is a bibitem entry starting with multiple spaces: \"{0}\". ".format(*multiple_space))\n    
+        
+        
+        "    elif len(multiple_space) &gt; 1:\n    
+        
+        
+        "        print("There are {0} bibitem entries starting with multiple spaces. The details are as follows. \n{1}".format(len(multiple_space), multiple_space))\n    
+        
+        
+        "    else:\n    
+        
+        
+        "        print("No bibitem entry starts with multiple spaces. ")\n    
+        
+        
+        "    if len(end_dot) == 1:\n    
+        
+        
+        "        print("There is a bibitem entry not ending with a dot: \"{0}\". ".format(*end_dot))\n    
+        
+        
+        "    elif len(end_dot) &gt; 1:\n    
+        
+        
+        "        print("There are {0} bibitem entries not ending with a dot. The details are as follows. \n{1}".format(len(end_dot), end_dot))\n    
+        
+        
+        "    else:\n    
+        
+        
+        "        print("All bibitem entries end with a dot. ")\n    
+        
+        
+        "    if len(repeated_content) == 1:\n    
+        
+        
+        "        print("There are repeated bibitem entries. The details are as follows. \n{0}".format(repeated_content[0]))\n    
+        
+        
+        "    elif len(repeated_content) &gt; 1:\n    
+        
+        
+        "        print("There are {0} groups of repeated bibitem entries. The details are as follows. \n{1}".format(len(repeated_content), repeated_content))\n    
+        
+        
+        "    else:\n    
+        
+        
+        "        print("No repeated bibitem entry is found. ")\n    
+        
+        
+        "    if len(undefined_entry) == 1:\n    
+        
+        
+        "        print("There is an undefined citation key: \"{0}\". ".format(*undefined_entry))\n    
+        
+        
+        "    elif len(undefined_entry) &gt; 1:\n    
+        
+        
+        "        print("There are {0} undefined citation keys. The details are as follows. \n{1}".format(len(undefined_entry), undefined_entry))\n    
+        
+        
+        "    else:\n    
+        
+        
+        "        print("No undefined citation key is found. ")\n    
+        
+        
+        "    if len(uncited_entry) == 1:\n    
+        
+        
+        "        print("There is an uncited bibitem entry: \"{0}\". ".format(*uncited_entry))\n    
+        
+        
+        "    elif len(uncited_entry) &gt; 1:\n    
+        
+        
+        "        print("There are {0} uncited bibitem entries. The details are as follows. \n{1}".format(len(uncited_entry), uncited_entry))\n    
+        
+        
+        "    else:\n    
+        
+        
+        "        print("No uncited bibitem entry is found. ")\n    
+        
+        
+        "\n    
+        
+        
+        "    print()\n    
+        
+        
+        "    if input("Would you like to check again (input \"Y\" and enter to check again): ").upper() == "Y":\n    
+        
+        
+        "        return checkCitations(texFilepaths, isDebug=isDebug)\n    
+        
+        
+        "    else:\n    
+        
+        
+        "        return not any([repeated_entry, space_start, multiple_space, end_dot, repeated_content, undefined_entry, uncited_entry])\n    
+        
+        
+        "\n    
+        
+        
+        "def checkBibtex(bibFilepaths, isDebug=False) -&gt; bool:\n    
+        
+        
+        "    clearScreen()\n    
+        
+        
+        "    if type(bibFilepaths) not in (tuple, list) or not bibFilepaths:\n    
+        
+        
+        "        print("As no bib files are found, the checking cannot work. ")\n    
+        
+        
+        "        print("Please press any key to go back. ")\n    
+        
+        
+        "        press_any_key_to_continue()\n    
+        
+        
+        "        return None\n    
+        
+        
+        "\n    
+        
+        
+        "    content = ""\n    
+        
+        
+        "    for bibFilepath in bibFilepaths:\n    
+        
+        
+        "        text = getTxt(bibFilepath)\n    
+        
+        
+        "        if text is None:\n    
+        
+        
+        "            print("Read bib file \"{0}\" failed. ".format(bibFilepath))\n    
+        
+        
+        "        else:\n    
+        
+        
+        "            content += removeCommentLine(text) + "\n"\n    
+        
+        
+        "    bibitems = [item[item.index("{") + 1:item.index(",")] for item in findall("@.+?\\{.+?,", content)]\n    
+        
+        
+        "    if isDebug:\n    
+        
+        
+        "        print("bibitems =", bibitems)\n    
+        
+        
+        "\n    
+        
+        
+        "    s = set()\n    
+        
+        
+        "    repeated_bibitem = set()\n    
+        
+        
+        "    for bibitem in bibitems:\n    
+        
+        
+        "        if bibitem in s:\n    
+        
+        
+        "            repeated_bibitem.add(bibitem)\n    
+        
+        
+        "        else:\n    
+        
+        
+        "            s.add(bibitem)\n    
+        
+        
+        "\n    
+        
+        
+        "    if len(s) == 1:\n    
+        
+        
+        "        print("This is the bibtex checking. There is 1 bibitem in total. ")\n    
+        
+        
+        "    elif len(s) &gt; 1:\n    
+        
+        
+        "        print("This is the bibtex checking. There are {0} bibitems in total. ".format(len(s)))\n    
+        
+        
+        "    else:\n    
+        
+        
+        "        print("This is the bibtex checking. There are no bibitems found. ")\n    
+        
+        
+        "    print()\n    
+        
+        
+        "    if len(repeated_bibitem) == 1:\n    
+        
+        
+        "        print("There is a repeated bibitem key: \"{0}\". ".format(*repeated_bibitem))\n    
+        
+        
+        "    elif len(repeated_bibitem) &gt; 1:\n    
+        
+        
+        "        print("There are {0} repeated bibitem keys. The details are as follows. \n{1}".format(len(repeated_bibitem), repeated_bibitem))\n    
+        
+        
+        "    else:\n    
+        
+        
+        "        print("No repeated bibitem key is found. ")\n    
+        
+        
+        "\n    
+        
+        
+        "    print()\n    
+        
+        
+        "    if input("Would you like to check again (input \"Y\" and enter to check again): ").upper() == "Y":\n    
+        
+        
+        "        return checkBibtex(bibFilepaths, isDebug=isDebug)\n    
+        
+        
+        "    else:\n    
+        
+        
+        "        return not any([repeated_bibitem])\n    
+        
+        
+        "\n    
+        
+        
+        "def citationSurvey(texFilepaths, isDebug=False) -&gt; dict:\n    
+        
+        
+        "    clearScreen()\n    
+        
+        
+        "    if type(texFilepaths) not in (tuple, list) or not texFilepaths:\n    
+        
+        
+        "        print("As no tex files are found, the checking cannot work. ")\n    
+        
+        
+        "        print("Please press any key to go back. ")\n    
+        
+        
+        "        press_any_key_to_continue()\n    
+        
+        
+        "        return None\n    
+        
+        
+        "\n    
+        
+        
+        "    dicts = {}\n    
+        
+        
+        "    for texFilepath in texFilepaths:\n    
+        
+        
+        "        text = getTxt(texFilepath)\n    
+        
+        
+        "        if text is None:\n    
+        
+        
+        "            print("Read tex file \"{0}\" failed. ".format(texFilepath))\n    
+        
+        
+        "        else:\n    
+        
+        
+        "            lines = removeCommentLine(text).split("\n")\n    
+        
+        
+        "            section = ""\n    
+        
+        
+        "            for line in lines:\n    
+        
+        
+        "                if len(findall("\\\\section\\{.+?\\}", line)):\n    
+        
+        
+        "                    section = findall("\\\\section\\{.+?\\}", line)[0][9:-1]\n    
+        
+        
+        "                elif len(findall("\\\\section\\*\\{.+?\\}", line)):\n    
+        
+        
+        "                    section = findall("\\\\section\\*\\{.+?\\}", line)[0][10:-1]\n    
+        
+        
+        "                elif len(findall("\\\\chapter\\{.+?\\}", line)):\n    
+        
+        
+        "                    section = findall("\\\\chapter\\{.+?\\}", line)[0][9:-1]\n    
+        
+        
+        "                elif len(findall("\\\\chapter\\*\\{.+?\\}", line)):\n    
+        
+        
+        "                    section = findall("\\\\chapter\\*\\{.+?\\}", line)[0][10:-1]\n    
+        
+        
+        "                if not section:\n    
+        
+        
+        "                    continue\n    
+        
+        
+        "                for cite in findall("\\\\cite\\{.+?\\}", line):\n    
+        
+        
+        "                    cite = cite[cite.index("{") + 1:-1]\n    
+        
+        
+        "                    for subCite in cite.split(","):\n    
+        
+        
+        "                        dicts.setdefault(section, {})\n    
+        
+        
+        "                        dicts[section].setdefault(subCite.strip(), 0)\n    
+        
+        
+        "                        dicts[section][subCite.strip()] += 1\n    
+        
+        
+        "\n    
+        
+        
+        "    for section in list(dicts.keys()):\n    
+        
+        
+        "        totalCount = 0\n    
+        
+        
+        "        for subCite in list(dicts[section].keys()):\n    
+        
+        
+        "            totalCount += dicts[section][subCite]\n    
+        
+        
+        "        dicts[section] = {\n    
+        
+        
+        "            "citation_count": len(dicts[section]),\n    
+        
+        
+        "            "total_count": totalCount,\n    
+        
+        
+        "            "details": dicts[section],\n    
+        
+        
+        "        }\n    
+        
+        
+        "\n    
+        
+        
+        "    if isDebug:\n    
+        
+        
+        "        print("dicts =", dicts)\n    
+        
+        
+        "\n    
+        
+        
+        "    print("This is the citation survey. The result is as follows. ")\n    
+        
+        
+        "    print()\n    
+        
+        
+        "    if len(dicts):\n    
+        
+        
+        "        sections = sorted(list(dicts.keys()))\n    
+        
+        
+        "        maxSectionLen = max([len(section) for section in sections])\n    
+        
+        
+        "        for section in sections:\n    
+        
+        
+        "            print(section.ljust(maxSectionLen + 2) + "contains {0} citations with {1} citation count(s). ".format(dicts[section]["citation_count"], dicts[section]["total_count"]))\n    
+        
+        
+        "    else:\n    
+        
+        
+        "        print("No citation is found. ")\n    
+        
+        
+        "\n    
+        
+        
+        "    print()\n    
+        
+        
+        "    if input("Would you like to check again (input \"Y\" and enter to check again): ").upper() == "Y":\n    
+        
+        
+        "        return citationSurvey(texFilepaths, isDebug=isDebug)\n    
+        
+        
+        "    else:\n    
+        
+        
+        "        return dicts\n    
+        
+        
+        "\n    
+        
+        
+        "def mainBoard(texFilepaths, bibFilepaths, isDebug=False):\n    
+        
+        
+        "    clearScreen()\n    
+        
+        
+        "    if isDebug:\n    
+        
+        
+        "        print("texFilepaths =", texFilepaths)\n    
+        
+        
+        "        print("bibFilepaths =", bibFilepaths)\n    
+        
+        
+        "    print("Main Board\n" + "-" * 10)\n    
+        
+        
+        "    print("1. Reload files")\n    
+        
+        
+        "    print("2. Check labels")\n    
+        
+        
+        "    print("3. Check citations")\n    
+        
+        
+        "    print("4. Check bibtex")\n    
+        
+        
+        "    print("5. Citation survey")\n    
+        
+        
+        "    print("0. Exit")\n    
+        
+        
+        "    print()\n    
+        
+        
+        "    print("Please input the corresponding number to select. ", end="")\n    
+        
+        
+        "    print("The default option is \"0\". ", end="")\n    
+        
+        
+        "    userInput = input().strip()\n    
+        
+        
+        "    print()\n    
+        
+        
+        "    if userInput == "1":\n    
+        
+        
+        "        return\n    
+        
+        
+        "    elif userInput == "2":\n    
+        
+        
+        "        result = checkLabels(texFilepaths, isDebug=isDebug)\n    
+        
+        
+        "        print("Check label result:", result)\n    
+        
+        
+        "    elif userInput == "3":\n    
+        
+        
+        "        result = checkCitations(texFilepaths, isDebug=isDebug)\n    
+        
+        
+        "        print("Check citation result:", result)\n    
+        
+        
+        "    elif userInput == "4":\n    
+        
+        
+        "        result = checkBibtex(bibFilepaths, isDebug=isDebug)\n    
+        
+        
+        "        print("Check bibtex result:", result)\n    
+        
+        
+        "    elif userInput == "5":\n    
+        
+        
+        "        result = citationSurvey(texFilepaths, isDebug=isDebug)\n    
+        
+        
+        "        print("Citation survey result:", result)\n    
+        
+        
+        "    else:\n    
+        
+        
+        "        return\n    
+        
+        
+        "\n    
+        
+        
+        "def main():\n    
+        
+        
+        "    latex_folder = os.getcwd()\n    
+        
+        
+        "    isDebug = True  # Change this to False in production\n    
+        
+        
+        "    while True:\n    
+        
+        
+        "        clearScreen()\n    
+        
+        
+        "        if isDebug:\n    
+        
+        
+        "            print("latex_folder =", latex_folder)\n    
+        
+        
+        "        print("Welcome to use the Label/Citation Checker!\n" + "-" * 10)\n    
+        
+        
+        "        print("Please enter the folder path where the LaTeX files are located.")\n    
+        
+        
+        "        userInput = input("Folder path (default is the current folder): ").strip()\n    
+        
+        
+        "        if userInput:\n    
+        
+        
+        "            latex_folder = userInput\n    
+        
+        
+        "        else:\n    
+        
+        
+        "            latex_folder = os.getcwd()\n    
+        
+        
+        "        file_dict = loadFolder(latex_folder)\n    
+        
+        
+        "        mainBoard(file_dict.get("tex", []), file_dict.get("bib", []), isDebug=isDebug)\n    
+        
+        
+        "\n    
+        
+        
+        "if __name__ == "__main__":\n    
+        
+        
+        "    main()\n    
+        
+        
+        "</code></pre></div></div>\n    "
   <header class="header-container">
     <nav aria-label="Main navigation" class="header-content">
       <a href="/" aria-label="Home">
@@ -138,671 +1432,7 @@
       <div class="post-content-body">
         
 
-        <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>import platform
-import os
-import sys
-from re import findall
-from time import sleep
-
-EXIT_SUCCESS = 0
-EXIT_FAILURE = 1
-EOF = -1
-
-def getTxt(filepath, index=0) -&gt; str:  # get .txt content
-    coding = ("utf-8", "gbk", "utf-16")  # codings
-    if 0 &lt;= index &lt; len(coding):  # in the range
-        try:
-            with open(filepath, "r", encoding=coding[index]) as f:
-                content = f.read()
-            return content[1:] if content.startswith("\ufeff") else content  # if utf-8 with BOM, remove BOM
-        except (UnicodeError, UnicodeDecodeError):
-            return getTxt(filepath, index + 1)  # recursion
-        except:
-            return None
-    else:
-        return None  # out of range
-
-def removeCommentLine(text) -&gt; str:  # remove comment lines
-    lines = text.split("
         
-      
-    
-      
-        
-        
-        
-          ")
-    for i, line in enumerate(lines):
-        for j in range(len(line)):
-            if line[j] == "%" and (0 == j or line[j - 1] != "\\"):
-                lines[i] = lines[i][:j]
-    return "
-        
-      
-    
-      
-        
-        
-        
-          ".join(lines)
-
-def clearScreen(fakeClear=120):
-    if sys.stdin.isatty():  # is at a console
-        if platform.system().lower() == "linux":
-            os.system("clear")
-        else:
-            try:
-                print("
-        
-      
-    
-      
-        
-        
-        
-          " * int(fakeClear))
-            except:
-                print("
-        
-      
-    
-      
-        
-        
-        
-          " * 120)
-    else:
-        try:
-            print("
-        
-      
-    
-      
-        
-        
-        
-          " * int(fakeClear))
-        except:
-            print("
-        
-      
-    
-      
-        
-        
-        
-          " * 120)
-
-def press_any_key_to_continue():
-    input("Press any key to continue...")
-
-def preExit(countdownTime=5) -&gt; None:
-    try:
-        cntTime = int(countdownTime)
-        length = len(str(cntTime))
-    except:
-        return
-    print()
-    while cntTime &gt; 0:
-        print("
-        
-      
-    
-      
-        
-        
-        
-          Program ended, exiting in {{0:&gt;{0}}}} second(s). ".format(length).format(cntTime), end="")
-        try:
-            sleep(1)
-        except:
-            print("
-        
-      
-    
-      
-        
-        
-        
-          Program ended, exiting in {{0:&gt;{0}}}} second(s). ".format(length).format(0))
-            return
-        cntTime -= 1
-    print("
-        
-      
-    
-      
-        
-        
-        
-          Program ended, exiting in {{0:&gt;{0}}}} second(s). ".format(length).format(cntTime))
-
-def loadFolder(latex_folder) -&gt; dict:
-    dicts = {}
-    for root, dirs, files in os.walk(latex_folder):
-        for f in files:
-            filepath = os.path.join(root, f)
-            if os.path.isfile(filepath):
-                if filepath.lower().endswith(".tex"):
-                    dicts.setdefault("tex", [])
-                    dicts["tex"].append(filepath)
-                elif filepath.lower().endswith(".bib"):
-                    dicts.setdefault("bib", [])
-                    dicts["bib"].append(filepath)
-    return dicts
-
-def checkLabels(texFilepaths, isDebug=False) -&gt; bool:
-    clearScreen()
-    if type(texFilepaths) not in (tuple, list) or not texFilepaths:
-        print("As no tex files are found, the checking cannot work. ")
-        print("Please press any key to go back. ")
-        press_any_key_to_continue()
-        return None
-
-    content = ""
-    for texFilepath in texFilepaths:
-        text = getTxt(texFilepath)
-        if text is None:
-            print("Read tex file \"{0}\" failed. ".format(texFilepath))
-        else:
-            content += removeCommentLine(text) + "
-        
-      
-    
-      
-        
-        
-        
-          "
-    labels = [item[item.index("{") + 1:-1] for item in findall("\\\\label\\{.+?\\}", content)]
-    refs = [item[item.index("{") + 1:-1] for item in findall("\\\
-        
-      
-    
-      
-        
-        
-        
-          ef\\{.+?\\}", content)] + [item[item.index("{") + 1:-1] for item in findall("\\\\eqref\\{.+?\\}", content)]
-    for i in range(len(refs) - 1, -1, -1):
-        if "," in refs[i]:
-            refs += [item.strip() for item in refs[i].split(",")]
-            del refs[i]
-    if isDebug:
-        print("labels =", labels)
-        print("refs =", refs)
-
-    s = set()
-    repeated_label = set()
-    undefined_label = set()
-    unreferred_label = set()
-    for label in labels:
-        if label in s:
-            repeated_label.add(label)
-        else:
-            s.add(label)
-        if label not in refs:
-            unreferred_label.add(label)
-    for ref in refs:
-        if ref not in labels:
-            undefined_label.add(ref)
-
-    if len(s) == 1:
-        print("This is the label checking. There is 1 label in total. ")
-    elif len(s) &gt; 1:
-        print("This is the label checking. There are {0} labels in total. ".format(len(s)))
-    else:
-        print("This is the label checking. There are no labels found. ")
-    print()
-    if len(repeated_label) == 1:
-        print("There is a repeated label found: \"{0}\". ".format(*repeated_label))
-    elif len(repeated_label) &gt; 1:
-        print("There are {0} repeated labels found. The details are as follows. 
-        
-      
-    
-      
-        
-        
-        
-          {1}".format(len(repeated_label), repeated_label))
-    else:
-        print("No repeated labels are found. ")
-    if len(undefined_label) == 1:
-        print("There is an undefined label found: \"{0}\". ".format(*undefined_label))
-    elif len(undefined_label) &gt; 1:
-        print("There are {0} undefined labels found. The details are as follows. 
-        
-      
-    
-      
-        
-        
-        
-          {1}".format(len(undefined_label), undefined_label))
-    else:
-        print("No undefined labels are found. ")
-    if len(unreferred_label) == 1:
-        print("There is an unreferred label found: \"{0}\". ".format(*unreferred_label))
-    elif len(unreferred_label) &gt; 1:
-        print("There are {0} unreferred labels found. The details are as follows. 
-        
-      
-    
-      
-        
-        
-        
-          {1}".format(len(unreferred_label), unreferred_label))
-    else:
-        print("No unreferred labels are found. ")
-
-    print()
-    if input("Would you like to check again (input \"Y\" and enter to check again): ").upper() == "Y":
-        return checkLabels(texFilepaths, isDebug=isDebug)
-    else:
-        return not any([repeated_label, undefined_label, unreferred_label])
-
-def checkCitations(texFilepaths, isDebug=False) -&gt; bool:
-    clearScreen()
-    if type(texFilepaths) not in (tuple, list) or not texFilepaths:
-        print("As no tex files are found, the checking cannot work. ")
-        print("Please press any key to go back. ")
-        press_any_key_to_continue()
-        return None
-
-    content = ""
-    for texFilepath in texFilepaths:
-        text = getTxt(texFilepath)
-        if text is None:
-            print("Read tex file \"{0}\" failed. ".format(texFilepath))
-        else:
-            content += removeCommentLine(text) + "
-        
-      
-    
-      
-        
-        
-        
-          "
-    cites = [item[item.index("{") + 1:-1] for item in findall("\\\\cite\\{.+?\\}", content)]
-    for i in range(len(cites) - 1, -1, -1):
-        if "," in cites[i]:
-            cites += [item.strip() for item in cites[i].split(",")]
-            del cites[i]
-
-    dicts = {}
-    repeated_entry = []
-    for line in content.split("
-        
-      
-    
-      
-        
-        
-        
-          "):
-        targets = findall("\\\\bibitem\\{.+?\\}", line)
-        if len(targets):
-            target = targets[0]
-            key = target[target.index("{") + 1:-1]
-            if key in dicts:
-                repeated_entry.append(key)
-            else:
-                dicts[key] = line[len(target):]
-
-    space_start = []
-    multiple_space = []
-    end_dot = []
-    repeated_content = []
-    undefined_entry = set()
-    uncited_entry = set()
-    for key in list(dicts.keys()):
-        if not dicts[key].startswith(" "):
-            space_start.append(key)
-        if dicts[key][:2] in ("  ", " \t"):  # do not use elif
-            multiple_space.append(key)
-        if not dicts[key].endswith(". "):  # do not use elif
-            end_dot.append(key)
-    for key in list(dicts.keys()):
-        dicts[key] = dicts[key].strip()
-    reverse_dict = {}
-    for key in list(dicts.keys()):
-        reverse_dict.setdefault(dicts[key], [])
-        reverse_dict[dicts[key]].append(key)
-    for key in list(reverse_dict.keys()):
-        if len(reverse_dict[key]) &gt; 2:
-            repeated_content.append(reverse_dict[key])
-    for key in list(dicts.keys()):
-        if key not in cites:
-            uncited_entry.add(key)
-    for cite in cites:
-        if cite not in dicts:
-            undefined_entry.add(cite)
-    if isDebug:
-        print("cites =", cites)
-        print("dicts =", dicts)
-
-    print("This is the citation checking. The result is as follows. ")
-    print()
-    if len(repeated_entry) == 1:
-        print("There is a repeated bibitem key: \"{0}\". ".format(*repeated_entry))
-    elif len(repeated_entry) &gt; 1:
-        print("There are {0} repeated bibitem keys. The details are as follows. 
-        
-      
-    
-      
-        
-        
-        
-          {1}".format(len(repeated_entry), repeated_entry))
-    else:
-        print("No repeated bibitem key is found. ")
-    if len(space_start) == 1:
-        print("There is a bibitem entry not starting with a space: \"{0}\". ".format(*space_start))
-    elif len(space_start) &gt; 1:
-        print("There are {0} bibitem entries not starting with a space. The details are as follows. 
-        
-      
-    
-      
-        
-        
-        
-          {1}".format(len(space_start), space_start))
-    else:
-        print("All bibitem entries start with a space. ")
-    if len(multiple_space) == 1:
-        print("There is a bibitem entry starting with multiple spaces: \"{0}\". ".format(*multiple_space))
-    elif len(multiple_space) &gt; 1:
-        print("There are {0} bibitem entries starting with multiple spaces. The details are as follows. 
-        
-      
-    
-      
-        
-        
-        
-          {1}".format(len(multiple_space), multiple_space))
-    else:
-        print("No bibitem entry starts with multiple spaces. ")
-    if len(end_dot) == 1:
-        print("There is a bibitem entry not ending with a dot: \"{0}\". ".format(*end_dot))
-    elif len(end_dot) &gt; 1:
-        print("There are {0} bibitem entries not ending with a dot. The details are as follows. 
-        
-      
-    
-      
-        
-        
-        
-          {1}".format(len(end_dot), end_dot))
-    else:
-        print("All bibitem entries end with a dot. ")
-    if len(repeated_content) == 1:
-        print("There are repeated bibitem entries. The details are as follows. 
-        
-      
-    
-      
-        
-        
-        
-          {0}".format(repeated_content[0]))
-    elif len(repeated_content) &gt; 1:
-        print("There are {0} groups of repeated bibitem entries. The details are as follows. 
-        
-      
-    
-      
-        
-        
-        
-          {1}".format(len(repeated_content), repeated_content))
-    else:
-        print("No repeated bibitem entry is found. ")
-    if len(undefined_entry) == 1:
-        print("There is an undefined citation key: \"{0}\". ".format(*undefined_entry))
-    elif len(undefined_entry) &gt; 1:
-        print("There are {0} undefined citation keys. The details are as follows. 
-        
-      
-    
-      
-        
-        
-        
-          {1}".format(len(undefined_entry), undefined_entry))
-    else:
-        print("No undefined citation key is found. ")
-    if len(uncited_entry) == 1:
-        print("There is an uncited bibitem entry: \"{0}\". ".format(*uncited_entry))
-    elif len(uncited_entry) &gt; 1:
-        print("There are {0} uncited bibitem entries. The details are as follows. 
-        
-      
-    
-      
-        
-        
-        
-          {1}".format(len(uncited_entry), uncited_entry))
-    else:
-        print("No uncited bibitem entry is found. ")
-
-    print()
-    if input("Would you like to check again (input \"Y\" and enter to check again): ").upper() == "Y":
-        return checkCitations(texFilepaths, isDebug=isDebug)
-    else:
-        return not any([repeated_entry, space_start, multiple_space, end_dot, repeated_content, undefined_entry, uncited_entry])
-
-def checkBibtex(bibFilepaths, isDebug=False) -&gt; bool:
-    clearScreen()
-    if type(bibFilepaths) not in (tuple, list) or not bibFilepaths:
-        print("As no bib files are found, the checking cannot work. ")
-        print("Please press any key to go back. ")
-        press_any_key_to_continue()
-        return None
-
-    content = ""
-    for bibFilepath in bibFilepaths:
-        text = getTxt(bibFilepath)
-        if text is None:
-            print("Read bib file \"{0}\" failed. ".format(bibFilepath))
-        else:
-            content += removeCommentLine(text) + "
-        
-      
-    
-      
-        
-        
-        
-          "
-    bibitems = [item[item.index("{") + 1:item.index(",")] for item in findall("@.+?\\{.+?,", content)]
-    if isDebug:
-        print("bibitems =", bibitems)
-
-    s = set()
-    repeated_bibitem = set()
-    for bibitem in bibitems:
-        if bibitem in s:
-            repeated_bibitem.add(bibitem)
-        else:
-            s.add(bibitem)
-
-    if len(s) == 1:
-        print("This is the bibtex checking. There is 1 bibitem in total. ")
-    elif len(s) &gt; 1:
-        print("This is the bibtex checking. There are {0} bibitems in total. ".format(len(s)))
-    else:
-        print("This is the bibtex checking. There are no bibitems found. ")
-    print()
-    if len(repeated_bibitem) == 1:
-        print("There is a repeated bibitem key: \"{0}\". ".format(*repeated_bibitem))
-    elif len(repeated_bibitem) &gt; 1:
-        print("There are {0} repeated bibitem keys. The details are as follows. 
-        
-      
-    
-      
-        
-        
-        
-          {1}".format(len(repeated_bibitem), repeated_bibitem))
-    else:
-        print("No repeated bibitem key is found. ")
-
-    print()
-    if input("Would you like to check again (input \"Y\" and enter to check again): ").upper() == "Y":
-        return checkBibtex(bibFilepaths, isDebug=isDebug)
-    else:
-        return not any([repeated_bibitem])
-
-def citationSurvey(texFilepaths, isDebug=False) -&gt; dict:
-    clearScreen()
-    if type(texFilepaths) not in (tuple, list) or not texFilepaths:
-        print("As no tex files are found, the checking cannot work. ")
-        print("Please press any key to go back. ")
-        press_any_key_to_continue()
-        return None
-
-    dicts = {}
-    for texFilepath in texFilepaths:
-        text = getTxt(texFilepath)
-        if text is None:
-            print("Read tex file \"{0}\" failed. ".format(texFilepath))
-        else:
-            lines = removeCommentLine(text).split("
-        
-      
-    
-      
-        
-        
-        
-          ")
-            section = ""
-            for line in lines:
-                if len(findall("\\\\section\\{.+?\\}", line)):
-                    section = findall("\\\\section\\{.+?\\}", line)[0][9:-1]
-                elif len(findall("\\\\section\\*\\{.+?\\}", line)):
-                    section = findall("\\\\section\\*\\{.+?\\}", line)[0][10:-1]
-                elif len(findall("\\\\chapter\\{.+?\\}", line)):
-                    section = findall("\\\\chapter\\{.+?\\}", line)[0][9:-1]
-                elif len(findall("\\\\chapter\\*\\{.+?\\}", line)):
-                    section = findall("\\\\chapter\\*\\{.+?\\}", line)[0][10:-1]
-                if not section:
-                    continue
-                for cite in findall("\\\\cite\\{.+?\\}", line):
-                    cite = cite[cite.index("{") + 1:-1]
-                    for subCite in cite.split(","):
-                        dicts.setdefault(section, {})
-                        dicts[section].setdefault(subCite.strip(), 0)
-                        dicts[section][subCite.strip()] += 1
-
-    for section in list(dicts.keys()):
-        totalCount = 0
-        for subCite in list(dicts[section].keys()):
-            totalCount += dicts[section][subCite]
-        dicts[section] = {
-            "citation_count": len(dicts[section]),
-            "total_count": totalCount,
-            "details": dicts[section],
-        }
-
-    if isDebug:
-        print("dicts =", dicts)
-
-    print("This is the citation survey. The result is as follows. ")
-    print()
-    if len(dicts):
-        sections = sorted(list(dicts.keys()))
-        maxSectionLen = max([len(section) for section in sections])
-        for section in sections:
-            print(section.ljust(maxSectionLen + 2) + "contains {0} citations with {1} citation count(s). ".format(dicts[section]["citation_count"], dicts[section]["total_count"]))
-    else:
-        print("No citation is found. ")
-
-    print()
-    if input("Would you like to check again (input \"Y\" and enter to check again): ").upper() == "Y":
-        return citationSurvey(texFilepaths, isDebug=isDebug)
-    else:
-        return dicts
-
-def mainBoard(texFilepaths, bibFilepaths, isDebug=False):
-    clearScreen()
-    if isDebug:
-        print("texFilepaths =", texFilepaths)
-        print("bibFilepaths =", bibFilepaths)
-    print("Main Board
-        
-      
-    
-      
-        
-        
-        
-          " + "-" * 10)
-    print("1. Reload files")
-    print("2. Check labels")
-    print("3. Check citations")
-    print("4. Check bibtex")
-    print("5. Citation survey")
-    print("0. Exit")
-    print()
-    print("Please input the corresponding number to select. ", end="")
-    print("The default option is \"0\". ", end="")
-    userInput = input().strip()
-    print()
-    if userInput == "1":
-        return
-    elif userInput == "2":
-        result = checkLabels(texFilepaths, isDebug=isDebug)
-        print("Check label result:", result)
-    elif userInput == "3":
-        result = checkCitations(texFilepaths, isDebug=isDebug)
-        print("Check citation result:", result)
-    elif userInput == "4":
-        result = checkBibtex(bibFilepaths, isDebug=isDebug)
-        print("Check bibtex result:", result)
-    elif userInput == "5":
-        result = citationSurvey(texFilepaths, isDebug=isDebug)
-        print("Citation survey result:", result)
-    else:
-        return
-
-def main():
-    latex_folder = os.getcwd()
-    isDebug = True  # Change this to False in production
-    while True:
-        clearScreen()
-        if isDebug:
-            print("latex_folder =", latex_folder)
-        print("Welcome to use the Label/Citation Checker!
-        
-      
-    
-      
-        
-        
-        
-          " + "-" * 10)
-        print("Please enter the folder path where the LaTeX files are located.")
-        userInput = input("Folder path (default is the current folder): ").strip()
-        if userInput:
-            latex_folder = userInput
-        else:
-            latex_folder = os.getcwd()
-        file_dict = loadFolder(latex_folder)
-        mainBoard(file_dict.get("tex", []), file_dict.get("bib", []), isDebug=isDebug)
-
-if __name__ == "__main__":
-    main()
-</code></pre></div></div>
 
       </div>
       
@@ -813,30 +1443,29 @@ if __name__ == "__main__":
       
         <div class="nav-arrow prev">
           <a href="/copy-dedup/" title=""Copy Spotter" and Deduplication" rel="prev">
-            <img src="data:image/png;base64," alt="Previous article" width="45" height="45" loading="lazy">
+            <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAC0AAAAtCAYAAAA6GuKaAAAAAXNSR0IArs4c6QAAAxVJREFUaEPt18FqG1cUBuD/nLkzI42UiVInkFLTCAKhS+9KA+3Kq1L8AAHjhR7AKz+ADV55qUfoqhvThTfdmC4KzTKmYJrELshJW9PIlSeKRpqZe88pUtouihvVRknqMNoMzD1zdPXNrzMM4RJ+6BLuGeWm39RdK6VL6VcIlPEo41HG401loJQupS8mUM7pi7md/6p3UtoHUJzf4vVecZb0e0EQfB7H8b0kSeqqummt/eb1buN83SebNsZ8QkQCYHVpaenu/v7+ra2tLRwdHWF1ddWq6hfM3BCRE2b+FcBHACQAHo1E5v9c+5mIhkR0e3z0VQ8LotuqWlXVw/GRmT8QkdMK89McuAOAAfwoIu8z85yIHBPRKRGN1/IAeDx0rul53hivo6psrf2ejDGfEtFOu92u7O3tBWtra2i322g0GhgOh9je3ka325UPax7fCR0iw+lp4aLxr70aeOmgkChTRY3JGSb73EroERD73uB54WpOgdhwZkXNQNQLiVDzOU1yFymAhu+lqZVopIqISQKmPLFS+atHv3A1q8AVQ/lXP/VHRPQx+b6frKysxMvLy1hfX0ez2USv18PCwgLiOEaSJKhWq/jhwQN8dnIfVOS4dsWHqCJ5YREGjBuNEMfd0eTc9WshBqnFYGhRqxrUIoNuLwMT4eb1Cp6dZshywdW6mZzr9QsEPuPmXIhfno3gnGKuEWCUC14MLKoVb1L72+8Zvj3JOl/udZt/S7darUqn0wlarRZ2d3cxPz+PJ8dPsPP1Doq8kIbL+cawjxBIM8MRFAidpBlRpIbhFc55gM2NF5IIQtVBRlRTZgTWZQ4wzvc8spO1NPM4Gr9Wh1bSDIjU98C5E0PIC8OVSX+Rlz08hl+4/LsML6X/menFxcW7BwcHtzY2NvDw8CE21zf/NdMAHskFMs3MT/EfMg3gsTsr02f8byfTo16v3+v3+//f6fGKgXNp5vT5huZbqH4nH+NvwXH6V5bS041mU1FKz8ZxepdSerrRbCpK6dk4Tu9SSk83mk1FKT0bx+ldSunpRrOpuJTSfwBcuImxpyA7XgAAAABJRU5ErkJggg==" alt="Previous article" width="45" height="45" loading="lazy">
           </a>
         </div>
       
       
         <div class="nav-arrow next">
           <a href="/llm-renamer/" title="Rename files using llm.datasette.io" rel="next">
-            <img src="data:image/png;base64," alt="Next article" width="45" height="45" loading="lazy">
+            <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAC0AAAAtCAYAAAA6GuKaAAAAAXNSR0IArs4c6QAAAwdJREFUaEPtl01rG1cUht9z7p070ijKWLVS3I9YULtNMBRn2UIXxZtuvCjedNWfoKVXBvsHeOUfoIUx5AeY0pVXXSR052UxBJSi0kDiRplII83HvadI9CMtOFjCmBjubC7cc8+Zc555eYdLuIEP3cCe4Zu+rq/mSXvSbyHg5eHl4eVxXRrwpD3p+Qh4n56P2+xZnvTszC7MCAAUF0XfOdJa62+IaCeO40GSJA/zPP8RwB9vDjBtWmv9JRE5ImpZawdVpbo58CkAIyJnIrLAzEvOuXNm/h3AfQDOAGdj5z5m5gXn3G9ENCKilckaiDwpiFZEpCoiTyYrM3/knOtXmHs58BkABvCLc+4DZl6cxIjoh4ODA728vIzt7W2sra09PT4+fgTgQES4LMvHZIy5LyI/f/dJvfK6FKMJqAdqmBS2ZgWINY9zJyZ1whUiRJrTfmGjybSxUemwcFEmghqT1UxlUrpQEXD7jRq3NWelEz10okIi1AJOX+U2EgALgUrT0kVnmcKvQ+uazSZvbW2hWq2i3++j3W5jf38f6+vrebvdHovI5pT09+vN7teLYev990K8GpQYjS1u1TQqhnHez6EU4cM7FTw7z5AXDo16ACcyPRsaxp2FEM9ejKd7zUaIYVpiOCpRq2rUIo0XLzMwEZaaFTzvZ8hyh/iWnu69fF1AAoOfFr/A5w8eYDQaIY5jJEmC09NTNBoNdLtd7O3t4ejoCIeHh8k/pL8KUSkCZcg6hCLDjLk2ufYGpRuXAuOMYiosQiDNNEcQILQuzYgi0QxVWKuAMtcqJPdXDaKaMMOUNrOAtoFSVE5jaaY4mtQPS5dmQPS8WkdfGReYgDe/3cTdpbvo9XrY2NhAp9NBq9XKO53Ov6T/r2mlVBeX0DSAMzeHppm5h7doemdvR99buYfd3V2srq4+PTk5+a+mr9CmrqTU3+5Rr9cHg8HgYve4krddbZGb5dOXmf2d+7n4pi9D4LrOeHl40v42fl0a8KQ96fkIeJ+ej9vsWZ707Mzmy/Ck5+M2e9afhmuAz1BhwewAAAAASUVORK5CYII=" alt="Next article" width="45" height="45" loading="lazy">
           </a>
         </div>
       
     </nav>
     
-      <div class="comment-box">
-        Reference:
-        <a href="https://github.com/BatchClayderman/checkCite" title="https://github.com/BatchClayderman/checkCite">https://github.com/BatchClayderman/checkCite</a>
-      </div>
+    <div class="comment-box">
+        Reference: <a href="https://github.com/BatchClayderman/checkCite" title="https://github.com/BatchClayderman/checkCite">https://github.com/BatchClayderman/checkCite</a>
+    </div>
     
   </main>
   <footer class="site-footer">
     <p>
       <a href="#" aria-label="Back to top">
         <img src="/assets/Rope_(Old).gif" alt="Back to top" width="32" height="32" loading="lazy">
-      </a><a href="https://ib.bsb.br/404" aria-label="404">2024-12-28 17:33:29</a>‎ ⇔‎ <a href="https://github.com/ib-bsb-br/ib-bsb-br.github.io" aria-label="GitHub">ℹ</a>‎ <a href="/" aria-label="Homepage">infoBAG</a>
+      </a><a href="https://ib.bsb.br/404" aria-label="404">2024-12-28 18:00:44</a>‎ ⇔‎ <a href="https://github.com/ib-bsb-br/ib-bsb-br.github.io" aria-label="GitHub">ℹ</a>‎ <a href="/" aria-label="Homepage">infoBAG</a>
     </p>
   </footer>
   <script type="application/ld+json">

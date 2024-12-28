@@ -44,16 +44,896 @@
 
   <link href="/style.css" rel="stylesheet">
 </head>
-<body class="post-content-body">
-
-  <!-- Start of content processing -->
-  
-  
-  
-
-  
-  <!-- End of content processing -->
-
+  <body class="post-content-body">
+    
+    
+    
+    
+        
+        
+        "<p>Fork of https://github.com/heversonbr/scientific-paper-pdf-rename</p>\n    
+        
+        
+        "\n    
+        
+        
+        "<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">#!/usr/bin/env python3\n    
+        
+        
+        "</span><span class="kn">import</span> <span class="n">fitz</span>\n    
+        
+        
+        "<span class="kn">import</span> <span class="n">os</span>\n    
+        
+        
+        "<span class="kn">import</span> <span class="n">sys</span>\n    
+        
+        
+        "<span class="kn">import</span> <span class="n">platform</span>\n    
+        
+        
+        "<span class="kn">import</span> <span class="n">pkg_resources</span>\n    
+        
+        
+        "<span class="kn">import</span> <span class="n">signal</span>\n    
+        
+        
+        "<span class="kn">import</span> <span class="n">string</span>\n    
+        
+        
+        "<span class="kn">import</span> <span class="n">hashlib</span>\n    
+        
+        
+        "<span class="kn">import</span> <span class="n">shutil</span>\n    
+        
+        
+        "<span class="kn">import</span> <span class="n">re</span>\n    
+        
+        
+        "<span class="kn">import</span> <span class="n">logging</span>\n    
+        
+        
+        "<span class="kn">import</span> <span class="n">llm</span>\n    
+        
+        
+        "<span class="kn">from</span> <span class="n">src.helper</span> <span class="kn">import</span> <span class="o">*</span>\n    
+        
+        
+        "\n    
+        
+        
+        "<span class="c1"># Define logger / logger config\n    
+        
+        
+        "</span><span class="n">log_level</span> <span class="o">=</span> <span class="n">logging</span><span class="p">.</span><span class="n">INFO</span>\n    
+        
+        
+        "<span class="n">logging</span><span class="p">.</span><span class="nf">basicConfig</span><span class="p">(</span><span class="nb">format</span><span class="o">=</span><span class="sh">'</span><span class="s">[%(asctime)s] - [%(levelname)s]- %(message)s</span><span class="sh">'</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="n">log_level</span><span class="p">)</span>\n    
+        
+        
+        "<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="p">.</span><span class="nf">getLogger</span><span class="p">()</span>\n    
+        
+        
+        "<span class="nf">set_helper_logger</span><span class="p">(</span><span class="n">log_level</span><span class="p">)</span>\n    
+        
+        
+        "\n    
+        
+        
+        "<span class="c1"># Set your OpenAI API key\n    
+        
+        
+        "</span><span class="n">model</span> <span class="o">=</span> <span class="n">llm</span><span class="p">.</span><span class="nf">get_model</span><span class="p">(</span><span class="sh">"</span><span class="s">gpt-3.5-turbo</span><span class="sh">"</span><span class="p">)</span>\n    
+        
+        
+        "<span class="n">model</span><span class="p">.</span><span class="n">key</span> <span class="o">=</span> <span class="sh">"</span><span class="s">&lt;!-- INSERT OPENAI KEY --&gt;</span><span class="sh">"</span>\n    
+        
+        
+        "\n    
+        
+        
+        "<span class="k">def</span> <span class="nf">keyboardInterruptHandler</span><span class="p">(</span><span class="n">signal</span><span class="p">,</span> <span class="n">frame</span><span class="p">):</span>\n    
+        
+        
+        "    <span class="n">logger</span><span class="p">.</span><span class="nf">info</span><span class="p">(</span><span class="sh">'</span><span class="s">You pressed Ctrl+C! Leaving...</span><span class="sh">'</span><span class="p">.</span><span class="nf">format</span><span class="p">(</span><span class="n">signal</span><span class="p">))</span>\n    
+        
+        
+        "    <span class="n">sys</span><span class="p">.</span><span class="nf">exit</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>\n    
+        
+        
+        "\n    
+        
+        
+        "<span class="k">def</span> <span class="nf">validate_arguments</span><span class="p">(</span><span class="n">arguments</span><span class="p">):</span>\n    
+        
+        
+        "    <span class="k">if</span> <span class="nf">len</span><span class="p">(</span><span class="n">arguments</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">2</span><span class="p">:</span>\n    
+        
+        
+        "        <span class="n">logger</span><span class="p">.</span><span class="nf">error</span><span class="p">(</span><span class="sh">'</span><span class="s">Wrong number of arguments!</span><span class="sh">'</span><span class="p">)</span>\n    
+        
+        
+        "        <span class="nf">print_usage</span><span class="p">()</span>\n    
+        
+        
+        "        <span class="n">sys</span><span class="p">.</span><span class="nf">exit</span><span class="p">()</span>\n    
+        
+        
+        "    <span class="k">if</span> <span class="nf">len</span><span class="p">(</span><span class="n">sys</span><span class="p">.</span><span class="n">argv</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>\n    
+        
+        
+        "        <span class="n">logger</span><span class="p">.</span><span class="nf">error</span><span class="p">(</span><span class="sh">"</span><span class="s">Missing arguments!</span><span class="sh">"</span><span class="p">)</span>\n    
+        
+        
+        "        <span class="nf">print_usage</span><span class="p">()</span>\n    
+        
+        
+        "        <span class="n">sys</span><span class="p">.</span><span class="nf">exit</span><span class="p">()</span>\n    
+        
+        
+        "    <span class="k">if</span> <span class="nf">len</span><span class="p">(</span><span class="n">arguments</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>\n    
+        
+        
+        "        <span class="n">target</span> <span class="o">=</span> <span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="nf">abspath</span><span class="p">(</span><span class="n">arguments</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>\n    
+        
+        
+        "        <span class="n">base_dir</span> <span class="o">=</span> <span class="sh">''</span>\n    
+        
+        
+        "        <span class="n">filename</span> <span class="o">=</span> <span class="sh">''</span>\n    
+        
+        
+        "        <span class="k">if</span> <span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="nf">exists</span><span class="p">(</span><span class="n">target</span><span class="p">):</span>\n    
+        
+        
+        "            <span class="k">if</span> <span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="nf">isdir</span><span class="p">(</span><span class="n">target</span><span class="p">):</span>\n    
+        
+        
+        "                <span class="n">base_dir</span> <span class="o">=</span> <span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="nf">abspath</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>\n    
+        
+        
+        "            <span class="k">else</span><span class="p">:</span>\n    
+        
+        
+        "                <span class="k">if</span> <span class="n">target</span><span class="p">.</span><span class="nf">endswith</span><span class="p">(</span><span class="sh">'</span><span class="s">.pdf</span><span class="sh">'</span><span class="p">):</span>\n    
+        
+        
+        "                    <span class="n">base_dir</span> <span class="o">=</span> <span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="nf">dirname</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>\n    
+        
+        
+        "                    <span class="n">filename</span> <span class="o">=</span> <span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="nf">basename</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>\n    
+        
+        
+        "                <span class="k">else</span><span class="p">:</span>\n    
+        
+        
+        "                    <span class="n">logger</span><span class="p">.</span><span class="nf">error</span><span class="p">(</span><span class="sh">'</span><span class="s">Argument is not a pdf file</span><span class="sh">'</span><span class="p">)</span>\n    
+        
+        
+        "                    <span class="n">sys</span><span class="p">.</span><span class="nf">exit</span><span class="p">()</span>\n    
+        
+        
+        "        <span class="k">else</span><span class="p">:</span>\n    
+        
+        
+        "            <span class="n">logger</span><span class="p">.</span><span class="nf">error</span><span class="p">(</span><span class="sh">"</span><span class="s">Directory or file [</span><span class="sh">"</span><span class="o">+</span> <span class="n">arguments</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="sh">"</span><span class="s">] path does not exist!</span><span class="sh">"</span><span class="p">)</span>\n    
+        
+        
+        "            <span class="n">sys</span><span class="p">.</span><span class="nf">exit</span><span class="p">()</span>\n    
+        
+        
+        "        <span class="k">return</span> <span class="n">base_dir</span><span class="p">,</span> <span class="n">filename</span>\n    
+        
+        
+        "\n    
+        
+        
+        "<span class="k">def</span> <span class="nf">hash_file</span><span class="p">(</span><span class="n">target_file</span><span class="p">):</span>\n    
+        
+        
+        "    <span class="n">blocksize</span> <span class="o">=</span> <span class="mi">65536</span>\n    
+        
+        
+        "    <span class="n">hasher</span> <span class="o">=</span> <span class="n">hashlib</span><span class="p">.</span><span class="nf">new</span><span class="p">(</span><span class="sh">'</span><span class="s">sha256</span><span class="sh">'</span><span class="p">)</span>\n    
+        
+        
+        "    <span class="n">target_file</span> <span class="o">=</span> <span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="nf">abspath</span><span class="p">(</span><span class="n">target_file</span><span class="p">)</span>\n    
+        
+        
+        "    <span class="k">if</span> <span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="nf">isfile</span><span class="p">(</span><span class="n">target_file</span><span class="p">):</span>\n    
+        
+        
+        "        <span class="k">with</span> <span class="nf">open</span><span class="p">(</span><span class="n">target_file</span><span class="p">,</span> <span class="sh">'</span><span class="s">rb</span><span class="sh">'</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>\n    
+        
+        
+        "            <span class="k">while</span> <span class="bp">True</span><span class="p">:</span>\n    
+        
+        
+        "                <span class="n">data</span> <span class="o">=</span> <span class="n">f</span><span class="p">.</span><span class="nf">read</span><span class="p">(</span><span class="n">blocksize</span><span class="p">)</span>\n    
+        
+        
+        "                <span class="k">if</span> <span class="ow">not</span> <span class="n">data</span><span class="p">:</span>\n    
+        
+        
+        "                    <span class="k">break</span>\n    
+        
+        
+        "                <span class="n">hasher</span><span class="p">.</span><span class="nf">update</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>\n    
+        
+        
+        "        <span class="k">return</span> <span class="n">hasher</span><span class="p">.</span><span class="nf">hexdigest</span><span class="p">()</span>\n    
+        
+        
+        "    <span class="k">else</span><span class="p">:</span>\n    
+        
+        
+        "        <span class="n">logger</span><span class="p">.</span><span class="nf">error</span><span class="p">(</span><span class="n">target_file</span> <span class="o">+</span> <span class="sh">'</span><span class="s"> is not a file</span><span class="sh">'</span><span class="p">)</span>\n    
+        
+        
+        "        <span class="n">sys</span><span class="p">.</span><span class="nf">exit</span><span class="p">()</span>\n    
+        
+        
+        "\n    
+        
+        
+        "<span class="k">def</span> <span class="nf">parse_title</span><span class="p">(</span><span class="n">title</span><span class="p">,</span> <span class="n">max_length</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>\n    
+        
+        
+        "    <span class="k">if</span> <span class="n">max_length</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>\n    
+        
+        
+        "        <span class="n">max_length</span> <span class="o">=</span> <span class="mi">125</span>\n    
+        
+        
+        "    <span class="k">if</span> <span class="nf">len</span><span class="p">(</span><span class="n">title</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">max_length</span><span class="p">:</span>\n    
+        
+        
+        "        <span class="n">title</span> <span class="o">=</span> <span class="n">title</span><span class="p">[:</span><span class="n">max_length</span><span class="p">]</span>\n    
+        
+        
+        "    <span class="n">title</span> <span class="o">=</span> <span class="n">re</span><span class="p">.</span><span class="nf">sub</span><span class="p">(</span><span class="sa">r</span><span class="sh">'</span><span class="s">[^a-zA-Z0-9]+</span><span class="sh">'</span><span class="p">,</span> <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">,</span> <span class="n">title</span><span class="p">)</span>\n    
+        
+        
+        "    <span class="n">title</span> <span class="o">=</span> <span class="n">title</span><span class="p">.</span><span class="nf">strip</span><span class="p">()</span>\n    
+        
+        
+        "    <span class="n">title</span> <span class="o">=</span> <span class="n">re</span><span class="p">.</span><span class="nf">sub</span><span class="p">(</span><span class="sa">r</span><span class="sh">'</span><span class="s">\s</span><span class="sh">'</span><span class="p">,</span> <span class="sh">'</span><span class="s">_</span><span class="sh">'</span><span class="p">,</span> <span class="n">title</span><span class="p">)</span>\n    
+        
+        
+        "    <span class="n">title</span> <span class="o">=</span> <span class="n">string</span><span class="p">.</span><span class="nf">capwords</span><span class="p">(</span><span class="n">title</span><span class="p">)</span> <span class="o">+</span> <span class="sh">'</span><span class="s">.pdf</span><span class="sh">'</span>\n    
+        
+        
+        "    <span class="k">return</span> <span class="n">title</span>\n    
+        
+        
+        "\n    
+        
+        
+        "<span class="k">def</span> <span class="nf">get_page_text</span><span class="p">(</span><span class="n">current_page</span><span class="p">):</span>\n    
+        
+        
+        "    <span class="n">python_version</span> <span class="o">=</span> <span class="n">platform</span><span class="p">.</span><span class="nf">python_version</span><span class="p">()</span>\n    
+        
+        
+        "    <span class="n">library_name</span> <span class="o">=</span> <span class="sh">"</span><span class="s">PyMuPDF</span><span class="sh">"</span>\n    
+        
+        
+        "    <span class="n">library_version</span> <span class="o">=</span> <span class="n">pkg_resources</span><span class="p">.</span><span class="nf">get_distribution</span><span class="p">(</span><span class="n">library_name</span><span class="p">).</span><span class="n">version</span>\n    
+        
+        
+        "\n    
+        
+        
+        "    <span class="n">acceptable_python_versions</span> <span class="o">=</span> <span class="p">[</span><span class="sh">"</span><span class="s">3.11</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">3.7</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">3.8</span><span class="sh">"</span><span class="p">]</span>\n    
+        
+        
+        "    <span class="n">acceptable_pymupdf_versions</span> <span class="o">=</span> <span class="p">[</span><span class="sh">"</span><span class="s">1.22</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">1.18</span><span class="sh">"</span><span class="p">]</span>\n    
+        
+        
+        "\n    
+        
+        
+        "    <span class="k">if</span> <span class="nf">any</span><span class="p">(</span><span class="n">python_version</span><span class="p">.</span><span class="nf">startswith</span><span class="p">(</span><span class="n">ver</span><span class="p">)</span> <span class="k">for</span> <span class="n">ver</span> <span class="ow">in</span> <span class="n">acceptable_python_versions</span><span class="p">)</span> <span class="ow">and</span> \\n    
+        
+        
+        "       <span class="nf">any</span><span class="p">(</span><span class="n">library_version</span><span class="p">.</span><span class="nf">startswith</span><span class="p">(</span><span class="n">ver</span><span class="p">)</span> <span class="k">for</span> <span class="n">ver</span> <span class="ow">in</span> <span class="n">acceptable_pymupdf_versions</span><span class="p">):</span>\n    
+        
+        
+        "        <span class="n">blocks</span> <span class="o">=</span> <span class="n">current_page</span><span class="p">.</span><span class="nf">get_text</span><span class="p">(</span><span class="sh">'</span><span class="s">dict</span><span class="sh">'</span><span class="p">)[</span><span class="sh">'</span><span class="s">blocks</span><span class="sh">'</span><span class="p">]</span>\n    
+        
+        
+        "        <span class="n">logger</span><span class="p">.</span><span class="nf">debug</span><span class="p">(</span><span class="sh">'</span><span class="s">Python version is: </span><span class="sh">'</span> <span class="o">+</span> <span class="n">python_version</span><span class="p">)</span>\n    
+        
+        
+        "        <span class="n">logger</span><span class="p">.</span><span class="nf">debug</span><span class="p">(</span><span class="sh">'</span><span class="s">PyMuPDF version is: </span><span class="sh">'</span> <span class="o">+</span> <span class="n">library_version</span><span class="p">)</span>\n    
+        
+        
+        "    <span class="k">else</span><span class="p">:</span>\n    
+        
+        
+        "        <span class="n">logger</span><span class="p">.</span><span class="nf">warning</span><span class="p">(</span><span class="sh">'</span><span class="s">Python version is: </span><span class="sh">'</span> <span class="o">+</span> <span class="n">python_version</span><span class="p">)</span>\n    
+        
+        
+        "        <span class="n">logger</span><span class="p">.</span><span class="nf">warning</span><span class="p">(</span><span class="sh">'</span><span class="s">PyMuPDF version is: </span><span class="sh">'</span> <span class="o">+</span> <span class="n">library_version</span><span class="p">)</span>\n    
+        
+        
+        "        <span class="n">logger</span><span class="p">.</span><span class="nf">error</span><span class="p">(</span><span class="sh">'</span><span class="s">Your Python version or PyMuPDF is not at the required level!</span><span class="sh">'</span><span class="p">)</span>\n    
+        
+        
+        "        <span class="n">logger</span><span class="p">.</span><span class="nf">error</span><span class="p">(</span><span class="sh">'</span><span class="s">Please ensure that both meet the specified version requirements for this script to function properly.</span><span class="sh">'</span><span class="p">)</span>\n    
+        
+        
+        "        <span class="n">sys</span><span class="p">.</span><span class="nf">exit</span><span class="p">()</span>\n    
+        
+        
+        "\n    
+        
+        
+        "    <span class="k">return</span> <span class="n">blocks</span>\n    
+        
+        
+        "\n    
+        
+        
+        "<span class="k">def</span> <span class="nf">get_best_title_from_llm</span><span class="p">(</span><span class="n">text_content</span><span class="p">):</span>\n    
+        
+        
+        "    <span class="n">response</span> <span class="o">=</span> <span class="n">model</span><span class="p">.</span><span class="nf">prompt</span><span class="p">(</span>\n    
+        
+        
+        "        <span class="n">text_content</span><span class="p">,</span>\n    
+        
+        
+        "        <span class="n">system</span><span class="o">=</span><span class="sh">'</span><span class="s">Given the extracted text from a PDF document, craft the most fitting title. The title should be accurate, clear, concise, and relevant to researchers, adhering, if possible, to the standard of ABNT NBR 6023 (e.g., </span><span class="sh">"</span><span class="s">MARX, Karl; ENGELS, Friedrich. The communist manifesto. In: Ideals and ideologies. Routledge, 2019. p. 243-255.</span><span class="sh">"</span><span class="s">). However, ensure the title adheres to filename restrictions: avoid characters like `/ \ ? * : &lt; &gt; |` and control characters (ASCII 0-31). Prioritize alphanumeric characters, hyphens, underscores, and periods. Your response MUST contain ONLY the crafted title, NO MORE, NO LESS.</span><span class="sh">'</span><span class="p">)</span>\n    
+        
+        
+        "    <span class="n">title</span> <span class="o">=</span> <span class="n">response</span><span class="p">.</span><span class="nf">text</span><span class="p">().</span><span class="nf">strip</span><span class="p">()</span>\n    
+        
+        
+        "    <span class="k">return</span> <span class="n">title</span>\n    
+        
+        
+        "\n    
+        
+        
+        "<span class="k">def</span> <span class="nf">scan_title</span><span class="p">(</span><span class="n">full_file_name</span><span class="p">,</span> <span class="n">page_num</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>\n    
+        
+        
+        "    <span class="k">if</span> <span class="n">page_num</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>\n    
+        
+        
+        "        <span class="n">page_num</span> <span class="o">=</span> <span class="mi">0</span>\n    
+        
+        
+        "    <span class="n">doc</span> <span class="o">=</span> <span class="n">fitz</span><span class="p">.</span><span class="nf">open</span><span class="p">(</span><span class="n">full_file_name</span><span class="p">)</span>\n    
+        
+        
+        "    <span class="n">meta_title</span> <span class="o">=</span> <span class="n">doc</span><span class="p">.</span><span class="n">metadata</span><span class="p">[</span><span class="sh">'</span><span class="s">title</span><span class="sh">'</span><span class="p">].</span><span class="nf">strip</span><span class="p">()</span>\n    
+        
+        
+        "    <span class="k">if</span> <span class="nf">len</span><span class="p">(</span><span class="n">meta_title</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">5</span><span class="p">:</span>\n    
+        
+        
+        "        <span class="n">meta_title</span> <span class="o">=</span> <span class="nf">parse_title</span><span class="p">(</span><span class="n">meta_title</span><span class="p">)</span>\n    
+        
+        
+        "    <span class="n">page</span> <span class="o">=</span> <span class="n">doc</span><span class="p">.</span><span class="nf">load_page</span><span class="p">(</span><span class="n">page_num</span><span class="p">)</span>\n    
+        
+        
+        "    <span class="n">size_text_tup_list</span> <span class="o">=</span> <span class="p">[]</span>\n    
+        
+        
+        "    <span class="n">title</span> <span class="o">=</span> <span class="sh">''</span>\n    
+        
+        
+        "    <span class="n">blocks</span> <span class="o">=</span> <span class="nf">get_page_text</span><span class="p">(</span><span class="n">page</span><span class="p">)</span>\n    
+        
+        
+        "    <span class="n">text_content</span> <span class="o">=</span> <span class="sh">""</span>\n    
+        
+        
+        "    <span class="k">for</span> <span class="n">blk</span> <span class="ow">in</span> <span class="n">blocks</span><span class="p">:</span>\n    
+        
+        
+        "        <span class="k">if</span> <span class="n">blk</span><span class="p">[</span><span class="sh">'</span><span class="s">type</span><span class="sh">'</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>\n    
+        
+        
+        "            <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">blk</span><span class="p">[</span><span class="sh">'</span><span class="s">lines</span><span class="sh">'</span><span class="p">]:</span>\n    
+        
+        
+        "                <span class="k">if</span> <span class="n">line</span><span class="p">[</span><span class="sh">'</span><span class="s">dir</span><span class="sh">'</span><span class="p">]</span> <span class="o">==</span> <span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)</span> <span class="ow">and</span> <span class="n">line</span><span class="p">[</span><span class="sh">'</span><span class="s">wmode</span><span class="sh">'</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>\n    
+        
+        
+        "                    <span class="k">for</span> <span class="n">span</span> <span class="ow">in</span> <span class="n">line</span><span class="p">[</span><span class="sh">'</span><span class="s">spans</span><span class="sh">'</span><span class="p">]:</span>\n    
+        
+        
+        "                        <span class="n">size_text_tup</span> <span class="o">=</span> <span class="p">(</span><span class="n">span</span><span class="p">[</span><span class="sh">'</span><span class="s">size</span><span class="sh">'</span><span class="p">],</span> <span class="n">span</span><span class="p">[</span><span class="sh">'</span><span class="s">text</span><span class="sh">'</span><span class="p">],</span> <span class="n">span</span><span class="p">[</span><span class="sh">'</span><span class="s">origin</span><span class="sh">'</span><span class="p">])</span>\n    
+        
+        
+        "                        <span class="n">size_text_tup_list</span><span class="p">.</span><span class="nf">append</span><span class="p">(</span><span class="n">size_text_tup</span><span class="p">)</span>\n    
+        
+        
+        "                        <span class="n">text_content</span> <span class="o">+=</span> <span class="n">span</span><span class="p">[</span><span class="sh">'</span><span class="s">text</span><span class="sh">'</span><span class="p">]</span> <span class="o">+</span> <span class="sh">"</span><span class="s"> </span><span class="sh">"</span>\n    
+        
+        
+        "    <span class="n">sorted_size_text_list</span> <span class="o">=</span> <span class="nf">sorted</span><span class="p">(</span><span class="n">size_text_tup_list</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">text_size</span><span class="p">:</span> <span class="n">text_size</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">reverse</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>\n    
+        
+        
+        "    <span class="n">larger_font</span> <span class="o">=</span> <span class="mi">0</span>\n    
+        
+        
+        "    <span class="n">title_max_lines</span> <span class="o">=</span> <span class="mi">5</span>\n    
+        
+        
+        "    <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">sorted_size_text_list</span><span class="p">:</span>\n    
+        
+        
+        "        <span class="n">t_font_size</span> <span class="o">=</span> <span class="n">item</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>\n    
+        
+        
+        "        <span class="n">t_text</span> <span class="o">=</span> <span class="n">item</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>\n    
+        
+        
+        "        <span class="n">t_text_len</span> <span class="o">=</span> <span class="nf">len</span><span class="p">(</span><span class="n">t_text</span><span class="p">)</span>\n    
+        
+        
+        "        <span class="k">if</span> <span class="n">t_text_len</span> <span class="o">&gt;</span> <span class="mi">2</span><span class="p">:</span>\n    
+        
+        
+        "            <span class="k">if</span> <span class="n">t_font_size</span> <span class="o">&gt;</span> <span class="n">larger_font</span><span class="p">:</span>\n    
+        
+        
+        "                <span class="n">larger_font</span> <span class="o">=</span> <span class="n">t_font_size</span>\n    
+        
+        
+        "                <span class="n">title</span> <span class="o">=</span> <span class="n">t_text</span><span class="p">.</span><span class="nf">strip</span><span class="p">()</span> <span class="o">+</span> <span class="sh">'</span><span class="s"> </span><span class="sh">'</span>\n    
+        
+        
+        "                <span class="n">title_max_lines</span> <span class="o">-=</span> <span class="mi">1</span>\n    
+        
+        
+        "            <span class="k">elif</span> <span class="n">t_font_size</span> <span class="o">==</span> <span class="n">larger_font</span><span class="p">:</span>\n    
+        
+        
+        "                <span class="n">title</span> <span class="o">=</span> <span class="n">title</span> <span class="o">+</span> <span class="n">t_text</span><span class="p">.</span><span class="nf">strip</span><span class="p">()</span> <span class="o">+</span> <span class="sh">'</span><span class="s"> </span><span class="sh">'</span>\n    
+        
+        
+        "                <span class="n">title_max_lines</span> <span class="o">-=</span> <span class="mi">1</span>\n    
+        
+        
+        "            <span class="k">if</span> <span class="n">title_max_lines</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>\n    
+        
+        
+        "                <span class="k">break</span>\n    
+        
+        
+        "    <span class="n">doc</span><span class="p">.</span><span class="nf">close</span><span class="p">()</span>\n    
+        
+        
+        "    <span class="n">parsed_found_title</span> <span class="o">=</span> <span class="nf">parse_title</span><span class="p">(</span><span class="n">title</span><span class="p">)</span>\n    
+        
+        
+        "    <span class="n">best_title</span> <span class="o">=</span> <span class="nf">get_best_title_from_llm</span><span class="p">(</span><span class="n">text_content</span><span class="p">)</span>\n    
+        
+        
+        "    <span class="k">return</span> <span class="n">meta_title</span><span class="p">,</span> <span class="n">parsed_found_title</span><span class="p">,</span> <span class="n">best_title</span>\n    
+        
+        
+        "\n    
+        
+        
+        "<span class="k">def</span> <span class="nf">do_rename</span><span class="p">(</span><span class="n">fullpath_current_filename</span><span class="p">,</span> <span class="n">fullpath_new_filename</span><span class="p">):</span>\n    
+        
+        
+        "    <span class="k">if</span> <span class="n">fullpath_current_filename</span> <span class="o">==</span> <span class="n">fullpath_new_filename</span><span class="p">:</span>\n    
+        
+        
+        "        <span class="n">logger</span><span class="p">.</span><span class="nf">warning</span><span class="p">(</span><span class="sh">'</span><span class="s">Current filename and found title are already the same. Skipping...</span><span class="sh">'</span><span class="p">)</span>\n    
+        
+        
+        "        <span class="k">return</span> <span class="bp">False</span>\n    
+        
+        
+        "    <span class="k">try</span><span class="p">:</span>\n    
+        
+        
+        "        <span class="n">os</span><span class="p">.</span><span class="nf">rename</span><span class="p">(</span><span class="n">fullpath_current_filename</span><span class="p">,</span> <span class="n">fullpath_new_filename</span><span class="p">)</span>\n    
+        
+        
+        "    <span class="k">except</span><span class="p">:</span>\n    
+        
+        
+        "        <span class="n">logger</span><span class="p">.</span><span class="nf">error</span><span class="p">(</span><span class="sh">"</span><span class="s">An exception occurred. File not renamed!</span><span class="sh">"</span><span class="p">)</span>\n    
+        
+        
+        "        <span class="k">return</span> <span class="bp">False</span>\n    
+        
+        
+        "    <span class="k">return</span> <span class="bp">True</span>\n    
+        
+        
+        "\n    
+        
+        
+        "<span class="k">def</span> <span class="nf">confirm_to_continue</span><span class="p">():</span>\n    
+        
+        
+        "    <span class="n">valid_choices</span> <span class="o">=</span> <span class="p">[</span><span class="sh">'</span><span class="s">c</span><span class="sh">'</span><span class="p">,</span> <span class="sh">'</span><span class="s">s</span><span class="sh">'</span><span class="p">,</span> <span class="sh">'</span><span class="s">a</span><span class="sh">'</span><span class="p">]</span>\n    
+        
+        
+        "    <span class="n">choice</span> <span class="o">=</span> <span class="nf">input</span><span class="p">(</span><span class="sh">'</span><span class="s">Choose [c] to continue, [s] to skip, or [a] to abort : </span><span class="se">\n</span><span class="sh">'</span><span class="p">)</span>\n    
+        
+        
+        "    <span class="nf">while</span><span class="p">(</span><span class="n">choice</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">valid_choices</span><span class="p">):</span>\n    
+        
+        
+        "        <span class="n">choice</span> <span class="o">=</span> <span class="nf">input</span><span class="p">(</span><span class="sh">'</span><span class="s">Choose [c] to continue or [a] to abort : </span><span class="se">\n</span><span class="sh">'</span><span class="p">)</span>\n    
+        
+        
+        "    <span class="k">if</span> <span class="n">choice</span> <span class="o">==</span> <span class="sh">'</span><span class="s">c</span><span class="sh">'</span><span class="p">:</span>\n    
+        
+        
+        "        <span class="k">return</span> <span class="bp">True</span>\n    
+        
+        
+        "    <span class="k">if</span> <span class="n">choice</span> <span class="o">==</span> <span class="sh">'</span><span class="s">s</span><span class="sh">'</span><span class="p">:</span>\n    
+        
+        
+        "        <span class="k">return</span> <span class="bp">False</span>\n    
+        
+        
+        "    <span class="k">if</span> <span class="n">choice</span> <span class="o">==</span> <span class="sh">'</span><span class="s">a</span><span class="sh">'</span><span class="p">:</span>\n    
+        
+        
+        "        <span class="n">logger</span><span class="p">.</span><span class="nf">info</span><span class="p">(</span><span class="sh">"</span><span class="s">aborting...</span><span class="sh">"</span><span class="p">)</span>\n    
+        
+        
+        "        <span class="n">sys</span><span class="p">.</span><span class="nf">exit</span><span class="p">()</span>\n    
+        
+        
+        "\n    
+        
+        
+        "<span class="k">def</span> <span class="nf">select_loop_type</span><span class="p">():</span>\n    
+        
+        
+        "    <span class="n">logger</span><span class="p">.</span><span class="nf">info</span><span class="p">(</span><span class="sh">'</span><span class="s">Choose [1] : for renaming all pdf files in the directory</span><span class="sh">'</span><span class="p">)</span>\n    
+        
+        
+        "    <span class="n">logger</span><span class="p">.</span><span class="nf">info</span><span class="p">(</span><span class="sh">'</span><span class="s">Choose [2] : for one-by-one pdf file confirmation</span><span class="sh">'</span><span class="p">)</span>\n    
+        
+        
+        "    <span class="n">valid_choices</span> <span class="o">=</span> <span class="p">[</span><span class="sh">'</span><span class="s">1</span><span class="sh">'</span><span class="p">,</span> <span class="sh">'</span><span class="s">2</span><span class="sh">'</span><span class="p">,</span> <span class="sh">'</span><span class="s">q</span><span class="sh">'</span><span class="p">]</span>\n    
+        
+        
+        "    <span class="n">choice</span> <span class="o">=</span> <span class="nf">input</span><span class="p">(</span><span class="sh">'</span><span class="s">Choose [1], [2] or q [quit] : </span><span class="se">\n</span><span class="sh">'</span><span class="p">)</span>\n    
+        
+        
+        "    <span class="nf">while</span><span class="p">(</span><span class="n">choice</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">valid_choices</span><span class="p">):</span>\n    
+        
+        
+        "        <span class="n">choice</span> <span class="o">=</span> <span class="nf">input</span><span class="p">(</span><span class="sh">'</span><span class="s">Choose [1], [2] or q [quit] : </span><span class="se">\n</span><span class="sh">'</span><span class="p">)</span>\n    
+        
+        
+        "    <span class="k">if</span> <span class="n">choice</span> <span class="o">==</span> <span class="sh">'</span><span class="s">1</span><span class="sh">'</span><span class="p">:</span>\n    
+        
+        
+        "        <span class="k">return</span> <span class="sh">'</span><span class="s">1</span><span class="sh">'</span>\n    
+        
+        
+        "    <span class="k">if</span> <span class="n">choice</span> <span class="o">==</span> <span class="sh">'</span><span class="s">2</span><span class="sh">'</span><span class="p">:</span>\n    
+        
+        
+        "        <span class="k">return</span> <span class="sh">'</span><span class="s">2</span><span class="sh">'</span>\n    
+        
+        
+        "    <span class="k">if</span> <span class="n">choice</span> <span class="o">==</span> <span class="sh">'</span><span class="s">q</span><span class="sh">'</span><span class="p">:</span>\n    
+        
+        
+        "        <span class="n">logger</span><span class="p">.</span><span class="nf">info</span><span class="p">(</span><span class="sh">"</span><span class="s">aborting...</span><span class="sh">"</span><span class="p">)</span>\n    
+        
+        
+        "        <span class="n">sys</span><span class="p">.</span><span class="nf">exit</span><span class="p">()</span>\n    
+        
+        
+        "\n    
+        
+        
+        "<span class="k">def</span> <span class="nf">move_file</span><span class="p">(</span><span class="n">fullpath_src_file</span><span class="p">,</span> <span class="n">destination_dir</span><span class="p">,</span> <span class="n">dest_file</span><span class="p">):</span>\n    
+        
+        
+        "    <span class="nf">if</span><span class="p">(</span><span class="ow">not</span> <span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="nf">isdir</span><span class="p">(</span><span class="n">destination_dir</span><span class="p">)):</span>\n    
+        
+        
+        "        <span class="n">os</span><span class="p">.</span><span class="nf">mkdir</span><span class="p">(</span><span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span><span class="n">destination_dir</span><span class="p">))</span>\n    
+        
+        
+        "    <span class="k">try</span><span class="p">:</span>\n    
+        
+        
+        "        <span class="n">shutil</span><span class="p">.</span><span class="nf">move</span><span class="p">(</span><span class="n">fullpath_src_file</span><span class="p">,</span> <span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span><span class="n">destination_dir</span><span class="p">,</span> <span class="n">dest_file</span><span class="p">))</span>\n    
+        
+        
+        "    <span class="k">except</span> <span class="nb">OSError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>\n    
+        
+        
+        "        <span class="n">logger</span><span class="p">.</span><span class="nf">exception</span><span class="p">(</span><span class="n">e</span><span class="p">.</span><span class="n">strerror</span><span class="p">)</span>\n    
+        
+        
+        "        <span class="n">logger</span><span class="p">.</span><span class="nf">warning</span><span class="p">(</span><span class="sh">'</span><span class="s">File </span><span class="sh">'</span> <span class="o">+</span> <span class="n">fullpath_src_file</span> <span class="o">+</span> <span class="sh">'</span><span class="s"> was not moved to </span><span class="sh">'</span> <span class="o">+</span> <span class="n">destination_dir</span> <span class="o">+</span> <span class="sh">'</span><span class="s">/auto_renamed_pdf</span><span class="sh">'</span> <span class="p">)</span>\n    
+        
+        
+        "\n    
+        
+        
+        "<span class="k">def</span> <span class="nf">search_candidate_title</span><span class="p">(</span><span class="n">src_dir</span><span class="p">,</span> <span class="n">current_file</span><span class="p">):</span>\n    
+        
+        
+        "    <span class="n">meta_title</span><span class="p">,</span> <span class="n">font_based_title</span><span class="p">,</span> <span class="n">best_title</span> <span class="o">=</span> <span class="nf">scan_title</span><span class="p">(</span><span class="n">src_dir</span> <span class="o">+</span> <span class="sh">'</span><span class="s">/</span><span class="sh">'</span> <span class="o">+</span> <span class="n">current_file</span><span class="p">)</span>\n    
+        
+        
+        "    <span class="k">if</span> <span class="nf">len</span><span class="p">(</span><span class="n">best_title</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>\n    
+        
+        
+        "        <span class="k">return</span> <span class="n">best_title</span>\n    
+        
+        
+        "    <span class="k">elif</span> <span class="nf">len</span><span class="p">(</span><span class="n">font_based_title</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>\n    
+        
+        
+        "        <span class="k">return</span> <span class="n">font_based_title</span>\n    
+        
+        
+        "    <span class="k">elif</span> <span class="nf">len</span><span class="p">(</span><span class="n">meta_title</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>\n    
+        
+        
+        "        <span class="k">return</span> <span class="n">meta_title</span>\n    
+        
+        
+        "    <span class="k">else</span><span class="p">:</span>\n    
+        
+        
+        "        <span class="n">logger</span><span class="p">.</span><span class="nf">info</span><span class="p">(</span><span class="sh">'</span><span class="s">No potential Title was found for : </span><span class="sh">'</span> <span class="o">+</span> <span class="n">current_file</span><span class="p">)</span>\n    
+        
+        
+        "        <span class="k">return</span> <span class="bp">None</span>\n    
+        
+        
+        "\n    
+        
+        
+        "<span class="k">def</span> <span class="nf">rename_files_in_dir</span><span class="p">(</span><span class="n">base_dir</span><span class="p">):</span>\n    
+        
+        
+        "    <span class="n">renamed_counter</span> <span class="o">=</span> <span class="mi">0</span>\n    
+        
+        
+        "    <span class="n">total_counter</span> <span class="o">=</span> <span class="mi">0</span>\n    
+        
+        
+        "    <span class="n">file_fingerprints</span> <span class="o">=</span> <span class="p">[]</span>\n    
+        
+        
+        "    <span class="n">full_path_base_dir</span> <span class="o">=</span> <span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="nf">abspath</span><span class="p">(</span><span class="n">base_dir</span><span class="p">)</span>\n    
+        
+        
+        "    <span class="k">if</span> <span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="nf">isdir</span><span class="p">(</span><span class="n">full_path_base_dir</span><span class="p">):</span>\n    
+        
+        
+        "        <span class="n">list_of_files</span> <span class="o">=</span> <span class="p">[</span><span class="nb">file</span> <span class="k">for</span> <span class="nb">file</span> <span class="ow">in</span> <span class="n">os</span><span class="p">.</span><span class="nf">listdir</span><span class="p">(</span><span class="n">full_path_base_dir</span><span class="p">)</span> <span class="k">if</span> <span class="nb">file</span><span class="p">.</span><span class="nf">endswith</span><span class="p">(</span><span class="sh">'</span><span class="s">.pdf</span><span class="sh">'</span><span class="p">)]</span>\n    
+        
+        
+        "        <span class="k">if</span> <span class="nf">len</span><span class="p">(</span><span class="n">list_of_files</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>\n    
+        
+        
+        "            <span class="n">logger</span><span class="p">.</span><span class="nf">info</span><span class="p">(</span><span class="sh">'</span><span class="s">no pdf files found in the target directory</span><span class="sh">'</span><span class="p">)</span>\n    
+        
+        
+        "            <span class="k">return</span> <span class="n">renamed_counter</span><span class="p">,</span> <span class="n">total_counter</span>\n    
+        
+        
+        "        <span class="k">else</span><span class="p">:</span>\n    
+        
+        
+        "            <span class="n">logger</span><span class="p">.</span><span class="nf">info</span><span class="p">(</span><span class="nf">str</span><span class="p">(</span><span class="nf">len</span><span class="p">(</span><span class="n">list_of_files</span><span class="p">))</span> <span class="o">+</span> <span class="sh">'</span><span class="s"> files found in the target directory!</span><span class="sh">'</span><span class="p">)</span>\n    
+        
+        
+        "        <span class="n">loop_type</span> <span class="o">=</span> <span class="nf">select_loop_type</span><span class="p">()</span>\n    
+        
+        
+        "        <span class="k">for</span> <span class="n">current_file</span> <span class="ow">in</span> <span class="n">list_of_files</span><span class="p">:</span>\n    
+        
+        
+        "            <span class="n">total_counter</span> <span class="o">+=</span> <span class="mi">1</span>\n    
+        
+        
+        "            <span class="n">fingerprint</span> <span class="o">=</span> <span class="nf">hash_file</span><span class="p">(</span><span class="n">full_path_base_dir</span> <span class="o">+</span> <span class="sh">'</span><span class="s">/</span><span class="sh">'</span> <span class="o">+</span> <span class="n">current_file</span><span class="p">)</span>\n    
+        
+        
+        "            <span class="n">logger</span><span class="p">.</span><span class="nf">info</span><span class="p">(</span><span class="sh">'</span><span class="s">*</span><span class="sh">'</span> <span class="o">*</span> <span class="mi">80</span><span class="p">)</span>\n    
+        
+        
+        "            <span class="n">logger</span><span class="p">.</span><span class="nf">info</span><span class="p">(</span><span class="sh">'</span><span class="s">[Current file name] : </span><span class="sh">'</span> <span class="o">+</span> <span class="n">current_file</span><span class="p">)</span>\n    
+        
+        
+        "            <span class="n">logger</span><span class="p">.</span><span class="nf">debug</span><span class="p">(</span><span class="sh">'</span><span class="s">[Current file hash] : </span><span class="sh">'</span> <span class="o">+</span> <span class="n">fingerprint</span><span class="p">)</span>\n    
+        
+        
+        "            <span class="n">logger</span><span class="p">.</span><span class="nf">debug</span><span class="p">(</span><span class="sh">'</span><span class="s">[loop_type] : </span><span class="sh">'</span> <span class="o">+</span> <span class="n">loop_type</span><span class="p">)</span>\n    
+        
+        
+        "            <span class="k">if</span> <span class="n">loop_type</span> <span class="o">==</span> <span class="sh">'</span><span class="s">2</span><span class="sh">'</span><span class="p">:</span>\n    
+        
+        
+        "                <span class="n">answer</span> <span class="o">=</span> <span class="nf">confirm_to_continue</span><span class="p">()</span>\n    
+        
+        
+        "                <span class="k">if</span> <span class="n">answer</span> <span class="ow">is</span> <span class="bp">False</span><span class="p">:</span>\n    
+        
+        
+        "                    <span class="k">continue</span>\n    
+        
+        
+        "            <span class="k">if</span> <span class="n">fingerprint</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">file_fingerprints</span><span class="p">:</span>\n    
+        
+        
+        "                <span class="n">file_fingerprints</span><span class="p">.</span><span class="nf">append</span><span class="p">(</span><span class="n">fingerprint</span><span class="p">)</span>\n    
+        
+        
+        "                <span class="n">found_title</span> <span class="o">=</span> <span class="nf">search_candidate_title</span><span class="p">(</span><span class="n">full_path_base_dir</span><span class="p">,</span> <span class="n">current_file</span><span class="p">)</span>\n    
+        
+        
+        "                <span class="k">if</span> <span class="n">found_title</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>\n    
+        
+        
+        "                    <span class="n">renamed</span> <span class="o">=</span> <span class="nf">do_rename</span><span class="p">(</span><span class="n">full_path_base_dir</span> <span class="o">+</span> <span class="sh">'</span><span class="s">/</span><span class="sh">'</span> <span class="o">+</span> <span class="n">current_file</span><span class="p">,</span> <span class="n">full_path_base_dir</span> <span class="o">+</span> <span class="sh">'</span><span class="s">/</span><span class="sh">'</span> <span class="o">+</span> <span class="n">found_title</span><span class="p">)</span>\n    
+        
+        
+        "                    <span class="k">if</span> <span class="n">renamed</span><span class="p">:</span>\n    
+        
+        
+        "                        <span class="nf">move_file</span><span class="p">(</span><span class="n">full_path_base_dir</span> <span class="o">+</span> <span class="sh">'</span><span class="s">/</span><span class="sh">'</span> <span class="o">+</span> <span class="n">found_title</span><span class="p">,</span> <span class="n">full_path_base_dir</span> <span class="o">+</span> <span class="sh">'</span><span class="s">/auto_renamed_pdf</span><span class="sh">'</span><span class="p">,</span> <span class="n">found_title</span><span class="p">)</span>\n    
+        
+        
+        "                        <span class="n">renamed_counter</span> <span class="o">+=</span> <span class="mi">1</span>\n    
+        
+        
+        "            <span class="k">else</span><span class="p">:</span>\n    
+        
+        
+        "                <span class="n">logger</span><span class="p">.</span><span class="nf">warning</span><span class="p">(</span><span class="sh">'</span><span class="s">Another file with the same content (hash) was found in the source directory!</span><span class="sh">'</span><span class="p">)</span>\n    
+        
+        
+        "                <span class="n">logger</span><span class="p">.</span><span class="nf">info</span><span class="p">(</span><span class="sh">'</span><span class="s">Skipping file: </span><span class="sh">'</span> <span class="o">+</span> <span class="n">current_file</span> <span class="o">+</span> <span class="sh">'</span><span class="s"> adding prefix `duplicated_`to it</span><span class="sh">'</span><span class="p">)</span>\n    
+        
+        
+        "                <span class="n">os</span><span class="p">.</span><span class="nf">rename</span><span class="p">(</span><span class="n">full_path_base_dir</span> <span class="o">+</span> <span class="sh">'</span><span class="s">/</span><span class="sh">'</span> <span class="o">+</span> <span class="n">current_file</span><span class="p">,</span> <span class="n">full_path_base_dir</span> <span class="o">+</span> <span class="sh">'</span><span class="s">/duplicated_</span><span class="sh">'</span> <span class="o">+</span> <span class="n">current_file</span><span class="p">)</span>\n    
+        
+        
+        "    <span class="k">else</span><span class="p">:</span>\n    
+        
+        
+        "        <span class="n">logger</span><span class="p">.</span><span class="nf">error</span><span class="p">(</span><span class="sh">'</span><span class="s">Directory does not exist!</span><span class="sh">'</span><span class="p">)</span>\n    
+        
+        
+        "    <span class="k">return</span> <span class="n">renamed_counter</span><span class="p">,</span> <span class="n">total_counter</span>\n    
+        
+        
+        "\n    
+        
+        
+        "<span class="k">def</span> <span class="nf">rename_target_file</span><span class="p">(</span><span class="n">src_dir</span><span class="p">,</span> <span class="n">filename</span><span class="p">):</span>\n    
+        
+        
+        "    <span class="n">fullpath_filename</span> <span class="o">=</span> <span class="n">src_dir</span> <span class="o">+</span> <span class="sh">'</span><span class="s">/</span><span class="sh">'</span> <span class="o">+</span> <span class="n">filename</span>\n    
+        
+        
+        "    <span class="k">if</span> <span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="nf">isfile</span><span class="p">(</span><span class="n">fullpath_filename</span><span class="p">):</span>\n    
+        
+        
+        "        <span class="k">if</span> <span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="nf">abspath</span><span class="p">(</span><span class="n">fullpath_filename</span><span class="p">).</span><span class="nf">endswith</span><span class="p">(</span><span class="sh">'</span><span class="s">.pdf</span><span class="sh">'</span><span class="p">):</span>\n    
+        
+        
+        "            <span class="n">found_title</span> <span class="o">=</span> <span class="nf">search_candidate_title</span><span class="p">(</span><span class="n">src_dir</span><span class="p">,</span> <span class="n">filename</span><span class="p">)</span>\n    
+        
+        
+        "            <span class="k">if</span> <span class="n">found_title</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>\n    
+        
+        
+        "                <span class="n">renamed</span> <span class="o">=</span> <span class="nf">do_rename</span><span class="p">(</span><span class="n">fullpath_filename</span><span class="p">,</span> <span class="n">src_dir</span> <span class="o">+</span> <span class="sh">'</span><span class="s">/</span><span class="sh">'</span> <span class="o">+</span> <span class="n">found_title</span><span class="p">)</span>\n    
+        
+        
+        "                <span class="k">if</span> <span class="n">renamed</span><span class="p">:</span>\n    
+        
+        
+        "                    <span class="nf">move_file</span><span class="p">(</span><span class="n">src_dir</span> <span class="o">+</span> <span class="sh">'</span><span class="s">/</span><span class="sh">'</span> <span class="o">+</span> <span class="n">found_title</span><span class="p">,</span> <span class="n">src_dir</span> <span class="o">+</span> <span class="sh">'</span><span class="s">/auto_renamed_pdf</span><span class="sh">'</span><span class="p">,</span> <span class="n">found_title</span><span class="p">)</span>\n    
+        
+        
+        "                <span class="k">return</span> <span class="bp">True</span>\n    
+        
+        
+        "        <span class="k">else</span><span class="p">:</span>\n    
+        
+        
+        "            <span class="n">logger</span><span class="p">.</span><span class="nf">debug</span><span class="p">(</span><span class="sh">"</span><span class="s">File is not a pdf!</span><span class="sh">"</span><span class="p">)</span>\n    
+        
+        
+        "            <span class="k">return</span> <span class="bp">False</span>\n    
+        
+        
+        "    <span class="k">else</span><span class="p">:</span>\n    
+        
+        
+        "        <span class="n">logger</span><span class="p">.</span><span class="nf">error</span><span class="p">(</span><span class="sh">"</span><span class="s">File does not exist!</span><span class="sh">"</span><span class="p">)</span>\n    
+        
+        
+        "        <span class="k">return</span> <span class="bp">False</span>\n    
+        
+        
+        "\n    
+        
+        
+        "<span class="k">def</span> <span class="nf">main</span><span class="p">():</span>\n    
+        
+        
+        "    <span class="nf">print_header</span><span class="p">()</span>\n    
+        
+        
+        "    <span class="n">base_dir</span><span class="p">,</span> <span class="n">filename</span> <span class="o">=</span> <span class="nf">validate_arguments</span><span class="p">(</span><span class="n">sys</span><span class="p">.</span><span class="n">argv</span><span class="p">)</span>\n    
+        
+        
+        "    <span class="n">signal</span><span class="p">.</span><span class="nf">signal</span><span class="p">(</span><span class="n">signal</span><span class="p">.</span><span class="n">SIGINT</span><span class="p">,</span> <span class="n">keyboardInterruptHandler</span><span class="p">)</span>\n    
+        
+        
+        "    <span class="n">target_path</span> <span class="o">=</span> <span class="n">base_dir</span> <span class="o">+</span> <span class="sh">'</span><span class="s">/</span><span class="sh">'</span> <span class="o">+</span> <span class="n">filename</span>\n    
+        
+        
+        "    <span class="n">logger</span><span class="p">.</span><span class="nf">info</span><span class="p">(</span><span class="sh">'</span><span class="s">[Target Path]: </span><span class="sh">'</span> <span class="o">+</span> <span class="n">target_path</span><span class="p">)</span>\n    
+        
+        
+        "    <span class="n">rename_counter</span> <span class="o">=</span> <span class="mi">0</span>\n    
+        
+        
+        "    <span class="k">if</span> <span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="nf">isdir</span><span class="p">(</span><span class="n">target_path</span><span class="p">):</span>\n    
+        
+        
+        "        <span class="n">rename_counter</span><span class="p">,</span> <span class="n">total_counter</span> <span class="o">=</span> <span class="nf">rename_files_in_dir</span><span class="p">(</span><span class="n">base_dir</span><span class="p">)</span>\n    
+        
+        
+        "        <span class="n">logger</span><span class="p">.</span><span class="nf">info</span><span class="p">(</span><span class="sh">'</span><span class="s">*</span><span class="sh">'</span> <span class="o">*</span> <span class="mi">80</span><span class="p">)</span>\n    
+        
+        
+        "        <span class="n">logger</span><span class="p">.</span><span class="nf">info</span><span class="p">(</span><span class="sh">'</span><span class="s">Finished =&gt; Total files: </span><span class="sh">'</span> <span class="o">+</span> <span class="nf">str</span><span class="p">(</span><span class="n">total_counter</span><span class="p">)</span> <span class="o">+</span> <span class="sh">'</span><span class="s"> Renamed files: </span><span class="sh">'</span> <span class="o">+</span> <span class="nf">str</span><span class="p">(</span><span class="n">rename_counter</span><span class="p">))</span>\n    
+        
+        
+        "    <span class="k">else</span><span class="p">:</span>\n    
+        
+        
+        "        <span class="n">renamed</span> <span class="o">=</span> <span class="nf">rename_target_file</span><span class="p">(</span><span class="n">base_dir</span><span class="p">,</span> <span class="n">filename</span><span class="p">)</span>\n    
+        
+        
+        "        <span class="k">if</span> <span class="n">renamed</span><span class="p">:</span>\n    
+        
+        
+        "            <span class="n">rename_counter</span> <span class="o">+=</span> <span class="mi">1</span>\n    
+        
+        
+        "        <span class="n">logger</span><span class="p">.</span><span class="nf">info</span><span class="p">(</span><span class="sh">'</span><span class="s">*</span><span class="sh">'</span> <span class="o">*</span> <span class="mi">80</span><span class="p">)</span>\n    
+        
+        
+        "        <span class="n">logger</span><span class="p">.</span><span class="nf">info</span><span class="p">(</span><span class="sh">'</span><span class="s">Finished =&gt; Renamed files : </span><span class="sh">'</span> <span class="o">+</span> <span class="nf">str</span><span class="p">(</span><span class="n">rename_counter</span><span class="p">))</span>\n    
+        
+        
+        "\n    
+        
+        
+        "<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="sh">"</span><span class="s">__main__</span><span class="sh">"</span><span class="p">:</span>\n    
+        
+        
+        "    <span class="nf">main</span><span class="p">()</span>\n    
+        
+        
+        "</code></pre></div></div>\n    "
   <header class="header-container">
     <nav aria-label="Main navigation" class="header-content">
       <a href="/" aria-label="Home">
@@ -138,333 +1018,7 @@
       <div class="post-content-body">
         
 
-        <p>Fork of https://github.com/heversonbr/scientific-paper-pdf-rename</p>
-
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">#!/usr/bin/env python3
-</span><span class="kn">import</span> <span class="n">fitz</span>
-<span class="kn">import</span> <span class="n">os</span>
-<span class="kn">import</span> <span class="n">sys</span>
-<span class="kn">import</span> <span class="n">platform</span>
-<span class="kn">import</span> <span class="n">pkg_resources</span>
-<span class="kn">import</span> <span class="n">signal</span>
-<span class="kn">import</span> <span class="n">string</span>
-<span class="kn">import</span> <span class="n">hashlib</span>
-<span class="kn">import</span> <span class="n">shutil</span>
-<span class="kn">import</span> <span class="n">re</span>
-<span class="kn">import</span> <span class="n">logging</span>
-<span class="kn">import</span> <span class="n">llm</span>
-<span class="kn">from</span> <span class="n">src.helper</span> <span class="kn">import</span> <span class="o">*</span>
-
-<span class="c1"># Define logger / logger config
-</span><span class="n">log_level</span> <span class="o">=</span> <span class="n">logging</span><span class="p">.</span><span class="n">INFO</span>
-<span class="n">logging</span><span class="p">.</span><span class="nf">basicConfig</span><span class="p">(</span><span class="nb">format</span><span class="o">=</span><span class="sh">'</span><span class="s">[%(asctime)s] - [%(levelname)s]- %(message)s</span><span class="sh">'</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="n">log_level</span><span class="p">)</span>
-<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="p">.</span><span class="nf">getLogger</span><span class="p">()</span>
-<span class="nf">set_helper_logger</span><span class="p">(</span><span class="n">log_level</span><span class="p">)</span>
-
-<span class="c1"># Set your OpenAI API key
-</span><span class="n">model</span> <span class="o">=</span> <span class="n">llm</span><span class="p">.</span><span class="nf">get_model</span><span class="p">(</span><span class="sh">"</span><span class="s">gpt-3.5-turbo</span><span class="sh">"</span><span class="p">)</span>
-<span class="n">model</span><span class="p">.</span><span class="n">key</span> <span class="o">=</span> <span class="sh">"</span><span class="s">&lt;!-- INSERT OPENAI KEY --&gt;</span><span class="sh">"</span>
-
-<span class="k">def</span> <span class="nf">keyboardInterruptHandler</span><span class="p">(</span><span class="n">signal</span><span class="p">,</span> <span class="n">frame</span><span class="p">):</span>
-    <span class="n">logger</span><span class="p">.</span><span class="nf">info</span><span class="p">(</span><span class="sh">'</span><span class="s">You pressed Ctrl+C! Leaving...</span><span class="sh">'</span><span class="p">.</span><span class="nf">format</span><span class="p">(</span><span class="n">signal</span><span class="p">))</span>
-    <span class="n">sys</span><span class="p">.</span><span class="nf">exit</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
-
-<span class="k">def</span> <span class="nf">validate_arguments</span><span class="p">(</span><span class="n">arguments</span><span class="p">):</span>
-    <span class="k">if</span> <span class="nf">len</span><span class="p">(</span><span class="n">arguments</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">2</span><span class="p">:</span>
-        <span class="n">logger</span><span class="p">.</span><span class="nf">error</span><span class="p">(</span><span class="sh">'</span><span class="s">Wrong number of arguments!</span><span class="sh">'</span><span class="p">)</span>
-        <span class="nf">print_usage</span><span class="p">()</span>
-        <span class="n">sys</span><span class="p">.</span><span class="nf">exit</span><span class="p">()</span>
-    <span class="k">if</span> <span class="nf">len</span><span class="p">(</span><span class="n">sys</span><span class="p">.</span><span class="n">argv</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-        <span class="n">logger</span><span class="p">.</span><span class="nf">error</span><span class="p">(</span><span class="sh">"</span><span class="s">Missing arguments!</span><span class="sh">"</span><span class="p">)</span>
-        <span class="nf">print_usage</span><span class="p">()</span>
-        <span class="n">sys</span><span class="p">.</span><span class="nf">exit</span><span class="p">()</span>
-    <span class="k">if</span> <span class="nf">len</span><span class="p">(</span><span class="n">arguments</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
-        <span class="n">target</span> <span class="o">=</span> <span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="nf">abspath</span><span class="p">(</span><span class="n">arguments</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
-        <span class="n">base_dir</span> <span class="o">=</span> <span class="sh">''</span>
-        <span class="n">filename</span> <span class="o">=</span> <span class="sh">''</span>
-        <span class="k">if</span> <span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="nf">exists</span><span class="p">(</span><span class="n">target</span><span class="p">):</span>
-            <span class="k">if</span> <span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="nf">isdir</span><span class="p">(</span><span class="n">target</span><span class="p">):</span>
-                <span class="n">base_dir</span> <span class="o">=</span> <span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="nf">abspath</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="k">if</span> <span class="n">target</span><span class="p">.</span><span class="nf">endswith</span><span class="p">(</span><span class="sh">'</span><span class="s">.pdf</span><span class="sh">'</span><span class="p">):</span>
-                    <span class="n">base_dir</span> <span class="o">=</span> <span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="nf">dirname</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>
-                    <span class="n">filename</span> <span class="o">=</span> <span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="nf">basename</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>
-                <span class="k">else</span><span class="p">:</span>
-                    <span class="n">logger</span><span class="p">.</span><span class="nf">error</span><span class="p">(</span><span class="sh">'</span><span class="s">Argument is not a pdf file</span><span class="sh">'</span><span class="p">)</span>
-                    <span class="n">sys</span><span class="p">.</span><span class="nf">exit</span><span class="p">()</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">logger</span><span class="p">.</span><span class="nf">error</span><span class="p">(</span><span class="sh">"</span><span class="s">Directory or file [</span><span class="sh">"</span><span class="o">+</span> <span class="n">arguments</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="sh">"</span><span class="s">] path does not exist!</span><span class="sh">"</span><span class="p">)</span>
-            <span class="n">sys</span><span class="p">.</span><span class="nf">exit</span><span class="p">()</span>
-        <span class="k">return</span> <span class="n">base_dir</span><span class="p">,</span> <span class="n">filename</span>
-
-<span class="k">def</span> <span class="nf">hash_file</span><span class="p">(</span><span class="n">target_file</span><span class="p">):</span>
-    <span class="n">blocksize</span> <span class="o">=</span> <span class="mi">65536</span>
-    <span class="n">hasher</span> <span class="o">=</span> <span class="n">hashlib</span><span class="p">.</span><span class="nf">new</span><span class="p">(</span><span class="sh">'</span><span class="s">sha256</span><span class="sh">'</span><span class="p">)</span>
-    <span class="n">target_file</span> <span class="o">=</span> <span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="nf">abspath</span><span class="p">(</span><span class="n">target_file</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="nf">isfile</span><span class="p">(</span><span class="n">target_file</span><span class="p">):</span>
-        <span class="k">with</span> <span class="nf">open</span><span class="p">(</span><span class="n">target_file</span><span class="p">,</span> <span class="sh">'</span><span class="s">rb</span><span class="sh">'</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
-            <span class="k">while</span> <span class="bp">True</span><span class="p">:</span>
-                <span class="n">data</span> <span class="o">=</span> <span class="n">f</span><span class="p">.</span><span class="nf">read</span><span class="p">(</span><span class="n">blocksize</span><span class="p">)</span>
-                <span class="k">if</span> <span class="ow">not</span> <span class="n">data</span><span class="p">:</span>
-                    <span class="k">break</span>
-                <span class="n">hasher</span><span class="p">.</span><span class="nf">update</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">hasher</span><span class="p">.</span><span class="nf">hexdigest</span><span class="p">()</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="n">logger</span><span class="p">.</span><span class="nf">error</span><span class="p">(</span><span class="n">target_file</span> <span class="o">+</span> <span class="sh">'</span><span class="s"> is not a file</span><span class="sh">'</span><span class="p">)</span>
-        <span class="n">sys</span><span class="p">.</span><span class="nf">exit</span><span class="p">()</span>
-
-<span class="k">def</span> <span class="nf">parse_title</span><span class="p">(</span><span class="n">title</span><span class="p">,</span> <span class="n">max_length</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
-    <span class="k">if</span> <span class="n">max_length</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
-        <span class="n">max_length</span> <span class="o">=</span> <span class="mi">125</span>
-    <span class="k">if</span> <span class="nf">len</span><span class="p">(</span><span class="n">title</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">max_length</span><span class="p">:</span>
-        <span class="n">title</span> <span class="o">=</span> <span class="n">title</span><span class="p">[:</span><span class="n">max_length</span><span class="p">]</span>
-    <span class="n">title</span> <span class="o">=</span> <span class="n">re</span><span class="p">.</span><span class="nf">sub</span><span class="p">(</span><span class="sa">r</span><span class="sh">'</span><span class="s">[^a-zA-Z0-9]+</span><span class="sh">'</span><span class="p">,</span> <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">,</span> <span class="n">title</span><span class="p">)</span>
-    <span class="n">title</span> <span class="o">=</span> <span class="n">title</span><span class="p">.</span><span class="nf">strip</span><span class="p">()</span>
-    <span class="n">title</span> <span class="o">=</span> <span class="n">re</span><span class="p">.</span><span class="nf">sub</span><span class="p">(</span><span class="sa">r</span><span class="sh">'</span><span class="s">\s</span><span class="sh">'</span><span class="p">,</span> <span class="sh">'</span><span class="s">_</span><span class="sh">'</span><span class="p">,</span> <span class="n">title</span><span class="p">)</span>
-    <span class="n">title</span> <span class="o">=</span> <span class="n">string</span><span class="p">.</span><span class="nf">capwords</span><span class="p">(</span><span class="n">title</span><span class="p">)</span> <span class="o">+</span> <span class="sh">'</span><span class="s">.pdf</span><span class="sh">'</span>
-    <span class="k">return</span> <span class="n">title</span>
-
-<span class="k">def</span> <span class="nf">get_page_text</span><span class="p">(</span><span class="n">current_page</span><span class="p">):</span>
-    <span class="n">python_version</span> <span class="o">=</span> <span class="n">platform</span><span class="p">.</span><span class="nf">python_version</span><span class="p">()</span>
-    <span class="n">library_name</span> <span class="o">=</span> <span class="sh">"</span><span class="s">PyMuPDF</span><span class="sh">"</span>
-    <span class="n">library_version</span> <span class="o">=</span> <span class="n">pkg_resources</span><span class="p">.</span><span class="nf">get_distribution</span><span class="p">(</span><span class="n">library_name</span><span class="p">).</span><span class="n">version</span>
-
-    <span class="n">acceptable_python_versions</span> <span class="o">=</span> <span class="p">[</span><span class="sh">"</span><span class="s">3.11</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">3.7</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">3.8</span><span class="sh">"</span><span class="p">]</span>
-    <span class="n">acceptable_pymupdf_versions</span> <span class="o">=</span> <span class="p">[</span><span class="sh">"</span><span class="s">1.22</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">1.18</span><span class="sh">"</span><span class="p">]</span>
-
-    <span class="k">if</span> <span class="nf">any</span><span class="p">(</span><span class="n">python_version</span><span class="p">.</span><span class="nf">startswith</span><span class="p">(</span><span class="n">ver</span><span class="p">)</span> <span class="k">for</span> <span class="n">ver</span> <span class="ow">in</span> <span class="n">acceptable_python_versions</span><span class="p">)</span> <span class="ow">and</span> \
-       <span class="nf">any</span><span class="p">(</span><span class="n">library_version</span><span class="p">.</span><span class="nf">startswith</span><span class="p">(</span><span class="n">ver</span><span class="p">)</span> <span class="k">for</span> <span class="n">ver</span> <span class="ow">in</span> <span class="n">acceptable_pymupdf_versions</span><span class="p">):</span>
-        <span class="n">blocks</span> <span class="o">=</span> <span class="n">current_page</span><span class="p">.</span><span class="nf">get_text</span><span class="p">(</span><span class="sh">'</span><span class="s">dict</span><span class="sh">'</span><span class="p">)[</span><span class="sh">'</span><span class="s">blocks</span><span class="sh">'</span><span class="p">]</span>
-        <span class="n">logger</span><span class="p">.</span><span class="nf">debug</span><span class="p">(</span><span class="sh">'</span><span class="s">Python version is: </span><span class="sh">'</span> <span class="o">+</span> <span class="n">python_version</span><span class="p">)</span>
-        <span class="n">logger</span><span class="p">.</span><span class="nf">debug</span><span class="p">(</span><span class="sh">'</span><span class="s">PyMuPDF version is: </span><span class="sh">'</span> <span class="o">+</span> <span class="n">library_version</span><span class="p">)</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="n">logger</span><span class="p">.</span><span class="nf">warning</span><span class="p">(</span><span class="sh">'</span><span class="s">Python version is: </span><span class="sh">'</span> <span class="o">+</span> <span class="n">python_version</span><span class="p">)</span>
-        <span class="n">logger</span><span class="p">.</span><span class="nf">warning</span><span class="p">(</span><span class="sh">'</span><span class="s">PyMuPDF version is: </span><span class="sh">'</span> <span class="o">+</span> <span class="n">library_version</span><span class="p">)</span>
-        <span class="n">logger</span><span class="p">.</span><span class="nf">error</span><span class="p">(</span><span class="sh">'</span><span class="s">Your Python version or PyMuPDF is not at the required level!</span><span class="sh">'</span><span class="p">)</span>
-        <span class="n">logger</span><span class="p">.</span><span class="nf">error</span><span class="p">(</span><span class="sh">'</span><span class="s">Please ensure that both meet the specified version requirements for this script to function properly.</span><span class="sh">'</span><span class="p">)</span>
-        <span class="n">sys</span><span class="p">.</span><span class="nf">exit</span><span class="p">()</span>
-
-    <span class="k">return</span> <span class="n">blocks</span>
-
-<span class="k">def</span> <span class="nf">get_best_title_from_llm</span><span class="p">(</span><span class="n">text_content</span><span class="p">):</span>
-    <span class="n">response</span> <span class="o">=</span> <span class="n">model</span><span class="p">.</span><span class="nf">prompt</span><span class="p">(</span>
-        <span class="n">text_content</span><span class="p">,</span>
-        <span class="n">system</span><span class="o">=</span><span class="sh">'</span><span class="s">Given the extracted text from a PDF document, craft the most fitting title. The title should be accurate, clear, concise, and relevant to researchers, adhering, if possible, to the standard of ABNT NBR 6023 (e.g., </span><span class="sh">"</span><span class="s">MARX, Karl; ENGELS, Friedrich. The communist manifesto. In: Ideals and ideologies. Routledge, 2019. p. 243-255.</span><span class="sh">"</span><span class="s">). However, ensure the title adheres to filename restrictions: avoid characters like `/ \ ? * : &lt; &gt; |` and control characters (ASCII 0-31). Prioritize alphanumeric characters, hyphens, underscores, and periods. Your response MUST contain ONLY the crafted title, NO MORE, NO LESS.</span><span class="sh">'</span><span class="p">)</span>
-    <span class="n">title</span> <span class="o">=</span> <span class="n">response</span><span class="p">.</span><span class="nf">text</span><span class="p">().</span><span class="nf">strip</span><span class="p">()</span>
-    <span class="k">return</span> <span class="n">title</span>
-
-<span class="k">def</span> <span class="nf">scan_title</span><span class="p">(</span><span class="n">full_file_name</span><span class="p">,</span> <span class="n">page_num</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
-    <span class="k">if</span> <span class="n">page_num</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
-        <span class="n">page_num</span> <span class="o">=</span> <span class="mi">0</span>
-    <span class="n">doc</span> <span class="o">=</span> <span class="n">fitz</span><span class="p">.</span><span class="nf">open</span><span class="p">(</span><span class="n">full_file_name</span><span class="p">)</span>
-    <span class="n">meta_title</span> <span class="o">=</span> <span class="n">doc</span><span class="p">.</span><span class="n">metadata</span><span class="p">[</span><span class="sh">'</span><span class="s">title</span><span class="sh">'</span><span class="p">].</span><span class="nf">strip</span><span class="p">()</span>
-    <span class="k">if</span> <span class="nf">len</span><span class="p">(</span><span class="n">meta_title</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">5</span><span class="p">:</span>
-        <span class="n">meta_title</span> <span class="o">=</span> <span class="nf">parse_title</span><span class="p">(</span><span class="n">meta_title</span><span class="p">)</span>
-    <span class="n">page</span> <span class="o">=</span> <span class="n">doc</span><span class="p">.</span><span class="nf">load_page</span><span class="p">(</span><span class="n">page_num</span><span class="p">)</span>
-    <span class="n">size_text_tup_list</span> <span class="o">=</span> <span class="p">[]</span>
-    <span class="n">title</span> <span class="o">=</span> <span class="sh">''</span>
-    <span class="n">blocks</span> <span class="o">=</span> <span class="nf">get_page_text</span><span class="p">(</span><span class="n">page</span><span class="p">)</span>
-    <span class="n">text_content</span> <span class="o">=</span> <span class="sh">""</span>
-    <span class="k">for</span> <span class="n">blk</span> <span class="ow">in</span> <span class="n">blocks</span><span class="p">:</span>
-        <span class="k">if</span> <span class="n">blk</span><span class="p">[</span><span class="sh">'</span><span class="s">type</span><span class="sh">'</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">blk</span><span class="p">[</span><span class="sh">'</span><span class="s">lines</span><span class="sh">'</span><span class="p">]:</span>
-                <span class="k">if</span> <span class="n">line</span><span class="p">[</span><span class="sh">'</span><span class="s">dir</span><span class="sh">'</span><span class="p">]</span> <span class="o">==</span> <span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)</span> <span class="ow">and</span> <span class="n">line</span><span class="p">[</span><span class="sh">'</span><span class="s">wmode</span><span class="sh">'</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-                    <span class="k">for</span> <span class="n">span</span> <span class="ow">in</span> <span class="n">line</span><span class="p">[</span><span class="sh">'</span><span class="s">spans</span><span class="sh">'</span><span class="p">]:</span>
-                        <span class="n">size_text_tup</span> <span class="o">=</span> <span class="p">(</span><span class="n">span</span><span class="p">[</span><span class="sh">'</span><span class="s">size</span><span class="sh">'</span><span class="p">],</span> <span class="n">span</span><span class="p">[</span><span class="sh">'</span><span class="s">text</span><span class="sh">'</span><span class="p">],</span> <span class="n">span</span><span class="p">[</span><span class="sh">'</span><span class="s">origin</span><span class="sh">'</span><span class="p">])</span>
-                        <span class="n">size_text_tup_list</span><span class="p">.</span><span class="nf">append</span><span class="p">(</span><span class="n">size_text_tup</span><span class="p">)</span>
-                        <span class="n">text_content</span> <span class="o">+=</span> <span class="n">span</span><span class="p">[</span><span class="sh">'</span><span class="s">text</span><span class="sh">'</span><span class="p">]</span> <span class="o">+</span> <span class="sh">"</span><span class="s"> </span><span class="sh">"</span>
-    <span class="n">sorted_size_text_list</span> <span class="o">=</span> <span class="nf">sorted</span><span class="p">(</span><span class="n">size_text_tup_list</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">text_size</span><span class="p">:</span> <span class="n">text_size</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">reverse</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
-    <span class="n">larger_font</span> <span class="o">=</span> <span class="mi">0</span>
-    <span class="n">title_max_lines</span> <span class="o">=</span> <span class="mi">5</span>
-    <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">sorted_size_text_list</span><span class="p">:</span>
-        <span class="n">t_font_size</span> <span class="o">=</span> <span class="n">item</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-        <span class="n">t_text</span> <span class="o">=</span> <span class="n">item</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
-        <span class="n">t_text_len</span> <span class="o">=</span> <span class="nf">len</span><span class="p">(</span><span class="n">t_text</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">t_text_len</span> <span class="o">&gt;</span> <span class="mi">2</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">t_font_size</span> <span class="o">&gt;</span> <span class="n">larger_font</span><span class="p">:</span>
-                <span class="n">larger_font</span> <span class="o">=</span> <span class="n">t_font_size</span>
-                <span class="n">title</span> <span class="o">=</span> <span class="n">t_text</span><span class="p">.</span><span class="nf">strip</span><span class="p">()</span> <span class="o">+</span> <span class="sh">'</span><span class="s"> </span><span class="sh">'</span>
-                <span class="n">title_max_lines</span> <span class="o">-=</span> <span class="mi">1</span>
-            <span class="k">elif</span> <span class="n">t_font_size</span> <span class="o">==</span> <span class="n">larger_font</span><span class="p">:</span>
-                <span class="n">title</span> <span class="o">=</span> <span class="n">title</span> <span class="o">+</span> <span class="n">t_text</span><span class="p">.</span><span class="nf">strip</span><span class="p">()</span> <span class="o">+</span> <span class="sh">'</span><span class="s"> </span><span class="sh">'</span>
-                <span class="n">title_max_lines</span> <span class="o">-=</span> <span class="mi">1</span>
-            <span class="k">if</span> <span class="n">title_max_lines</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
-                <span class="k">break</span>
-    <span class="n">doc</span><span class="p">.</span><span class="nf">close</span><span class="p">()</span>
-    <span class="n">parsed_found_title</span> <span class="o">=</span> <span class="nf">parse_title</span><span class="p">(</span><span class="n">title</span><span class="p">)</span>
-    <span class="n">best_title</span> <span class="o">=</span> <span class="nf">get_best_title_from_llm</span><span class="p">(</span><span class="n">text_content</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">meta_title</span><span class="p">,</span> <span class="n">parsed_found_title</span><span class="p">,</span> <span class="n">best_title</span>
-
-<span class="k">def</span> <span class="nf">do_rename</span><span class="p">(</span><span class="n">fullpath_current_filename</span><span class="p">,</span> <span class="n">fullpath_new_filename</span><span class="p">):</span>
-    <span class="k">if</span> <span class="n">fullpath_current_filename</span> <span class="o">==</span> <span class="n">fullpath_new_filename</span><span class="p">:</span>
-        <span class="n">logger</span><span class="p">.</span><span class="nf">warning</span><span class="p">(</span><span class="sh">'</span><span class="s">Current filename and found title are already the same. Skipping...</span><span class="sh">'</span><span class="p">)</span>
-        <span class="k">return</span> <span class="bp">False</span>
-    <span class="k">try</span><span class="p">:</span>
-        <span class="n">os</span><span class="p">.</span><span class="nf">rename</span><span class="p">(</span><span class="n">fullpath_current_filename</span><span class="p">,</span> <span class="n">fullpath_new_filename</span><span class="p">)</span>
-    <span class="k">except</span><span class="p">:</span>
-        <span class="n">logger</span><span class="p">.</span><span class="nf">error</span><span class="p">(</span><span class="sh">"</span><span class="s">An exception occurred. File not renamed!</span><span class="sh">"</span><span class="p">)</span>
-        <span class="k">return</span> <span class="bp">False</span>
-    <span class="k">return</span> <span class="bp">True</span>
-
-<span class="k">def</span> <span class="nf">confirm_to_continue</span><span class="p">():</span>
-    <span class="n">valid_choices</span> <span class="o">=</span> <span class="p">[</span><span class="sh">'</span><span class="s">c</span><span class="sh">'</span><span class="p">,</span> <span class="sh">'</span><span class="s">s</span><span class="sh">'</span><span class="p">,</span> <span class="sh">'</span><span class="s">a</span><span class="sh">'</span><span class="p">]</span>
-    <span class="n">choice</span> <span class="o">=</span> <span class="nf">input</span><span class="p">(</span><span class="sh">'</span><span class="s">Choose [c] to continue, [s] to skip, or [a] to abort : </span><span class="se">
         
-      
-    
-      
-        
-        
-        
-          </span><span class="sh">'</span><span class="p">)</span>
-    <span class="nf">while</span><span class="p">(</span><span class="n">choice</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">valid_choices</span><span class="p">):</span>
-        <span class="n">choice</span> <span class="o">=</span> <span class="nf">input</span><span class="p">(</span><span class="sh">'</span><span class="s">Choose [c] to continue or [a] to abort : </span><span class="se">
-        
-      
-    
-      
-        
-        
-        
-          </span><span class="sh">'</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">choice</span> <span class="o">==</span> <span class="sh">'</span><span class="s">c</span><span class="sh">'</span><span class="p">:</span>
-        <span class="k">return</span> <span class="bp">True</span>
-    <span class="k">if</span> <span class="n">choice</span> <span class="o">==</span> <span class="sh">'</span><span class="s">s</span><span class="sh">'</span><span class="p">:</span>
-        <span class="k">return</span> <span class="bp">False</span>
-    <span class="k">if</span> <span class="n">choice</span> <span class="o">==</span> <span class="sh">'</span><span class="s">a</span><span class="sh">'</span><span class="p">:</span>
-        <span class="n">logger</span><span class="p">.</span><span class="nf">info</span><span class="p">(</span><span class="sh">"</span><span class="s">aborting...</span><span class="sh">"</span><span class="p">)</span>
-        <span class="n">sys</span><span class="p">.</span><span class="nf">exit</span><span class="p">()</span>
-
-<span class="k">def</span> <span class="nf">select_loop_type</span><span class="p">():</span>
-    <span class="n">logger</span><span class="p">.</span><span class="nf">info</span><span class="p">(</span><span class="sh">'</span><span class="s">Choose [1] : for renaming all pdf files in the directory</span><span class="sh">'</span><span class="p">)</span>
-    <span class="n">logger</span><span class="p">.</span><span class="nf">info</span><span class="p">(</span><span class="sh">'</span><span class="s">Choose [2] : for one-by-one pdf file confirmation</span><span class="sh">'</span><span class="p">)</span>
-    <span class="n">valid_choices</span> <span class="o">=</span> <span class="p">[</span><span class="sh">'</span><span class="s">1</span><span class="sh">'</span><span class="p">,</span> <span class="sh">'</span><span class="s">2</span><span class="sh">'</span><span class="p">,</span> <span class="sh">'</span><span class="s">q</span><span class="sh">'</span><span class="p">]</span>
-    <span class="n">choice</span> <span class="o">=</span> <span class="nf">input</span><span class="p">(</span><span class="sh">'</span><span class="s">Choose [1], [2] or q [quit] : </span><span class="se">
-        
-      
-    
-      
-        
-        
-        
-          </span><span class="sh">'</span><span class="p">)</span>
-    <span class="nf">while</span><span class="p">(</span><span class="n">choice</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">valid_choices</span><span class="p">):</span>
-        <span class="n">choice</span> <span class="o">=</span> <span class="nf">input</span><span class="p">(</span><span class="sh">'</span><span class="s">Choose [1], [2] or q [quit] : </span><span class="se">
-        
-      
-    
-      
-        
-        
-        
-          </span><span class="sh">'</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">choice</span> <span class="o">==</span> <span class="sh">'</span><span class="s">1</span><span class="sh">'</span><span class="p">:</span>
-        <span class="k">return</span> <span class="sh">'</span><span class="s">1</span><span class="sh">'</span>
-    <span class="k">if</span> <span class="n">choice</span> <span class="o">==</span> <span class="sh">'</span><span class="s">2</span><span class="sh">'</span><span class="p">:</span>
-        <span class="k">return</span> <span class="sh">'</span><span class="s">2</span><span class="sh">'</span>
-    <span class="k">if</span> <span class="n">choice</span> <span class="o">==</span> <span class="sh">'</span><span class="s">q</span><span class="sh">'</span><span class="p">:</span>
-        <span class="n">logger</span><span class="p">.</span><span class="nf">info</span><span class="p">(</span><span class="sh">"</span><span class="s">aborting...</span><span class="sh">"</span><span class="p">)</span>
-        <span class="n">sys</span><span class="p">.</span><span class="nf">exit</span><span class="p">()</span>
-
-<span class="k">def</span> <span class="nf">move_file</span><span class="p">(</span><span class="n">fullpath_src_file</span><span class="p">,</span> <span class="n">destination_dir</span><span class="p">,</span> <span class="n">dest_file</span><span class="p">):</span>
-    <span class="nf">if</span><span class="p">(</span><span class="ow">not</span> <span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="nf">isdir</span><span class="p">(</span><span class="n">destination_dir</span><span class="p">)):</span>
-        <span class="n">os</span><span class="p">.</span><span class="nf">mkdir</span><span class="p">(</span><span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span><span class="n">destination_dir</span><span class="p">))</span>
-    <span class="k">try</span><span class="p">:</span>
-        <span class="n">shutil</span><span class="p">.</span><span class="nf">move</span><span class="p">(</span><span class="n">fullpath_src_file</span><span class="p">,</span> <span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span><span class="n">destination_dir</span><span class="p">,</span> <span class="n">dest_file</span><span class="p">))</span>
-    <span class="k">except</span> <span class="nb">OSError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-        <span class="n">logger</span><span class="p">.</span><span class="nf">exception</span><span class="p">(</span><span class="n">e</span><span class="p">.</span><span class="n">strerror</span><span class="p">)</span>
-        <span class="n">logger</span><span class="p">.</span><span class="nf">warning</span><span class="p">(</span><span class="sh">'</span><span class="s">File </span><span class="sh">'</span> <span class="o">+</span> <span class="n">fullpath_src_file</span> <span class="o">+</span> <span class="sh">'</span><span class="s"> was not moved to </span><span class="sh">'</span> <span class="o">+</span> <span class="n">destination_dir</span> <span class="o">+</span> <span class="sh">'</span><span class="s">/auto_renamed_pdf</span><span class="sh">'</span> <span class="p">)</span>
-
-<span class="k">def</span> <span class="nf">search_candidate_title</span><span class="p">(</span><span class="n">src_dir</span><span class="p">,</span> <span class="n">current_file</span><span class="p">):</span>
-    <span class="n">meta_title</span><span class="p">,</span> <span class="n">font_based_title</span><span class="p">,</span> <span class="n">best_title</span> <span class="o">=</span> <span class="nf">scan_title</span><span class="p">(</span><span class="n">src_dir</span> <span class="o">+</span> <span class="sh">'</span><span class="s">/</span><span class="sh">'</span> <span class="o">+</span> <span class="n">current_file</span><span class="p">)</span>
-    <span class="k">if</span> <span class="nf">len</span><span class="p">(</span><span class="n">best_title</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">best_title</span>
-    <span class="k">elif</span> <span class="nf">len</span><span class="p">(</span><span class="n">font_based_title</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">font_based_title</span>
-    <span class="k">elif</span> <span class="nf">len</span><span class="p">(</span><span class="n">meta_title</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">meta_title</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="n">logger</span><span class="p">.</span><span class="nf">info</span><span class="p">(</span><span class="sh">'</span><span class="s">No potential Title was found for : </span><span class="sh">'</span> <span class="o">+</span> <span class="n">current_file</span><span class="p">)</span>
-        <span class="k">return</span> <span class="bp">None</span>
-
-<span class="k">def</span> <span class="nf">rename_files_in_dir</span><span class="p">(</span><span class="n">base_dir</span><span class="p">):</span>
-    <span class="n">renamed_counter</span> <span class="o">=</span> <span class="mi">0</span>
-    <span class="n">total_counter</span> <span class="o">=</span> <span class="mi">0</span>
-    <span class="n">file_fingerprints</span> <span class="o">=</span> <span class="p">[]</span>
-    <span class="n">full_path_base_dir</span> <span class="o">=</span> <span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="nf">abspath</span><span class="p">(</span><span class="n">base_dir</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="nf">isdir</span><span class="p">(</span><span class="n">full_path_base_dir</span><span class="p">):</span>
-        <span class="n">list_of_files</span> <span class="o">=</span> <span class="p">[</span><span class="nb">file</span> <span class="k">for</span> <span class="nb">file</span> <span class="ow">in</span> <span class="n">os</span><span class="p">.</span><span class="nf">listdir</span><span class="p">(</span><span class="n">full_path_base_dir</span><span class="p">)</span> <span class="k">if</span> <span class="nb">file</span><span class="p">.</span><span class="nf">endswith</span><span class="p">(</span><span class="sh">'</span><span class="s">.pdf</span><span class="sh">'</span><span class="p">)]</span>
-        <span class="k">if</span> <span class="nf">len</span><span class="p">(</span><span class="n">list_of_files</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
-            <span class="n">logger</span><span class="p">.</span><span class="nf">info</span><span class="p">(</span><span class="sh">'</span><span class="s">no pdf files found in the target directory</span><span class="sh">'</span><span class="p">)</span>
-            <span class="k">return</span> <span class="n">renamed_counter</span><span class="p">,</span> <span class="n">total_counter</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">logger</span><span class="p">.</span><span class="nf">info</span><span class="p">(</span><span class="nf">str</span><span class="p">(</span><span class="nf">len</span><span class="p">(</span><span class="n">list_of_files</span><span class="p">))</span> <span class="o">+</span> <span class="sh">'</span><span class="s"> files found in the target directory!</span><span class="sh">'</span><span class="p">)</span>
-        <span class="n">loop_type</span> <span class="o">=</span> <span class="nf">select_loop_type</span><span class="p">()</span>
-        <span class="k">for</span> <span class="n">current_file</span> <span class="ow">in</span> <span class="n">list_of_files</span><span class="p">:</span>
-            <span class="n">total_counter</span> <span class="o">+=</span> <span class="mi">1</span>
-            <span class="n">fingerprint</span> <span class="o">=</span> <span class="nf">hash_file</span><span class="p">(</span><span class="n">full_path_base_dir</span> <span class="o">+</span> <span class="sh">'</span><span class="s">/</span><span class="sh">'</span> <span class="o">+</span> <span class="n">current_file</span><span class="p">)</span>
-            <span class="n">logger</span><span class="p">.</span><span class="nf">info</span><span class="p">(</span><span class="sh">'</span><span class="s">*</span><span class="sh">'</span> <span class="o">*</span> <span class="mi">80</span><span class="p">)</span>
-            <span class="n">logger</span><span class="p">.</span><span class="nf">info</span><span class="p">(</span><span class="sh">'</span><span class="s">[Current file name] : </span><span class="sh">'</span> <span class="o">+</span> <span class="n">current_file</span><span class="p">)</span>
-            <span class="n">logger</span><span class="p">.</span><span class="nf">debug</span><span class="p">(</span><span class="sh">'</span><span class="s">[Current file hash] : </span><span class="sh">'</span> <span class="o">+</span> <span class="n">fingerprint</span><span class="p">)</span>
-            <span class="n">logger</span><span class="p">.</span><span class="nf">debug</span><span class="p">(</span><span class="sh">'</span><span class="s">[loop_type] : </span><span class="sh">'</span> <span class="o">+</span> <span class="n">loop_type</span><span class="p">)</span>
-            <span class="k">if</span> <span class="n">loop_type</span> <span class="o">==</span> <span class="sh">'</span><span class="s">2</span><span class="sh">'</span><span class="p">:</span>
-                <span class="n">answer</span> <span class="o">=</span> <span class="nf">confirm_to_continue</span><span class="p">()</span>
-                <span class="k">if</span> <span class="n">answer</span> <span class="ow">is</span> <span class="bp">False</span><span class="p">:</span>
-                    <span class="k">continue</span>
-            <span class="k">if</span> <span class="n">fingerprint</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">file_fingerprints</span><span class="p">:</span>
-                <span class="n">file_fingerprints</span><span class="p">.</span><span class="nf">append</span><span class="p">(</span><span class="n">fingerprint</span><span class="p">)</span>
-                <span class="n">found_title</span> <span class="o">=</span> <span class="nf">search_candidate_title</span><span class="p">(</span><span class="n">full_path_base_dir</span><span class="p">,</span> <span class="n">current_file</span><span class="p">)</span>
-                <span class="k">if</span> <span class="n">found_title</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
-                    <span class="n">renamed</span> <span class="o">=</span> <span class="nf">do_rename</span><span class="p">(</span><span class="n">full_path_base_dir</span> <span class="o">+</span> <span class="sh">'</span><span class="s">/</span><span class="sh">'</span> <span class="o">+</span> <span class="n">current_file</span><span class="p">,</span> <span class="n">full_path_base_dir</span> <span class="o">+</span> <span class="sh">'</span><span class="s">/</span><span class="sh">'</span> <span class="o">+</span> <span class="n">found_title</span><span class="p">)</span>
-                    <span class="k">if</span> <span class="n">renamed</span><span class="p">:</span>
-                        <span class="nf">move_file</span><span class="p">(</span><span class="n">full_path_base_dir</span> <span class="o">+</span> <span class="sh">'</span><span class="s">/</span><span class="sh">'</span> <span class="o">+</span> <span class="n">found_title</span><span class="p">,</span> <span class="n">full_path_base_dir</span> <span class="o">+</span> <span class="sh">'</span><span class="s">/auto_renamed_pdf</span><span class="sh">'</span><span class="p">,</span> <span class="n">found_title</span><span class="p">)</span>
-                        <span class="n">renamed_counter</span> <span class="o">+=</span> <span class="mi">1</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="n">logger</span><span class="p">.</span><span class="nf">warning</span><span class="p">(</span><span class="sh">'</span><span class="s">Another file with the same content (hash) was found in the source directory!</span><span class="sh">'</span><span class="p">)</span>
-                <span class="n">logger</span><span class="p">.</span><span class="nf">info</span><span class="p">(</span><span class="sh">'</span><span class="s">Skipping file: </span><span class="sh">'</span> <span class="o">+</span> <span class="n">current_file</span> <span class="o">+</span> <span class="sh">'</span><span class="s"> adding prefix `duplicated_`to it</span><span class="sh">'</span><span class="p">)</span>
-                <span class="n">os</span><span class="p">.</span><span class="nf">rename</span><span class="p">(</span><span class="n">full_path_base_dir</span> <span class="o">+</span> <span class="sh">'</span><span class="s">/</span><span class="sh">'</span> <span class="o">+</span> <span class="n">current_file</span><span class="p">,</span> <span class="n">full_path_base_dir</span> <span class="o">+</span> <span class="sh">'</span><span class="s">/duplicated_</span><span class="sh">'</span> <span class="o">+</span> <span class="n">current_file</span><span class="p">)</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="n">logger</span><span class="p">.</span><span class="nf">error</span><span class="p">(</span><span class="sh">'</span><span class="s">Directory does not exist!</span><span class="sh">'</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">renamed_counter</span><span class="p">,</span> <span class="n">total_counter</span>
-
-<span class="k">def</span> <span class="nf">rename_target_file</span><span class="p">(</span><span class="n">src_dir</span><span class="p">,</span> <span class="n">filename</span><span class="p">):</span>
-    <span class="n">fullpath_filename</span> <span class="o">=</span> <span class="n">src_dir</span> <span class="o">+</span> <span class="sh">'</span><span class="s">/</span><span class="sh">'</span> <span class="o">+</span> <span class="n">filename</span>
-    <span class="k">if</span> <span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="nf">isfile</span><span class="p">(</span><span class="n">fullpath_filename</span><span class="p">):</span>
-        <span class="k">if</span> <span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="nf">abspath</span><span class="p">(</span><span class="n">fullpath_filename</span><span class="p">).</span><span class="nf">endswith</span><span class="p">(</span><span class="sh">'</span><span class="s">.pdf</span><span class="sh">'</span><span class="p">):</span>
-            <span class="n">found_title</span> <span class="o">=</span> <span class="nf">search_candidate_title</span><span class="p">(</span><span class="n">src_dir</span><span class="p">,</span> <span class="n">filename</span><span class="p">)</span>
-            <span class="k">if</span> <span class="n">found_title</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
-                <span class="n">renamed</span> <span class="o">=</span> <span class="nf">do_rename</span><span class="p">(</span><span class="n">fullpath_filename</span><span class="p">,</span> <span class="n">src_dir</span> <span class="o">+</span> <span class="sh">'</span><span class="s">/</span><span class="sh">'</span> <span class="o">+</span> <span class="n">found_title</span><span class="p">)</span>
-                <span class="k">if</span> <span class="n">renamed</span><span class="p">:</span>
-                    <span class="nf">move_file</span><span class="p">(</span><span class="n">src_dir</span> <span class="o">+</span> <span class="sh">'</span><span class="s">/</span><span class="sh">'</span> <span class="o">+</span> <span class="n">found_title</span><span class="p">,</span> <span class="n">src_dir</span> <span class="o">+</span> <span class="sh">'</span><span class="s">/auto_renamed_pdf</span><span class="sh">'</span><span class="p">,</span> <span class="n">found_title</span><span class="p">)</span>
-                <span class="k">return</span> <span class="bp">True</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">logger</span><span class="p">.</span><span class="nf">debug</span><span class="p">(</span><span class="sh">"</span><span class="s">File is not a pdf!</span><span class="sh">"</span><span class="p">)</span>
-            <span class="k">return</span> <span class="bp">False</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="n">logger</span><span class="p">.</span><span class="nf">error</span><span class="p">(</span><span class="sh">"</span><span class="s">File does not exist!</span><span class="sh">"</span><span class="p">)</span>
-        <span class="k">return</span> <span class="bp">False</span>
-
-<span class="k">def</span> <span class="nf">main</span><span class="p">():</span>
-    <span class="nf">print_header</span><span class="p">()</span>
-    <span class="n">base_dir</span><span class="p">,</span> <span class="n">filename</span> <span class="o">=</span> <span class="nf">validate_arguments</span><span class="p">(</span><span class="n">sys</span><span class="p">.</span><span class="n">argv</span><span class="p">)</span>
-    <span class="n">signal</span><span class="p">.</span><span class="nf">signal</span><span class="p">(</span><span class="n">signal</span><span class="p">.</span><span class="n">SIGINT</span><span class="p">,</span> <span class="n">keyboardInterruptHandler</span><span class="p">)</span>
-    <span class="n">target_path</span> <span class="o">=</span> <span class="n">base_dir</span> <span class="o">+</span> <span class="sh">'</span><span class="s">/</span><span class="sh">'</span> <span class="o">+</span> <span class="n">filename</span>
-    <span class="n">logger</span><span class="p">.</span><span class="nf">info</span><span class="p">(</span><span class="sh">'</span><span class="s">[Target Path]: </span><span class="sh">'</span> <span class="o">+</span> <span class="n">target_path</span><span class="p">)</span>
-    <span class="n">rename_counter</span> <span class="o">=</span> <span class="mi">0</span>
-    <span class="k">if</span> <span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="nf">isdir</span><span class="p">(</span><span class="n">target_path</span><span class="p">):</span>
-        <span class="n">rename_counter</span><span class="p">,</span> <span class="n">total_counter</span> <span class="o">=</span> <span class="nf">rename_files_in_dir</span><span class="p">(</span><span class="n">base_dir</span><span class="p">)</span>
-        <span class="n">logger</span><span class="p">.</span><span class="nf">info</span><span class="p">(</span><span class="sh">'</span><span class="s">*</span><span class="sh">'</span> <span class="o">*</span> <span class="mi">80</span><span class="p">)</span>
-        <span class="n">logger</span><span class="p">.</span><span class="nf">info</span><span class="p">(</span><span class="sh">'</span><span class="s">Finished =&gt; Total files: </span><span class="sh">'</span> <span class="o">+</span> <span class="nf">str</span><span class="p">(</span><span class="n">total_counter</span><span class="p">)</span> <span class="o">+</span> <span class="sh">'</span><span class="s"> Renamed files: </span><span class="sh">'</span> <span class="o">+</span> <span class="nf">str</span><span class="p">(</span><span class="n">rename_counter</span><span class="p">))</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="n">renamed</span> <span class="o">=</span> <span class="nf">rename_target_file</span><span class="p">(</span><span class="n">base_dir</span><span class="p">,</span> <span class="n">filename</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">renamed</span><span class="p">:</span>
-            <span class="n">rename_counter</span> <span class="o">+=</span> <span class="mi">1</span>
-        <span class="n">logger</span><span class="p">.</span><span class="nf">info</span><span class="p">(</span><span class="sh">'</span><span class="s">*</span><span class="sh">'</span> <span class="o">*</span> <span class="mi">80</span><span class="p">)</span>
-        <span class="n">logger</span><span class="p">.</span><span class="nf">info</span><span class="p">(</span><span class="sh">'</span><span class="s">Finished =&gt; Renamed files : </span><span class="sh">'</span> <span class="o">+</span> <span class="nf">str</span><span class="p">(</span><span class="n">rename_counter</span><span class="p">))</span>
-
-<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="sh">"</span><span class="s">__main__</span><span class="sh">"</span><span class="p">:</span>
-    <span class="nf">main</span><span class="p">()</span>
-</code></pre></div></div>
 
       </div>
       
@@ -475,30 +1029,29 @@
       
         <div class="nav-arrow prev">
           <a href="/bibtex-check/" title="Python script to check LaTeX citations" rel="prev">
-            <img src="data:image/png;base64," alt="Previous article" width="45" height="45" loading="lazy">
+            <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAC0AAAAtCAYAAAA6GuKaAAAAAXNSR0IArs4c6QAAAxVJREFUaEPt18FqG1cUBuD/nLkzI42UiVInkFLTCAKhS+9KA+3Kq1L8AAHjhR7AKz+ADV55qUfoqhvThTfdmC4KzTKmYJrELshJW9PIlSeKRpqZe88pUtouihvVRknqMNoMzD1zdPXNrzMM4RJ+6BLuGeWm39RdK6VL6VcIlPEo41HG401loJQupS8mUM7pi7md/6p3UtoHUJzf4vVecZb0e0EQfB7H8b0kSeqqummt/eb1buN83SebNsZ8QkQCYHVpaenu/v7+ra2tLRwdHWF1ddWq6hfM3BCRE2b+FcBHACQAHo1E5v9c+5mIhkR0e3z0VQ8LotuqWlXVw/GRmT8QkdMK89McuAOAAfwoIu8z85yIHBPRKRGN1/IAeDx0rul53hivo6psrf2ejDGfEtFOu92u7O3tBWtra2i322g0GhgOh9je3ka325UPax7fCR0iw+lp4aLxr70aeOmgkChTRY3JGSb73EroERD73uB54WpOgdhwZkXNQNQLiVDzOU1yFymAhu+lqZVopIqISQKmPLFS+atHv3A1q8AVQ/lXP/VHRPQx+b6frKysxMvLy1hfX0ez2USv18PCwgLiOEaSJKhWq/jhwQN8dnIfVOS4dsWHqCJ5YREGjBuNEMfd0eTc9WshBqnFYGhRqxrUIoNuLwMT4eb1Cp6dZshywdW6mZzr9QsEPuPmXIhfno3gnGKuEWCUC14MLKoVb1L72+8Zvj3JOl/udZt/S7darUqn0wlarRZ2d3cxPz+PJ8dPsPP1Doq8kIbL+cawjxBIM8MRFAidpBlRpIbhFc55gM2NF5IIQtVBRlRTZgTWZQ4wzvc8spO1NPM4Gr9Wh1bSDIjU98C5E0PIC8OVSX+Rlz08hl+4/LsML6X/menFxcW7BwcHtzY2NvDw8CE21zf/NdMAHskFMs3MT/EfMg3gsTsr02f8byfTo16v3+v3+//f6fGKgXNp5vT5huZbqH4nH+NvwXH6V5bS041mU1FKz8ZxepdSerrRbCpK6dk4Tu9SSk83mk1FKT0bx+ldSunpRrOpuJTSfwBcuImxpyA7XgAAAABJRU5ErkJggg==" alt="Previous article" width="45" height="45" loading="lazy">
           </a>
         </div>
       
       
         <div class="nav-arrow next">
           <a href="/pdf-utf8/" title="Convert `.pdf` to `UTF-8`" rel="next">
-            <img src="data:image/png;base64," alt="Next article" width="45" height="45" loading="lazy">
+            <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAC0AAAAtCAYAAAA6GuKaAAAAAXNSR0IArs4c6QAAAwdJREFUaEPtl01rG1cUht9z7p070ijKWLVS3I9YULtNMBRn2UIXxZtuvCjedNWfoKVXBvsHeOUfoIUx5AeY0pVXXSR052UxBJSi0kDiRplII83HvadI9CMtOFjCmBjubC7cc8+Zc555eYdLuIEP3cCe4Zu+rq/mSXvSbyHg5eHl4eVxXRrwpD3p+Qh4n56P2+xZnvTszC7MCAAUF0XfOdJa62+IaCeO40GSJA/zPP8RwB9vDjBtWmv9JRE5ImpZawdVpbo58CkAIyJnIrLAzEvOuXNm/h3AfQDOAGdj5z5m5gXn3G9ENCKilckaiDwpiFZEpCoiTyYrM3/knOtXmHs58BkABvCLc+4DZl6cxIjoh4ODA728vIzt7W2sra09PT4+fgTgQES4LMvHZIy5LyI/f/dJvfK6FKMJqAdqmBS2ZgWINY9zJyZ1whUiRJrTfmGjybSxUemwcFEmghqT1UxlUrpQEXD7jRq3NWelEz10okIi1AJOX+U2EgALgUrT0kVnmcKvQ+uazSZvbW2hWq2i3++j3W5jf38f6+vrebvdHovI5pT09+vN7teLYev990K8GpQYjS1u1TQqhnHez6EU4cM7FTw7z5AXDo16ACcyPRsaxp2FEM9ejKd7zUaIYVpiOCpRq2rUIo0XLzMwEZaaFTzvZ8hyh/iWnu69fF1AAoOfFr/A5w8eYDQaIY5jJEmC09NTNBoNdLtd7O3t4ejoCIeHh8k/pL8KUSkCZcg6hCLDjLk2ufYGpRuXAuOMYiosQiDNNEcQILQuzYgi0QxVWKuAMtcqJPdXDaKaMMOUNrOAtoFSVE5jaaY4mtQPS5dmQPS8WkdfGReYgDe/3cTdpbvo9XrY2NhAp9NBq9XKO53Ov6T/r2mlVBeX0DSAMzeHppm5h7doemdvR99buYfd3V2srq4+PTk5+a+mr9CmrqTU3+5Rr9cHg8HgYve4krddbZGb5dOXmf2d+7n4pi9D4LrOeHl40v42fl0a8KQ96fkIeJ+ej9vsWZ707Mzmy/Ck5+M2e9afhmuAz1BhwewAAAAASUVORK5CYII=" alt="Next article" width="45" height="45" loading="lazy">
           </a>
         </div>
       
     </nav>
     
-      <div class="comment-box">
-        Reference:
-        <a href="https://github.com/heversonbr/scientific-paper-pdf-rename" title="https://github.com/heversonbr/scientific-paper-pdf-rename">https://github.com/heversonbr/scientific-paper-pdf-rename</a>
-      </div>
+    <div class="comment-box">
+        Reference: <a href="https://github.com/heversonbr/scientific-paper-pdf-rename" title="https://github.com/heversonbr/scientific-paper-pdf-rename">https://github.com/heversonbr/scientific-paper-pdf-rename</a>
+    </div>
     
   </main>
   <footer class="site-footer">
     <p>
       <a href="#" aria-label="Back to top">
         <img src="/assets/Rope_(Old).gif" alt="Back to top" width="32" height="32" loading="lazy">
-      </a><a href="https://ib.bsb.br/404" aria-label="404">2024-12-28 17:33:29</a>‎ ⇔‎ <a href="https://github.com/ib-bsb-br/ib-bsb-br.github.io" aria-label="GitHub">ℹ</a>‎ <a href="/" aria-label="Homepage">infoBAG</a>
+      </a><a href="https://ib.bsb.br/404" aria-label="404">2024-12-28 18:00:44</a>‎ ⇔‎ <a href="https://github.com/ib-bsb-br/ib-bsb-br.github.io" aria-label="GitHub">ℹ</a>‎ <a href="/" aria-label="Homepage">infoBAG</a>
     </p>
   </footer>
   <script type="application/ld+json">

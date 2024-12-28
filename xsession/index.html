@@ -42,16 +42,359 @@
 
   <link href="/style.css" rel="stylesheet">
 </head>
-<body class="post-content-body">
-
-  <!-- Start of content processing -->
-  
-  
-  
-
-  
-  <!-- End of content processing -->
-
+  <body class="post-content-body">
+    
+    
+    
+    
+        
+        
+        "<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>#!/bin/sh\n    
+        
+        
+        "#\n    
+        
+        
+        "# /etc/X11/Xsession\n    
+        
+        
+        "#\n    
+        
+        
+        "# global Xsession file -- used by display managers and xinit (startx)\n    
+        
+        
+        "\n    
+        
+        
+        "# $Id: Xsession 967 2005-12-27 07:20:55Z dnusinow $\n    
+        
+        
+        "\n    
+        
+        
+        "set -e\n    
+        
+        
+        "\n    
+        
+        
+        "PROGNAME=Xsession\n    
+        
+        
+        "\n    
+        
+        
+        "message () {\n    
+        
+        
+        "  # pretty-print messages of arbitrary length; use xmessage if it\n    
+        
+        
+        "  # is available and $DISPLAY is set\n    
+        
+        
+        "  MESSAGE="$PROGNAME: $*"\n    
+        
+        
+        "  echo "$MESSAGE" | fold -s -w ${COLUMNS:-80} &gt;&amp;2\n    
+        
+        
+        "  if [ -n "$DISPLAY" ] &amp;&amp; which xmessage &gt; /dev/null 2&gt;&amp;1; then\n    
+        
+        
+        "    echo "$MESSAGE" | fold -s -w ${COLUMNS:-80} | xmessage -center -file -\n    
+        
+        
+        "  fi\n    
+        
+        
+        "}\n    
+        
+        
+        "\n    
+        
+        
+        "message_nonl () {\n    
+        
+        
+        "  # pretty-print messages of arbitrary length (no trailing newline); use\n    
+        
+        
+        "  # xmessage if it is available and $DISPLAY is set\n    
+        
+        
+        "  MESSAGE="$PROGNAME: $*"\n    
+        
+        
+        "  echo -n "$MESSAGE" | fold -s -w ${COLUMNS:-80} &gt;&amp;2;\n    
+        
+        
+        "  if [ -n "$DISPLAY" ] &amp;&amp; which xmessage &gt; /dev/null 2&gt;&amp;1; then\n    
+        
+        
+        "    echo -n "$MESSAGE" | fold -s -w ${COLUMNS:-80} | xmessage -center -file -\n    
+        
+        
+        "  fi\n    
+        
+        
+        "}\n    
+        
+        
+        "\n    
+        
+        
+        "errormsg () {\n    
+        
+        
+        "  # exit script with error\n    
+        
+        
+        "  message "$*"\n    
+        
+        
+        "  exit 1\n    
+        
+        
+        "}\n    
+        
+        
+        "\n    
+        
+        
+        "internal_errormsg () {\n    
+        
+        
+        "  # exit script with error; essentially a "THIS SHOULD NEVER HAPPEN" message\n    
+        
+        
+        "  # One big call to message() for the sake of xmessage; if we had two then\n    
+        
+        
+        "  # the user would have dismissed the error we want reported before seeing the\n    
+        
+        
+        "  # request to report it.\n    
+        
+        
+        "  errormsg "$*" \\n    
+        
+        
+        "           "Please report the installed version of the \"x11-common\"" \\n    
+        
+        
+        "           "package and the complete text of this error message to" \\n    
+        
+        
+        "           "&lt;debian-x@lists.debian.org&gt;."\n    
+        
+        
+        "}\n    
+        
+        
+        "\n    
+        
+        
+        "# initialize variables for use by all session scripts\n    
+        
+        
+        "\n    
+        
+        
+        "OPTIONFILE=/etc/X11/Xsession.options\n    
+        
+        
+        "\n    
+        
+        
+        "SYSRESOURCES=/etc/X11/Xresources\n    
+        
+        
+        "USRRESOURCES=$HOME/.Xresources\n    
+        
+        
+        "\n    
+        
+        
+        "SYSSESSIONDIR=/etc/X11/Xsession.d\n    
+        
+        
+        "USERXSESSION=$HOME/.xsession\n    
+        
+        
+        "USERXSESSIONRC=$HOME/.xsessionrc\n    
+        
+        
+        "ALTUSERXSESSION=$HOME/.Xsession\n    
+        
+        
+        "ERRFILE=$HOME/.xsession-errors\n    
+        
+        
+        "\n    
+        
+        
+        "# attempt to create an error file; abort if we cannot\n    
+        
+        
+        "if (umask 077 &amp;&amp; touch "$ERRFILE") 2&gt; /dev/null &amp;&amp; [ -w "$ERRFILE" ] &amp;&amp;\n    
+        
+        
+        "  [ ! -L "$ERRFILE" ]; then\n    
+        
+        
+        "  chmod 600 "$ERRFILE"\n    
+        
+        
+        "elif ERRFILE=$(tempfile 2&gt; /dev/null); then\n    
+        
+        
+        "  if ! ln -sf "$ERRFILE" "${TMPDIR:=/tmp}/xsession-$USER"; then\n    
+        
+        
+        "    message "warning: unable to symlink \"$TMPDIR/xsession-$USER\" to" \\n    
+        
+        
+        "             "\"$ERRFILE\"; look for session log/errors in" \\n    
+        
+        
+        "             "\"$TMPDIR/xsession-$USER\"."\n    
+        
+        
+        "  fi\n    
+        
+        
+        "else\n    
+        
+        
+        "  errormsg "unable to create X session log/error file; aborting."\n    
+        
+        
+        "fi\n    
+        
+        
+        "\n    
+        
+        
+        "exec &gt;&gt;"$ERRFILE" 2&gt;&amp;1\n    
+        
+        
+        "\n    
+        
+        
+        "echo "$PROGNAME: X session started for $LOGNAME at $(date)"\n    
+        
+        
+        "\n    
+        
+        
+        "# sanity check; is our session script directory present?\n    
+        
+        
+        "if [ ! -d "$SYSSESSIONDIR" ]; then\n    
+        
+        
+        "  errormsg "no \"$SYSSESSIONDIR\" directory found; aborting."\n    
+        
+        
+        "fi\n    
+        
+        
+        "\n    
+        
+        
+        "# Attempt to create a file of non-zero length in /tmp; a full filesystem can\n    
+        
+        
+        "# cause mysterious X session failures.  We do not use touch, :, or test -w\n    
+        
+        
+        "# because they won't actually create a file with contents.  We also let standard\n    
+        
+        
+        "# error from tempfile and echo go to the error file to aid the user in\n    
+        
+        
+        "# determining what went wrong.\n    
+        
+        
+        "WRITE_TEST=$(tempfile)\n    
+        
+        
+        "if ! echo "*" &gt;&gt;"$WRITE_TEST"; then\n    
+        
+        
+        "  message "warning: unable to write to ${WRITE_TEST%/*}; X session may exit" \\n    
+        
+        
+        "          "with an error"\n    
+        
+        
+        "fi\n    
+        
+        
+        "rm -f "$WRITE_TEST"\n    
+        
+        
+        "\n    
+        
+        
+        "# use run-parts to source every file in the session directory; we source\n    
+        
+        
+        "# instead of executing so that the variables and functions defined above\n    
+        
+        
+        "# are available to the scripts, and so that they can pass variables to each\n    
+        
+        
+        "# other\n    
+        
+        
+        "SESSIONFILES=$(run-parts --list $SYSSESSIONDIR)\n    
+        
+        
+        "if [ -n "$SESSIONFILES" ]; then\n    
+        
+        
+        "  set +e\n    
+        
+        
+        "  for SESSIONFILE in $SESSIONFILES; do\n    
+        
+        
+        "    . $SESSIONFILE\n    
+        
+        
+        "  done\n    
+        
+        
+        "  set -e\n    
+        
+        
+        "fi\n    
+        
+        
+        "\n    
+        
+        
+        "exec ratpoison\n    
+        
+        
+        "\n    
+        
+        
+        "exit 0\n    
+        
+        
+        "\n    
+        
+        
+        "# vim:set ai et sts=2 sw=2 tw=80:\n    
+        
+        
+        "</code></pre></div></div>\n    "
   <header class="header-container">
     <nav aria-label="Main navigation" class="header-content">
       <a href="/" aria-label="Home">
@@ -134,122 +477,7 @@
       <div class="post-content-body">
         
 
-        <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>#!/bin/sh
-#
-# /etc/X11/Xsession
-#
-# global Xsession file -- used by display managers and xinit (startx)
-
-# $Id: Xsession 967 2005-12-27 07:20:55Z dnusinow $
-
-set -e
-
-PROGNAME=Xsession
-
-message () {
-  # pretty-print messages of arbitrary length; use xmessage if it
-  # is available and $DISPLAY is set
-  MESSAGE="$PROGNAME: $*"
-  echo "$MESSAGE" | fold -s -w ${COLUMNS:-80} &gt;&amp;2
-  if [ -n "$DISPLAY" ] &amp;&amp; which xmessage &gt; /dev/null 2&gt;&amp;1; then
-    echo "$MESSAGE" | fold -s -w ${COLUMNS:-80} | xmessage -center -file -
-  fi
-}
-
-message_nonl () {
-  # pretty-print messages of arbitrary length (no trailing newline); use
-  # xmessage if it is available and $DISPLAY is set
-  MESSAGE="$PROGNAME: $*"
-  echo -n "$MESSAGE" | fold -s -w ${COLUMNS:-80} &gt;&amp;2;
-  if [ -n "$DISPLAY" ] &amp;&amp; which xmessage &gt; /dev/null 2&gt;&amp;1; then
-    echo -n "$MESSAGE" | fold -s -w ${COLUMNS:-80} | xmessage -center -file -
-  fi
-}
-
-errormsg () {
-  # exit script with error
-  message "$*"
-  exit 1
-}
-
-internal_errormsg () {
-  # exit script with error; essentially a "THIS SHOULD NEVER HAPPEN" message
-  # One big call to message() for the sake of xmessage; if we had two then
-  # the user would have dismissed the error we want reported before seeing the
-  # request to report it.
-  errormsg "$*" \
-           "Please report the installed version of the \"x11-common\"" \
-           "package and the complete text of this error message to" \
-           "&lt;debian-x@lists.debian.org&gt;."
-}
-
-# initialize variables for use by all session scripts
-
-OPTIONFILE=/etc/X11/Xsession.options
-
-SYSRESOURCES=/etc/X11/Xresources
-USRRESOURCES=$HOME/.Xresources
-
-SYSSESSIONDIR=/etc/X11/Xsession.d
-USERXSESSION=$HOME/.xsession
-USERXSESSIONRC=$HOME/.xsessionrc
-ALTUSERXSESSION=$HOME/.Xsession
-ERRFILE=$HOME/.xsession-errors
-
-# attempt to create an error file; abort if we cannot
-if (umask 077 &amp;&amp; touch "$ERRFILE") 2&gt; /dev/null &amp;&amp; [ -w "$ERRFILE" ] &amp;&amp;
-  [ ! -L "$ERRFILE" ]; then
-  chmod 600 "$ERRFILE"
-elif ERRFILE=$(tempfile 2&gt; /dev/null); then
-  if ! ln -sf "$ERRFILE" "${TMPDIR:=/tmp}/xsession-$USER"; then
-    message "warning: unable to symlink \"$TMPDIR/xsession-$USER\" to" \
-             "\"$ERRFILE\"; look for session log/errors in" \
-             "\"$TMPDIR/xsession-$USER\"."
-  fi
-else
-  errormsg "unable to create X session log/error file; aborting."
-fi
-
-exec &gt;&gt;"$ERRFILE" 2&gt;&amp;1
-
-echo "$PROGNAME: X session started for $LOGNAME at $(date)"
-
-# sanity check; is our session script directory present?
-if [ ! -d "$SYSSESSIONDIR" ]; then
-  errormsg "no \"$SYSSESSIONDIR\" directory found; aborting."
-fi
-
-# Attempt to create a file of non-zero length in /tmp; a full filesystem can
-# cause mysterious X session failures.  We do not use touch, :, or test -w
-# because they won't actually create a file with contents.  We also let standard
-# error from tempfile and echo go to the error file to aid the user in
-# determining what went wrong.
-WRITE_TEST=$(tempfile)
-if ! echo "*" &gt;&gt;"$WRITE_TEST"; then
-  message "warning: unable to write to ${WRITE_TEST%/*}; X session may exit" \
-          "with an error"
-fi
-rm -f "$WRITE_TEST"
-
-# use run-parts to source every file in the session directory; we source
-# instead of executing so that the variables and functions defined above
-# are available to the scripts, and so that they can pass variables to each
-# other
-SESSIONFILES=$(run-parts --list $SYSSESSIONDIR)
-if [ -n "$SESSIONFILES" ]; then
-  set +e
-  for SESSIONFILE in $SESSIONFILES; do
-    . $SESSIONFILE
-  done
-  set -e
-fi
-
-exec ratpoison
-
-exit 0
-
-# vim:set ai et sts=2 sw=2 tw=80:
-</code></pre></div></div>
+        
 
       </div>
       
@@ -260,14 +488,14 @@ exit 0
       
         <div class="nav-arrow prev">
           <a href="/call-05-2021/" title="Call de Maio de 2021" rel="prev">
-            <img src="data:image/png;base64," alt="Previous article" width="45" height="45" loading="lazy">
+            <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAC0AAAAtCAYAAAA6GuKaAAAAAXNSR0IArs4c6QAAAxVJREFUaEPt18FqG1cUBuD/nLkzI42UiVInkFLTCAKhS+9KA+3Kq1L8AAHjhR7AKz+ADV55qUfoqhvThTfdmC4KzTKmYJrELshJW9PIlSeKRpqZe88pUtouihvVRknqMNoMzD1zdPXNrzMM4RJ+6BLuGeWm39RdK6VL6VcIlPEo41HG401loJQupS8mUM7pi7md/6p3UtoHUJzf4vVecZb0e0EQfB7H8b0kSeqqummt/eb1buN83SebNsZ8QkQCYHVpaenu/v7+ra2tLRwdHWF1ddWq6hfM3BCRE2b+FcBHACQAHo1E5v9c+5mIhkR0e3z0VQ8LotuqWlXVw/GRmT8QkdMK89McuAOAAfwoIu8z85yIHBPRKRGN1/IAeDx0rul53hivo6psrf2ejDGfEtFOu92u7O3tBWtra2i322g0GhgOh9je3ka325UPax7fCR0iw+lp4aLxr70aeOmgkChTRY3JGSb73EroERD73uB54WpOgdhwZkXNQNQLiVDzOU1yFymAhu+lqZVopIqISQKmPLFS+atHv3A1q8AVQ/lXP/VHRPQx+b6frKysxMvLy1hfX0ez2USv18PCwgLiOEaSJKhWq/jhwQN8dnIfVOS4dsWHqCJ5YREGjBuNEMfd0eTc9WshBqnFYGhRqxrUIoNuLwMT4eb1Cp6dZshywdW6mZzr9QsEPuPmXIhfno3gnGKuEWCUC14MLKoVb1L72+8Zvj3JOl/udZt/S7darUqn0wlarRZ2d3cxPz+PJ8dPsPP1Doq8kIbL+cawjxBIM8MRFAidpBlRpIbhFc55gM2NF5IIQtVBRlRTZgTWZQ4wzvc8spO1NPM4Gr9Wh1bSDIjU98C5E0PIC8OVSX+Rlz08hl+4/LsML6X/menFxcW7BwcHtzY2NvDw8CE21zf/NdMAHskFMs3MT/EfMg3gsTsr02f8byfTo16v3+v3+//f6fGKgXNp5vT5huZbqH4nH+NvwXH6V5bS041mU1FKz8ZxepdSerrRbCpK6dk4Tu9SSk83mk1FKT0bx+ldSunpRrOpuJTSfwBcuImxpyA7XgAAAABJRU5ErkJggg==" alt="Previous article" width="45" height="45" loading="lazy">
           </a>
         </div>
       
       
         <div class="nav-arrow next">
           <a href="/neofetch/" title="neofetch config.conf" rel="next">
-            <img src="data:image/png;base64," alt="Next article" width="45" height="45" loading="lazy">
+            <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAC0AAAAtCAYAAAA6GuKaAAAAAXNSR0IArs4c6QAAAwdJREFUaEPtl01rG1cUht9z7p070ijKWLVS3I9YULtNMBRn2UIXxZtuvCjedNWfoKVXBvsHeOUfoIUx5AeY0pVXXSR052UxBJSi0kDiRplII83HvadI9CMtOFjCmBjubC7cc8+Zc555eYdLuIEP3cCe4Zu+rq/mSXvSbyHg5eHl4eVxXRrwpD3p+Qh4n56P2+xZnvTszC7MCAAUF0XfOdJa62+IaCeO40GSJA/zPP8RwB9vDjBtWmv9JRE5ImpZawdVpbo58CkAIyJnIrLAzEvOuXNm/h3AfQDOAGdj5z5m5gXn3G9ENCKilckaiDwpiFZEpCoiTyYrM3/knOtXmHs58BkABvCLc+4DZl6cxIjoh4ODA728vIzt7W2sra09PT4+fgTgQES4LMvHZIy5LyI/f/dJvfK6FKMJqAdqmBS2ZgWINY9zJyZ1whUiRJrTfmGjybSxUemwcFEmghqT1UxlUrpQEXD7jRq3NWelEz10okIi1AJOX+U2EgALgUrT0kVnmcKvQ+uazSZvbW2hWq2i3++j3W5jf38f6+vrebvdHovI5pT09+vN7teLYev990K8GpQYjS1u1TQqhnHez6EU4cM7FTw7z5AXDo16ACcyPRsaxp2FEM9ejKd7zUaIYVpiOCpRq2rUIo0XLzMwEZaaFTzvZ8hyh/iWnu69fF1AAoOfFr/A5w8eYDQaIY5jJEmC09NTNBoNdLtd7O3t4ejoCIeHh8k/pL8KUSkCZcg6hCLDjLk2ufYGpRuXAuOMYiosQiDNNEcQILQuzYgi0QxVWKuAMtcqJPdXDaKaMMOUNrOAtoFSVE5jaaY4mtQPS5dmQPS8WkdfGReYgDe/3cTdpbvo9XrY2NhAp9NBq9XKO53Ov6T/r2mlVBeX0DSAMzeHppm5h7doemdvR99buYfd3V2srq4+PTk5+a+mr9CmrqTU3+5Rr9cHg8HgYve4krddbZGb5dOXmf2d+7n4pi9D4LrOeHl40v42fl0a8KQ96fkIeJ+ej9vsWZ707Mzmy/Ck5+M2e9afhmuAz1BhwewAAAAASUVORK5CYII=" alt="Next article" width="45" height="45" loading="lazy">
           </a>
         </div>
       
@@ -278,7 +506,7 @@ exit 0
     <p>
       <a href="#" aria-label="Back to top">
         <img src="/assets/Rope_(Old).gif" alt="Back to top" width="32" height="32" loading="lazy">
-      </a><a href="https://ib.bsb.br/404" aria-label="404">2024-12-28 17:33:29</a>‎ ⇔‎ <a href="https://github.com/ib-bsb-br/ib-bsb-br.github.io" aria-label="GitHub">ℹ</a>‎ <a href="/" aria-label="Homepage">infoBAG</a>
+      </a><a href="https://ib.bsb.br/404" aria-label="404">2024-12-28 18:00:44</a>‎ ⇔‎ <a href="https://github.com/ib-bsb-br/ib-bsb-br.github.io" aria-label="GitHub">ℹ</a>‎ <a href="/" aria-label="Homepage">infoBAG</a>
     </p>
   </footer>
   <script type="application/ld+json">

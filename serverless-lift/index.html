@@ -42,16 +42,823 @@
 
   <link href="/style.css" rel="stylesheet">
 </head>
-<body class="post-content-body">
-
-  <!-- Start of content processing -->
-  
-  
-  
-
-  
-  <!-- End of content processing -->
-
+  <body class="post-content-body">
+    
+    
+    
+    
+        
+        
+        "<h1 id="serverlessyml">serverless.yml</h1>\n    
+        
+        
+        "\n    
+        
+        
+        "<section data-filename="yaml_code-block.yaml" data-code="service: github-webhook-service\n    
+        
+        
+        "provider:\n    
+        
+        
+        "name: aws\n    
+        
+        
+        "runtime: nodejs20.x\n    
+        
+        
+        "region: us-east-1\n    
+        
+        
+        "environment:\n    
+        
+        
+        "GITHUB_TOKEN: ${env:GITHUB_TOKEN}\n    
+        
+        
+        "plugins:\n    
+        
+        
+        "- serverless-lift\n    
+        
+        
+        "constructs:\n    
+        
+        
+        "webhook:\n    
+        
+        
+        "type: webhook\n    
+        
+        
+        "path: /webhook\n    
+        
+        
+        "method: POST\n    
+        
+        
+        "eventType: $request.body.type\n    
+        
+        
+        "insecure: true\n    
+        
+        
+        "functions:\n    
+        
+        
+        "handleWebhook:\n    
+        
+        
+        "handler: handler.handleWebhook\n    
+        
+        
+        "events:\n    
+        
+        
+        "- eventBridge:\n    
+        
+        
+        "eventBus: ${construct:webhook.busName}\n    
+        
+        
+        "pattern:\n    
+        
+        
+            
+                
+                
+                
+        
+        
+        "- webhook\n    
+        
+        
+        "detail-type:\n    
+        
+        
+        "- new_comment\n    
+        
+        
+        "package:\n    
+        
+        
+        "patterns:\n    
+        
+        
+        "- '!node_modules/aws-sdk/**'\n    
+        
+        
+        "- '!node_modules/@aws-sdk/**'" data-download-link="" data-download-link-label="Download Yaml"><code class="language-yaml">service: github-webhook-service\n    
+        
+        
+        "provider:\n    
+        
+        
+        "name: aws\n    
+        
+        
+        "runtime: nodejs20.x\n    
+        
+        
+        "region: us-east-1\n    
+        
+        
+        "environment:\n    
+        
+        
+        "GITHUB_TOKEN: ${env:GITHUB_TOKEN}\n    
+        
+        
+        "plugins:\n    
+        
+        
+        "- serverless-lift\n    
+        
+        
+        "constructs:\n    
+        
+        
+        "webhook:\n    
+        
+        
+        "type: webhook\n    
+        
+        
+        "path: /webhook\n    
+        
+        
+        "method: POST\n    
+        
+        
+        "eventType: $request.body.type\n    
+        
+        
+        "insecure: true\n    
+        
+        
+        "functions:\n    
+        
+        
+        "handleWebhook:\n    
+        
+        
+        "handler: handler.handleWebhook\n    
+        
+        
+        "events:\n    
+        
+        
+        "- eventBridge:\n    
+        
+        
+        "eventBus: ${construct:webhook.busName}\n    
+        
+        
+        "pattern:\n    
+        
+        
+            
+        
+        "source:\n    
+        
+        
+        "- webhook\n    
+        
+        
+        "detail-type:\n    
+        
+        
+        "- new_comment\n    
+        
+        
+        "package:\n    
+        
+        
+        "patterns:\n    
+        
+        
+        "- '!node_modules/aws-sdk/**'\n    
+        
+        
+        "- '!node_modules/@aws-sdk/**'</code></section>\n    
+        
+        
+        "\n    
+        
+        
+        "<h1 id="handlermjs">handler.mjs</h1>\n    
+        
+        
+        "\n    
+        
+        
+        "<section data-filename="javascript_code-block.js" data-code="import { Octokit } from &quot;@octokit/rest&quot;;\n    
+        
+        
+        "import { Base64 } from &quot;js-base64&quot;;\n    
+        
+        
+        "/**\n    
+        
+        
+        "* Converts a string to a URL-friendly slug.\n    
+        
+        
+        "* @param {string} text - The text to be slugified.\n    
+        
+        
+        "* @return {string} The slugified text.\n    
+        
+        
+        "*/\n    
+        
+        
+        "const slugify = (text) =&gt; {\n    
+        
+        
+        "return text\n    
+        
+        
+        ".toString()\n    
+        
+        
+        ".toLowerCase()\n    
+        
+        
+        ".trim()\n    
+        
+        
+        ".replace(/\s+/g, '-')           // Replace spaces with -\n    
+        
+        
+        ".replace(/[^\w\-]+/g, '')       // Remove all non-word chars\n    
+        
+        
+        ".replace(/\-\-+/g, '-')         // Replace multiple - with single -\n    
+        
+        
+        ".replace(/^-+/, '')             // Trim - from start of text\n    
+        
+        
+        ".replace(/-+$/, '');            // Trim - from end of text\n    
+        
+        
+        "};\n    
+        
+        
+        "/**\n    
+        
+        
+        "* Formats a date string to YYYY-MM-DD.\n    
+        
+        
+        "* @param {string} date - The date string to format.\n    
+        
+        
+        "* @return {string} The formatted date string.\n    
+        
+        
+        "*/\n    
+        
+        
+        "const formatDate = (date) =&gt; {\n    
+        
+        
+        "const d = new Date(date);\n    
+        
+        
+        "if (isNaN(d.getTime())) {\n    
+        
+        
+        "throw new Error('Invalid date provided');\n    
+        
+        
+        "}\n    
+        
+        
+        "return d.toISOString().split('T')[0];\n    
+        
+        
+        "};\n    
+        
+        
+        "/**\n    
+        
+        
+        "* Creates the content for a blog post.\n    
+        
+        
+        "* @param {Object} data - The data for the blog post.\n    
+        
+        
+        "* @param {string} data.by_nickname - The author's nickname.\n    
+        
+        
+        "* @param {string} data.by_email - The author's email.\n    
+        
+        
+        "* @param {string} data.content - The content of the post.\n    
+        
+        
+        "* @param {string} data.time - The timestamp of the post.\n    
+        
+        
+        "* @return {string} The formatted blog post content.\n    
+        
+        
+        "*/\n    
+        
+        
+        "const createPostContent = (data) =&gt; {\n    
+        
+        
+        "const { by_nickname, by_email, content, time } = data;\n    
+        
+        
+        "const slugName = slugify(by_nickname);\n    
+        
+        
+        "const date = formatDate(time);\n    
+        
+        
+        "return `---\n    
+        
+        
+        "tags:\n    
+        
+        
+        "- ${by_email}\n    
+        
+        
+        "info: aberto.\n    
+        
+        
+        "date: ${date}\n    
+        
+        
+        "type: post\n    
+        
+        
+        "layout: post\n    
+        
+        
+        "published: true\n    
+        
+        
+        "slug: ${slugName}\n    
+        
+        
+        "title: '${by_nickname}'\n    
+        
+        
+        "---\n    
+        
+        
+        "${content}`;\n    
+        
+        
+        "};\n    
+        
+        
+        "/**\n    
+        
+        
+        "* Handles the webhook event for creating a new blog post.\n    
+        
+        
+        "* @param {Object} event - The webhook event object.\n    
+        
+        
+        "* @return {Object} The response object.\n    
+        
+        
+        "*/\n    
+        
+        
+        "export const handleWebhook = async (event) =&gt; {\n    
+        
+        
+        "try {\n    
+        
+        
+        "if (!event || !event.detail || !event.detail.data) {\n    
+        
+        
+        "throw new Error('Invalid event structure');\n    
+        
+        
+        "}\n    
+        
+        
+        "const { by_nickname, by_email, content } = event.detail.data;\n    
+        
+        
+        "const time = event.time || new Date().toISOString();\n    
+        
+        
+        "if (!by_email || !by_nickname || !content) {\n    
+        
+        
+        "throw new Error('Missing required fields: email, nickname, or content');\n    
+        
+        
+        "}\n    
+        
+        
+        "const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });\n    
+        
+        
+        "if (!process.env.GITHUB_TOKEN) {\n    
+        
+        
+        "throw new Error('GitHub token is not set');\n    
+        
+        
+        "}\n    
+        
+        
+        "const owner = &quot;${REPO_OWNER}&quot;;\n    
+        
+        
+        "const repo = &quot;${REPO_NAME}&quot;;\n    
+        
+        
+        "const date = formatDate(time);\n    
+        
+        
+        "const slugName = slugify(by_nickname);\n    
+        
+        
+        "const path = `_posts/${date}-${slugName}.md`;\n    
+        
+        
+        "const message = `New post by ${by_nickname}`;\n    
+        
+        
+        "const postContent = createPostContent({ by_nickname, by_email, content, time });\n    
+        
+        
+        "const contentEncoded = Base64.encode(postContent);\n    
+        
+        
+        "await octokit.repos.createOrUpdateFileContents({\n    
+        
+        
+        "owner,\n    
+        
+        
+        "repo,\n    
+        
+        
+        "path,\n    
+        
+        
+        "message,\n    
+        
+        
+        "content: contentEncoded,\n    
+        
+        
+        "});\n    
+        
+        
+        "return {\n    
+        
+        
+        "statusCode: 200,\n    
+        
+        
+        "body: JSON.stringify({ message: &quot;File created/updated successfully&quot;, path }),\n    
+        
+        
+        "};\n    
+        
+        
+        "} catch (error) {\n    
+        
+        
+        "console.error('Error in handleWebhook:', error);\n    
+        
+        
+        "return {\n    
+        
+        
+        "statusCode: error.status || 500,\n    
+        
+        
+        "body: JSON.stringify({ message: error.message || &quot;An unexpected error occurred&quot; }),\n    
+        
+        
+        "};\n    
+        
+        
+        "}\n    
+        
+        
+        "};" data-download-link="" data-download-link-label="Download Javascript"><code class="language-javascript">import { Octokit } from "@octokit/rest";\n    
+        
+        
+        "import { Base64 } from "js-base64";\n    
+        
+        
+        "/**\n    
+        
+        
+        "* Converts a string to a URL-friendly slug.\n    
+        
+        
+        "* @param {string} text - The text to be slugified.\n    
+        
+        
+        "* @return {string} The slugified text.\n    
+        
+        
+        "*/\n    
+        
+        
+        "const slugify = (text) =&gt; {\n    
+        
+        
+        "return text\n    
+        
+        
+        ".toString()\n    
+        
+        
+        ".toLowerCase()\n    
+        
+        
+        ".trim()\n    
+        
+        
+        ".replace(/\s+/g, '-')           // Replace spaces with -\n    
+        
+        
+        ".replace(/[^\w\-]+/g, '')       // Remove all non-word chars\n    
+        
+        
+        ".replace(/\-\-+/g, '-')         // Replace multiple - with single -\n    
+        
+        
+        ".replace(/^-+/, '')             // Trim - from start of text\n    
+        
+        
+        ".replace(/-+$/, '');            // Trim - from end of text\n    
+        
+        
+        "};\n    
+        
+        
+        "/**\n    
+        
+        
+        "* Formats a date string to YYYY-MM-DD.\n    
+        
+        
+        "* @param {string} date - The date string to format.\n    
+        
+        
+        "* @return {string} The formatted date string.\n    
+        
+        
+        "*/\n    
+        
+        
+        "const formatDate = (date) =&gt; {\n    
+        
+        
+        "const d = new Date(date);\n    
+        
+        
+        "if (isNaN(d.getTime())) {\n    
+        
+        
+        "throw new Error('Invalid date provided');\n    
+        
+        
+        "}\n    
+        
+        
+        "return d.toISOString().split('T')[0];\n    
+        
+        
+        "};\n    
+        
+        
+        "/**\n    
+        
+        
+        "* Creates the content for a blog post.\n    
+        
+        
+        "* @param {Object} data - The data for the blog post.\n    
+        
+        
+        "* @param {string} data.by_nickname - The author's nickname.\n    
+        
+        
+        "* @param {string} data.by_email - The author's email.\n    
+        
+        
+        "* @param {string} data.content - The content of the post.\n    
+        
+        
+        "* @param {string} data.time - The timestamp of the post.\n    
+        
+        
+        "* @return {string} The formatted blog post content.\n    
+        
+        
+        "*/\n    
+        
+        
+        "const createPostContent = (data) =&gt; {\n    
+        
+        
+        "const { by_nickname, by_email, content, time } = data;\n    
+        
+        
+        "const slugName = slugify(by_nickname);\n    
+        
+        
+        "const date = formatDate(time);\n    
+        
+        
+        "return `---\n    
+        
+        
+        "tags:\n    
+        
+        
+        "- ${by_email}\n    
+        
+        
+        "info: aberto.\n    
+        
+        
+        "date: ${date}\n    
+        
+        
+        "type: post\n    
+        
+        
+        "layout: post\n    
+        
+        
+        "published: true\n    
+        
+        
+        "slug: ${slugName}\n    
+        
+        
+        "title: '${by_nickname}'\n    
+        
+        
+        "---\n    
+        
+        
+        "${content}`;\n    
+        
+        
+        "};\n    
+        
+        
+        "/**\n    
+        
+        
+        "* Handles the webhook event for creating a new blog post.\n    
+        
+        
+        "* @param {Object} event - The webhook event object.\n    
+        
+        
+        "* @return {Object} The response object.\n    
+        
+        
+        "*/\n    
+        
+        
+        "export const handleWebhook = async (event) =&gt; {\n    
+        
+        
+        "try {\n    
+        
+        
+        "if (!event || !event.detail || !event.detail.data) {\n    
+        
+        
+        "throw new Error('Invalid event structure');\n    
+        
+        
+        "}\n    
+        
+        
+        "const { by_nickname, by_email, content } = event.detail.data;\n    
+        
+        
+        "const time = event.time || new Date().toISOString();\n    
+        
+        
+        "if (!by_email || !by_nickname || !content) {\n    
+        
+        
+        "throw new Error('Missing required fields: email, nickname, or content');\n    
+        
+        
+        "}\n    
+        
+        
+        "const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });\n    
+        
+        
+        "if (!process.env.GITHUB_TOKEN) {\n    
+        
+        
+        "throw new Error('GitHub token is not set');\n    
+        
+        
+        "}\n    
+        
+        
+        "const owner = "${REPO_OWNER}";\n    
+        
+        
+        "const repo = "${REPO_NAME}";\n    
+        
+        
+        "const date = formatDate(time);\n    
+        
+        
+        "const slugName = slugify(by_nickname);\n    
+        
+        
+        "const path = `_posts/${date}-${slugName}.md`;\n    
+        
+        
+        "const message = `New post by ${by_nickname}`;\n    
+        
+        
+        "const postContent = createPostContent({ by_nickname, by_email, content, time });\n    
+        
+        
+        "const contentEncoded = Base64.encode(postContent);\n    
+        
+        
+        "await octokit.repos.createOrUpdateFileContents({\n    
+        
+        
+        "owner,\n    
+        
+        
+        "repo,\n    
+        
+        
+        "path,\n    
+        
+        
+        "message,\n    
+        
+        
+        "content: contentEncoded,\n    
+        
+        
+        "});\n    
+        
+        
+        "return {\n    
+        
+        
+        "statusCode: 200,\n    
+        
+        
+        "body: JSON.stringify({ message: "File created/updated successfully", path }),\n    
+        
+        
+        "};\n    
+        
+        
+        "} catch (error) {\n    
+        
+        
+        "console.error('Error in handleWebhook:', error);\n    
+        
+        
+        "return {\n    
+        
+        
+        "statusCode: error.status || 500,\n    
+        
+        
+        "body: JSON.stringify({ message: error.message || "An unexpected error occurred" }),\n    
+        
+        
+        "};\n    
+        
+        
+        "}\n    
+        
+        
+        "};</code></section>\n    "
   <header class="header-container">
     <nav aria-label="Main navigation" class="header-content">
       <a href="/" aria-label="Home">
@@ -133,289 +940,8 @@
     <article class="post-wrapper">
       <div class="post-content-body">
         
-<ul><li><a href="#serverlessyml">serverless.yml</a></li><li><a href="#handlermjs">handler.mjs</a></li></ul>
-        <h1 id="serverlessyml">
-    
-    
-     <a href="#serverlessyml">#</a><a href="#" aria-label="Back to top">serverless.yml</a>
-        
-    
-  </h1>
-      
 
-<section data-filename="yaml_code-block.yaml" data-code="service: github-webhook-service
-provider:
-name: aws
-runtime: nodejs20.x
-region: us-east-1
-environment:
-GITHUB_TOKEN: ${env:GITHUB_TOKEN}
-plugins:
-- serverless-lift
-constructs:
-webhook:
-type: webhook
-path: /webhook
-method: POST
-eventType: $request.body.type
-insecure: true
-functions:
-handleWebhook:
-handler: handler.handleWebhook
-events:
-- eventBridge:
-eventBus: ${construct:webhook.busName}
-pattern:
-source:
-- webhook
-detail-type:
-- new_comment
-package:
-patterns:
-- '!node_modules/aws-sdk/**'
-- '!node_modules/@aws-sdk/**'" data-download-link="" data-download-link-label="Download Yaml"><code class="language-yaml">service: github-webhook-service
-provider:
-name: aws
-runtime: nodejs20.x
-region: us-east-1
-environment:
-GITHUB_TOKEN: ${env:GITHUB_TOKEN}
-plugins:
-- serverless-lift
-constructs:
-webhook:
-type: webhook
-path: /webhook
-method: POST
-eventType: $request.body.type
-insecure: true
-functions:
-handleWebhook:
-handler: handler.handleWebhook
-events:
-- eventBridge:
-eventBus: ${construct:webhook.busName}
-pattern:
-source:
-- webhook
-detail-type:
-- new_comment
-package:
-patterns:
-- '!node_modules/aws-sdk/**'
-- '!node_modules/@aws-sdk/**'</code></section>
-  <h1 id="handlermjs">
-    
-    
-     <a href="#handlermjs">#</a><a href="#" aria-label="Back to top">handler.mjs</a>
         
-    
-  </h1>
-      
-
-<section data-filename="javascript_code-block.js" data-code="import { Octokit } from &quot;@octokit/rest&quot;;
-import { Base64 } from &quot;js-base64&quot;;
-/**
-* Converts a string to a URL-friendly slug.
-* @param {string} text - The text to be slugified.
-* @return {string} The slugified text.
-*/
-const slugify = (text) =&gt; {
-return text
-.toString()
-.toLowerCase()
-.trim()
-.replace(/\s+/g, '-')           // Replace spaces with -
-.replace(/[^\w\-]+/g, '')       // Remove all non-word chars
-.replace(/\-\-+/g, '-')         // Replace multiple - with single -
-.replace(/^-+/, '')             // Trim - from start of text
-.replace(/-+$/, '');            // Trim - from end of text
-};
-/**
-* Formats a date string to YYYY-MM-DD.
-* @param {string} date - The date string to format.
-* @return {string} The formatted date string.
-*/
-const formatDate = (date) =&gt; {
-const d = new Date(date);
-if (isNaN(d.getTime())) {
-throw new Error('Invalid date provided');
-}
-return d.toISOString().split('T')[0];
-};
-/**
-* Creates the content for a blog post.
-* @param {Object} data - The data for the blog post.
-* @param {string} data.by_nickname - The author's nickname.
-* @param {string} data.by_email - The author's email.
-* @param {string} data.content - The content of the post.
-* @param {string} data.time - The timestamp of the post.
-* @return {string} The formatted blog post content.
-*/
-const createPostContent = (data) =&gt; {
-const { by_nickname, by_email, content, time } = data;
-const slugName = slugify(by_nickname);
-const date = formatDate(time);
-return `---
-tags:
-- ${by_email}
-info: aberto.
-date: ${date}
-type: post
-layout: post
-published: true
-slug: ${slugName}
-title: '${by_nickname}'
----
-${content}`;
-};
-/**
-* Handles the webhook event for creating a new blog post.
-* @param {Object} event - The webhook event object.
-* @return {Object} The response object.
-*/
-export const handleWebhook = async (event) =&gt; {
-try {
-if (!event || !event.detail || !event.detail.data) {
-throw new Error('Invalid event structure');
-}
-const { by_nickname, by_email, content } = event.detail.data;
-const time = event.time || new Date().toISOString();
-if (!by_email || !by_nickname || !content) {
-throw new Error('Missing required fields: email, nickname, or content');
-}
-const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
-if (!process.env.GITHUB_TOKEN) {
-throw new Error('GitHub token is not set');
-}
-const owner = &quot;${REPO_OWNER}&quot;;
-const repo = &quot;${REPO_NAME}&quot;;
-const date = formatDate(time);
-const slugName = slugify(by_nickname);
-const path = `_posts/${date}-${slugName}.md`;
-const message = `New post by ${by_nickname}`;
-const postContent = createPostContent({ by_nickname, by_email, content, time });
-const contentEncoded = Base64.encode(postContent);
-await octokit.repos.createOrUpdateFileContents({
-owner,
-repo,
-path,
-message,
-content: contentEncoded,
-});
-return {
-statusCode: 200,
-body: JSON.stringify({ message: &quot;File created/updated successfully&quot;, path }),
-};
-} catch (error) {
-console.error('Error in handleWebhook:', error);
-return {
-statusCode: error.status || 500,
-body: JSON.stringify({ message: error.message || &quot;An unexpected error occurred&quot; }),
-};
-}
-};" data-download-link="" data-download-link-label="Download Javascript"><code class="language-javascript">import { Octokit } from "@octokit/rest";
-import { Base64 } from "js-base64";
-/**
-* Converts a string to a URL-friendly slug.
-* @param {string} text - The text to be slugified.
-* @return {string} The slugified text.
-*/
-const slugify = (text) =&gt; {
-return text
-.toString()
-.toLowerCase()
-.trim()
-.replace(/\s+/g, '-')           // Replace spaces with -
-.replace(/[^\w\-]+/g, '')       // Remove all non-word chars
-.replace(/\-\-+/g, '-')         // Replace multiple - with single -
-.replace(/^-+/, '')             // Trim - from start of text
-.replace(/-+$/, '');            // Trim - from end of text
-};
-/**
-* Formats a date string to YYYY-MM-DD.
-* @param {string} date - The date string to format.
-* @return {string} The formatted date string.
-*/
-const formatDate = (date) =&gt; {
-const d = new Date(date);
-if (isNaN(d.getTime())) {
-throw new Error('Invalid date provided');
-}
-return d.toISOString().split('T')[0];
-};
-/**
-* Creates the content for a blog post.
-* @param {Object} data - The data for the blog post.
-* @param {string} data.by_nickname - The author's nickname.
-* @param {string} data.by_email - The author's email.
-* @param {string} data.content - The content of the post.
-* @param {string} data.time - The timestamp of the post.
-* @return {string} The formatted blog post content.
-*/
-const createPostContent = (data) =&gt; {
-const { by_nickname, by_email, content, time } = data;
-const slugName = slugify(by_nickname);
-const date = formatDate(time);
-return `---
-tags:
-- ${by_email}
-info: aberto.
-date: ${date}
-type: post
-layout: post
-published: true
-slug: ${slugName}
-title: '${by_nickname}'
----
-${content}`;
-};
-/**
-* Handles the webhook event for creating a new blog post.
-* @param {Object} event - The webhook event object.
-* @return {Object} The response object.
-*/
-export const handleWebhook = async (event) =&gt; {
-try {
-if (!event || !event.detail || !event.detail.data) {
-throw new Error('Invalid event structure');
-}
-const { by_nickname, by_email, content } = event.detail.data;
-const time = event.time || new Date().toISOString();
-if (!by_email || !by_nickname || !content) {
-throw new Error('Missing required fields: email, nickname, or content');
-}
-const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
-if (!process.env.GITHUB_TOKEN) {
-throw new Error('GitHub token is not set');
-}
-const owner = "${REPO_OWNER}";
-const repo = "${REPO_NAME}";
-const date = formatDate(time);
-const slugName = slugify(by_nickname);
-const path = `_posts/${date}-${slugName}.md`;
-const message = `New post by ${by_nickname}`;
-const postContent = createPostContent({ by_nickname, by_email, content, time });
-const contentEncoded = Base64.encode(postContent);
-await octokit.repos.createOrUpdateFileContents({
-owner,
-repo,
-path,
-message,
-content: contentEncoded,
-});
-return {
-statusCode: 200,
-body: JSON.stringify({ message: "File created/updated successfully", path }),
-};
-} catch (error) {
-console.error('Error in handleWebhook:', error);
-return {
-statusCode: error.status || 500,
-body: JSON.stringify({ message: error.message || "An unexpected error occurred" }),
-};
-}
-};</code></section>
 
       </div>
       
@@ -426,14 +952,14 @@ body: JSON.stringify({ message: error.message || "An unexpected error occurred" 
       
         <div class="nav-arrow prev">
           <a href="/daily-coffee-for-the-heart/" title="Daily coffee for the heart" rel="prev">
-            <img src="data:image/png;base64," alt="Previous article" width="45" height="45" loading="lazy">
+            <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAC0AAAAtCAYAAAA6GuKaAAAAAXNSR0IArs4c6QAAAxVJREFUaEPt18FqG1cUBuD/nLkzI42UiVInkFLTCAKhS+9KA+3Kq1L8AAHjhR7AKz+ADV55qUfoqhvThTfdmC4KzTKmYJrELshJW9PIlSeKRpqZe88pUtouihvVRknqMNoMzD1zdPXNrzMM4RJ+6BLuGeWm39RdK6VL6VcIlPEo41HG401loJQupS8mUM7pi7md/6p3UtoHUJzf4vVecZb0e0EQfB7H8b0kSeqqummt/eb1buN83SebNsZ8QkQCYHVpaenu/v7+ra2tLRwdHWF1ddWq6hfM3BCRE2b+FcBHACQAHo1E5v9c+5mIhkR0e3z0VQ8LotuqWlXVw/GRmT8QkdMK89McuAOAAfwoIu8z85yIHBPRKRGN1/IAeDx0rul53hivo6psrf2ejDGfEtFOu92u7O3tBWtra2i322g0GhgOh9je3ka325UPax7fCR0iw+lp4aLxr70aeOmgkChTRY3JGSb73EroERD73uB54WpOgdhwZkXNQNQLiVDzOU1yFymAhu+lqZVopIqISQKmPLFS+atHv3A1q8AVQ/lXP/VHRPQx+b6frKysxMvLy1hfX0ez2USv18PCwgLiOEaSJKhWq/jhwQN8dnIfVOS4dsWHqCJ5YREGjBuNEMfd0eTc9WshBqnFYGhRqxrUIoNuLwMT4eb1Cp6dZshywdW6mZzr9QsEPuPmXIhfno3gnGKuEWCUC14MLKoVb1L72+8Zvj3JOl/udZt/S7darUqn0wlarRZ2d3cxPz+PJ8dPsPP1Doq8kIbL+cawjxBIM8MRFAidpBlRpIbhFc55gM2NF5IIQtVBRlRTZgTWZQ4wzvc8spO1NPM4Gr9Wh1bSDIjU98C5E0PIC8OVSX+Rlz08hl+4/LsML6X/menFxcW7BwcHtzY2NvDw8CE21zf/NdMAHskFMs3MT/EfMg3gsTsr02f8byfTo16v3+v3+//f6fGKgXNp5vT5huZbqH4nH+NvwXH6V5bS041mU1FKz8ZxepdSerrRbCpK6dk4Tu9SSk83mk1FKT0bx+ldSunpRrOpuJTSfwBcuImxpyA7XgAAAABJRU5ErkJggg==" alt="Previous article" width="45" height="45" loading="lazy">
           </a>
         </div>
       
       
         <div class="nav-arrow next">
           <a href="/eidetic/" title="eidetic reduction" rel="next">
-            <img src="data:image/png;base64," alt="Next article" width="45" height="45" loading="lazy">
+            <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAC0AAAAtCAYAAAA6GuKaAAAAAXNSR0IArs4c6QAAAwdJREFUaEPtl01rG1cUht9z7p070ijKWLVS3I9YULtNMBRn2UIXxZtuvCjedNWfoKVXBvsHeOUfoIUx5AeY0pVXXSR052UxBJSi0kDiRplII83HvadI9CMtOFjCmBjubC7cc8+Zc555eYdLuIEP3cCe4Zu+rq/mSXvSbyHg5eHl4eVxXRrwpD3p+Qh4n56P2+xZnvTszC7MCAAUF0XfOdJa62+IaCeO40GSJA/zPP8RwB9vDjBtWmv9JRE5ImpZawdVpbo58CkAIyJnIrLAzEvOuXNm/h3AfQDOAGdj5z5m5gXn3G9ENCKilckaiDwpiFZEpCoiTyYrM3/knOtXmHs58BkABvCLc+4DZl6cxIjoh4ODA728vIzt7W2sra09PT4+fgTgQES4LMvHZIy5LyI/f/dJvfK6FKMJqAdqmBS2ZgWINY9zJyZ1whUiRJrTfmGjybSxUemwcFEmghqT1UxlUrpQEXD7jRq3NWelEz10okIi1AJOX+U2EgALgUrT0kVnmcKvQ+uazSZvbW2hWq2i3++j3W5jf38f6+vrebvdHovI5pT09+vN7teLYev990K8GpQYjS1u1TQqhnHez6EU4cM7FTw7z5AXDo16ACcyPRsaxp2FEM9ejKd7zUaIYVpiOCpRq2rUIo0XLzMwEZaaFTzvZ8hyh/iWnu69fF1AAoOfFr/A5w8eYDQaIY5jJEmC09NTNBoNdLtd7O3t4ejoCIeHh8k/pL8KUSkCZcg6hCLDjLk2ufYGpRuXAuOMYiosQiDNNEcQILQuzYgi0QxVWKuAMtcqJPdXDaKaMMOUNrOAtoFSVE5jaaY4mtQPS5dmQPS8WkdfGReYgDe/3cTdpbvo9XrY2NhAp9NBq9XKO53Ov6T/r2mlVBeX0DSAMzeHppm5h7doemdvR99buYfd3V2srq4+PTk5+a+mr9CmrqTU3+5Rr9cHg8HgYve4krddbZGb5dOXmf2d+7n4pi9D4LrOeHl40v42fl0a8KQ96fkIeJ+ej9vsWZ707Mzmy/Ck5+M2e9afhmuAz1BhwewAAAAASUVORK5CYII=" alt="Next article" width="45" height="45" loading="lazy">
           </a>
         </div>
       
@@ -444,7 +970,7 @@ body: JSON.stringify({ message: error.message || "An unexpected error occurred" 
     <p>
       <a href="#" aria-label="Back to top">
         <img src="/assets/Rope_(Old).gif" alt="Back to top" width="32" height="32" loading="lazy">
-      </a><a href="https://ib.bsb.br/404" aria-label="404">2024-12-28 17:33:29</a>‎ ⇔‎ <a href="https://github.com/ib-bsb-br/ib-bsb-br.github.io" aria-label="GitHub">ℹ</a>‎ <a href="/" aria-label="Homepage">infoBAG</a>
+      </a><a href="https://ib.bsb.br/404" aria-label="404">2024-12-28 18:00:44</a>‎ ⇔‎ <a href="https://github.com/ib-bsb-br/ib-bsb-br.github.io" aria-label="GitHub">ℹ</a>‎ <a href="/" aria-label="Homepage">infoBAG</a>
     </p>
   </footer>
   <script type="application/ld+json">

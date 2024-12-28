@@ -44,16 +44,407 @@
 
   <link href="/style.css" rel="stylesheet">
 </head>
-<body class="post-content-body">
-
-  <!-- Start of content processing -->
-  
-  
-  
-
-  
-  <!-- End of content processing -->
-
+  <body class="post-content-body">
+    
+    
+    
+    
+        
+        
+        "<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>import os\n    
+        
+        
+        "import openai\n    
+        
+        
+        "from concurrent.futures import ThreadPoolExecutor, as_completed\n    
+        
+        
+        "import tiktoken\n    
+        
+        
+        "import logging\n    
+        
+        
+        "from tqdm import tqdm\n    
+        
+        
+        "import time\n    
+        
+        
+        "import random\n    
+        
+        
+        "\n    
+        
+        
+        "# Setup the logging system\n    
+        
+        
+        "logging.basicConfig(level=logging.INFO)\n    
+        
+        
+        "\n    
+        
+        
+        "# Initialize OpenAI client with the API key\n    
+        
+        
+        "api_key = os.getenv('OPENAI_KEY')\n    
+        
+        
+        "if not api_key:\n    
+        
+        
+        "    raise ValueError("API key not found. Please set the OPENAI_KEY environment variable.")\n    
+        
+        
+        "client = openai.OpenAI(api_key=api_key)\n    
+        
+        
+        "\n    
+        
+        
+        "def load_text(file_path):\n    
+        
+        
+        "    """Load text from a specified file."""\n    
+        
+        
+        "    try:\n    
+        
+        
+        "        with open(file_path, 'r') as file:\n    
+        
+        
+        "            return file.read()\n    
+        
+        
+        "    except Exception as e:\n    
+        
+        
+        "        logging.error(f'Failed to load file {file_path}: {str(e)}')\n    
+        
+        
+        "        raise\n    
+        
+        
+        "\n    
+        
+        
+        "def initialize_files(output_file, log_file):\n    
+        
+        
+        "    """Initialize the output and log files by creating empty files."""\n    
+        
+        
+        "    try:\n    
+        
+        
+        "        open(output_file, 'w').close()\n    
+        
+        
+        "        open(log_file, 'w').close()\n    
+        
+        
+        "    except Exception as e:\n    
+        
+        
+        "        logging.error(f'Failed to initialize files {output_file}, {log_file}: {str(e)}')\n    
+        
+        
+        "        raise\n    
+        
+        
+        "\n    
+        
+        
+        "def save_to_file(responses, output_file):\n    
+        
+        
+        "    """Save API responses to an output file."""\n    
+        
+        
+        "    try:\n    
+        
+        
+        "        with open(output_file, 'w') as file:\n    
+        
+        
+        "            for response in responses:\n    
+        
+        
+        "                file.write(response + '\n')\n    
+        
+        
+        "    except Exception as e:\n    
+        
+        
+        "        logging.error(f'Failed to save to file {output_file}: {str(e)}')\n    
+        
+        
+        "        raise\n    
+        
+        
+        "\n    
+        
+        
+        "def log_to_file(log_file, message):\n    
+        
+        
+        "    """Log messages to a log file."""\n    
+        
+        
+        "    try:\n    
+        
+        
+        "        with open(log_file, 'a') as file:\n    
+        
+        
+        "            file.write(message + '\n')\n    
+        
+        
+        "    except Exception as e:\n    
+        
+        
+        "        logging.error(f'Failed to log to file {log_file}: {str(e)}')\n    
+        
+        
+        "        raise\n    
+        
+        
+        "\n    
+        
+        
+        "def call_openai_api(chunk, model, max_tokens, temperature, prompt):\n    
+        
+        
+        "    """Call the OpenAI API with retries on rate limits."""\n    
+        
+        
+        "    for i in range(3):\n    
+        
+        
+        "        try:\n    
+        
+        
+        "            response = client.chat.completions.create(\n    
+        
+        
+        "                model=model,\n    
+        
+        
+        "                messages=[\n    
+        
+        
+        "                    {"role": "system", "content": prompt},\n    
+        
+        
+        "                    {"role": "user", "content": chunk},\n    
+        
+        
+        "                ],\n    
+        
+        
+        "                max_tokens=max_tokens,\n    
+        
+        
+        "                n=1,\n    
+        
+        
+        "                temperature=temperature,\n    
+        
+        
+        "            )\n    
+        
+        
+        "            return response.choices[0].message.content.strip()\n    
+        
+        
+        "        except openai.OpenAIError as e:\n    
+        
+        
+        "            if 'Rate limit' in str(e):\n    
+        
+        
+        "                wait_time = (2 ** i) + random.random()  # Exponential backoff with jitter\n    
+        
+        
+        "                logging.warning(f'Rate limit exceeded. Retrying after {wait_time} seconds.')\n    
+        
+        
+        "                time.sleep(wait_time)\n    
+        
+        
+        "            else:\n    
+        
+        
+        "                logging.error(f'API call failed: {str(e)}')\n    
+        
+        
+        "                return None\n    
+        
+        
+        "    logging.error('Failed to call OpenAI API after multiple retries due to rate limiting.')\n    
+        
+        
+        "    return None\n    
+        
+        
+        "\n    
+        
+        
+        "def split_into_chunks(text, model, tokens=3500):\n    
+        
+        
+        "    """Split the text into smaller chunks based on token limits."""\n    
+        
+        
+        "    encoding = tiktoken.encoding_for_model(model)\n    
+        
+        
+        "    words = encoding.encode(text)\n    
+        
+        
+        "    chunks = []\n    
+        
+        
+        "    for i in range(0, len(words), tokens):\n    
+        
+        
+        "        chunks.append(''.join(encoding.decode(words[i:i + tokens])))\n    
+        
+        
+        "    return chunks\n    
+        
+        
+        "\n    
+        
+        
+        "def process_chunks(input_file, output_file, log_file, model, chunksize, max_tokens, temperature, prompt):\n    
+        
+        
+        "    """Process text chunks and call OpenAI API for each chunk."""\n    
+        
+        
+        "    initialize_files(output_file, log_file)\n    
+        
+        
+        "    text = load_text(input_file)\n    
+        
+        
+        "    chunks = split_into_chunks(text, model, tokens=chunksize)\n    
+        
+        
+        "    nCh = len(chunks)\n    
+        
+        
+        "    print(f'{nCh} chunks.')\n    
+        
+        
+        "    log_to_file(log_file, f'Number of chunks: {nCh}')\n    
+        
+        
+        "    with ThreadPoolExecutor() as executor:\n    
+        
+        
+        "        futures = {executor.submit(call_openai_api, chunk, model, max_tokens, temperature, prompt): chunk for chunk in chunks}\n    
+        
+        
+        "        responses = []\n    
+        
+        
+        "        for future in tqdm(as_completed(futures), total=len(futures), desc='Processing chunks'):\n    
+        
+        
+        "            response = future.result()\n    
+        
+        
+        "            if response is None:\n    
+        
+        
+        "                log_to_file(log_file, f'Failed to process chunk {futures[future]}')\n    
+        
+        
+        "            else:\n    
+        
+        
+        "                responses.append(response)\n    
+        
+        
+        "                log_to_file(log_file, 'Successfully processed chunk!')\n    
+        
+        
+        "    save_to_file(responses, output_file)\n    
+        
+        
+        "\n    
+        
+        
+        "if __name__ == "__main__":\n    
+        
+        
+        "    input_file = 'input.txt'\n    
+        
+        
+        "    output_file = 'output.txt'\n    
+        
+        
+        "    log_file = 'log.txt'\n    
+        
+        
+        "    model = 'gpt-3.5-turbo'\n    
+        
+        
+        "    chunksize = 3500\n    
+        
+        
+        "    max_tokens = 4000\n    
+        
+        
+        "    temperature = 0.01\n    
+        
+        
+        "    prompt = '''You will be presented with a scrambled, poorly formatted BibTeX entry. \n    
+        
+        
+        "    Your task is to refactor the entry to fix all syntax problems and ensure it adheres to the standard BibTeX format. \n    
+        
+        
+        "    Here is an example of a properly formatted BibTeX entry: \n    
+        
+        
+        "    @article{Smith2023, author = {Smith, John and Doe, Jane}, title = {The Impact of Artificial Intelligence on Society}, journal = {Journal of Artificial Intelligence Research}, year = {2023}, volume = {10}, number = {2}, pages = {123--145}, doi = {10.1234/jair.2023.10.2.123}, abstract = {This paper explores the profound impact of artificial intelligence (AI) on various aspects of society. We discuss the ethical implications, economic consequences, and potential societal benefits of AI. Our analysis highlights the need for responsible AI development and deployment to mitigate risks and maximize its positive impact.}, keywords = {Artificial Intelligence, Society, Ethics, Economics, Impact} } \n    
+        
+        
+        "    Here is the scrambled BibTeX data you need to refactor: &lt;scrambled_bibtex&gt;  &lt;/scrambled_bibtex&gt; \n    
+        
+        
+        "    To refactor the scrambled BibTeX data, follow these steps: \n    
+        
+        
+        "    1. Check for missing or incorrect delimiters, such as curly braces, commas, and equals signs. Ensure that each field is properly enclosed in curly braces and that key-value pairs are separated by commas. \n    
+        
+        
+        "    2. Ensure proper indentation and line breaks. Each field should start on a new line and be indented with two spaces. \n    
+        
+        
+        "    3. Verify the presence and correct order of required fields, such as author, title, and year. Optional fields can be included as needed. \n    
+        
+        
+        "    4. Check for proper capitalization and punctuation within fields. Titles should be capitalized appropriately, and punctuation should be consistent. \n    
+        
+        
+        "    5. If any information is missing or unclear, note this in your response. \n    
+        
+        
+        "    Please provide the refactored BibTeX entry inside &lt;refactored_bibtex&gt; tags.'''\n    
+        
+        
+        "    process_chunks(input_file, output_file, log_file, model, chunksize, max_tokens, temperature, prompt)\n    
+        
+        
+        "</code></pre></div></div>\n    "
   <header class="header-container">
     <nav aria-label="Main navigation" class="header-content">
       <a href="/" aria-label="Home">
@@ -138,154 +529,7 @@
       <div class="post-content-body">
         
 
-        <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>import os
-import openai
-from concurrent.futures import ThreadPoolExecutor, as_completed
-import tiktoken
-import logging
-from tqdm import tqdm
-import time
-import random
-
-# Setup the logging system
-logging.basicConfig(level=logging.INFO)
-
-# Initialize OpenAI client with the API key
-api_key = os.getenv('OPENAI_KEY')
-if not api_key:
-    raise ValueError("API key not found. Please set the OPENAI_KEY environment variable.")
-client = openai.OpenAI(api_key=api_key)
-
-def load_text(file_path):
-    """Load text from a specified file."""
-    try:
-        with open(file_path, 'r') as file:
-            return file.read()
-    except Exception as e:
-        logging.error(f'Failed to load file {file_path}: {str(e)}')
-        raise
-
-def initialize_files(output_file, log_file):
-    """Initialize the output and log files by creating empty files."""
-    try:
-        open(output_file, 'w').close()
-        open(log_file, 'w').close()
-    except Exception as e:
-        logging.error(f'Failed to initialize files {output_file}, {log_file}: {str(e)}')
-        raise
-
-def save_to_file(responses, output_file):
-    """Save API responses to an output file."""
-    try:
-        with open(output_file, 'w') as file:
-            for response in responses:
-                file.write(response + '
         
-      
-    
-      
-        
-        
-        
-          ')
-    except Exception as e:
-        logging.error(f'Failed to save to file {output_file}: {str(e)}')
-        raise
-
-def log_to_file(log_file, message):
-    """Log messages to a log file."""
-    try:
-        with open(log_file, 'a') as file:
-            file.write(message + '
-        
-      
-    
-      
-        
-        
-        
-          ')
-    except Exception as e:
-        logging.error(f'Failed to log to file {log_file}: {str(e)}')
-        raise
-
-def call_openai_api(chunk, model, max_tokens, temperature, prompt):
-    """Call the OpenAI API with retries on rate limits."""
-    for i in range(3):
-        try:
-            response = client.chat.completions.create(
-                model=model,
-                messages=[
-                    {"role": "system", "content": prompt},
-                    {"role": "user", "content": chunk},
-                ],
-                max_tokens=max_tokens,
-                n=1,
-                temperature=temperature,
-            )
-            return response.choices[0].message.content.strip()
-        except openai.OpenAIError as e:
-            if 'Rate limit' in str(e):
-                wait_time = (2 ** i) + random.random()  # Exponential backoff with jitter
-                logging.warning(f'Rate limit exceeded. Retrying after {wait_time} seconds.')
-                time.sleep(wait_time)
-            else:
-                logging.error(f'API call failed: {str(e)}')
-                return None
-    logging.error('Failed to call OpenAI API after multiple retries due to rate limiting.')
-    return None
-
-def split_into_chunks(text, model, tokens=3500):
-    """Split the text into smaller chunks based on token limits."""
-    encoding = tiktoken.encoding_for_model(model)
-    words = encoding.encode(text)
-    chunks = []
-    for i in range(0, len(words), tokens):
-        chunks.append(''.join(encoding.decode(words[i:i + tokens])))
-    return chunks
-
-def process_chunks(input_file, output_file, log_file, model, chunksize, max_tokens, temperature, prompt):
-    """Process text chunks and call OpenAI API for each chunk."""
-    initialize_files(output_file, log_file)
-    text = load_text(input_file)
-    chunks = split_into_chunks(text, model, tokens=chunksize)
-    nCh = len(chunks)
-    print(f'{nCh} chunks.')
-    log_to_file(log_file, f'Number of chunks: {nCh}')
-    with ThreadPoolExecutor() as executor:
-        futures = {executor.submit(call_openai_api, chunk, model, max_tokens, temperature, prompt): chunk for chunk in chunks}
-        responses = []
-        for future in tqdm(as_completed(futures), total=len(futures), desc='Processing chunks'):
-            response = future.result()
-            if response is None:
-                log_to_file(log_file, f'Failed to process chunk {futures[future]}')
-            else:
-                responses.append(response)
-                log_to_file(log_file, 'Successfully processed chunk!')
-    save_to_file(responses, output_file)
-
-if __name__ == "__main__":
-    input_file = 'input.txt'
-    output_file = 'output.txt'
-    log_file = 'log.txt'
-    model = 'gpt-3.5-turbo'
-    chunksize = 3500
-    max_tokens = 4000
-    temperature = 0.01
-    prompt = '''You will be presented with a scrambled, poorly formatted BibTeX entry. 
-    Your task is to refactor the entry to fix all syntax problems and ensure it adheres to the standard BibTeX format. 
-    Here is an example of a properly formatted BibTeX entry: 
-    @article{Smith2023, author = {Smith, John and Doe, Jane}, title = {The Impact of Artificial Intelligence on Society}, journal = {Journal of Artificial Intelligence Research}, year = {2023}, volume = {10}, number = {2}, pages = {123--145}, doi = {10.1234/jair.2023.10.2.123}, abstract = {This paper explores the profound impact of artificial intelligence (AI) on various aspects of society. We discuss the ethical implications, economic consequences, and potential societal benefits of AI. Our analysis highlights the need for responsible AI development and deployment to mitigate risks and maximize its positive impact.}, keywords = {Artificial Intelligence, Society, Ethics, Economics, Impact} } 
-    Here is the scrambled BibTeX data you need to refactor: &lt;scrambled_bibtex&gt;  &lt;/scrambled_bibtex&gt; 
-    To refactor the scrambled BibTeX data, follow these steps: 
-    1. Check for missing or incorrect delimiters, such as curly braces, commas, and equals signs. Ensure that each field is properly enclosed in curly braces and that key-value pairs are separated by commas. 
-    2. Ensure proper indentation and line breaks. Each field should start on a new line and be indented with two spaces. 
-    3. Verify the presence and correct order of required fields, such as author, title, and year. Optional fields can be included as needed. 
-    4. Check for proper capitalization and punctuation within fields. Titles should be capitalized appropriately, and punctuation should be consistent. 
-    5. If any information is missing or unclear, note this in your response. 
-    Please provide the refactored BibTeX entry inside &lt;refactored_bibtex&gt; tags.'''
-    process_chunks(input_file, output_file, log_file, model, chunksize, max_tokens, temperature, prompt)
-</code></pre></div></div>
 
       </div>
       
@@ -296,30 +540,29 @@ if __name__ == "__main__":
       
         <div class="nav-arrow prev">
           <a href="/pdf-utf8/" title="Convert `.pdf` to `UTF-8`" rel="prev">
-            <img src="data:image/png;base64," alt="Previous article" width="45" height="45" loading="lazy">
+            <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAC0AAAAtCAYAAAA6GuKaAAAAAXNSR0IArs4c6QAAAxVJREFUaEPt18FqG1cUBuD/nLkzI42UiVInkFLTCAKhS+9KA+3Kq1L8AAHjhR7AKz+ADV55qUfoqhvThTfdmC4KzTKmYJrELshJW9PIlSeKRpqZe88pUtouihvVRknqMNoMzD1zdPXNrzMM4RJ+6BLuGeWm39RdK6VL6VcIlPEo41HG401loJQupS8mUM7pi7md/6p3UtoHUJzf4vVecZb0e0EQfB7H8b0kSeqqummt/eb1buN83SebNsZ8QkQCYHVpaenu/v7+ra2tLRwdHWF1ddWq6hfM3BCRE2b+FcBHACQAHo1E5v9c+5mIhkR0e3z0VQ8LotuqWlXVw/GRmT8QkdMK89McuAOAAfwoIu8z85yIHBPRKRGN1/IAeDx0rul53hivo6psrf2ejDGfEtFOu92u7O3tBWtra2i322g0GhgOh9je3ka325UPax7fCR0iw+lp4aLxr70aeOmgkChTRY3JGSb73EroERD73uB54WpOgdhwZkXNQNQLiVDzOU1yFymAhu+lqZVopIqISQKmPLFS+atHv3A1q8AVQ/lXP/VHRPQx+b6frKysxMvLy1hfX0ez2USv18PCwgLiOEaSJKhWq/jhwQN8dnIfVOS4dsWHqCJ5YREGjBuNEMfd0eTc9WshBqnFYGhRqxrUIoNuLwMT4eb1Cp6dZshywdW6mZzr9QsEPuPmXIhfno3gnGKuEWCUC14MLKoVb1L72+8Zvj3JOl/udZt/S7darUqn0wlarRZ2d3cxPz+PJ8dPsPP1Doq8kIbL+cawjxBIM8MRFAidpBlRpIbhFc55gM2NF5IIQtVBRlRTZgTWZQ4wzvc8spO1NPM4Gr9Wh1bSDIjU98C5E0PIC8OVSX+Rlz08hl+4/LsML6X/menFxcW7BwcHtzY2NvDw8CE21zf/NdMAHskFMs3MT/EfMg3gsTsr02f8byfTo16v3+v3+//f6fGKgXNp5vT5huZbqH4nH+NvwXH6V5bS041mU1FKz8ZxepdSerrRbCpK6dk4Tu9SSk83mk1FKT0bx+ldSunpRrOpuJTSfwBcuImxpyA7XgAAAABJRU5ErkJggg==" alt="Previous article" width="45" height="45" loading="lazy">
           </a>
         </div>
       
       
         <div class="nav-arrow next">
           <a href="/clipaper-qa/" title="cliPaperQA" rel="next">
-            <img src="data:image/png;base64," alt="Next article" width="45" height="45" loading="lazy">
+            <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAC0AAAAtCAYAAAA6GuKaAAAAAXNSR0IArs4c6QAAAwdJREFUaEPtl01rG1cUht9z7p070ijKWLVS3I9YULtNMBRn2UIXxZtuvCjedNWfoKVXBvsHeOUfoIUx5AeY0pVXXSR052UxBJSi0kDiRplII83HvadI9CMtOFjCmBjubC7cc8+Zc555eYdLuIEP3cCe4Zu+rq/mSXvSbyHg5eHl4eVxXRrwpD3p+Qh4n56P2+xZnvTszC7MCAAUF0XfOdJa62+IaCeO40GSJA/zPP8RwB9vDjBtWmv9JRE5ImpZawdVpbo58CkAIyJnIrLAzEvOuXNm/h3AfQDOAGdj5z5m5gXn3G9ENCKilckaiDwpiFZEpCoiTyYrM3/knOtXmHs58BkABvCLc+4DZl6cxIjoh4ODA728vIzt7W2sra09PT4+fgTgQES4LMvHZIy5LyI/f/dJvfK6FKMJqAdqmBS2ZgWINY9zJyZ1whUiRJrTfmGjybSxUemwcFEmghqT1UxlUrpQEXD7jRq3NWelEz10okIi1AJOX+U2EgALgUrT0kVnmcKvQ+uazSZvbW2hWq2i3++j3W5jf38f6+vrebvdHovI5pT09+vN7teLYev990K8GpQYjS1u1TQqhnHez6EU4cM7FTw7z5AXDo16ACcyPRsaxp2FEM9ejKd7zUaIYVpiOCpRq2rUIo0XLzMwEZaaFTzvZ8hyh/iWnu69fF1AAoOfFr/A5w8eYDQaIY5jJEmC09NTNBoNdLtd7O3t4ejoCIeHh8k/pL8KUSkCZcg6hCLDjLk2ufYGpRuXAuOMYiosQiDNNEcQILQuzYgi0QxVWKuAMtcqJPdXDaKaMMOUNrOAtoFSVE5jaaY4mtQPS5dmQPS8WkdfGReYgDe/3cTdpbvo9XrY2NhAp9NBq9XKO53Ov6T/r2mlVBeX0DSAMzeHppm5h7doemdvR99buYfd3V2srq4+PTk5+a+mr9CmrqTU3+5Rr9cHg8HgYve4krddbZGb5dOXmf2d+7n4pi9D4LrOeHl40v42fl0a8KQ96fkIeJ+ej9vsWZ707Mzmy/Ck5+M2e9afhmuAz1BhwewAAAAASUVORK5CYII=" alt="Next article" width="45" height="45" loading="lazy">
           </a>
         </div>
       
     </nav>
     
-      <div class="comment-box">
-        Reference:
-        <a href="github.com/andrewgcodes/lightspeedGPT" title="github.com/andrewgcodes/lightspeedGPT">github.com/andrewgcodes/lightspeedGPT</a>
-      </div>
+    <div class="comment-box">
+        Reference: <a href="github.com/andrewgcodes/lightspeedGPT" title="github.com/andrewgcodes/lightspeedGPT">github.com/andrewgcodes/lightspeedGPT</a>
+    </div>
     
   </main>
   <footer class="site-footer">
     <p>
       <a href="#" aria-label="Back to top">
         <img src="/assets/Rope_(Old).gif" alt="Back to top" width="32" height="32" loading="lazy">
-      </a><a href="https://ib.bsb.br/404" aria-label="404">2024-12-28 17:33:29</a>‎ ⇔‎ <a href="https://github.com/ib-bsb-br/ib-bsb-br.github.io" aria-label="GitHub">ℹ</a>‎ <a href="/" aria-label="Homepage">infoBAG</a>
+      </a><a href="https://ib.bsb.br/404" aria-label="404">2024-12-28 18:00:44</a>‎ ⇔‎ <a href="https://github.com/ib-bsb-br/ib-bsb-br.github.io" aria-label="GitHub">ℹ</a>‎ <a href="/" aria-label="Homepage">infoBAG</a>
     </p>
   </footer>
   <script type="application/ld+json">
