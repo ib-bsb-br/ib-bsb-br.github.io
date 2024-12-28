@@ -50,6 +50,27 @@
     {% endfor %}
   {% endif %}
 
+  <!-- Start of content processing -->
+  {% assign page_content = content %}
+  {% assign source_line = '' %}
+  {% capture processed_content %}
+    {% assign lines = page_content | split: '\n' %}
+    {% for line in lines %}
+      {% if source_line == '' and line startswith 'source:' %}
+        {% assign source_line = line %}
+      {% else %}
+        {{ line | append: "\n" }}
+      {% endif %}
+    {% endfor %}
+  {% endcapture %}
+  {% assign content = processed_content %}
+  {% if source_line != '' %}
+    {% assign my_comment = source_line %}
+  {% else %}
+    {% assign my_comment = page.comment %}
+  {% endif %}
+  <!-- End of content processing -->
+
   <link href="{{ '/style.css' | relative_url }}" rel="stylesheet">
 </head>
 <body class="post-content-body">
@@ -175,10 +196,11 @@
         </div>
       {% endif %}
     </nav>
-    {% if page.comment %}
+    {% if my_comment %}
       <div class="comment-box">
         Reference:
-        <a href="{{ page.comment | strip_html | strip }}" title="{{ page.comment | strip_html | strip }}">{{ page.comment | strip_html | strip }}</a>
+        {% assign comment_url = my_comment | remove: 'source:' | strip %}
+        <a href="{{ comment_url }}" title="{{ comment_url }}">{{ comment_url }}</a>
       </div>
     {% endif %}
   </main>
