@@ -5,7 +5,7 @@ date: 2024-10-22
 type: post
 layout: post
 published: true
-slug: virtus-escola-crist-clssica
+slug: escola-virtus
 title: 'Virtus - Escola Cristã Clássica'
 ---
 Source: https://virtusecc.com.br/
