@@ -1,5 +1,5 @@
 ---
-tags: tools, cloud
+tags: tools>cloud
 info: aberto.
 date: 2024-12-09
 type: post
