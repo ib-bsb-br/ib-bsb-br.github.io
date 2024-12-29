@@ -1,8 +1,7 @@
 ---
 title: OpenAI Token Limits
 date: 2023-03-10
-tags:
-- AI
+tags: AI
 comment: https://github.com/Ighina/DeepTiling
 info: aberto.
 type: post
@@ -16,6 +15,7 @@ UPDATED: The article includes the ChatGPT API option (model=”gpt-3.5-turbo”)
 If you are reading this article, you have encountered the token limits of OpenAI’s GPT-3 models. The limits for various models are provided here.
 
 
+https://platform.openai.com/docs/models/gpt-3
 To overcome this limitation, OpenAI offers a great example with the Summarizing Books with Human Feedback (https://openai.com/blog/summarizing-books/) solution as provided below.
 
 The original text is divided into sections, and each section is summarized.
