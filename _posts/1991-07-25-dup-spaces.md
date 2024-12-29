@@ -2,7 +2,7 @@
 tags:
   - tools
 layout: default
-slug: rm-spaces
+slug: dup-spaces
 ---
 <div class="editor-container">
     <div class="editor-ui">
