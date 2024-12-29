@@ -7,7 +7,7 @@ layout: post
 published: true
 slug: web-archive-wayback-machine-url-pattern-searching
 title: Web Archive Wayback Machine URL Pattern Searching
-comment: https://web.archive.org/web/[timestamp]*/[domain]/[path]*
+comment: https://web.archive.org/web/*/example.com/wp-content/uploads/*/*
 ---
 
 ## Understanding Web Archives
@@ -48,7 +48,6 @@ Where:
 ### 1. Directory Traversal
 Search entire directory structures:
 ```
-https://web.archive.org/web/*/example.com/wp-content/uploads/*/*
 ```
 This matches:
 - /wp-content/uploads/2023/01/file.pdf
