@@ -7,7 +7,7 @@ layout: post
 published: true
 slug: web-archive-wayback-machine-url-pattern-searching
 title: Web Archive Wayback Machine URL Pattern Searching
-comment: https://web.archive.org/web/*/example.com/*/document*.pdf
+comment: https://web.archive.org/web/*/example.com/*/*/report*.doc
 ---
 
 ## Understanding Web Archives
@@ -57,7 +57,6 @@ This matches:
 ### 2. File Type Discovery
 Find specific file types:
 ```
-https://web.archive.org/web/*/example.com/*/*/report*.doc
 ```
 
 ### 3. Hidden Content Discovery
