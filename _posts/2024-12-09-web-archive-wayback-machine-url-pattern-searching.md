@@ -7,7 +7,7 @@ layout: post
 published: true
 slug: web-archive-wayback-machine-url-pattern-searching
 title: Web Archive Wayback Machine URL Pattern Searching
-comment: https://web.archive.org/web/*/example.com/*/*/report*.doc
+comment: https://web.archive.org/web/*/example.com/*backup*
 ---
 
 ## Understanding Web Archives
@@ -62,7 +62,6 @@ Find specific file types:
 ### 3. Hidden Content Discovery
 Common patterns for finding sensitive content:
 ```
-https://web.archive.org/web/*/example.com/*backup*
 https://web.archive.org/web/*/example.com/*archive*
 https://web.archive.org/web/*/example.com/*/old/*
 ```
