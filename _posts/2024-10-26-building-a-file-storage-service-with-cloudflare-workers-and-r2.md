@@ -1,15 +1,13 @@
 ---
-tags: scripts>cloud, tools
+tags: scripts>cloud, tools>cloud
 info: aberto.
 date: 2024-10-26
 type: post
 layout: post
 published: true
 slug: building-a-file-storage-service-with-cloudflare-workers-and-r2
-title: Building a File Storage Service with Cloudflare Workers and R2
-comment: 'httpMetadata: { cacheControl: ''public, max-age=31536000'' },'
+title: 'Building a File Storage Service with Cloudflare Workers and R2'
 ---
-
 How to create a file storage service that handles multiple file types using Cloudflare Workers for the RESTful API and Cloudflare R2 for storage. This implementation allows secure uploading, retrieving, and deleting of files.
 
 ### Introduction
@@ -90,7 +88,9 @@ async function uploadFile(request, env, key) {
   const contentType =
     request.headers.get('Content-Type') || 'application/octet-stream';
   await env.MY_BUCKET.put(key, request.body, {
+    httpMetadata: { contentType },
     // Optional: Set cache control
+    httpMetadata: { cacheControl: 'public, max-age=31536000' },
   });
   return new Response(`File '${key}' uploaded successfully`, { status: 200 });
 }
