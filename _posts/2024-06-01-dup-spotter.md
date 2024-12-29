@@ -1,12 +1,12 @@
 ---
-title: '"Copy Spotter" and "Duplicate-File-Remover"'
+title: 'Copy Spotter and Duplicate-File-Remover'
 date: 2024-06-01
 tags: linux, scripts
 comment: https://github.com/Kilemonn/Duplicate-File-Remover
 info: aberto.
 type: post
 layout: post
-slug: rm-spaces
+slug: dup-spotter
 ---
 
 # Duplicate-File-Remover
