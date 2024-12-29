@@ -6,10 +6,10 @@ type: post
 layout: post
 published: true
 slug: escola-virtus
-title: 'Virtus - Escola Cristã Clássica'
+title: Virtus - Escola Cristã Clássica
+comment: ref. = https://virtusecc.com.br/
 ---
 
-ref. = https://virtusecc.com.br/
 
 Markdown Content:
 *   [• Piedade](https://virtusecc.com.br/#section-iconbox-0-3ee1f7d)
