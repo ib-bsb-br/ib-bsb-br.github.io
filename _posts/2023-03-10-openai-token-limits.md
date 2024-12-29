@@ -1,15 +1,12 @@
 ---
 title: OpenAI Token Limits
-date: 2023-03-10 00:00:00-03:00
-categories:
-- Tutorial
+date: 2023-03-10
 tags:
 - AI
-comment: https://platform.openai.com/docs/models/gpt-3
+comment: https://github.com/Ighina/DeepTiling
 info: aberto.
 type: post
 layout: post
-sha: null
 ---
 
 How to Get Around OpenAI GPT-3 Token Limits
