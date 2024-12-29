@@ -1,15 +1,15 @@
 ---
 title: OpenAI Token Limits
-date: 2023-03-10 00:00:00 -03:00
+date: 2023-03-10 00:00:00-03:00
 categories:
 - Tutorial
 tags:
 - AI
-comment: github.com/Ighina/DeepTiling
+comment: https://platform.openai.com/docs/models/gpt-3
 info: aberto.
 type: post
 layout: post
-sha: 
+sha: null
 ---
 
 How to Get Around OpenAI GPT-3 Token Limits
@@ -19,7 +19,6 @@ UPDATED: The article includes the ChatGPT API option (model=”gpt-3.5-turbo”)
 If you are reading this article, you have encountered the token limits of OpenAI’s GPT-3 models. The limits for various models are provided here.
 
 
-https://platform.openai.com/docs/models/gpt-3
 To overcome this limitation, OpenAI offers a great example with the Summarizing Books with Human Feedback (https://openai.com/blog/summarizing-books/) solution as provided below.
 
 The original text is divided into sections, and each section is summarized.

@@ -6,8 +6,10 @@ type: post
 layout: post
 published: true
 slug: web-archive-wayback-machine-url-pattern-searching
-title: 'Web Archive Wayback Machine URL Pattern Searching'
+title: Web Archive Wayback Machine URL Pattern Searching
+comment: https://web.archive.org/web/[timestamp]*/[domain]/[path]*
 ---
+
 ## Understanding Web Archives
 
 The Internet Archive's Wayback Machine is a digital archive of the World Wide Web, containing over 700 billion web pages saved over time. This guide focuses on advanced searching techniques using URL patterns to discover archived content.
@@ -27,7 +29,6 @@ The asterisk (*) represents any number of characters in a URL. For example:
 
 ### Standard Format
 ```
-https://web.archive.org/web/[timestamp]*/[domain]/[path]*
 ```
 
 Where:

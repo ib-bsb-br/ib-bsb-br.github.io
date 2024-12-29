@@ -6,8 +6,10 @@ type: post
 layout: post
 published: true
 slug: converting-curl-to-ios-shortcut
-title: 'Converting cURL to iOS Shortcut'
+title: Converting cURL to iOS Shortcut
+comment: https://app.khoj.dev/api/chat/history?client=web&conversation_id=b24b3a6b-0915-41a9-b540-643ed42b60ef
 ---
+
 ## Converting cURL to iOS Shortcut
 
 This guide provides a step-by-step approach to converting your `cURL` command into an iOS Shortcut, focusing on clarity and security.
@@ -24,7 +26,6 @@ Search for and add the **”Get Contents of URL”** action.
 
 1. **URL:**  Enter the following URL:
    ```
-   https://app.khoj.dev/api/chat/history?client=web&conversation_id=b24b3a6b-0915-41a9-b540-643ed42b60ef
    ```
 2. **Method:** Select **”GET”**.
 

@@ -6,7 +6,8 @@ type: post
 layout: post
 published: true
 slug: urls-list-text-scraper
-title: 'URLs list text scraper'
+title: URLs list text scraper
+comment: https://example.com
 ---
 
 Reference: `https://github.com/kitsuyui/scraper`
@@ -26,7 +27,6 @@ To download the text content of multiple URLs from a list on Windows 11, we'll c
 
 3. Create a text file named `urls.txt` with one URL per line:
    ```
-   https://example.com
    https://another-example.com
    https://third-example.com
    ```

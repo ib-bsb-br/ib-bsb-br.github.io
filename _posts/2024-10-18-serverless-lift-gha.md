@@ -7,7 +7,7 @@ layout: post
 published: true
 slug: serverless-lift-gha
 title: Github actions workflow dispatch + Webhooks using `Serverless.com` Lift plugin
-comment: ''
+comment: https://api.github.com/repos/ib-bsb-br/ib-bsb-br.github.io/dispatches
 ---
 
 # 1. `serverless.yml` Configuration:
@@ -434,5 +434,4 @@ jobs:
             -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
             -H "Content-Type: application/json" \
             -d '{"event_type":"trigger-jekyll", "client_payload": {"message": "Triggered from main workflow"}}' \
-            https://api.github.com/repos/ib-bsb-br/ib-bsb-br.github.io/dispatches
 {% endcodeblock %}
