@@ -40,6 +40,7 @@ functions:
       - eventBridge:
           eventBus: ${construct:webhook.busName}
           pattern:
+            source:
               - webhook
             detail-type:
               - new_comment
