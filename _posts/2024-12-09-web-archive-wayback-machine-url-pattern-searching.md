@@ -6,10 +6,8 @@ type: post
 layout: post
 published: true
 slug: web-archive-wayback-machine-url-pattern-searching
-title: Web Archive Wayback Machine URL Pattern Searching
-comment: https://web.archive.org/web/*/example.com/*backup*
+title: 'Web Archive Wayback Machine URL Pattern Searching'
 ---
-
 ## Understanding Web Archives
 
 The Internet Archive's Wayback Machine is a digital archive of the World Wide Web, containing over 700 billion web pages saved over time. This guide focuses on advanced searching techniques using URL patterns to discover archived content.
@@ -29,6 +27,7 @@ The asterisk (*) represents any number of characters in a URL. For example:
 
 ### Standard Format
 ```
+https://web.archive.org/web/[timestamp]*/[domain]/[path]*
 ```
 
 Where:
@@ -48,6 +47,7 @@ Where:
 ### 1. Directory Traversal
 Search entire directory structures:
 ```
+https://web.archive.org/web/*/example.com/wp-content/uploads/*/*
 ```
 This matches:
 - /wp-content/uploads/2023/01/file.pdf
@@ -57,11 +57,14 @@ This matches:
 ### 2. File Type Discovery
 Find specific file types:
 ```
+https://web.archive.org/web/*/example.com/*/document*.pdf
+https://web.archive.org/web/*/example.com/*/*/report*.doc
 ```
 
 ### 3. Hidden Content Discovery
 Common patterns for finding sensitive content:
 ```
+https://web.archive.org/web/*/example.com/*backup*
 https://web.archive.org/web/*/example.com/*archive*
 https://web.archive.org/web/*/example.com/*/old/*
 ```
