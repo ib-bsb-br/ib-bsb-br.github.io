@@ -24,7 +24,7 @@ for root, dirs, files in os.walk(POSTS_DIR):
             source_line = ''
             new_body_lines = []
             for line in body_lines:
-                if not source_line and line.strip().lower().startswith('http'):
+                if not source_line and line.strip().lower().startswith('bibref'):
                     source_line = line.strip()
                 else:
                     new_body_lines.append(line)
