@@ -1,19 +1,15 @@
 ---
-title: '"Copy Spotter" and Deduplication'
-date: 2024-06-01 00:00:00-03:00
-categories:
-- Code
-tags:
-- linux
-- scripts
+title: '"Copy Spotter" and "Duplicate-File-Remover"'
+date: 2024-06-01
+tags: linux, scripts
 comment: https://github.com/Kilemonn/Duplicate-File-Remover
 info: aberto.
 type: post
 layout: post
+slug: rm-spaces
 ---
 
 # Duplicate-File-Remover
-
 
 A command-line tool that takes input directories and create an output directory containing only unique files from the provided input directories. The files are determined as being unique based on its content hash.
 
