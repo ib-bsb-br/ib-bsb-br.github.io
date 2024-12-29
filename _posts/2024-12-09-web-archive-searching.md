@@ -5,7 +5,7 @@ date: 2024-12-09
 type: post
 layout: post
 published: true
-slug: web-archive-wayback-machine-url-pattern-searching
+slug: web-archive-searching
 title: 'Web Archive Wayback Machine URL Pattern Searching'
 ---
 ## Understanding Web Archives
