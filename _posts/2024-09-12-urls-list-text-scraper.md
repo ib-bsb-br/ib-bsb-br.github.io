@@ -6,8 +6,7 @@ type: post
 layout: post
 published: true
 slug: urls-list-text-scraper
-title: URLs list text scraper
-comment: https://third-example.com
+title: 'URLs list text scraper'
 ---
 
 Reference: `https://github.com/kitsuyui/scraper`
@@ -27,6 +26,9 @@ To download the text content of multiple URLs from a list on Windows 11, we'll c
 
 3. Create a text file named `urls.txt` with one URL per line:
    ```
+   https://example.com
+   https://another-example.com
+   https://third-example.com
    ```
 
 4. Create a new file named `Scrape-Urls.ps1` with the following PowerShell script:
