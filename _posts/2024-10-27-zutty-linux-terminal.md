@@ -7,7 +7,7 @@ layout: post
 published: true
 slug: zutty-linux-terminal
 title: Zutty Linux terminal
-comment: '[https://git.hq.sig7.se/zutty.git](https://git.hq.sig7.se/zutty.git)'
+comment: 'https://git.hq.sig7.se/zutty.git'
 ---
 
 >Homepage: `https://tomscii.sig7.se/zutty/`
