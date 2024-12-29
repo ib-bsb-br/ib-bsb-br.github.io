@@ -7,7 +7,6 @@ layout: post
 published: true
 slug: pagefind-with-jekyll
 title: 'PageFind with Jekyll '
-comment: _site
 ---
 
 #### **Understanding the Components**
@@ -69,6 +68,7 @@ comment: _site
    Create a file named `pagefind.yml` in your root directory to configure PageFind’s behavior:
 
    ```yaml
+   source: _site
    bundle_dir: _pagefind
    split_pages_on: "h2"
    ```
