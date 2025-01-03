@@ -9,7 +9,7 @@ comment: 'bibref: https://tools.simonwillison.net/extract-urls'
 <h1>Extract URLs</h1>
 <p>Copy content from a web page and paste here to extract linked URLs:</p>
 
-<div id="input" contenteditable="true"></div>
+<div id="output-container" contenteditable="true"></div>
 
 <div id="output-container">
     <h2>Extracted</h2>
