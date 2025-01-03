@@ -2,8 +2,9 @@
 tags: tools
 layout: default
 slug: extract-urls
+comment: 'bibref: https://tools.simonwillison.net/extract-urls'
 ---
-bibref: https://tools.simonwillison.net/extract-urls
+
 
 <h1>Extract URLs</h1>
 <p>Copy content from a web page and paste here to extract linked URLs:</p>
