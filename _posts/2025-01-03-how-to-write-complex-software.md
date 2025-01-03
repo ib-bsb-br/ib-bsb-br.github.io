@@ -6,9 +6,10 @@ type: post
 layout: post
 published: true
 slug: how-to-write-complex-software
-title: 'How to write complex software'
+title: How to write complex software
+comment: 'bibref: https://grantslatton.com/how-to-software'
 ---
-bibref: https://grantslatton.com/how-to-software
+
 
 Suppose you are implementing some complex piece of software — a database, a word processor, a filesystem, a web browser, whatever. How do you get started? How do you actually organize the code?
 
