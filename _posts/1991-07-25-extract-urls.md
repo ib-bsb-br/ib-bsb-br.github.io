@@ -2,14 +2,14 @@
 tags: tools
 layout: default
 slug: extract-urls
-comment: 'bibref: https://tools.simonwillison.net/extract-urls'
 ---
-
+bibref: https://tools.simonwillison.net/extract-urls
 
 <h1>Extract URLs</h1>
-<p>Copy content from a web page and paste here to extract linked URLs:</p>
-
-<div id="output-container" contenteditable="true"></div>
+<div id="input" contenteditable="true">
+    <h2>Copy content from a web page and paste here to extract linked URLs:</h2>
+    <textarea id="input" readonly></textarea>
+</div>
 
 <div id="output-container">
     <h2>Extracted</h2>
