@@ -2,8 +2,9 @@
 tags: tools
 layout: default
 slug: extract-urls
+comment: https://tools.simonwillison.net/extract-urls
 ---
-bibref: https://tools.simonwillison.net/extract-urls
+
 
 <h1>Extract URLs</h1>
 <div id="input" contenteditable="true">
