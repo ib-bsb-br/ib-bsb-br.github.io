@@ -1,4 +1,218 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.4">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2025-01-03T19:58:21+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">How to write complex software</title><link href="https://ib.bsb.br/how-to-write-complex-software/" rel="alternate" type="text/html" title="How to write complex software" /><published>2025-01-03T00:00:00+00:00</published><updated>2025-01-03T19:54:08+00:00</updated><id>https://ib.bsb.br/how-to-write-complex-software</id><content type="html" xml:base="https://ib.bsb.br/how-to-write-complex-software/"><![CDATA[<p>Suppose you are implementing some complex piece of software — a database, a word processor, a filesystem, a web browser, whatever. How do you get started? How do you actually organize the code?</p>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.4">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2025-01-04T18:38:22+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">doc2plan to jekyll markdown via PowerShell</title><link href="https://ib.bsb.br/doc2plan-to-jekyll-markdown-via-powershell/" rel="alternate" type="text/html" title="doc2plan to jekyll markdown via PowerShell" /><published>2025-01-04T00:00:00+00:00</published><updated>2025-01-04T18:37:25+00:00</updated><id>https://ib.bsb.br/doc2plan-to-jekyll-markdown-via-powershell</id><content type="html" xml:base="https://ib.bsb.br/doc2plan-to-jekyll-markdown-via-powershell/"><![CDATA[<section data-filename="powershell_code-block.txt" data-code="Param(
+[Parameter(Mandatory = $true)]
+[string]$JsonFilePath,
+[Parameter(Mandatory = $true)]
+[string]$OutputMarkdownPath
+)
+# Function to adjust heading levels
+function Adjust-Headings {
+Param(
+[string]$content,
+[int]$levelOffset
+)
+if ([string]::IsNullOrEmpty($content)) {
+return ''
+}
+$lines = $content -split &quot;`n&quot;
+$adjustedLines = foreach ($line in $lines) {
+if ($line -match '^(#{1,6})') {
+$hashes = $Matches[1]
+$newLevel = [Math]::Min($hashes.Length + $levelOffset, 6)
+$restOfLine = $line.Substring($hashes.Length)
+('#' * $newLevel) + $restOfLine
+} else {
+$line
+}
+}
+return ($adjustedLines -join &quot;`n&quot;)
+}
+# Function to process topics recursively
+function Process-Topic {
+Param(
+[psobject]$topic,
+[int]$headingLevel
+)
+$output = &quot;&quot;
+try {
+# Sanitize the title to remove markdown formatting
+$title = $topic.title -replace '^[#*\-\s]*', ''   # Remove leading #, *, -, spaces
+$title = $title.Trim('*').Trim()                  # Remove asterisks and extra spaces
+# Create the heading for the topic
+$headingHashes = '#' * $headingLevel
+$output += &quot;`n$headingHashes $title`n`n&quot;
+$content = $topic.content
+if ([string]::IsNullOrEmpty($content)) {
+$adjustedContent = ''  # Set to empty string if content is null or empty
+}
+else {
+# Adjust content headings
+$adjustedContent = Adjust-Headings -content $content -levelOffset ($headingLevel - 1)
+}
+$output += $adjustedContent + &quot;`n&quot;
+# Process children recursively
+if ($topic.children -and $topic.children.Count -gt 0) {
+foreach ($child in $topic.children) {
+$childOutput = Process-Topic -topic $child -headingLevel ($headingLevel + 1)
+$output += $childOutput
+}
+}
+}
+catch {
+Write-Error &quot;Error processing topic '$($topic.title)': $_&quot;
+}
+return $output
+}
+# Main script execution
+try {
+# Read the JSON data
+$JsonData = Get-Content -Raw -Path $JsonFilePath | ConvertFrom-Json
+# Initialize output content
+$markdownContent = &quot;&quot;
+# Create front matter
+$frontMatter = &quot;---`n&quot;
+$frontMatter += &quot;title: '$($JsonData.name)'`n&quot;
+$frontMatter += &quot;layout: default`n&quot;
+$frontMatter += &quot;---`n`n&quot;
+$markdownContent += $frontMatter
+# Include keyTopics if available
+if ($JsonData.keyTopics) {
+$keyTopicsContent = Adjust-Headings -content $JsonData.keyTopics -levelOffset 0
+$markdownContent += $keyTopicsContent + &quot;`n&quot;
+}
+# Process chapters
+$chapters = $JsonData.chapters
+foreach ($chapter in $chapters) {
+# Sanitize chapter name
+$chapterName = $chapter.name -replace '^[#*\-\s]*', ''   # Remove leading #, *, -, spaces
+$chapterName = $chapterName.Trim('*').Trim()             # Remove asterisks and extra spaces
+$markdownContent += &quot;`n## $chapterName`n`n&quot;
+# Adjust headings in chapter content if needed (if chapter has content)
+if ($chapter.content) {
+$adjustedChapterContent = Adjust-Headings -content $chapter.content -levelOffset 1
+$markdownContent += $adjustedChapterContent + &quot;`n&quot;
+}
+# Process topics within the chapter
+if ($chapter.topics) {
+foreach ($topic in $chapter.topics) {
+$topicOutput = Process-Topic -topic $topic -headingLevel 3
+$markdownContent += $topicOutput
+}
+}
+}
+# Write the combined markdown content to the output file
+Set-Content -Path $OutputMarkdownPath -Value $markdownContent -Encoding UTF8
+Write-Host &quot;Markdown file has been created at $OutputMarkdownPath&quot;
+}
+catch {
+Write-Error &quot;An error occurred: $_&quot;
+}" data-download-link="" data-download-link-label="Download Powershell"><code class="language-powershell">Param(
+[Parameter(Mandatory = $true)]
+[string]$JsonFilePath,
+[Parameter(Mandatory = $true)]
+[string]$OutputMarkdownPath
+)
+# Function to adjust heading levels
+function Adjust-Headings {
+Param(
+[string]$content,
+[int]$levelOffset
+)
+if ([string]::IsNullOrEmpty($content)) {
+return ''
+}
+$lines = $content -split "`n"
+$adjustedLines = foreach ($line in $lines) {
+if ($line -match '^(#{1,6})') {
+$hashes = $Matches[1]
+$newLevel = [Math]::Min($hashes.Length + $levelOffset, 6)
+$restOfLine = $line.Substring($hashes.Length)
+('#' * $newLevel) + $restOfLine
+} else {
+$line
+}
+}
+return ($adjustedLines -join "`n")
+}
+# Function to process topics recursively
+function Process-Topic {
+Param(
+[psobject]$topic,
+[int]$headingLevel
+)
+$output = ""
+try {
+# Sanitize the title to remove markdown formatting
+$title = $topic.title -replace '^[#*\-\s]*', ''   # Remove leading #, *, -, spaces
+$title = $title.Trim('*').Trim()                  # Remove asterisks and extra spaces
+# Create the heading for the topic
+$headingHashes = '#' * $headingLevel
+$output += "`n$headingHashes $title`n`n"
+$content = $topic.content
+if ([string]::IsNullOrEmpty($content)) {
+$adjustedContent = ''  # Set to empty string if content is null or empty
+}
+else {
+# Adjust content headings
+$adjustedContent = Adjust-Headings -content $content -levelOffset ($headingLevel - 1)
+}
+$output += $adjustedContent + "`n"
+# Process children recursively
+if ($topic.children -and $topic.children.Count -gt 0) {
+foreach ($child in $topic.children) {
+$childOutput = Process-Topic -topic $child -headingLevel ($headingLevel + 1)
+$output += $childOutput
+}
+}
+}
+catch {
+Write-Error "Error processing topic '$($topic.title)': $_"
+}
+return $output
+}
+# Main script execution
+try {
+# Read the JSON data
+$JsonData = Get-Content -Raw -Path $JsonFilePath | ConvertFrom-Json
+# Initialize output content
+$markdownContent = ""
+# Create front matter
+$frontMatter = "---`n"
+$frontMatter += "title: '$($JsonData.name)'`n"
+$frontMatter += "layout: default`n"
+$frontMatter += "---`n`n"
+$markdownContent += $frontMatter
+# Include keyTopics if available
+if ($JsonData.keyTopics) {
+$keyTopicsContent = Adjust-Headings -content $JsonData.keyTopics -levelOffset 0
+$markdownContent += $keyTopicsContent + "`n"
+}
+# Process chapters
+$chapters = $JsonData.chapters
+foreach ($chapter in $chapters) {
+# Sanitize chapter name
+$chapterName = $chapter.name -replace '^[#*\-\s]*', ''   # Remove leading #, *, -, spaces
+$chapterName = $chapterName.Trim('*').Trim()             # Remove asterisks and extra spaces
+$markdownContent += "`n## $chapterName`n`n"
+# Adjust headings in chapter content if needed (if chapter has content)
+if ($chapter.content) {
+$adjustedChapterContent = Adjust-Headings -content $chapter.content -levelOffset 1
+$markdownContent += $adjustedChapterContent + "`n"
+}
+# Process topics within the chapter
+if ($chapter.topics) {
+foreach ($topic in $chapter.topics) {
+$topicOutput = Process-Topic -topic $topic -headingLevel 3
+$markdownContent += $topicOutput
+}
+}
+}
+# Write the combined markdown content to the output file
+Set-Content -Path $OutputMarkdownPath -Value $markdownContent -Encoding UTF8
+Write-Host "Markdown file has been created at $OutputMarkdownPath"
+}
+catch {
+Write-Error "An error occurred: $_"
+}</code></section>]]></content><author><name></name></author><category term="scripts&gt;powershell," /><category term="estudos," /><category term="tools&gt;cloud" /></entry><entry><title type="html">How to write complex software</title><link href="https://ib.bsb.br/how-to-write-complex-software/" rel="alternate" type="text/html" title="How to write complex software" /><published>2025-01-03T00:00:00+00:00</published><updated>2025-01-03T19:54:08+00:00</updated><id>https://ib.bsb.br/how-to-write-complex-software</id><content type="html" xml:base="https://ib.bsb.br/how-to-write-complex-software/"><![CDATA[<p>Suppose you are implementing some complex piece of software — a database, a word processor, a filesystem, a web browser, whatever. How do you get started? How do you actually organize the code?</p>
 
 <p>This post attempts to lay out a general method for approaching this problem with some specific techniques and guiding heuristics.</p>
 
@@ -8236,6 +8450,4 @@ Write-Host "An error occurred: $_"
     <div class="language-powershell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">.</span><span class="n">\extract_senders.ps1</span><span class="w">
 </span></code></pre></div>    </div>
   </li>
-</ul>]]></content><author><name></name></author><category term="scripts&gt;powershell," /><category term="scripts&gt;python," /><category term="tasks" /></entry><entry><title type="html">The Influence of Steady Friendships on Adolescent Development</title><link href="https://ib.bsb.br/the-influence-of-steady-friendships-on-adolescent-development/" rel="alternate" type="text/html" title="The Influence of Steady Friendships on Adolescent Development" /><published>2024-12-21T00:00:00+00:00</published><updated>2024-12-21T09:56:59+00:00</updated><id>https://ib.bsb.br/the-influence-of-steady-friendships-on-adolescent-development</id><content type="html" xml:base="https://ib.bsb.br/the-influence-of-steady-friendships-on-adolescent-development/"><![CDATA[<p>It’s the friends they hang out with. If she has at least one real friend with years of friendship, she will be more busy with developing herself and her own future life. Kids that have a new friend every month, because their parents move a lot for example, start to get more trouble. They need to prove themselves and try to get attention, to get a connection and to feel accepted. Spoiler alert: this is not where (pre) teenagers make very good decisions, which is known out of our own experience. Shortcut: a steady, safe living and social base is the key: make sure she hangs out with kids you admire.</p>
-
-<p><strong>Source:</strong> I have done a short psychology study to understand the troubled kids I worked with as a nurse. I needed to understand where their behaviour came from, because talking is in the beginning impossible for them. But 90% were sexually active.</p>]]></content><author><name></name></author><category term="fatherhood" /></entry></feed>
+</ul>]]></content><author><name></name></author><category term="scripts&gt;powershell," /><category term="scripts&gt;python," /><category term="tasks" /></entry></feed>
