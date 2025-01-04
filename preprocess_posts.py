@@ -21,19 +21,19 @@ for root, dirs, files in os.walk(POSTS_DIR):
             front_matter = yaml.safe_load(front_matter_raw)
             body_lines = body.strip().split('\n')
 
-            source_line = ''
+            bibref_value = None
             new_body_lines = []
             for line in body_lines:
-                if not source_line and line.strip().lower().startswith('bibref'):
-                    source_line = line.strip()
+                # Use regex to match lines starting with 'bibref', optional colon, capturing the value
+                match = re.match(r'^\s*[Bb]ibref\s*:?\s*(.*)', line)
+                if match and bibref_value is None:
+                    bibref_value = match.group(1).strip()
                 else:
                     new_body_lines.append(line)
 
-            if source_line:
-                # Extract the URL from the source line
-                source_value = re.sub(r'^[Ss]ource:\s*', '', source_line).strip()
+            if bibref_value:
                 # Update the 'comment' field in the front matter
-                front_matter['comment'] = source_value
+                front_matter['comment'] = bibref_value
 
                 # Reconstruct the content
                 new_front_matter_raw = yaml.dump(front_matter, allow_unicode=True, sort_keys=False).strip()
