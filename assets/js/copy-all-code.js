@@ -3,8 +3,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
   if (copyAllButton) {
     copyAllButton.addEventListener('click', function () {
-      // Collect all code block contents
-      const codeBlocks = document.querySelectorAll('pre code, code[class*="language-"]');
+      // Select all code blocks within <section><code>
+      const codeBlocks = document.querySelectorAll('section > code');
+
       let combinedCode = '';
 
       codeBlocks.forEach(function (block, index) {
@@ -21,6 +22,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
       // Copy the combined code to the clipboard
       if (navigator.clipboard && window.isSecureContext) {
+        // Modern browsers
         navigator.clipboard.writeText(combinedCode).then(function () {
           showCopySuccessMessage();
         }, function (err) {
@@ -28,6 +30,7 @@ document.addEventListener('DOMContentLoaded', function () {
           showCopyErrorMessage('Failed to copy code blocks.');
         });
       } else {
+        // Fallback method for older browsers
         fallbackCopyTextToClipboard(combinedCode);
       }
     });
