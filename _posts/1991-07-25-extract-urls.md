@@ -4,9 +4,6 @@ layout: default
 slug: extract-urls
 comment: https://tools.simonwillison.net/extract-urls
 ---
-
-
-<h1>Extract URLs</h1>
 <div id="input" contenteditable="true">
     <h2>Copy content from a web page and paste here to extract linked URLs:</h2>
     <textarea id="input" readonly></textarea>
