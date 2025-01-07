@@ -15,6 +15,6 @@ group :jekyll_plugins do
 end
 
 # Additional gems
-gem "ffi", "< 1.17.0"
+gem "ffi", "< 1.18.0"
 gem "kramdown-parser-gfm"
 gem "icalendar"
