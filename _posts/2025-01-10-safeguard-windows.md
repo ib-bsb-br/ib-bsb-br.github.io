@@ -5,8 +5,8 @@ date: 2025-01-10
 type: post
 layout: post
 published: true
-slug: safeguard-windows-11-customizing
-title: 'Safeguard Windows 11 customizing'
+slug: safeguard-windows
+title: 'Safeguard Windows 11 customization'
 ---
 ### **1. Creating a Complete System Backup**
 
