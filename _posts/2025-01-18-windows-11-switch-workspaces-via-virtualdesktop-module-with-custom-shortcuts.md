@@ -119,47 +119,48 @@ We will create a PowerShell script that automatically generates the batch files 
    Paste the following PowerShell script:
 
    ```powershell
-   # GenerateBatchFiles.ps1
 
-   # Path to the VirtualDesktop executable
-   $virtualDesktopPath = "C:\Tools\VirtualDesktop\VirtualDesktop11.exe"
+# Path to the VirtualDesktop executable
+$virtualDesktopPath = "G:\05-portable\VirtualDesktop11-24H2.exe"
 
-   # Output folder for the batch files
-   $outputFolder = "C:\QuickAccess"
+# Output folder for the batch files
+$outputFolder = "C:\QuickAccess"
 
-   # Ensure the VirtualDesktop executable exists
-   if (-Not (Test-Path -Path $virtualDesktopPath)) {
-       Write-Error "VirtualDesktop executable not found at $virtualDesktopPath"
-       exit 1
-   }
+# Ensure the VirtualDesktop executable exists
+if (-Not (Test-Path -Path $virtualDesktopPath)) {
+    Write-Error "VirtualDesktop executable not found at $virtualDesktopPath"
+    exit 1
+}
 
-   # Ensure the output folder exists
-   if (-Not (Test-Path -Path $outputFolder)) {
-       New-Item -ItemType Directory -Path $outputFolder -Force | Out-Null
-       Write-Host "Created output directory: $outputFolder"
-   }
+# Ensure the output folder exists
+if (-Not (Test-Path -Path $outputFolder)) {
+    New-Item -ItemType Directory -Path $outputFolder -Force | Out-Null
+    Write-Host "Created output directory: $outputFolder"
+}
 
-   # Generate batch files for desktops 1 to 8
-   for ($desktopNumber = 1; $desktopNumber -le 8; $desktopNumber++) {
+# Generate batch files for desktops 1 to 8
+for ($desktopNumber = 1; $desktopNumber -le 8; $desktopNumber++) {
 
-       # Batch file content
-       $batFileContent = "@echo off`n"
-       $batFileContent += "`"$virtualDesktopPath`" /Switch:$desktopNumber"
+    # Batch file content
+    $batFileContent = "@echo off`n"
+    $batFileContent += "`"$virtualDesktopPath`" /Switch:$desktopNumber"
 
-       # Batch file path
-       $batFilePath = Join-Path $outputFolder "$desktopNumber.bat"
+    # Batch file path
+    $batFilePath = Join-Path $outputFolder "$desktopNumber.bat"
 
-       # Create the batch file
-       try {
-           Set-Content -Path $batFilePath -Value $batFileContent -Encoding ASCII
-           Write-Host "Created batch file: $batFilePath"
-       }
-       catch {
-           Write-Error "Error creating batch file $batFilePath: $_"
-       }
-   }
+    # Create the batch file
+    try {
+        Set-Content -Path $batFilePath -Value $batFileContent -Encoding ASCII
+        Write-Host "Created batch file: $batFilePath"
+    }
+    catch {
+        Write-Error "Error creating batch file ${batFilePath}: $_"
+        # Or using the -f operator:
+        # Write-Error ("Error creating batch file {0}: {1}" -f $batFilePath, $_)
+    }
+}
 
-   Write-Host "All batch files have been generated in $outputFolder."
+Write-Host "All batch files have been generated in $outputFolder."
    ```
 
    **Notes:**
