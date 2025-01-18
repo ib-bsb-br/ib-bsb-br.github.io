@@ -246,8 +246,4 @@ You can now switch to any workspace by running the corresponding batch file.
 
 - **From Command Prompt or PowerShell:**
 
-  - Simply type the number (which corresponds to the batch file's name) and press **Enter**:
-
-    ```cmd
-    C:\Users\YourUsername> 3
-    ```
+  - Simply type the number (which corresponds to the batch file's name) and press **Enter**: `C:\Users\YourUsername> 3`
