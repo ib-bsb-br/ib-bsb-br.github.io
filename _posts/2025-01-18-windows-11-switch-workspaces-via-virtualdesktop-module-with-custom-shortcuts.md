@@ -10,13 +10,13 @@ title: 'Windows 11: Switch Workspaces via VirtualDesktop Module with custom shor
 ---
 # Creating Batch Files to Switch to Specific Virtual Desktops Using PowerShell and the VirtualDesktop Tool
 
-### **Overview**
+## **Overview**
 
 This guide will help you create a PowerShell script that generates batch files (`1.bat` to `8.bat`) to switch directly to any of your eight virtual desktops (workspaces) on Windows 11. We will use the **VirtualDesktop** command-line tool by Markus Scholtes to manage virtual desktops via command-line commands.
 
 ---
 
-### **Prerequisites**
+## **Prerequisites**
 
 1. **Download the VirtualDesktop Tool:**
 
@@ -44,7 +44,7 @@ This guide will help you create a PowerShell script that generates batch files (
 
 ---
 
-### **Step 1: Ensure Eight Virtual Desktops Exist**
+## **Step 1: Ensure Eight Virtual Desktops Exist**
 
 We need to make sure that you have exactly eight virtual desktops. We will use PowerShell to create additional desktops if necessary.
 
@@ -94,7 +94,7 @@ We need to make sure that you have exactly eight virtual desktops. We will use P
 
 ---
 
-### **Step 2: Create a PowerShell Script to Generate Batch Files**
+## **Step 2: Create a PowerShell Script to Generate Batch Files**
 
 We will create a PowerShell script that automatically generates the batch files needed to switch to each of the eight virtual desktops.
 
@@ -117,9 +117,7 @@ We will create a PowerShell script that automatically generates the batch files 
 3. **Script Content:**
 
    Paste the following PowerShell script:
-
-   ```powershell
-
+{% codeblock powershell %}
 # Path to the VirtualDesktop executable
 $virtualDesktopPath = "G:\05-portable\VirtualDesktop11-24H2.exe"
 
@@ -161,7 +159,7 @@ for ($desktopNumber = 1; $desktopNumber -le 8; $desktopNumber++) {
 }
 
 Write-Host "All batch files have been generated in $outputFolder."
-   ```
+{% endcodeblock %}
 
    **Notes:**
 
@@ -177,7 +175,7 @@ Write-Host "All batch files have been generated in $outputFolder."
 
 ---
 
-### **Step 3: Run the PowerShell Script**
+## **Step 3: Run the PowerShell Script**
 
 1. **Run the Script:**
 
@@ -208,7 +206,7 @@ Write-Host "All batch files have been generated in $outputFolder."
 
 ---
 
-### **Step 4: Add `C:\QuickAccess` to Your PATH Environment Variable**
+## **Step 4: Add `C:\QuickAccess` to Your PATH Environment Variable**
 
 Adding the `C:\QuickAccess` folder to your PATH allows Windows to recognize the batch files when using the Run dialog or Command Prompt.
 
@@ -236,7 +234,7 @@ Adding the `C:\QuickAccess` folder to your PATH allows Windows to recognize the 
 
 ---
 
-### **Step 5: Use the Batch Files to Switch Workspaces**
+## **Step 5: Use the Batch Files to Switch Workspaces**
 
 You can now switch to any workspace by running the corresponding batch file.
 
