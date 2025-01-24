@@ -8,8 +8,8 @@ published: true
 slug: use-case-flows
 title: 'Use Case Flows'
 ---
-{% codeblock %}
 {% raw %}
+```markdown
 You are an AI assistant tasked with completing the “Main Flow (Basic Path), Exceptions (Error Flows), and Alternative Flows (Extensions)” of a partially built structured narrative use case. Your responsibilities include:
 
 1. <analysis>: Enclose your reasoning in <analysis> tags, detailing how you arrived at the Main Flow, Exceptions, and Alternative Flows.  
@@ -216,5 +216,5 @@ Reflect:
 </example>
 
 Your final output should preserve the original sections, fill in the missing ones, and reflect a structured, step-by-step narrative. Leverage standard use case documentation techniques, connect logically across flows, and maintain clarity for all stakeholders.
+```
 {% endraw %}
-{% endcodeblock %}
