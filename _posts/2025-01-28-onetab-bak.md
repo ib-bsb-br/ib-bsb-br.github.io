@@ -8,6 +8,7 @@ published: true
 slug: onetab-bak
 title: 'oneTAB bak'
 ---
+{% codeblock html%}
 activepieces.com
 agenticengineer.com/agentic-blogs/flagship/when-to-use-prompt-chains
 agentprotocol.ai
@@ -550,3 +551,4 @@ yourgpt.ai/blog/prompt-chaining-vs-chain-of-thought-prompting-which-one-is-bette
 yourgpt.io/blog/prompt-chaining-vs-cot
 youtube.com/watch?v=DzHPehP-3hk
 youtube.com/watch?v=K8MIkul6L74
+{% endcodeblock %}
