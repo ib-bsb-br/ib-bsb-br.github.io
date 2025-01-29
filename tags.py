@@ -10,7 +10,7 @@ import json
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 # Threshold for generating permutations
-THRESHOLD = 1  # Adjust this value as needed
+THRESHOLD = 2  # Adjust this value as needed
 
 def extract_frontmatter(file_content: str) -> str:
     """Extracts the YAML frontmatter from a markdown file."""
