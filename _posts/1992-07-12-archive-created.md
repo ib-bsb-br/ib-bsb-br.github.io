@@ -11,10 +11,11 @@ slug: archive-created
     {% for post in sorted_posts %}
       <div class="search-link">
         <h4>
-          <a class="post-heading" href="{{ site.back_to_top_url | default: '#' }}" id="back-to-top" aria-label="Back to top">
-            <img src="{{ '/assets/gold.ico' | relative_url }}" alt="gold icon">
-          </a>
-          {{ post.date | date: '%Y-%m-%d' }}
+        <a class="post-heading" href="{{ site.back_to_top_url | default: '#' }}" id="back-top" aria-label="Back_to_top" class="back-top-link">
+          <span class="sr-only">Back_to_top</span></a>
+        {{ post.date | date: '%Y-%m-%d' }}
+        {% if post.last_modified_at != post.date %} &rightarrowtail; {{ post.last_modified_at | date_to_string }}
+        {% endif %}
         </h4>
         <ul>
           <li>
