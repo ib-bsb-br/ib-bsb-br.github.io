@@ -4,107 +4,96 @@ layout: default
 slug: extract-urls
 comment: https://tools.simonwillison.net/extract-urls
 ---
-
-<h2>Copy content from a web page and paste here to extract linked URLs:</h2>
-
-<!-- Pasting Area -->
-<div id="paste-area" contenteditable="true" style="
-  border: 1px solid #ccc;
-  padding: 1em;
-  min-height: 5em;
-  margin-bottom: 1em;
-">
-  <!-- The user will paste HTML content here -->
+<div id="input-container">
+  <h2>Copy content and paste here to extract linked URLs:</h2>
+  <div id="input" contenteditable="true" aria-label="Input Area" tabindex="0" role="textbox" aria-multiline="true">
+    <p>Paste your content here...</p>
+  </div>
 </div>
 
-<!-- Output Container (hidden by default) -->
 <div id="output-container" style="display: none;">
   <h2>Extracted URLs</h2>
-  <textarea id="output" readonly style="width: 100%; height: 6em;"></textarea>
-  <button id="copy-button">Copy URLs</button>
+  <textarea id="output" readonly aria-label="Extracted URLs"></textarea>
+  <button id="copy-button">Copy to clipboard</button>
 </div>
 
 <script>
-(function() {
-  'use strict';
-
-  const pasteArea = document.getElementById('paste-area');
+  const inputDiv = document.getElementById('input');
   const outputContainer = document.getElementById('output-container');
-  const output = document.getElementById('output');
+  const outputTextarea = document.getElementById('output');
   const copyButton = document.getElementById('copy-button');
 
-  // Optional: Basic sanitization to text (removes HTML tags)
-  // A thorough approach would require a specialized library.
-  function sanitizeHTML(html) {
-    const temp = document.createElement('div');
-    temp.textContent = html;
-    return temp.innerHTML;
-  }
-
-  // Extract URLs from pasted HTML
-  pasteArea.addEventListener('paste', (e) => {
+  /**
+   * Extracts URLs from the pasted content.
+   * @param {ClipboardEvent} e - The paste event.
+   */
+  const handlePaste = (e) => {
     e.preventDefault();
     const clipboardData = e.clipboardData || window.clipboardData;
-    // Attempt to read HTML; fallback to plain text if unavailable
-    let pastedContent = clipboardData.getData('text/html')
-      || clipboardData.getData('text/plain')
-      || '';
+    const pastedData = clipboardData.getData('text/html') || clipboardData.getData('text/plain');
 
-    // Sanitize if we wish to avoid embedding HTML
-    pastedContent = sanitizeHTML(pastedContent);
+    let urls = [];
 
-    // Create a temporary container to parse the HTML
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = pastedContent;
-
-    const links = tempDiv.querySelectorAll('a');
-    const urls = Array.from(links)
-      .map(link => link.href)
-      .filter(url => url.startsWith('http'));
+    if (clipboardData.types.includes('text/html')) {
+      // Extract URLs from HTML content
+      const tempDiv = document.createElement('div');
+      tempDiv.innerHTML = pastedData;
+      // If robust sanitization is needed, consider using a library like DOMPurify:
+      // tempDiv.innerHTML = DOMPurify.sanitize(pastedData);
+      const links = tempDiv.getElementsByTagName('a');
+      urls = Array.from(links)
+        .map(link => link.href)
+        .filter(url => url.startsWith('http'));
+    } else {
+      // Extract URLs from plain text using a regular expression
+      const urlRegex = /(https?:\/\/[^\s]+)/g;
+      urls = pastedData.match(urlRegex) || [];
+    }
 
     if (urls.length > 0) {
-      output.value = urls.join('\\n');
+      outputTextarea.value = urls.join('\n');
       outputContainer.style.display = 'block';
+      inputDiv.innerHTML = '<p>Content pasted. URLs extracted.</p>';
     } else {
-      output.value = '';
-      outputContainer.style.display = 'none';
-      alert('No valid URLs found.');
+      outputContainer.style.display = 'block'; // Show output container even if no URLs are found
+      outputTextarea.value = 'No valid URLs found in the pasted content.';
+      inputDiv.innerHTML = '<p>Content pasted. No URLs found.</p>';
     }
+  };
 
-    // Replace the user’s pasted content with a simple message (optional)
-    pasteArea.textContent = 'URLs extracted – you can paste again.';
-  });
-
-  // Copy to clipboard
-  copyButton.addEventListener('click', () => {
-    // Try the modern API first
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(output.value)
-        .then(() => {
-          showCopyFeedback();
-        })
-        .catch(() => {
-          fallbackCopy();
-        });
-    } else {
-      fallbackCopy();
+  /**
+   * Clears the input message when the input area gains focus.
+   */
+  const handleFocus = () => {
+    const messages = ['Content pasted. URLs extracted.', 'Content pasted. No URLs found.', '<p>Paste your content here...</p>'];
+    if (messages.includes(inputDiv.innerHTML)) {
+      inputDiv.innerHTML = '';
     }
-  });
+  };
 
-  // Provide fallback for older browsers
-  function fallbackCopy() {
-    output.select();
-    document.execCommand('copy');
-    showCopyFeedback();
-  }
+  /**
+   * Copies the extracted URLs to the clipboard.
+   */
+  const handleCopy = async () => {
+    if (outputTextarea.value.trim() === '') {
+      outputTextarea.value = 'No content to copy!';
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(outputTextarea.value);
+      const originalText = copyButton.textContent;
+      copyButton.textContent = 'Copied!';
+      setTimeout(() => {
+        copyButton.textContent = originalText;
+      }, 1500);
+    } catch (err) {
+      console.error('Failed to copy!', err);
+      outputTextarea.value = 'Failed to copy the URLs. Please try again.';
+    }
+  };
 
-  // Give user a quick “Copied!” feedback
-  function showCopyFeedback() {
-    const originalText = copyButton.textContent;
-    copyButton.textContent = 'Copied!';
-    setTimeout(() => {
-      copyButton.textContent = originalText;
-    }, 1500);
-  }
-})();
+  // Event Listeners
+  inputDiv.addEventListener('paste', handlePaste);
+  inputDiv.addEventListener('focus', handleFocus);
+  copyButton.addEventListener('click', handleCopy);
 </script>
