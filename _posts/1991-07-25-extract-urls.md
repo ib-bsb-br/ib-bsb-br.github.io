@@ -4,62 +4,107 @@ layout: default
 slug: extract-urls
 comment: https://tools.simonwillison.net/extract-urls
 ---
-<div id="input" contenteditable="true">
-    <h2>Copy content from a web page and paste here to extract linked URLs:</h2>
-    <textarea id="input" readonly></textarea>
+
+<h2>Copy content from a web page and paste here to extract linked URLs:</h2>
+
+<!-- Pasting Area -->
+<div id="paste-area" contenteditable="true" style="
+  border: 1px solid #ccc;
+  padding: 1em;
+  min-height: 5em;
+  margin-bottom: 1em;
+">
+  <!-- The user will paste HTML content here -->
 </div>
 
-<div id="output-container">
-    <h2>Extracted</h2>
-    <textarea id="output" readonly></textarea>
-    <button id="copy-button">Copy to clipboard</button>
+<!-- Output Container (hidden by default) -->
+<div id="output-container" style="display: none;">
+  <h2>Extracted URLs</h2>
+  <textarea id="output" readonly style="width: 100%; height: 6em;"></textarea>
+  <button id="copy-button">Copy URLs</button>
 </div>
 
 <script>
-    const input = document.getElementById('input');
-    const outputContainer = document.getElementById('output-container');
-    const output = document.getElementById('output');
-    const copyButton = document.getElementById('copy-button');
+(function() {
+  'use strict';
 
-    input.addEventListener('paste', function(e) {
-        e.preventDefault();
+  const pasteArea = document.getElementById('paste-area');
+  const outputContainer = document.getElementById('output-container');
+  const output = document.getElementById('output');
+  const copyButton = document.getElementById('copy-button');
 
-        const clipboardData = e.clipboardData || window.clipboardData;
-        const pastedData = clipboardData.getData('text/html');
+  // Optional: Basic sanitization to text (removes HTML tags)
+  // A thorough approach would require a specialized library.
+  function sanitizeHTML(html) {
+    const temp = document.createElement('div');
+    temp.textContent = html;
+    return temp.innerHTML;
+  }
 
-        const temp = document.createElement('div');
-        temp.innerHTML = pastedData;
+  // Extract URLs from pasted HTML
+  pasteArea.addEventListener('paste', (e) => {
+    e.preventDefault();
+    const clipboardData = e.clipboardData || window.clipboardData;
+    // Attempt to read HTML; fallback to plain text if unavailable
+    let pastedContent = clipboardData.getData('text/html')
+      || clipboardData.getData('text/plain')
+      || '';
 
-        const links = temp.getElementsByTagName('a');
-        const urls = Array.from(links)
-            .map(link => link.href)
-            .filter(url => url.startsWith('http'));
+    // Sanitize if we wish to avoid embedding HTML
+    pastedContent = sanitizeHTML(pastedContent);
 
-        if (urls.length > 0) {
-            output.value = urls.join('\n');
-            outputContainer.style.display = 'block';
-        } else {
-            outputContainer.style.display = 'none';
-        }
+    // Create a temporary container to parse the HTML
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = pastedContent;
 
-        input.textContent = 'Content pasted. URLs extracted.';
-    });
+    const links = tempDiv.querySelectorAll('a');
+    const urls = Array.from(links)
+      .map(link => link.href)
+      .filter(url => url.startsWith('http'));
 
-    input.addEventListener('focus', function() {
-        if (input.textContent === 'Content pasted. URLs extracted.') {
-            input.textContent = '';
-        }
-    });
+    if (urls.length > 0) {
+      output.value = urls.join('\\n');
+      outputContainer.style.display = 'block';
+    } else {
+      output.value = '';
+      outputContainer.style.display = 'none';
+      alert('No valid URLs found.');
+    }
 
-    copyButton.addEventListener('click', function() {
-        output.select();
-        document.execCommand('copy');
+    // Replace the user’s pasted content with a simple message (optional)
+    pasteArea.textContent = 'URLs extracted – you can paste again.';
+  });
 
-        const originalText = copyButton.textContent;
-        copyButton.textContent = 'Copied!';
+  // Copy to clipboard
+  copyButton.addEventListener('click', () => {
+    // Try the modern API first
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(output.value)
+        .then(() => {
+          showCopyFeedback();
+        })
+        .catch(() => {
+          fallbackCopy();
+        });
+    } else {
+      fallbackCopy();
+    }
+  });
 
-        setTimeout(() => {
-            copyButton.textContent = originalText;
-        }, 1500);
-    });
+  // Provide fallback for older browsers
+  function fallbackCopy() {
+    output.select();
+    document.execCommand('copy');
+    showCopyFeedback();
+  }
+
+  // Give user a quick “Copied!” feedback
+  function showCopyFeedback() {
+    const originalText = copyButton.textContent;
+    copyButton.textContent = 'Copied!';
+    setTimeout(() => {
+      copyButton.textContent = originalText;
+    }, 1500);
+  }
+})();
 </script>
