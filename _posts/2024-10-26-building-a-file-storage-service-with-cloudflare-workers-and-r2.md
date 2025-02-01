@@ -1,5 +1,5 @@
 ---
-tags: scripts>cloud
+tags: scripts>cloud, scripts>serverless
 info: aberto.
 date: 2024-10-26
 type: post
