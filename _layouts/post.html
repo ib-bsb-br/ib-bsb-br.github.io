@@ -281,38 +281,39 @@
         {% endif %}
       </article>
       <nav class="post-navigation-combined" aria-label="Post navigation">
-        {%- if page.tags and page.tags.size > 0 -%}
-          <!-- Tag Selector: Let the reader choose the tag to base navigation on -->
-          <div class="tag-selector">
-            <p>Select a tag for navigation:</p>
-            <ul>
-              {% for tag in page.tags %}
-                <li>
-                  <a href="#" class="tag-option" data-tag="{{ tag | slugify }}">
-                    {{ tag }}
-                  </a>
-                </li>
-              {% endfor %}
-            </ul>
-          </div>
-        {%- endif -%}
+                {%- assign tag_list = page.tags | split: "," %}
+        <!-- Tag Selector UI: Let the reader choose the tag for navigation -->
+        <div class="tag-selector">
+          <p>Select a tag for navigation:</p>
+          <ul>
+            {% for tag in tag_list %}
+              {% assign current_tag = tag | strip %}
+              <li>
+                <a href="#" class="tag-option" data-tag="{{ current_tag | slugify }}">
+                  {{ current_tag }}
+                </a>
+              </li>
+            {% endfor %}
+          </ul>
+        </div>
         <!-- Pre-generated Navigation Blocks for Each Tag -->
-        {% for tag in page.tags %}
-          {%- assign tag_posts = site.tags[tag] | sort: 'date' -%}
-          {%- assign tag_index = 0 -%}
+        {% for tag in tag_list %}
+          {% assign current_tag = tag | strip %}
+          {% assign tag_posts = site.tags[current_tag] | sort: "date" %}
+          {% assign tag_index = 0 %}
           {% for post in tag_posts %}
             {% if post.url == page.url %}
               {% assign tag_index = forloop.index0 %}
               {% break %}
             {% endif %}
           {% endfor %}
-          {#‑‑ Compute previous index and then get the previous post – avoid inline arithmetic in indexing ‑‑#}
+          {# Compute previous and next indexes separately #}
           {% assign tag_prev_index = tag_index | minus: 1 %}
           {% assign tag_prev_post = tag_posts[tag_prev_index] %}
           {% assign tag_next_index = tag_index | plus: 1 %}
           {% assign tag_next_post = tag_posts[tag_next_index] %}
-          <!-- Navigation block for tag "{{ tag }}"; initially hidden -->
-          <div class="nav-group tags" id="tag-nav-{{ tag | slugify }}" style="display: none;">
+          <!-- Navigation block for the current tag; initially hidden -->
+          <div class="nav-group tags" id="tag-nav-{{ current_tag | slugify }}" style="display: none;">
             <div class="nav-arrow tags prev">
               {% if tag_prev_post %}
                 <a href="{{ tag_prev_post.url | relative_url }}"
@@ -341,18 +342,18 @@
             </div>
           </div>
         {% endfor %}
-        <!-- JavaScript to Toggle Navigation Block Based on Tag Selection -->
+        <!-- JavaScript to Toggle the Navigation Block Based on Tag Selection -->
         <script>
         document.addEventListener("DOMContentLoaded", function(){
           var tagLinks = document.querySelectorAll('.tag-option');
           tagLinks.forEach(function(link){
             link.addEventListener('click', function(event){
               event.preventDefault();
-              // Hide all tag navigation blocks
+              // Hide all navigation blocks
               document.querySelectorAll('.nav-group.tags').forEach(function(block){
                 block.style.display = 'none';
               });
-              // Show the navigation block for the selected tag
+              // Show the navigation block for the chosen tag
               var tagSlug = this.getAttribute('data-tag');
               var target = document.getElementById('tag-nav-' + tagSlug);
               if(target) {
@@ -361,7 +362,7 @@
             });
           });
         });
-        </script>        
+        </script>
       </nav>
     </main>
     <footer id="bottom-of-page" class="site-footer">
