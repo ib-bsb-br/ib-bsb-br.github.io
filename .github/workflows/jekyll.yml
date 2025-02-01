@@ -20,26 +20,22 @@ jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     steps:
-      # Checkout the full repository history for proper file tracking.
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      # Setup Ruby environment required by Jekyll.
       - name: Setup Ruby
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: .ruby-version
           bundler-cache: true
 
-      # Setup Python environment.
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
-      # Cache Python dependencies to speed up the workflow.
       - name: Cache Python dependencies
         uses: actions/cache@v4
         id: cache-pip
@@ -49,25 +45,21 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pip-
 
-      # Install dependencies from requirements.txt.
-      - name: Install Python dependencies from requirements.txt
+      - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
         if: steps.cache-pip.outputs.cache-hit != 'true'
 
-      # Install additional Python packages required for the scripts.
-      - name: Install additional Python packages
+      - name: Install requests icalendar datetime pyyaml (always run)
         run: pip install requests icalendar datetime pyyaml
 
-      # Install any required system dependencies.
       - name: Install system dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y sqlite3
 
-      # Cache directory for Jekyll tag-related cache data if applicable.
-      - name: Cache Jekyll tag data
+      - name: Cache tag data
         uses: actions/cache@v4
         id: cache-tag-data
         with:
@@ -76,7 +68,6 @@ jobs:
           restore-keys: |
             tag-data-
 
-      # Cache the Jekyll build output to improve build speed.
       - name: Cache Jekyll _site directory
         uses: actions/cache@v4
         id: cache-jekyll-site
@@ -86,60 +77,27 @@ jobs:
           restore-keys: |
             jekyll-site-
 
-      # Process markdown files to standardize "tags" in the YAML front matter.
       - name: Process markdown files for tags
         run: python standardize_tags.py
 
-      # Debug step: Verify that file modifications are detected.
-      - name: Debug: Verify changes after tag standardization
-        run: |
-          echo "Git Status After standardize_tags.py execution:"
-          git status
-          echo "Git Diff:"
-          git diff
-          echo "Ensure that modifications (if any) are present in the _posts folder."
-
-      # Fetch calendar events (if needed by later processing).
       - name: Fetch calendar events
         run: python events.py
 
-      # Preprocess Markdown posts prior to site generation.
       - name: Preprocess Markdown Posts
         run: python preprocess_posts.py        
 
-      # Debug step: Final review before committing changes.
-      - name: Debug: Final Git status and diff before commit
-        run: |
-          echo "Final Git status before commit:"
-          git status
-          echo "Final Git diff before commit:"
-          git diff
-
-      # Commit and push modified files if any changes are detected.
       - name: Commit and push changes (pre-build)
         run: |
-          echo "Preparing to commit changes..."
           git config --local user.email "actions@github.com"
           git config --local user.name "GitHub Actions"
           git add --all
-          echo "Status before commit:"
-          git status
-          echo "Diff before commit:"
-          git diff
-          if ! git diff-index --quiet HEAD; then
-            git commit -m "Update content [skip ci]"
-            echo "Pushing commit to main branch..."
-            git push origin main || echo "Push failed."
-          else
-            echo "No changes detected; skipping commit."
-          fi
+          git diff-index --quiet HEAD || git commit -m "Update content [skip ci]"
+          git push origin main || echo "No changes to push"
 
-      # Setup GitHub Pages configuration before building.
       - name: Setup Pages
         id: pages
         uses: actions/configure-pages@v5
 
-      # Build the site using Jekyll.
       - name: Build with Jekyll
         env:
           PAGES_REPO_NWO: ib-bsb-br/ib-bsb-br.github.io
@@ -148,15 +106,12 @@ jobs:
         run: |
           bundle exec jekyll build --trace --config _config.yml --baseurl "${base_path}"
 
-      # Generate a Pagefind index for the built site.
       - name: Generate Pagefind Index
         run: npx -y pagefind --site ${{ github.workspace }}/_site --output-path ${{ github.workspace }}/_site/pagefind
 
-      # Modify the Pagefind UI as needed.
       - name: Modify Pagefind UI
         run: python modify-pagefind-ui.py
 
-      # Deploy the built site to the GitHub Pages branch.
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
         with:
@@ -173,19 +128,16 @@ jobs:
     needs: build-and-deploy
     if: github.event_name == 'push' && !contains(github.event.head_commit.message, '[skip ci]')
     steps:
-      # Checkout the repository to process spaced inbox updates.
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      # Setup Python for spaced inbox processing.
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
-      # Cache Python dependencies.
       - name: Cache Python dependencies
         uses: actions/cache@v4
         id: cache-pip
@@ -195,21 +147,18 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pip-
 
-      # Install dependencies needed for spaced inbox scripts.
-      - name: Install Python dependencies for inbox processing
+      - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
           pip install requests icalendar datetime pyyaml
         if: steps.cache-pip.outputs.cache-hit != 'true'
 
-      # Initialize the spaced-inbox SQLite database if it doesn't exist.
       - name: Initialize spaced-inbox database
         run: |
           if [ ! -f data.db ]; then
             sqlite3 data.db < schema.sql
           fi
 
-      # Extract URLs from modified posts and prepare them.
       - name: Extract post URLs
         id: extract-urls
         run: |
@@ -224,7 +173,6 @@ jobs:
           done
           echo -e "$POST_URLS" > post_urls.txt
 
-      # Append extracted URLs to the spaced inbox file.
       - name: Append URLs to inbox file
         run: |
           if [ -s post_urls.txt ]; then
@@ -233,33 +181,22 @@ jobs:
             done < post_urls.txt
           fi
 
-      # Install matplotlib for visualization purposes.
       - name: Install matplotlib
         run: pip install matplotlib          
 
-      # Run the spaced inbox script to process the new posts.
       - name: Run spaced inbox script
         run: python script.py --no-review
         env:
           TERM: xterm
 
-      # Generate a visual report of the inbox review load.
       - name: Run review load visualizer
         run: python review_load.py data.db
-
-      # Commit and push any updates related to spaced inbox.
-      - name: Commit and Push Spaced Inbox Updates
+        
+      - name: Commit and Push
         run: |
-          echo "Committing spaced inbox updates..."
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git add --all
-          echo "Status before commit:"
-          git status
-          if ! git diff-index --quiet HEAD; then
-            git commit -m "Update spaced-inbox with new posts"
-            git pull --rebase
-            git push
-          else
-            echo "No changes detected in spaced inbox; skipping commit."
-          fi
+          git diff-index --quiet HEAD || git commit -m "Update spaced-inbox with new posts"
+          git pull --rebase
+          git push
