@@ -1,5 +1,5 @@
 ---
-tags: scripts>cloud, github, serverless
+tags: scripts>cloud, github, scripts>serverless
 info: aberto.
 date: 2024-10-18
 type: post
@@ -67,7 +67,7 @@ package:
 
 # 2. Handler Functions (`handler.mjs`):
 
-{% codeblock javascript %}
+```
 import { Octokit } from "@octokit/rest";
 import { Base64 } from "js-base64";
 
@@ -347,7 +347,7 @@ export const triggerGithubWorkflow = async (event) => {
     };
   }
 };
-{% endcodeblock %}
+```
 
 # 3. Client-Side JavaScript (If Applicable):
 
@@ -401,11 +401,11 @@ export const triggerGithubWorkflow = async (event) => {
    - `GITHUB_REPOSITORY`: Your GitHub repository in the format `owner/repo`.
    - `WORKFLOW_ID`: The filename or ID of the GitHub Actions workflow to trigger.
 
-{% codeblock bash %}
+```
 export GITHUB_TOKEN="your_personal_access_token"
 export GITHUB_REPOSITORY="owner/repo"
 export WORKFLOW_ID="main.yml"
-{% endcodeblock %}
+```
 
 2. **Deploy the Serverless Application:**
 
