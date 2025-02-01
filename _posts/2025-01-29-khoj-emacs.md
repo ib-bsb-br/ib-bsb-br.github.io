@@ -1,5 +1,6 @@
 ---
-tags: software
+
+tags: [software]
 info: aberto.
 date: 2025-01-29
 type: post

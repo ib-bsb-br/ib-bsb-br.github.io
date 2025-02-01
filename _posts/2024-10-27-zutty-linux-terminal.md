@@ -1,5 +1,6 @@
 ---
-tags: software>linux
+
+tags: [software>linux]
 info: aberto.
 date: 2024-10-27
 type: post

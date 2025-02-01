@@ -1,9 +1,8 @@
 ---
+
 title: Periódicos para publicar artigos
 date: 2024-07-05 00:00:00 -03:00
-tags:
-- estudos
-- trabalho
+tags: [estudos, trabalho]
 comment: https://direito.jatai.ufg.br/
 info: closed.
 type: post

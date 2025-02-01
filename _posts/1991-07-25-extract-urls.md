@@ -1,5 +1,6 @@
 ---
-tags: tools
+
+tags: [tools]
 layout: default
 slug: extract-urls
 comment: https://tools.simonwillison.net/extract-urls

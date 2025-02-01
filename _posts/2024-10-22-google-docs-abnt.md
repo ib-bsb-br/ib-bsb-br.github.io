@@ -1,5 +1,6 @@
 ---
-tags: estudos, trabalho, cloud>dotfile
+
+tags: [estudos, trabalho, cloud>dotfile]
 info: aberto.
 date: 2024-10-22
 type: post

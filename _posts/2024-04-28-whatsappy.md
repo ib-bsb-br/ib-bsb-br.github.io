@@ -1,7 +1,8 @@
 ---
+
 title: WhatsapPY data
 date: 2024-04-28
-tags: scripts
+tags: [scripts]
 comment: https://github.com/chris18369/Whatsappdata
 info: aberto.
 type: post

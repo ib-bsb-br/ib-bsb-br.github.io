@@ -1,10 +1,10 @@
 ---
+
 title: Your Life in Tokens
 date: 2024-06-22 00:00:00 -03:00
 categories:
 - Stuff
-tags:
-- admoestação
+tags: [admoestação]
 comment: https://threadreaderapp.com/thread/1803522711236256254.html
 info: fechado.
 type: post

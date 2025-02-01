@@ -1,10 +1,10 @@
 ---
+
 title: dasel references filtering + citation appender [script]
 date: 2024-02-17 01:00:00 -02:00
 categories:
 - Code
-tags:
-- scripts
+tags: [scripts]
 comment: https://daseldocs.tomwright.me/
 info: aberto.
 type: post

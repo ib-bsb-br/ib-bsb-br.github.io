@@ -1,7 +1,8 @@
 ---
+
 title: "/.ratpoisonrc"
 date: 2024-04-14
-tags: linux>dotfile
+tags: [linux>dotfile]
 comment: 
 info: aberto.
 type: post

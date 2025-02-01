@@ -1,5 +1,6 @@
 ---
-tags: software>windows
+
+tags: [software>windows]
 info: aberto.
 date: 2024-12-19
 type: post

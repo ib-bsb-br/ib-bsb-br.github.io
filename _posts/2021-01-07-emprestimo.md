@@ -1,10 +1,10 @@
 ---
+
 title: Como calcular prestação por meio de taxa de juros e período
 date: 2021-01-07 01:00:00 -02:00
 categories:
 - Tutorial
-tags:
-- despesas
+tags: [despesas]
 comment: 
 info: fechado.
 type: post

@@ -1,7 +1,8 @@
 ---
+
 title: Compile LLM chat-history
 date: 2024-10-16
-tags: AI>prompt
+tags: [AI>prompt]
 info: aberto.
 type: post
 layout: post

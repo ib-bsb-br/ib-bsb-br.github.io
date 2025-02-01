@@ -1,5 +1,6 @@
 ---
-tags: fatherhood
+
+tags: [fatherhood]
 info: aberto.
 date: 2024-12-26
 type: post

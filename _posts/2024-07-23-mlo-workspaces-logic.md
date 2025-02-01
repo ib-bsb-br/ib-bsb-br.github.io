@@ -1,5 +1,6 @@
 ---
-tags: tasks>mlo
+
+tags: [tasks>mlo]
 info: aberto.
 date: 2024-07-23
 type: post

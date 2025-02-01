@@ -1,10 +1,10 @@
 ---
+
 title: streaming
 date: 2022-03-16 00:00:00 -03:00
 categories:
 - Stuff
-tags:
-- assistir
+tags: [assistir]
 comment: justwatch.com/br
 info: aberto.
 type: post

@@ -1,5 +1,6 @@
 ---
-tags: scripts>powershell, scripts>python, tasks
+
+tags: [scripts>powershell, scripts>python, tasks]
 info: aberto.
 date: 2024-12-24
 type: post

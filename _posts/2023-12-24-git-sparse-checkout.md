@@ -1,10 +1,10 @@
 ---
+
 title: Alternative option to upload a file to GitHub without cloning the entire repository
 date: 2023-12-24 01:00:00 -02:00
 categories:
 - Tutorial
-tags:
-- linux
+tags: [linux]
 comment: 
 info: aberto.
 type: post

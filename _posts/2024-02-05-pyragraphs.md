@@ -1,10 +1,10 @@
 ---
+
 title: PYragraphs
 date: 2024-02-05 01:00:00 -02:00
 categories:
 - Code
-tags:
-- scripts
+tags: [scripts]
 comment: https://www.textfixer.com/tools/convert-line-breaks.php
 info: fechado.
 type: post

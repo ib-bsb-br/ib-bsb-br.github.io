@@ -1,5 +1,6 @@
 ---
-tags: scripts>cloud
+
+tags: [scripts>cloud]
 info: aberto.
 date: 2024-11-03
 type: post

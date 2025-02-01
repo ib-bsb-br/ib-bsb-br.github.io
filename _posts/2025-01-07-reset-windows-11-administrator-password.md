@@ -1,5 +1,6 @@
 ---
-tags: windows
+
+tags: [windows]
 info: aberto.
 date: 2025-01-07
 type: post

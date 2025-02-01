@@ -1,5 +1,6 @@
 ---
-tags: scripts>AI
+
+tags: [scripts>AI]
 info: aberto.
 date: 2024-10-20
 type: post

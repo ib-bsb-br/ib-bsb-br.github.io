@@ -1,5 +1,6 @@
 ---
-tags: software>linux, cloud
+
+tags: [software>linux, cloud]
 comment: 'https://github.com/FilenCloudDienste/filen-cli'
 info: fechado.
 date: '2024-10-13'

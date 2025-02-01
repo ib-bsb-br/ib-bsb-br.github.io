@@ -1,5 +1,6 @@
 ---
-tags: scratchpad
+
+tags: [scratchpad]
 info: aberto.
 date: 2025-01-28
 type: post

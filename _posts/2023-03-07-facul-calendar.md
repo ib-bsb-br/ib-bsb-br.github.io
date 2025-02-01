@@ -1,10 +1,10 @@
 ---
+
 title: Calendário Acadêmico
 date: 2023-03-07 00:00:00 -03:00
 categories:
 - Δ24
-tags:
-- estudos
+tags: [estudos]
 comment: 
 info: aberto.
 type: post

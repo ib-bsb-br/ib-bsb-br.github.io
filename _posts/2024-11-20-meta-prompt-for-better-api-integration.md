@@ -1,5 +1,6 @@
 ---
-tags: AI>LLM
+
+tags: [AI>LLM]
 info: aberto.
 date: 2024-11-20
 type: post

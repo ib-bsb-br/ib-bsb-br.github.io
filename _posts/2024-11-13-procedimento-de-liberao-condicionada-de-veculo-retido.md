@@ -1,5 +1,6 @@
 ---
-tags: trabalho
+
+tags: [trabalho]
 info: aberto.
 date: 2024-11-13
 type: post

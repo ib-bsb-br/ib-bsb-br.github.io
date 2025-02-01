@@ -1,6 +1,6 @@
 ---
-tags:
-  - tasks
+
+tags: [tasks]
 info: aberto.
 date: 2024-07-31
 type: post

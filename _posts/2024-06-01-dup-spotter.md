@@ -1,7 +1,8 @@
 ---
+
 title: 'Copy Spotter and Duplicate-File-Remover'
 date: 2024-06-01
-tags: linux, scripts
+tags: [linux, scripts]
 comment: https://github.com/Kilemonn/Duplicate-File-Remover
 info: aberto.
 type: post

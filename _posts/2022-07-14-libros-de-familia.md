@@ -1,10 +1,10 @@
 ---
+
 title: libros familiares
 date: 2022-07-14 00:00:00 -03:00
 categories:
 - Familia
-tags:
-- ler
+tags: [ler]
 comment: 
 info: aberto.
 type: post

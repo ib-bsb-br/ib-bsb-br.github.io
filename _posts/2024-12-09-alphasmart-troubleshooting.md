@@ -1,5 +1,6 @@
 ---
-tags: tasks, estudos>hardware
+
+tags: [tasks, estudos>hardware]
 info: aberto.
 date: 2024-12-09
 type: post

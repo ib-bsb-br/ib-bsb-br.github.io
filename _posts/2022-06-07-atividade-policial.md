@@ -1,10 +1,10 @@
 ---
+
 title: Estados que exigem atividade policial para DELTA
 date: 2022-06-07 00:00:00 -03:00
 categories:
 - Δ24
-tags:
-- edital
+tags: [edital]
 comment: blog.supremotv.com.br/quais-estados-exigem-pratica-para-o-cargo-de-delegado/
 info: aberto.
 type: post

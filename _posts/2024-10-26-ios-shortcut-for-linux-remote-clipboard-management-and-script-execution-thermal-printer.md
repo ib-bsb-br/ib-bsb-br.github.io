@@ -1,6 +1,7 @@
 ---
 
-tags: iphone>shortcuts, linux  
+
+tags: [iphone>shortcuts, linux]
 info: aberto.  
 date: 2024-10-27  
 type: post  

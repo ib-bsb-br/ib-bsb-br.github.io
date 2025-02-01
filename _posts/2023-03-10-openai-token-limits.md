@@ -1,7 +1,8 @@
 ---
+
 title: OpenAI Token Limits
 date: 2023-03-10
-tags: AI
+tags: [AI]
 comment: https://github.com/Ighina/DeepTiling
 info: aberto.
 type: post

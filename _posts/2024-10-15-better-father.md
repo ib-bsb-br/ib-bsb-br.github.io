@@ -1,7 +1,8 @@
 ---
+
 title: Serei um pai muito melhor
 date: 2024-10-15
-tags: fatherhood
+tags: [fatherhood]
 comment: https://www.youtube.com/watch?v=Yp19QicD0g0
 info: fechado.
 type: post

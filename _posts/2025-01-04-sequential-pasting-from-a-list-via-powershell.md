@@ -1,5 +1,6 @@
 ---
-tags: scripts>powershell
+
+tags: [scripts>powershell]
 info: aberto.
 date: 2025-01-04
 type: post

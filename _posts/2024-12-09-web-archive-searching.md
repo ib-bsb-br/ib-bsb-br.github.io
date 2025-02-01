@@ -1,5 +1,6 @@
 ---
-tags: aid>web
+
+tags: [aid>web]
 info: aberto.
 date: 2024-12-09
 type: post

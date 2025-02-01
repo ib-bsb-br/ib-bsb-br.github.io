@@ -1,5 +1,6 @@
 ---
-tags: software>windows, scripts>powershell
+
+tags: [software>windows, scripts>powershell]
 info: aberto.
 date: 2025-01-18
 type: post

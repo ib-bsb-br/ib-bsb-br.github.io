@@ -1,7 +1,8 @@
 ---
+
 title: Ordenamento Jurídico Brasileiro [redução eidética]
 date: 2024-04-17
-tags: edital>direito
+tags: [edital>direito]
 comment: 
 info: aberto.
 type: post

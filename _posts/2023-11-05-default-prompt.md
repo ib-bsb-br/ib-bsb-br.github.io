@@ -1,7 +1,8 @@
 ---
+
 title: default
 date: 2023-11-05
-tags: AI>prompt
+tags: [AI>prompt]
 comment: 
 info: aberto.
 type: post

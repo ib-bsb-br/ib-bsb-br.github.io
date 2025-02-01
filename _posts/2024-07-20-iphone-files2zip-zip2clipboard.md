@@ -1,5 +1,6 @@
 ---
-tags: iphone, scripts>mobile
+
+tags: [iphone, scripts>mobile]
 info: aberto.
 date: 2024-07-20
 type: post

@@ -1,12 +1,11 @@
 ---
+
 title: 'Rclone: Syncing STORJ Cloud to Local Storage'
 date: 2024-05-06 00:00:00 -03:00
 categories:
 - Tutorial
 - Code
-tags:
-- linux
-- scripts
+tags: [linux, scripts]
 comment: https://rclone.org/s3/#storj
 info: aberto.
 type: post

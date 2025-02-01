@@ -1,5 +1,6 @@
 ---
-tags: linux, software>mobile
+
+tags: [linux, software>mobile]
 info: aberto.
 date: 2024-08-17
 type: post

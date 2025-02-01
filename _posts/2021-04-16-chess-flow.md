@@ -1,10 +1,10 @@
 ---
+
 title: chess analysis workflow
 date: 2021-04-16 00:00:00 -03:00
 categories:
 - Xadrez
-tags:
-- tasks
+tags: [tasks]
 comment: IM David Pruess
 info: fechado.
 type: post

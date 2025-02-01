@@ -1,10 +1,10 @@
 ---
+
 title: QRU Aposentadoria
 date: 2024-02-25 00:00:00 -03:00
 categories:
 - Stuff
-tags:
-- trabalho
+tags: [trabalho]
 comment: https://www.youtube.com/watch?v=5lKG2NpTta8
 info: aberto.
 type: post

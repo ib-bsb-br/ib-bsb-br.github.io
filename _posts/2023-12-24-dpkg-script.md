@@ -1,7 +1,8 @@
 ---
+
 title: Packages list script
 date: 2023-12-24
-tags: linux>dotfile, scripts
+tags: [linux>dotfile, scripts]
 comment: 
 info: fechado.
 type: post

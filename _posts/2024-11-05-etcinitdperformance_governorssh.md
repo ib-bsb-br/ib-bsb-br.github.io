@@ -1,5 +1,6 @@
 ---
-tags: linux>dotfile
+
+tags: [linux>dotfile]
 info: aberto.
 date: 2024-11-05
 type: post

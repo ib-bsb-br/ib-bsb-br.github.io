@@ -1,5 +1,6 @@
 ---
-tags: tasks>mlo, iphone>shortcuts
+
+tags: [tasks>mlo, iphone>shortcuts]
 info: aberto.
 date: 2024-08-25
 type: post

@@ -1,10 +1,10 @@
 ---
+
 title: Installation of ratpoison in debian/ubuntu
 date: 2023-11-10 01:00:00 -02:00
 categories:
 - Tutorial
-tags:
-- linux
+tags: [linux]
 comment: 
 info: aberto.
 type: post

@@ -1,10 +1,10 @@
 ---
+
 title: chess books
 date: 2020-12-31 01:00:00 -02:00
 categories:
 - Xadrez
-tags:
-- ler
+tags: [ler]
 comment: 
 info: aberto.
 type: post

@@ -1,11 +1,10 @@
 ---
+
 title: cliPaperQA
 date: 2024-06-16
 categories:
 - Code
-tags:
-- linux
-- scripts
+tags: [linux, scripts]
 comment: https://github.com/whitead/paper-qa
 info: aberto.
 type: post

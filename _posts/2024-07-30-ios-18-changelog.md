@@ -1,5 +1,6 @@
 ---
-tags: software>mobile, iphone
+
+tags: [software>mobile, iphone]
 info: aberto.
 date: 2024-07-30
 type: post

@@ -1,5 +1,6 @@
 ---
-tags: software, tasks
+
+tags: [software, tasks]
 info: aberto.
 date: 2024-10-26
 type: post

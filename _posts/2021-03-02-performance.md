@@ -1,7 +1,8 @@
 ---
+
 title: Performance média
 date: 2021-03-02
-tags: chess
+tags: [chess]
 comment: 
 info: aberto.
 type: post

@@ -1,11 +1,10 @@
 ---
+
 title: Organize files by their extensions
 date: 2024-05-30 00:00:00 -03:00
 categories:
 - Code
-tags:
-- linux
-- scripts
+tags: [linux, scripts]
 comment: 
 info: aberto.
 type: post

@@ -1,7 +1,8 @@
 ---
+
 title: Cleaning flowchart
 date: 2022-11-11
-tags: tasks
+tags: [tasks]
 comment: 
 info: fechado.
 type: post

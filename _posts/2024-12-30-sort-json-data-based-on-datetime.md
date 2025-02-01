@@ -1,5 +1,6 @@
 ---
-tags: scripts>python
+
+tags: [scripts>python]
 info: aberto.
 date: 2024-12-30
 type: post

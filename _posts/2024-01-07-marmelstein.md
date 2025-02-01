@@ -1,10 +1,10 @@
 ---
+
 title: Se eu fosse um concurseiro - George Marmelstein
 date: 2024-01-07 01:00:00 -02:00
 categories:
 - Δ24
-tags:
-- estudos
+tags: [estudos]
 comment: youtube.com/watch?v=5pRpGKV0AOk
 info: fechado.
 type: post

@@ -1,5 +1,6 @@
 ---
-tags: misc
+
+tags: [misc]
 info: aberto.
 date: 2024-07-25
 type: post

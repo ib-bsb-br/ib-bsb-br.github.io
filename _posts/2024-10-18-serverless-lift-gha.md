@@ -1,5 +1,6 @@
 ---
-tags: scripts>cloud, github, scripts>serverless
+
+tags: [scripts>cloud, github, scripts>serverless]
 info: aberto.
 date: 2024-10-18
 type: post

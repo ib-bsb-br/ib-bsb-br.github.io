@@ -1,5 +1,6 @@
 ---
-tags: scratchpad>gemini
+
+tags: [scratchpad>gemini]
 info: aberto.
 date: 2024-11-12
 type: post

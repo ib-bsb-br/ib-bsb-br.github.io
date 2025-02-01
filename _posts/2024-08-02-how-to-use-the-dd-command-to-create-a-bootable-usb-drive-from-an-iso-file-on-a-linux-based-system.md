@@ -1,6 +1,6 @@
 ---
-tags:
-  - linux
+
+tags: [linux]
 info: aberto.
 date: 2024-08-02
 type: post

@@ -1,5 +1,6 @@
 ---
-tags: AI>prompt, tasks
+
+tags: [AI>prompt, tasks]
 info: aberto.
 date: 2024-08-02
 type: post

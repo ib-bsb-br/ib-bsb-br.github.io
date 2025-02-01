@@ -1,10 +1,10 @@
 ---
+
 title: Concursos DELTA iminentes
 date: 2023-12-22 01:00:00 -02:00
 categories:
 - Δ24
-tags:
-- edital
+tags: [edital]
 comment: 
 info: aberto.
 type: post

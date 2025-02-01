@@ -1,6 +1,6 @@
 ---
-tags:
-  - hardware
+
+tags: [hardware]
 info: aberto.
 date: 2024-07-20
 type: post
