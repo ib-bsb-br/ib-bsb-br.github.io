@@ -1,5 +1,5 @@
 ---
-tags: scripts>powershell, estudos, tools>cloud
+tags: scripts>powershell, estudos
 info: aberto.
 date: 2025-01-04
 type: post
