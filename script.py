@@ -352,16 +352,16 @@ def interact_loop(conn, no_review, external_program):
             print("Attempting to choose an exciting note...", end="", file=sys.stderr)
             note = get_exciting_note(notes_db)
             if note is None:
-                print("failed.", file=sys.stderr)
+                print("failed.", file.sys.stderr)
             else:
-                print("success.", file=sys.stderr)
+                print("success.", file.sys.stderr)
         if note is None:
-            print("Attempting to choose some other note...", end="", file=sys.stderr)
+            print("Attempting to choose some other note...", end="", file.sys.stderr)
             note = get_all_other_note(notes_db)
             if note is None:
-                print("failed.", file=sys.stderr)
+                print("failed.", file.sys.stderr)
             else:
-                print("success.", file=sys.stderr)
+                print("success.", file.sys.stderr)
 
         if note is None:
             print("No notes are due")
