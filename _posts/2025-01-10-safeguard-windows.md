@@ -1,6 +1,6 @@
 ---
 
-tags: [scratchpad>openai]
+tags: [scratchpad]
 info: aberto.
 date: 2025-01-10
 type: post
