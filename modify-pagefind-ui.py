@@ -3,6 +3,7 @@
 #!/usr/bin/env python3
 
 import re
+import os
 
 # Path to the pagefind-ui.js file
 FILE = "_site/pagefind/pagefind-ui.js"
@@ -12,6 +13,11 @@ ORIGINAL_EXPRESSION = r'placeholder:"Search",clear_search:"Clear"'
 
 # Replacement expression
 NEW_EXPRESSION = r'placeholder:"long-term",clear_search:"X"'
+
+# Ensure the file exists before attempting to open it
+if not os.path.exists(FILE):
+    print(f"Error: The file {FILE} does not exist.")
+    exit(1)
 
 # Read the contents of the file
 with open(FILE, 'r') as f:
