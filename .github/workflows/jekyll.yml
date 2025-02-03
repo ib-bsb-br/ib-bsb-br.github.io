@@ -17,76 +17,33 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  build-and-deploy:
+  commit-updates:
+    name: Commit Auto-generated Content
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout Repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Setup Ruby
-        uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: .ruby-version
-          bundler-cache: true
-
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: "3.11.3"
 
-      - name: Cache Python dependencies
-        uses: actions/cache@v4
-        id: cache-pip
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-
-      - name: Install Python dependencies
+      - name: Install Python Dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-        if: steps.cache-pip.outputs.cache-hit != 'true'
+          pip install requests icalendar datetime pyyaml
 
-      - name: Install requests icalendar datetime pyyaml (always run)
-        run: pip install requests icalendar datetime pyyaml
-
-      - name: Install system dependencies
+      - name: Run Preprocessing Scripts
         run: |
-          sudo apt-get update
-          sudo apt-get install -y sqlite3
+          python tags.py
+          python events.py
+          python preprocess_posts.py
 
-      - name: Cache tag data
-        uses: actions/cache@v4
-        id: cache-tag-data
-        with:
-          path: ${{ github.workspace }}/.jekyll-cache
-          key: tag-data-${{ github.sha }}
-          restore-keys: |
-            tag-data-
-
-      - name: Cache Jekyll _site directory
-        uses: actions/cache@v4
-        id: cache-jekyll-site
-        with:
-          path: ${{ github.workspace }}/_site
-          key: jekyll-site-${{ github.sha }}
-          restore-keys: |
-            jekyll-site-
-
-      - name: Process markdown files for tags
-        run: python tags.py
-
-      - name: Fetch calendar events
-        run: python events.py
-
-      - name: Preprocess Markdown Posts
-        run: python preprocess_posts.py        
-
-      - name: Commit and push changes (pre-build)
+      - name: Commit and Push Content Updates
         run: |
           git config --local user.email "actions@github.com"
           git config --local user.name "GitHub Actions"
@@ -94,57 +51,31 @@ jobs:
           if ! git diff-index --quiet HEAD; then
             git commit -m "Update content [skip ci]"
           fi
-          git pull --rebase origin main
+          git pull --no-rebase origin main
           git push origin main || echo "No changes to push"
-          
-      - name: Setup Pages
-        id: pages
-        uses: actions/configure-pages@v5
 
-      - name: Build with Jekyll
-        env:
-          PAGES_REPO_NWO: ib-bsb-br/ib-bsb-br.github.io
-          JEKYLL_ENV: production
-          base_path: ""
-        run: |
-          bundle exec jekyll build --trace --config _config.yml --baseurl "${base_path}"
-
-      - name: Generate Pagefind Index
-        run: npx -y pagefind --site ${{ github.workspace }}/_site --output-path ${{ github.workspace }}/_site/pagefind
-
-      - name: Modify Pagefind UI
-        run: python modify-pagefind-ui.py
-
-      - name: List installed Python packages
-        run: pip list
-
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ${{ github.workspace }}/_site
-          publish_branch: gh-pages
-          cname: ib.bsb.br
-          allow_empty_commit: true
-          enable_jekyll: false
-          keep_files: true
-
-  add-posts-to-inbox:
+  build-and-deploy:
+    name: Build and Deploy Jekyll Site
     runs-on: ubuntu-latest
-    needs: build-and-deploy
-    if: github.event_name == 'push' && !contains(github.event.head_commit.message, '[skip ci]')
+    needs: commit-updates
     steps:
-      - name: Checkout repository
+      - name: Checkout Repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.1.2"
+          bundler-cache: true
+
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: "3.11.3"
 
-      - name: Cache Python dependencies
+      - name: Cache Python Dependencies
         uses: actions/cache@v4
         id: cache-pip
         with:
@@ -153,23 +84,111 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pip-
 
-      - name: Install Python dependencies
+      - name: Install Python Dependencies If Needed
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+        if: steps.cache-pip.outputs.cache-hit != 'true'
+
+      - name: Install Additional Python Packages
+        run: pip install requests icalendar datetime pyyaml
+
+      - name: Install System Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y sqlite3
+
+      - name: Cache Tag Data
+        uses: actions/cache@v4
+        id: cache-tag-data
+        with:
+          path: .jekyll-cache
+          key: tag-data-${{ github.sha }}
+          restore-keys: |
+            tag-data-
+
+      - name: Cache Jekyll _site Directory
+        uses: actions/cache@v4
+        id: cache-jekyll-site
+        with:
+          path: _site
+          key: jekyll-site-${{ github.sha }}
+          restore-keys: |
+            jekyll-site-
+
+      - name: Setup Pages Configuration
+        uses: actions/configure-pages@v5
+
+      - name: Build Jekyll Site
+        env:
+          PAGES_REPO_NWO: "ib-bsb-br/ib-bsb-br.github.io"
+          JEKYLL_ENV: production
+          base_path: ""
+        run: |
+          bundle exec jekyll build --trace --config _config.yml --baseurl "${base_path}"
+
+      - name: Generate Pagefind Index
+        run: npx -y pagefind --site _site --output-path _site/pagefind
+
+      - name: Modify Pagefind UI
+        run: python modify-pagefind-ui.py
+
+      - name: List Installed Python Packages
+        run: pip list
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: _site
+          publish_branch: gh-pages
+          cname: "ib.bsb.br"
+          allow_empty_commit: true
+          enable_jekyll: false
+          keep_files: true
+
+  add-posts-to-inbox:
+    name: Add Posts to Spaced Inbox
+    runs-on: ubuntu-latest
+    needs: build-and-deploy
+    if: github.event_name == 'push' && "!contains(github.event.head_commit.message, '[skip ci]')"
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11.3"
+
+      - name: Cache Python Dependencies
+        uses: actions/cache@v4
+        id: cache-pip
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install Python Dependencies
         run: |
           python -m pip install --upgrade pip
           pip install requests icalendar datetime pyyaml
         if: steps.cache-pip.outputs.cache-hit != 'true'
 
-      - name: Initialize spaced-inbox database
+      - name: Initialize Spaced-Inbox Database
         run: |
           if [ ! -f data.db ]; then
             sqlite3 data.db < schema.sql
           fi
 
-      - name: Extract post URLs
+      - name: Extract Post URLs
         id: extract-urls
         run: |
           BASE_URL="ib.bsb.br"
-          POST_FILES=$(git diff --name-only HEAD^ HEAD -- '_posts/**.md')
+          POST_FILES=$(git diff --name-only HEAD^ HEAD -- '_posts/**/*.md')
           POST_URLS=""
           for POST in $POST_FILES; do
             FILENAME=$(basename "$POST" .md)
@@ -179,7 +198,7 @@ jobs:
           done
           echo -e "$POST_URLS" > post_urls.txt
 
-      - name: Append URLs to inbox file
+      - name: Append URLs to Inbox File
         run: |
           if [ -s post_urls.txt ]; then
             while read -r URL; do
@@ -187,18 +206,18 @@ jobs:
             done < post_urls.txt
           fi
 
-      - name: Install matplotlib
-        run: pip install matplotlib          
+      - name: Install Matplotlib
+        run: pip install matplotlib
 
-      - name: Run spaced inbox script
+      - name: Run Spaced Inbox Script
         run: python script.py --no-review
         env:
           TERM: xterm
 
-      - name: Run review load visualizer
+      - name: Run Review Load Visualizer
         run: python review_load.py data.db
-        
-      - name: Commit and Push
+
+      - name: Commit and Push Inbox Updates
         run: |
           git config --local user.email "actions@github.com"
           git config --local user.name "GitHub Actions"
@@ -206,5 +225,5 @@ jobs:
           if ! git diff-index --quiet HEAD; then
             git commit -m "Update content [skip ci]"
           fi
-          git pull --rebase origin main
+          git pull --no-rebase origin main
           git push origin main || echo "No changes to push"
