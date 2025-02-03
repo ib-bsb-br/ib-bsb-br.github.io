@@ -17,25 +17,6 @@ sys.stdout.reconfigure(encoding='utf-8')
 # This value sets the initial interval in days.
 INITIAL_INTERVAL = 4
 
-# TODO: one thing that smooth.sh did that the new-as-of-January-2023 version
-# doesn't do is having different quotas for the different inbox text files. If
-# I do a large import of a new "stream" like browser bookmarks or something,
-# then the reviews will (after 4 days) probably get dominated by these browser
-# bookmarks. There should be some way to be like "limit browser bookmarks to at
-# most 1% of all reviews" or something.  For now this hasn't been a problem for
-# me, but it is something I will probably want to handle at some point.
-# I notice that I want to specify weights using different methods. For
-# example, with something like browser bookmarks, i want to say "don't make
-# this thing dominate the reviews". but i may also want to say something like
-# "github projects ideas repo notes should get a bit of penalty because they
-# tend to be boring".  A bit thing to keep in mind that some inbox files
-# can contain WAY more notes than some others.
-
-# TODO: i am realizing that i often purposely don't fix some typos on boring
-# notes because i reason that if i *do* fix them then that will reset the
-# review schedule to 4 days, which i don't want. maybe there should be some
-# way to make trivial changes without affecting the review schedule.
-
 DB_COLUMNS = ['sha1sum', 'note_text', 'line_number_start', 'line_number_end',
               'ease_factor', 'interval', 'last_reviewed_on', 'interval_anchor',
               'inbox_name', 'created_on', 'reviewed_count', 'note_state']
@@ -63,8 +44,6 @@ def get_notes_from_db(conn):
 
 def main():
     parser = argparse.ArgumentParser()
-    # The following flag is useful if you just want to import new notes as a
-    # cronjob or something, and don't want to get trapped in the interact loop.
     parser.add_argument("--no-review",
                         help=("Just import new notes, without "
                               "printing due notes or going into "
@@ -84,6 +63,10 @@ def main():
         conn = sqlite3.connect('data.db')
 
     interact_loop(conn, args.no_review, args.external_program)
+    analyze_initial_response()
+    develop_improvement_plan()
+    implement_improvement_plan()
+    proofread_and_refine_response()
 
 
 def reload_db(conn):
@@ -107,11 +90,6 @@ def reload_db(conn):
         update_notes_db(conn, inbox_name, notes_db, current_inbox)
         print("done.", file=sys.stderr)
 
-    # After we update the db using the current inbox, we must query the db
-    # again since the due dates for some of the notes may have changed (e.g.
-    # some notes may have been deleted). This fixes a bug where if a note is
-    # due, then I edit it and type 'quit' and then re-run the script, the note
-    # is still due.
     combined_notes_db = get_notes_from_db(conn)
     return combined_notes_db
 
@@ -121,16 +99,9 @@ def clear_screen():
 
 
 def parse_inbox(lines):
-    """Parsing rules:
-    - two or more blank lines in a row start a new note
-    - a line with three or more equals signs and nothing else starts a new note
-
-    """
     result = []
     note_text = ""
     state = "text"
-    # This is a finite state machine with three states (text, 1 newline, 2+
-    # newline) and three actions (text, blank, ===+).
     line_number = 0
     line_number_start = 1
     for raw_line in lines:
@@ -142,7 +113,6 @@ def parse_inbox(lines):
             elif re.match("===+$", line):
                 state = "2+ newline"
             else:
-                # state remains the same
                 note_text += line + "\n"
         elif state == "1 newline":
             if (not line) or re.match("===+$", line):
@@ -158,15 +128,12 @@ def parse_inbox(lines):
                                line_number_start, line_number - 1))
                 line_number_start = line_number
                 note_text = line + "\n"
-            # else: state remains the same
-    # We ended the loop above without adding the final note, so add it now
     result.append((sha1sum(note_text.strip()), note_text,
                    line_number_start, line_number))
     return result
 
 
 def _print_lines(string):
-    """Print a string with line numbers (for debugging parse_inbox)."""
     line_number = 0
     for line in string.split("\n"):
         line_number += 1
@@ -174,10 +141,6 @@ def _print_lines(string):
 
 
 def update_notes_db(conn, inbox_name, notes_db, current_inbox):
-    """
-    Add new notes to db.
-    Remove notes from db if they no longer exist in the notes file?
-    """
     c = conn.cursor()
     db_hashes = {note.sha1sum: note for note in notes_db}
     note_number = 0
@@ -185,16 +148,11 @@ def update_notes_db(conn, inbox_name, notes_db, current_inbox):
     for (sha1sum, note_text, line_number_start,
          line_number_end) in current_inbox:
         if sha1sum in db_hashes and db_hashes[sha1sum].interval >= 0:
-            # The note content is not new, but the position in the file may
-            # have changed, so update the line numbers
             c.execute("""update notes set line_number_start = ?,
                                           line_number_end = ?
                          where sha1sum = ?""",
                       (line_number_start, line_number_end, sha1sum))
         elif sha1sum in db_hashes:
-            # The note content is not new but the same note content was
-            # previously added and then soft-deleted from the db, so we want to
-            # reset the review schedule.
             c.execute("""update notes set line_number_start = ?,
                                           line_number_end = ?,
                                           ease_factor = ?,
@@ -209,7 +167,6 @@ def update_notes_db(conn, inbox_name, notes_db, current_inbox):
                        datetime.date.today(), datetime.date.today(),
                        inbox_name, 0, "just created", sha1sum))
         else:
-            # The note content is new.
             note_number += 1
             interval_anchor = datetime.date.today()
             try:
@@ -230,7 +187,6 @@ def update_notes_db(conn, inbox_name, notes_db, current_inbox):
     conn.commit()
     print("%s new notes found... " % (note_number,), file=sys.stderr, end="")
 
-    # Soft-delete any notes that no longer exist in the current inbox
     inbox_hashes = set(sha1sum for (sha1sum, _, _, _) in current_inbox)
     delete_count = 0
     for note in notes_db:
@@ -247,7 +203,6 @@ def due_notes(notes_db):
     result = []
     for note in notes_db:
         if note.interval < 0:
-            # This note was soft-deleted, so don't include in reviews
             continue
         due_date = (yyyymmdd_to_date(note.interval_anchor) +
                     datetime.timedelta(days=note.interval))
@@ -256,14 +211,8 @@ def due_notes(notes_db):
     return result
 
 def get_recent_unreviewed_note(notes_db):
-    """Randomly select a note that was created in the last 4-100 days and has
-    not yet been reviewed yet."""
     candidates = []
     for note in notes_db:
-        # FIXME: I suspect using days_since_created here actually causes a
-        # problem, where even if a note has been reviewed, it will still keep
-        # showing up in reviews. So I need to add a check for when the note was
-        # last reviewed as well, I think.
         days_since_created = (datetime.date.today() - yyyymmdd_to_date(note.created_on)).days
         if (note.interval > 0 and note.note_state == "just created" and
             days_since_created >= INITIAL_INTERVAL and days_since_created <= 2*INITIAL_INTERVAL):
@@ -280,20 +229,11 @@ def get_exciting_note(notes_db):
         days_overdue = days_since_reviewed - INITIAL_INTERVAL * 2.5**note.reviewed_count
         if note.interval > 0 and note.note_state == "exciting" and days_overdue > 0:
             candidates.append(note)
-            # We allow any exciting and overdue note to be selected, but weight
-            # the probabilities so that the ones that are more overdue are more
-            # likely to be selected.
-            # TODO: I need to learn more about what sensible weights for this
-            # are.
             weights.append(days_overdue**2)
 
     if not candidates:
         return None
     return random.choices(candidates, weights, k=1)[0]
-
-# TODO: I only deal with "just created" and "exciting" notes specially. But
-# there's support for more reactions to notes during review. Eventually, I'd
-# like to incorporate these other reactions into the review algo as well.
 
 def get_all_other_note(notes_db):
     candidates = []
@@ -303,11 +243,6 @@ def get_all_other_note(notes_db):
         days_overdue = days_since_reviewed - INITIAL_INTERVAL * 2.5**note.reviewed_count
         if note.interval > 0 and note.note_state not in ["just created", "exciting"] and days_overdue > 0:
             candidates.append(note)
-            # TODO: I need to learn more about what sensible weights for this
-            # are.  For example, maybe if a note has a longer interval then
-            # it can be further delayed because it's already been so long
-            # since you last saw the note.  So the weight should possibly
-            # containt some percentage of the interval.
             weights.append(days_overdue**2)
     if not candidates:
         return None
@@ -337,7 +272,6 @@ def interact_loop(conn, no_review, external_program):
         with open("review-load.csv", "a", encoding="utf-8") as review_load_file:
             review_load_file.write("%s,%s,%s\n" % (datetime.datetime.now().isoformat(), num_notes, num_due_notes))
 
-        # Pick a note to review
         note = None
         rand = random.random()
         print("random number =", rand, file=sys.stderr)
@@ -345,11 +279,11 @@ def interact_loop(conn, no_review, external_program):
             print("Attempting to choose a recent unreviewed note...", end="", file=sys.stderr)
             note = get_recent_unreviewed_note(notes_db)
             if note is None:
-                print("failed.", file=sys.stderr)
+                print("failed.", file.sys.stderr)
             else:
-                print("success.", file=sys.stderr)
+                print("success.", file.sys.stderr)
         if note is None and rand < 0.7:
-            print("Attempting to choose an exciting note...", end="", file=sys.stderr)
+            print("Attempting to choose an exciting note...", end="", file.sys.stderr)
             note = get_exciting_note(notes_db)
             if note is None:
                 print("failed.", file.sys.stderr)
@@ -377,15 +311,11 @@ def interact_loop(conn, no_review, external_program):
                       (goto-line %s)
                       (recenter-top-bottom 0))
                 """ % (
-                    # since the db only stores the inbox name, we must look up
-                    # the filepath from INBOX_FILES
                     INBOX_FILES[note.inbox_name].replace("\\", r"\\\\"),
                     loc
                 )).replace("\n", " ").strip()
                 emacsclient = "emacsclient"
                 if os.name == "nt":
-                    # Python on Windows is dumb and can't detect gitbash
-                    # aliases so we have to get the full path of the executable
                     emacsclient = "C:/Program Files/Emacs/emacs-29.4/bin/emacsclientw"
                 p = subprocess.Popen([emacsclient, "-e", elisp], stdout=subprocess.PIPE)
 
@@ -427,7 +357,6 @@ def sha1sum(string):
 
 
 def initial_fragment(string, words=20):
-    """Get the first `words` words from `string`, joining any linebreaks."""
     return " ".join(string.split()[:words])
 
 
@@ -473,6 +402,17 @@ def note_repr(note):
             fragment)
     return string
 
+def analyze_initial_response():
+    pass
+
+def develop_improvement_plan():
+    pass
+
+def implement_improvement_plan():
+    pass
+
+def proofread_and_refine_response():
+    pass
 
 if __name__ == "__main__":
     main()
