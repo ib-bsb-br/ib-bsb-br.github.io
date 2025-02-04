@@ -1,5 +1,4 @@
 ---
-
 layout: favicon
 slug: archive-created
 ---
@@ -24,6 +23,13 @@ slug: archive-created
               <h3>{{ post.title }}</h3>
             </a>
           </li>
+          {% if post.tags.size > 0 %}
+            <p>Tags: 
+              {% for tag in post.tags %}
+                <a href="#{{ tag | slugify }}">{{ tag }}</a>{% unless forloop.last %}, {% endunless %}
+              {% endfor %}
+            </p>
+          {% endif %}
         </ul>
       </div>
     {% endfor %}
