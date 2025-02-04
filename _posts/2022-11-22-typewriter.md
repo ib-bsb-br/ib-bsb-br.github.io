@@ -57,3 +57,4 @@ sudo sync
 - QR code transfer of typed text to phone. (Use e.g. fim / fbi to display QR code in terminal?)
 - Boot settings: keyboard layout, timezone, user-default-groups for USB drive access?
 - Modify .bash_login to launch text editor with filename specified?
+- check `https://hoolis.net/posts/rev2.html` for insights
