@@ -1,5 +1,5 @@
 ---
-comment: `https://csh.rit.edu/~rg/alphasmart-3000/20221106195356/`
+comment: 'https://csh.rit.edu/~rg/alphasmart-3000/20221106195356/'
 tags: [tasks, estudos>hardware]
 info: aberto.
 date: 2024-12-09
