@@ -1,13 +1,13 @@
 ---
-
+comment: `https://csh.rit.edu/~rg/alphasmart-3000/20221106195356/`
 tags: [tasks, estudos>hardware]
 info: aberto.
 date: 2024-12-09
 type: post
 layout: post
 published: true
-slug: alphasmart-troubleshooting
-title: 'AlphaSmart Troubleshooting'
+slug: alphasmart
+title: 'AlphaSmart Troubleshooting and Updating'
 ---
 AlphaSmart devices were portable, battery-powered word processors popular in educational settings for their simplicity and durability. They allowed students to type and save their work, which could then be transferred to a computer. This guide provides comprehensive troubleshooting steps for common issues encountered with AlphaSmart devices, including general error messages, factory resets, and recovery from update interruptions. *Note that beginning March 5, 2010, AlphaSmart Manager replaced AlphaSmart Manager 2.*
 
@@ -94,6 +94,10 @@ To reset your AlphaSmart device to factory defaults:
 
 **Note:** If successful, you'll see "Initializing AlphaSmart System." If not, you'll return to the last file, and you'll need to try again.
 
+>Master password: think
+>Default file password: write
+>Factory default reset password: tommy
+
 ### **3. Recovering from Update Interruptions**
 
 **Issue:**
@@ -135,3 +139,33 @@ If errors persist, you may have corrupted SmartApplets. This is often the case i
 6. **Send the List:** Go to the Send List tab and click \[Send]. You may encounter errors on the device; press the space bar to clear them and continue the update. The device may take up to 3 minutes to reboot after the update is sent.
 
 Completing these steps will remove any SmartApplets not included in the Send List. You should now be able to install additional SmartApplets. If errors continue, repeat these steps, choosing a different SmartApplet in step 4.
+
+***
+
+## Updating the Software
+
+System 3 comes with [all kinds of updates](https://support.renaissance.com/techkb/download/AS3000_System_3_Addendum.pdf), including but not limited to viewing word counts (Ctrl+W), saving and opening files (Ctrl+N and Ctrl+F), and password protection.
+
+I’ve been able to update all my Alphasmarts (both those running v1.3 as well as those running v1.6) to System 3.01 by following these steps:
+
+*   Install [VirtualBox](https://www.virtualbox.org/) on Windows 10
+*   Launch a virtual machine using a Windows XP ISO file (you can find them online)
+    *   It will ask for a serial number, but you can just leave it blank each time it asks
+*   Install [Alphasmart Manager](https://csh.rit.edu/~rg/alphasmart-3000/attachments/ASM3000Manager2.3Full.zip) (ASM 2.3)
+*   Launch ASM 2.3 and connect your device via USB
+    *   You will need to enable USB access in the virtual machine’s settings
+
+![Image 5](https://csh.rit.edu/~rg/alphasmart-3000/attachments/2022-11-09-17-35-58.png)
+
+*   Once the device is selected, go to the `SmartApplets` tab and select the applets you want
+    *   AlphaWord Plus is a must
+    *   Control Panel is a must
+    *   SpellCheck Small is recommended
+    *   Thesaurus Small is recommended
+
+![Image 6](https://csh.rit.edu/~rg/alphasmart-3000/attachments/2022-11-09-17-27-03.png)
+
+*   Next, head to the `Settings` tab and select System 3 in the left nav, make sure the Startup SmartApplet is set to AlphaWord Plus
+    *   Change any other settings you wish to change
+*   Go to the `Send List` tab and if everything looks good, click `Send`.
+*   Wait for your device to update, DO NOT DISCONNECT IT until the update is complete.
