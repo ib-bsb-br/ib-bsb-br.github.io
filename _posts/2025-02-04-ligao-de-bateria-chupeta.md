@@ -1,5 +1,5 @@
 ---
-tags: aid>carro
+tags: [aid>carro]
 info: aberto.
 date: 2025-02-04
 type: post
