@@ -1,326 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2025-02-05T15:18:47+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">files-to-prompt ftp.py</title><link href="https://ib.bsb.br/files-to-prompt-ftppy/" rel="alternate" type="text/html" title="files-to-prompt ftp.py" /><published>2025-02-05T00:00:00+00:00</published><updated>2025-02-05T15:16:49+00:00</updated><id>https://ib.bsb.br/files-to-prompt-ftppy</id><content type="html" xml:base="https://ib.bsb.br/files-to-prompt-ftppy/"><![CDATA[<p>&lt;?xml version=”1.0” encoding=”utf-8”?&gt;</p>
-<opml version="2.0">
-<head><title>Untitledftp</title></head>
-<body><outline text="">&lt;outline text="#!/usr/bin/env python
-import os
-import sys
-import click
-import shutil
-import zipfile
-import tarfile
-import logging
-import tempfile
-from fnmatch import fnmatch
-
-# Attempt rarfile and py7zr imports
-try:
-    import rarfile
-except ImportError:
-    rarfile = None
-
-try:
-    import py7zr
-except ImportError:
-    py7zr = None
-
-# Attempt pathspec import
-try:
-    import pathspec
-    pathspec_available = True
-except ImportError:
-    pathspec_available = False
-
-logging.basicConfig(level=logging.WARNING)
-logger = logging.getLogger(__name__)
-
-ARCHIVE_HANDLERS = {
-    &quot;.zip&quot;: &quot;handle_zip&quot;,
-    &quot;.rar&quot;: &quot;handle_rar&quot;,
-    &quot;.7z&quot;: &quot;handle_7z&quot;,
-    &quot;.tar&quot;: &quot;handle_tar&quot;,
-    &quot;.gz&quot;: &quot;handle_tar&quot;,
-    &quot;.bz2&quot;: &quot;handle_tar&quot;,
-}
-
-OFFICE_EXTENSIONS = [
-    &quot;.docx&quot;,
-    &quot;.xlsx&quot;,
-    &quot;.pptx&quot;,
-    &quot;.odt&quot;,
-    &quot;.ods&quot;,
-    &quot;.odp&quot;,
-]
-
-class GitignoreHandler:
-    &quot;&quot;&quot;Handles .gitignore rules in two ways:
-       1) uses pathspec if installed,
-       2) falls back to basic fnmatch approach otherwise.&quot;&quot;&quot;
-    def __init__(self):
-        self.spec = None
-        self.rules = []
-
-    def load(self, directory):
-        gitignore_path = os.path.join(directory, &quot;.gitignore&quot;)
-        if os.path.isfile(gitignore_path):
-            with open(gitignore_path, &quot;r&quot;, encoding=&quot;utf-8&quot;) as f:
-                lines = [
-                    line.strip() for line in f
-                    if line.strip() and not line.startswith(&quot;#&quot;)
-                ]
-            if pathspec_available:
-                self.spec = pathspec.PathSpec.from_lines(&quot;gitwildmatch&quot;, lines)
-            else:
-                self.rules.extend(lines)
-
-    def should_ignore(self, path):
-        if self.spec:
-            # pathspec matches relative paths by default
-            return self.spec.match_file(path)
-        else:
-            base = os.path.basename(path)
-            if os.path.isdir(path):
-                base += &quot;/&quot;
-            for rule in self.rules:
-                if fnmatch(base, rule):
-                    return True
-            return False
-
-
-def handle_zip(file_path, extract_dir):
-    try:
-        with zipfile.ZipFile(file_path, &quot;r&quot;) as zf:
-            zf.extractall(extract_dir)
-        return True
-    except zipfile.BadZipFile as e:
-        logger.warning(f&quot;Failed to extract ZIP: {file_path} ({e})&quot;)
-        return False
-
-
-def handle_rar(file_path, extract_dir):
-    if rarfile is None:
-        logger.warning(&quot;RAR support not installed. &apos;rarfile&apos; required.&quot;)
-        return False
-    try:
-        with rarfile.RarFile(file_path, &quot;r&quot;) as rf:
-            rf.extractall(extract_dir)
-        return True
-    except rarfile.Error as e:
-        logger.warning(f&quot;Failed to extract RAR: {file_path} ({e})&quot;)
-        return False
-
-
-def handle_7z(file_path, extract_dir):
-    if py7zr is None:
-        logger.warning(&quot;7z support not installed. &apos;py7zr&apos; required.&quot;)
-        return False
-    try:
-        with py7zr.SevenZipFile(file_path, mode=&quot;r&quot;) as sz:
-            sz.extractall(path=extract_dir)
-        return True
-    except py7zr.exceptions.Bad7zFile as e:
-        logger.warning(f&quot;Failed to extract 7Z: {file_path} ({e})&quot;)
-        return False
-
-
-def handle_tar(file_path, extract_dir):
-    try:
-        with tarfile.open(file_path, &quot;r:*&quot;) as tf:
-            tf.extractall(extract_dir)
-        return True
-    except tarfile.TarError as e:
-        logger.warning(f&quot;Failed to extract TAR: {file_path} ({e})&quot;)
-        return False
-
-
-def decompress_file(file_path, extension):
-    &quot;&quot;&quot;Extract the archive or document into a temporary directory and return that directory path.&quot;&quot;&quot;
-    tmpdir = tempfile.mkdtemp()
-    handler_name = ARCHIVE_HANDLERS.get(extension.lower())
-    if extension.lower() in OFFICE_EXTENSIONS:
-        handler_name = &quot;handle_zip&quot;
-
-    if handler_name is None:
-        logger.warning(f&quot;No handler for extension {extension} in file {file_path}&quot;)
-        shutil.rmtree(tmpdir)
-        return None
-
-    handler_func = globals()[handler_name]
-    success = handler_func(file_path, tmpdir)
-    if success:
-        return tmpdir
-    else:
-        shutil.rmtree(tmpdir)
-        return None
-
-
-class FileProcessor:
-    &quot;&quot;&quot;Handles recursive file/directory processing with optional .gitignore usage, archiving, etc.&quot;&quot;&quot;
-    def __init__(self, extensions, include_hidden, ignore_gitignore, ignore_patterns, output_xml, writer, max_depth):
-        self.extensions = [ext.lower() for ext in extensions]
-        self.include_hidden = include_hidden
-        self.ignore_gitignore = ignore_gitignore
-        self.ignore_patterns = ignore_patterns
-        self.output_xml = output_xml
-        self.writer = writer
-        self.max_depth = max_depth
-        self.xml_index = 1
-
-    def process_path(self, path, depth=0, gitignore_handler=None):
-        if depth &gt; self.max_depth:
-            logger.warning(f&quot;Maximum recursion depth ({self.max_depth}) reached for {path}&quot;)
-            return
-
-        if os.path.isfile(path):
-            self._handle_file(path, depth)
-        elif os.path.isdir(path):
-            if not gitignore_handler and not self.ignore_gitignore:
-                gitignore_handler = GitignoreHandler()
-                gitignore_handler.load(path)
-            self._handle_directory(path, depth, gitignore_handler)
-
-    def _handle_file(self, path, depth):
-        _, ext = os.path.splitext(path)
-        ext = ext.lower()
-        if ext in ARCHIVE_HANDLERS or ext in OFFICE_EXTENSIONS:
-            extracted = decompress_file(path, ext)
-            if extracted:
-                try:
-                    self.process_path(extracted, depth=depth+1)
-                finally:
-                    shutil.rmtree(extracted)
-        else:
-            self._print_file_content(path)
-
-    def _handle_directory(self, dir_path, depth, gitignore_handler):
-        for root, dirs, files in os.walk(dir_path):
-            if not self.include_hidden:
-                dirs[:] = [d for d in dirs if not d.startswith(&quot;.&quot;)]
-                files = [f for f in files if not f.startswith(&quot;.&quot;)]
-
-            if gitignore_handler:
-                for d in list(dirs):
-                    full_d = os.path.join(root, d)
-                    gitignore_handler.load(root)
-                    if gitignore_handler.should_ignore(full_d):
-                        dirs.remove(d)
-                new_files = []
-                for f in files:
-                    full_f = os.path.join(root, f)
-                    if not gitignore_handler.should_ignore(full_f):
-                        new_files.append(f)
-                files = new_files
-
-            if self.ignore_patterns:
-                files = [
-                    f for f in files
-                    if not any(fnmatch(f, pattern) for pattern in self.ignore_patterns)
-                ]
-
-            if self.extensions:
-                files = [
-                    f for f in files
-                    if any(f.lower().endswith(ext) for ext in self.extensions)
-                ]
-
-            for filename in sorted(files):
-                fpath = os.path.join(root, filename)
-                self.process_path(fpath, depth + 1, gitignore_handler)
-
-    def _print_file_content(self, path):
-        try:
-            with open(path, &quot;r&quot;, encoding=&quot;utf-8&quot;) as f:
-                content = f.read()
-            self._print_content(path, content)
-        except UnicodeDecodeError:
-            try:
-                with open(path, &quot;r&quot;, encoding=&quot;latin-1&quot;) as f:
-                    content = f.read()
-                self._print_content(path, content)
-            except Exception as e:
-                logger.warning(f&quot;Could not read file {path} with fallback encoding: {e}&quot;)
-        except Exception as e:
-            logger.warning(f&quot;Could not read file {path}: {e}&quot;)
-
-    def _print_content(self, path, content):
-        if self.output_xml:
-            self.writer(f&quot;&lt;document index=\&quot;{self.xml_index}\&quot;&gt;&quot;)
-            self.writer(f&quot;    &lt;source&gt;{path}&lt;/source&gt;&quot;)
-            self.writer(&quot;    &lt;document_content&gt;&quot;)
-            self.writer(f&quot;        {content}&quot;)
-            self.writer(&quot;    &lt;/document_content&gt;&quot;)
-            self.writer(&quot;&lt;/document&gt;&quot;)
-            self.xml_index += 1
-        else:
-            self.writer(path)
-            self.writer(&quot;---&quot;)
-            self.writer(content)
-            self.writer(&quot;&quot;)
-            self.writer(&quot;---&quot;)
-
-
-@click.command()
-@click.argument(&quot;paths&quot;, nargs=-1, type=click.Path(exists=True))
-@click.option(&quot;-e&quot;, &quot;--extension&quot;, &quot;extensions&quot;, multiple=True, help=&quot;File extensions (e.g., .txt)&quot;)
-@click.option(&quot;--include-hidden&quot;, is_flag=True, help=&quot;Include hidden files/folders.&quot;)
-@click.option(&quot;--ignore-gitignore&quot;, is_flag=True, help=&quot;Ignore .gitignore rules.&quot;)
-@click.option(&quot;--ignore&quot;, &quot;ignore_patterns&quot;, multiple=True, default=[], help=&quot;Glob patterns to ignore.&quot;)
-@click.option(&quot;-o&quot;, &quot;--output&quot;, &quot;output_file&quot;, type=click.Path(writable=True), help=&quot;Output to a file.&quot;)
-@click.option(&quot;-c&quot;, &quot;--cxml&quot;, &quot;output_xml&quot;, is_flag=True, help=&quot;Output in XML format.&quot;)
-@click.option(&quot;-d&quot;, &quot;--max-depth&quot;, &quot;max_depth&quot;, type=int, default=5, help=&quot;Max recursion depth.&quot;)
-@click.version_option()
-def cli(paths, extensions, include_hidden, ignore_gitignore, ignore_patterns, output_file, output_xml, max_depth):
-    &quot;&quot;&quot;
-    Process files/directories, including archives &amp; Office/LibreOffice docs.
-    &quot;&quot;&quot;
-    writer = click.echo
-    fp = None
-    if output_file:
-        try:
-            fp = open(output_file, &quot;w&quot;, encoding=&quot;utf-8&quot;)
-            writer = lambda s: print(s, file=fp)
-        except Exception as e:
-            logger.error(f&quot;Could not open output file {output_file}: {e}&quot;)
-            sys.exit(1)
-
-    processor = FileProcessor(
-        extensions=extensions,
-        include_hidden=include_hidden,
-        ignore_gitignore=ignore_gitignore,
-        ignore_patterns=ignore_patterns,
-        output_xml=output_xml,
-        writer=writer,
-        max_depth=max_depth,
-    )
-
-    if output_xml:
-        writer(&quot;<section data-filename="xml_code-block.xml" data-code="&quot;)
-writer(&quot;&lt;documents&gt;&quot;)
-for path in paths:
-if not os.path.exists(path):
-logger.error(f&quot;Path does not exist: {path}&quot;)
-continue
-processor.process_path(path, depth=0)
-if output_xml:
-writer(&quot;&lt;/documents&gt;&quot;)
-writer(&quot;" data-download-link="" data-download-link-label="Download Xml"><code class="language-xml">&quot;)
-writer(&quot;&lt;documents&gt;&quot;)
-for path in paths:
-if not os.path.exists(path):
-logger.error(f&quot;Path does not exist: {path}&quot;)
-continue
-processor.process_path(path, depth=0)
-if output_xml:
-writer(&quot;&lt;/documents&gt;&quot;)
-writer(&quot;
-&quot;)
-
-    if fp:
-        fp.close()
-
-if __name__ == &quot;__main__&quot;:
-    cli()"&gt;&lt;/outline&gt;
-
-&lt;outline text="import os
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2025-02-06T21:26:25+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">files-to-prompt ftp.py</title><link href="https://ib.bsb.br/files-to-prompt-ftppy/" rel="alternate" type="text/html" title="files-to-prompt ftp.py" /><published>2025-02-05T00:00:00+00:00</published><updated>2025-02-06T21:24:26+00:00</updated><id>https://ib.bsb.br/files-to-prompt-ftppy</id><content type="html" xml:base="https://ib.bsb.br/files-to-prompt-ftppy/"><![CDATA[<section data-filename="python_code-block.py" data-code="import os
 import sys
 import tempfile
 import shutil
@@ -330,729 +8,627 @@ import click
 import logging
 from fnmatch import fnmatch
 from typing import Callable, List, Optional, Tuple
-
-# Optional libraries
+# Optional dependencies for specialized archive handling or .gitignore parsing
 try:
-    import rarfile
+import rarfile
 except ImportError:
-    rarfile = None
-
+rarfile = None
 try:
-    import py7zr
+import py7zr
 except ImportError:
-    py7zr = None
-
+py7zr = None
 try:
-    import pathspec
+import pathspec
 except ImportError:
-    pathspec = None
-
-# Configure logging
-logging.basicConfig(level=logging.INFO, format=&quot;%(levelname)s: %(message)s&quot;)
+pathspec = None
+logging.basicConfig(
+level=logging.INFO,
+format=&quot;%(asctime)s - %(levelname)s - %(message)s&quot;,
+stream=sys.stderr,
+)
 logger = logging.getLogger(__name__)
-
-# Archive handler functions using direct references
+# ---------------------------------------------------------------------
+# Handling Path Traversal in Tar Extraction
+# ---------------------------------------------------------------------
+def is_within_directory(directory: str, target: str) -&gt; bool:
+&quot;&quot;&quot;
+Prevent path traversal beyond the intended extraction directory.
+&quot;&quot;&quot;
+abs_directory = os.path.abspath(directory)
+abs_target = os.path.abspath(target)
+return os.path.commonprefix([abs_directory, abs_target]) == abs_directory
+def safe_extract(tar: tarfile.TarFile, path: str = &quot;.&quot;, members=None) -&gt; None:
+&quot;&quot;&quot;
+Extract all members from a tarfile safely, ensuring no path traversal occurs.
+&quot;&quot;&quot;
+for member in (members or tar.getmembers()):
+member_path = os.path.join(path, member.name)
+if not is_within_directory(path, member_path):
+raise ValueError(&quot;Detected path traversal attempt.&quot;)
+tar.extractall(path=path, members=members)
+# ---------------------------------------------------------------------
+# Archive Handlers
+# ---------------------------------------------------------------------
 def handle_zip(file_path: str, extract_dir: str) -&gt; bool:
-    try:
-        with zipfile.ZipFile(file_path, &apos;r&apos;) as zf:
-            zf.extractall(extract_dir)
-        return True
-    except zipfile.BadZipFile as e:
-        logger.warning(f&quot;Bad ZIP file {file_path}: {e}&quot;)
-        return False
-
+try:
+with zipfile.ZipFile(file_path, &quot;r&quot;) as zf:
+zf.extractall(extract_dir)
+return True
+except zipfile.BadZipFile as e:
+logger.warning(f&quot;Bad ZIP file {file_path}: {str(e)}&quot;)
+return False
 def handle_rar(file_path: str, extract_dir: str) -&gt; bool:
-    if rarfile is None:
-        logger.warning(f&quot;RAR support not available. Install &apos;rarfile&apos; to handle {file_path}&quot;)
-        return False
-    try:
-        with rarfile.RarFile(file_path, &apos;r&apos;) as rf:
-            rf.extractall(extract_dir)
-        return True
-    except rarfile.Error as e:
-        logger.warning(f&quot;Failed to extract RAR file {file_path}: {e}&quot;)
-        return False
-
+if not rarfile:
+logger.warning(&quot;RAR handling requires 'rarfile' to be installed.&quot;)
+return False
+try:
+with rarfile.RarFile(file_path, &quot;r&quot;) as rf:
+rf.extractall(extract_dir)
+return True
+except rarfile.Error as e:
+logger.warning(f&quot;RAR extraction failed: {str(e)}&quot;)
+return False
 def handle_7z(file_path: str, extract_dir: str) -&gt; bool:
-    if py7zr is None:
-        logger.warning(f&quot;7z support not available. Install &apos;py7zr&apos; to handle {file_path}&quot;)
-        return False
-    try:
-        with py7zr.SevenZipFile(file_path, mode=&apos;r&apos;) as sz:
-            sz.extractall(path=extract_dir)
-        return True
-    except py7zr.exceptions.Bad7zFile as e:
-        logger.warning(f&quot;Bad 7z file {file_path}: {e}&quot;)
-        return False
-
+if not py7zr:
+logger.warning(&quot;7z handling requires 'py7zr' to be installed.&quot;)
+return False
+try:
+with py7zr.SevenZipFile(file_path, &quot;r&quot;) as sz:
+sz.extractall(extract_dir)
+return True
+except py7zr.exceptions.Bad7zFile as e:
+logger.warning(f&quot;7z extraction failed: {str(e)}&quot;)
+return False
 def handle_tar(file_path: str, extract_dir: str) -&gt; bool:
-    try:
-        with tarfile.open(file_path, &apos;r:*&apos;) as tf:
-            tf.extractall(extract_dir)
-        return True
-    except tarfile.TarError as e:
-        logger.warning(f&quot;Bad TAR file {file_path}: {e}&quot;)
-        return False
-
-# Mapping file extensions to handler functions directly
+try:
+with tarfile.open(file_path, &quot;r:*&quot;) as tf:
+safe_extract(tf, extract_dir)
+return True
+except tarfile.TarError as e:
+logger.warning(f&quot;TAR extraction failed: {str(e)}&quot;)
+return False
 ARCHIVE_HANDLERS = {
-    &quot;.zip&quot;: handle_zip,
-    &quot;.rar&quot;: handle_rar,
-    &quot;.7z&quot;: handle_7z,
-    &quot;.tar&quot;: handle_tar,
-    &quot;.gz&quot;: handle_tar,
-    &quot;.bz2&quot;: handle_tar,
+&quot;.zip&quot;: handle_zip,
+&quot;.rar&quot;: handle_rar,
+&quot;.7z&quot;: handle_7z,
+&quot;.tar&quot;: handle_tar,
+&quot;.gz&quot;: handle_tar,
+&quot;.bz2&quot;: handle_tar,
 }
-
-# Office document extensions handled as archives via ZIP
+# Office documents use ZIP-based archives internally
 OFFICE_EXTENSIONS = [&quot;.docx&quot;, &quot;.xlsx&quot;, &quot;.pptx&quot;, &quot;.odt&quot;, &quot;.ods&quot;, &quot;.odp&quot;]
-
+# ---------------------------------------------------------------------
+# Gitignore Handler
+# ---------------------------------------------------------------------
 class GitignoreHandler:
-    &quot;&quot;&quot;
-    Handles .gitignore rules using pathspec if available.
-    &quot;&quot;&quot;
-    def __init__(self, directory: str):
-        self.spec = None
-        gitignore_path = os.path.join(directory, &quot;.gitignore&quot;)
-        if os.path.isfile(gitignore_path):
-            try:
-                with open(gitignore_path, &quot;r&quot;, encoding=&quot;utf-8&quot;) as f:
-                    lines = f.read().splitlines()
-                if pathspec:
-                    self.spec = pathspec.PathSpec.from_lines(&quot;gitwildmatch&quot;, lines)
-                else:
-                    # Fallback: use basic list of rules
-                    self.spec = lines
-            except Exception as e:
-                logger.warning(f&quot;Error reading .gitignore from {gitignore_path}: {e}&quot;)
-
-    def should_ignore(self, file_path: str) -&gt; bool:
-        if self.spec is None:
-            return False
-        if pathspec and isinstance(self.spec, pathspec.PathSpec):
-            return self.spec.match_file(file_path)
-        else:
-            basename = os.path.basename(file_path)
-            for rule in self.spec:
-                if fnmatch(basename, rule):
-                    return True
-                if os.path.isdir(file_path) and fnmatch(basename + &quot;/&quot;, rule):
-                    return True
-            return False
-
-def print_default(writer: Callable[[str], None], path: str, content: str) -&gt; None:
-    writer(path)
-    writer(&quot;---&quot;)
-    writer(content)
-    writer(&quot;&quot;)
-    writer(&quot;---&quot;)
-
-def print_as_xml(writer: Callable[[str], None], path: str, content: str, index: int) -&gt; None:
-    writer(f&quot;&lt;document index=\&quot;{index}\&quot;&gt;&quot;)
-    writer(f&quot;    &lt;source&gt;{path}&lt;/source&gt;&quot;)
-    writer(&quot;    &lt;document_content&gt;&quot;)
-    for line in content.splitlines():
-        writer(f&quot;        {line}&quot;)
-    writer(&quot;    &lt;/document_content&gt;&quot;)
-    writer(&quot;&lt;/document&gt;&quot;)
-
+&quot;&quot;&quot;
+Attempts to load and parse a .gitignore file using pathspec when available,
+otherwise uses a basic fnmatch fallback.
+&quot;&quot;&quot;
+def __init__(self, directory: str):
+self.spec = None
+self.rules = []
+gitignore_file = os.path.join(directory, &quot;.gitignore&quot;)
+if os.path.isfile(gitignore_file):
+with open(gitignore_file, &quot;r&quot;, encoding=&quot;utf-8&quot;) as f:
+lines = [line.strip() for line in f if line.strip() and not line.startswith(&quot;#&quot;)]
+if pathspec:
+self.spec = pathspec.PathSpec.from_lines(&quot;gitwildmatch&quot;, lines)
+else:
+self.rules = lines
+def should_ignore(self, path_to_check: str) -&gt; bool:
+if self.spec:
+return self.spec.match_file(path_to_check)
+base = os.path.basename(path_to_check)
+if os.path.isdir(path_to_check):
+base += &quot;/&quot;
+return any(fnmatch(base, rule) for rule in self.rules)
+# ---------------------------------------------------------------------
+# Output Formatting: Plain-text or XML
+# ---------------------------------------------------------------------
+class OutputFormatter:
+def __init__(self, writer: Callable[[str], None], xml_mode: bool):
+self.writer = writer
+self.xml_mode = xml_mode
+self.xml_index = 1
+def write(self, path: str, content: str) -&gt; None:
+if self.xml_mode:
+self.writer(f'&lt;document index=&quot;{self.xml_index}&quot;&gt;')
+self.writer(f'    &lt;source&gt;{path}&lt;/source&gt;')
+self.writer('    &lt;document_content&gt;')
+# Indent content for clarity in XML
+for line in content.splitlines():
+self.writer(f'        {line}')
+self.writer('    &lt;/document_content&gt;')
+self.writer('&lt;/document&gt;')
+self.xml_index += 1
+else:
+self.writer(path)
+self.writer(&quot;---&quot;)
+self.writer(content)
+self.writer(&quot;&quot;)
+self.writer(&quot;---&quot;)
+# ---------------------------------------------------------------------
+# File Processing Class
+# ---------------------------------------------------------------------
 class FileProcessor:
-    def __init__(
-        self,
-        extensions: Tuple[str, ...],
-        include_hidden: bool,
-        ignore_gitignore: bool,
-        ignore_patterns: Tuple[str, ...],
-        writer: Callable[[str], None],
-        output_xml: bool,
-        max_depth: int,
-    ):
-        self.extensions = tuple(ext.lower() for ext in extensions)
-        self.include_hidden = include_hidden
-        self.ignore_gitignore = ignore_gitignore
-        self.ignore_patterns = ignore_patterns
-        self.writer = writer
-        self.output_xml = output_xml
-        self.max_depth = max_depth
-        self.xml_index = 1
-
-    def process_path(self, path: str, depth: int = 0) -&gt; None:
-        if depth &gt; self.max_depth:
-            logger.warning(f&quot;Maximum recursion depth reached for {path}&quot;)
-            return
-        if os.path.isfile(path):
-            self._handle_file(path, depth)
-        elif os.path.isdir(path):
-            self._handle_directory(path, depth)
-
-    def _handle_file(self, path: str, depth: int) -&gt; None:
-        _, ext = os.path.splitext(path)
-        ext = ext.lower()
-        # Process archive or Office document
-        if ext in ARCHIVE_HANDLERS or ext in OFFICE_EXTENSIONS:
-            self._handle_archive_or_office(path, ext, depth)
-        else:
-            self._print_file(path)
-
-    def _handle_archive_or_office(self, path: str, ext: str, depth: int) -&gt; None:
-        with tempfile.TemporaryDirectory() as extract_dir:
-            handler = ARCHIVE_HANDLERS.get(ext)
-            if ext in OFFICE_EXTENSIONS:
-                handler = ARCHIVE_HANDLERS[&quot;.zip&quot;]
-            if handler is None:
-                logger.warning(f&quot;No handler for archive type {ext} in {path}&quot;)
-                return
-            # Check for required libraries
-            if (ext == &quot;.rar&quot; and rarfile is None) or (ext == &quot;.7z&quot; and py7zr is None):
-                return
-            success = handler(path, extract_dir)
-            if success:
-                self.process_path(extract_dir, depth + 1)
-            else:
-                logger.warning(f&quot;Failed to extract archive: {path}&quot;)
-
-    def _print_file(self, path: str) -&gt; None:
-        try:
-            with open(path, &quot;r&quot;, encoding=&quot;utf-8&quot;) as f:
-                content = f.read()
-                self._print_content(path, content)
-        except UnicodeDecodeError:
-            try:
-                with open(path, &quot;r&quot;, encoding=&quot;latin-1&quot;) as f:
-                    content = f.read()
-                    self._print_content(path, content)
-            except Exception as e:
-                logger.warning(f&quot;Skipping file {path} due to encoding error: {e}&quot;)
-        except Exception as e:
-            logger.warning(f&quot;Skipping file {path} due to error: {e}&quot;)
-
-    def _print_content(self, path: str, content: str) -&gt; None:
-        if self.output_xml:
-            print_as_xml(self.writer, path, content, self.xml_index)
-            self.xml_index += 1
-        else:
-            print_default(self.writer, path, content)
-
-    def _handle_directory(self, path: str, depth: int) -&gt; None:
-        gitignore = None if self.ignore_gitignore else GitignoreHandler(path)
-        for root, dirs, files in os.walk(path):
-            if not self.include_hidden:
-                dirs[:] = [d for d in dirs if not d.startswith(&quot;.&quot;)]
-                files = [f for f in files if not f.startswith(&quot;.&quot;)]
-            if gitignore:
-                dirs[:] = [d for d in dirs if not gitignore.should_ignore(os.path.join(root, d))]
-                files = [f for f in files if not gitignore.should_ignore(os.path.join(root, f))]
-            if self.ignore_patterns:
-                files = [f for f in files if not any(fnmatch(f, pattern) for pattern in self.ignore_patterns)]
-            if self.extensions:
-                files = [f for f in files if any(f.lower().endswith(ext) for ext in self.extensions)]
-            for file in sorted(files):
-                file_path = os.path.join(root, file)
-                self.process_path(file_path, depth + 1)
-
+&quot;&quot;&quot;
+Recursively processes files and directories, optionally extracting
+archives and applying .gitignore rules. Outputs in plain text or XML.
+&quot;&quot;&quot;
+def __init__(
+self,
+extensions: Tuple[str, ...],
+include_hidden: bool,
+ignore_gitignore: bool,
+ignore_patterns: Tuple[str, ...],
+formatter: OutputFormatter,
+max_depth: int = 5,
+):
+self.extensions = [ext.lower() for ext in extensions]
+self.include_hidden = include_hidden
+self.ignore_gitignore = ignore_gitignore
+self.ignore_patterns = ignore_patterns
+self.formatter = formatter
+self.max_depth = max_depth
+def process_path(self, path: str, depth: int = 0) -&gt; None:
+if depth &gt; self.max_depth:
+logger.warning(f&quot;Max recursion depth ({self.max_depth}) reached at {path}.&quot;)
+return
+if os.path.isfile(path):
+self._handle_file(path, depth)
+elif os.path.isdir(path):
+self._handle_directory(path, depth)
+def _handle_file(self, path: str, depth: int) -&gt; None:
+ext = os.path.splitext(path)[1].lower()
+# If archive or Office doc, handle as an archive; otherwise just read content
+if ext in ARCHIVE_HANDLERS or ext in OFFICE_EXTENSIONS:
+self._extract_and_recurse(path, ext, depth)
+else:
+self._read_and_output(path)
+def _extract_and_recurse(self, path: str, ext: str, depth: int) -&gt; None:
+handler_func = ARCHIVE_HANDLERS.get(ext)
+# Office documents use the ZIP handler
+if ext in OFFICE_EXTENSIONS:
+handler_func = ARCHIVE_HANDLERS[&quot;.zip&quot;]
+if not handler_func:
+logger.warning(f&quot;No valid handler for extension: {ext}&quot;)
+return
+with tempfile.TemporaryDirectory() as tmpdir:
+success = handler_func(path, tmpdir)
+if success:
+self.process_path(tmpdir, depth + 1)
+else:
+logger.warning(f&quot;Extraction failed for {path}&quot;)
+def _read_and_output(self, path: str) -&gt; None:
+# Attempt to read as UTF-8, fallback to Latin-1
+for encoding in (&quot;utf-8&quot;, &quot;latin-1&quot;):
+try:
+with open(path, &quot;r&quot;, encoding=encoding) as f:
+content = f.read()
+self.formatter.write(path, content)
+return
+except UnicodeDecodeError:
+pass
+except Exception as e:
+logger.warning(f&quot;Error reading file {path}: {str(e)}&quot;)
+return
+logger.warning(f&quot;Could not read file {path} with provided encodings.&quot;)
+def _handle_directory(self, directory: str, depth: int) -&gt; None:
+gitignore_handler = None
+if not self.ignore_gitignore:
+gitignore_handler = GitignoreHandler(directory)
+for root, dirs, files in os.walk(directory):
+if not self.include_hidden:
+dirs[:] = [d for d in dirs if not d.startswith(&quot;.&quot;)]
+files = [f for f in files if not f.startswith(&quot;.&quot;)]
+if gitignore_handler:
+dirs[:] = [d for d in dirs if not gitignore_handler.should_ignore(os.path.join(root, d))]
+files = [f for f in files if not gitignore_handler.should_ignore(os.path.join(root, f))]
+if self.ignore_patterns:
+files = [
+f
+for f in files
+if not any(fnmatch(f, pattern) for pattern in self.ignore_patterns)
+]
+if self.extensions:
+files = [
+f
+for f in files
+if any(f.lower().endswith(ext) for ext in self.extensions)
+]
+for file_name in sorted(files):
+self.process_path(os.path.join(root, file_name), depth + 1)
+# ---------------------------------------------------------------------
+# Click CLI Declaration
+# ---------------------------------------------------------------------
 @click.command()
 @click.argument(&quot;paths&quot;, nargs=-1, type=click.Path(exists=True))
-@click.option(&quot;-e&quot;, &quot;--extension&quot;, &quot;extensions&quot;, multiple=True, help=&quot;File extensions to include (e.g., .txt, .md)&quot;)
-@click.option(&quot;--include-hidden&quot;, is_flag=True, help=&quot;Include hidden files and folders.&quot;)
-@click.option(&quot;--ignore-gitignore&quot;, is_flag=True, help=&quot;Ignore .gitignore rules.&quot;)
-@click.option(&quot;--ignore&quot;, &quot;ignore_patterns&quot;, multiple=True, default=[], help=&quot;Glob patterns to ignore (e.g., *.log).&quot;)
-@click.option(&quot;-o&quot;, &quot;--output&quot;, &quot;output_file&quot;, type=click.Path(writable=True), help=&quot;Output to a file instead of stdout.&quot;)
-@click.option(&quot;-c&quot;, &quot;--cxml&quot;, &quot;output_xml&quot;, is_flag=True, help=&quot;Output in XML format enclosed in codeblock tags.&quot;)
-@click.option(&quot;-d&quot;, &quot;--max-depth&quot;, &quot;max_depth&quot;, type=int, default=5, help=&quot;Maximum recursion depth (default: 5).&quot;)
-@click.version_option()
-def cli(paths: Tuple[str, ...], extensions: Tuple[str, ...], include_hidden: bool, ignore_gitignore: bool,
-        ignore_patterns: Tuple[str, ...], output_file: Optional[str], output_xml: bool, max_depth: int) -&gt; None:
-    writer: Callable[[str], None] = click.echo
-    fp = None
-    if output_file:
-        try:
-            fp = open(output_file, &quot;w&quot;, encoding=&quot;utf-8&quot;)
-            writer = lambda s: print(s, file=fp)
-        except Exception as e:
-            logger.error(f&quot;Cannot open output file {output_file}: {e}&quot;)
-            sys.exit(1)
-    if output_xml:
-        writer(&quot;<section data-filename="xml_code-block.xml" data-code="&quot;)
+@click.option(&quot;-e&quot;, &quot;--extension&quot;, &quot;extensions&quot;, multiple=True,
+help=&quot;Specify file extensions (e.g., .txt, .md) to include.&quot;)
+@click.option(&quot;--include-hidden&quot;, is_flag=True, default=False,
+help=&quot;Whether to include hidden files and directories.&quot;)
+@click.option(&quot;--ignore-gitignore&quot;, is_flag=True, default=False,
+help=&quot;Disable .gitignore-based filtering.&quot;)
+@click.option(&quot;--ignore&quot;, &quot;ignore_patterns&quot;, multiple=True,
+help=&quot;One or more glob patterns to exclude (e.g., *.log, temp*).&quot;)
+@click.option(&quot;-o&quot;, &quot;--output&quot;, &quot;output_file&quot;, type=click.Path(writable=True),
+help=&quot;File path to save results (stdout by default).&quot;)
+@click.option(&quot;--xml&quot;, &quot;output_xml&quot;, is_flag=True, default=False,
+help=&quot;Output results in an XML-like format.&quot;)
+@click.option(&quot;-d&quot;, &quot;--max-depth&quot;, default=5,
+help=&quot;Maximum recursion depth for nested archives.&quot;)
+def cli(paths, extensions, include_hidden, ignore_gitignore, ignore_patterns,
+output_file, output_xml, max_depth):
+&quot;&quot;&quot;
+This tool processes files and directories, including archive extraction
+and Office document reading, optionally respecting .gitignore rules.
+&quot;&quot;&quot;
+writer = click.echo
+file_handle = None
+if output_file:
+try:
+file_handle = open(output_file, &quot;w&quot;, encoding=&quot;utf-8&quot;)
+writer = lambda msg: print(msg, file=file_handle)
+except IOError as e:
+logger.error(f&quot;Could not open output file {output_file}: {str(e)}&quot;)
+sys.exit(1)
+formatter = OutputFormatter(writer, output_xml)
+# Print optional XML headers/footers if needed
+if output_xml:
+writer(&quot;&lt;section data-filename=&quot;xml_code-block.xml&quot; data-code=&quot;&quot;)
 writer(&quot;&lt;documents&gt;&quot;)
-processor = FileProcessor(extensions, include_hidden, ignore_gitignore, ignore_patterns, writer, output_xml, max_depth)
+processor = FileProcessor(
+extensions=extensions,
+include_hidden=include_hidden,
+ignore_gitignore=ignore_gitignore,
+ignore_patterns=ignore_patterns,
+formatter=formatter,
+max_depth=max_depth,
+)
+# Process each path recursively
 for path in paths:
 processor.process_path(path)
 if output_xml:
 writer(&quot;&lt;/documents&gt;&quot;)
-writer(&quot;" data-download-link="" data-download-link-label="Download Xml"><code class="language-xml">&quot;)
+writer(&quot;&quot; data-download-link data-download-link-label=&quot;Download Xml&quot;&gt;&lt;code class=&quot;language-xml&quot;&gt;&quot;)
 writer(&quot;&lt;documents&gt;&quot;)
-processor = FileProcessor(extensions, include_hidden, ignore_gitignore, ignore_patterns, writer, output_xml, max_depth)
+processor = FileProcessor(
+extensions=extensions,
+include_hidden=include_hidden,
+ignore_gitignore=ignore_gitignore,
+ignore_patterns=ignore_patterns,
+formatter=formatter,
+max_depth=max_depth,
+)
+# Process each path recursively
 for path in paths:
 processor.process_path(path)
 if output_xml:
 writer(&quot;&lt;/documents&gt;&quot;)
 writer(&quot;
 &quot;)
-    if fp:
-        fp.close()
-
+if file_handle:
+file_handle.close()
+# Entry point
 if __name__ == &quot;__main__&quot;:
-    cli()"&gt;&lt;/outline&gt;
-
-&lt;outline text="import os
+cli()" data-download-link="" data-download-link-label="Download Python"><code class="language-python">import os
 import sys
 import tempfile
 import shutil
-import logging
-from fnmatch import fnmatch
 import zipfile
 import tarfile
 import click
-from typing import List, Callable, Optional, Tuple
-
+import logging
+from fnmatch import fnmatch
+from typing import Callable, List, Optional, Tuple
+# Optional dependencies for specialized archive handling or .gitignore parsing
 try:
-    import rarfile
+import rarfile
 except ImportError:
-    rarfile = None
-
+rarfile = None
 try:
-    import py7zr
+import py7zr
 except ImportError:
-    py7zr = None
-
+py7zr = None
 try:
-    import pathspec
+import pathspec
 except ImportError:
-    pathspec = None
-
-# Configure logging
+pathspec = None
 logging.basicConfig(
-    level=logging.INFO,
-    format=&quot;%(asctime)s - %(levelname)s - %(message)s&quot;,
-    stream=sys.stderr,
+level=logging.INFO,
+format="%(asctime)s - %(levelname)s - %(message)s",
+stream=sys.stderr,
 )
 logger = logging.getLogger(__name__)
-
-# Supported archive extensions and their handlers
-ARCHIVE_HANDLERS = {
-    &quot;.zip&quot;: lambda f, d: handle_zip(f, d),
-    &quot;.rar&quot;: lambda f, d: handle_rar(f, d),
-    &quot;.7z&quot;: lambda f, d: handle_7z(f, d),
-    &quot;.tar&quot;: lambda f, d: handle_tar(f, d),
-    &quot;.gz&quot;: lambda f, d: handle_tar(f, d),
-    &quot;.bz2&quot;: lambda f, d: handle_tar(f, d),
-}
-
-# Microsoft Office and LibreOffice document extensions
-OFFICE_EXTENSIONS = [&quot;.docx&quot;, &quot;.xlsx&quot;, &quot;.pptx&quot;, &quot;.odt&quot;, &quot;.ods&quot;, &quot;.odp&quot;]
-
+# ---------------------------------------------------------------------
+# Handling Path Traversal in Tar Extraction
+# ---------------------------------------------------------------------
 def is_within_directory(directory: str, target: str) -&gt; bool:
-    &quot;&quot;&quot;
-    Check if the target path is within the specified directory to prevent path traversal.
-    &quot;&quot;&quot;
-    abs_directory = os.path.abspath(directory)
-    abs_target = os.path.abspath(target)
-    return os.path.commonprefix([abs_directory, abs_target]) == abs_directory
-
-def safe_extract(tar: tarfile.TarFile, path: str = &quot;.&quot;, members=None, numeric_owner: bool = False) -&gt; None:
-    &quot;&quot;&quot;
-    Safely extract a tar archive, preventing path traversal attacks.
-    &quot;&quot;&quot;
-    for member in (members or tar.getmembers()):
-        member_path = os.path.join(path, member.name)
-        if not is_within_directory(path, member_path):
-            raise Exception(&quot;Attempted Path Traversal in Tar file&quot;)
-    tar.extractall(path=path, members=members, numeric_owner=numeric_owner)
-
-class GitignoreHandler:
-    &quot;&quot;&quot;Handles .gitignore rules.&quot;&quot;&quot;
-
-    def __init__(self, path: str):
-        if pathspec:
-            self.matches = self.read_gitignore(path)
-        else:
-            self.rules = self.read_gitignore_basic(path)
-
-    def read_gitignore(self, path: str) -&gt; Callable[[str], bool]:
-        &quot;&quot;&quot;Read and parse .gitignore file using pathspec.&quot;&quot;&quot;
-        gitignore_path = os.path.join(path, &quot;.gitignore&quot;)
-        if os.path.isfile(gitignore_path):
-            try:
-                with open(gitignore_path, &quot;r&quot;, encoding=&quot;utf-8&quot;) as f:
-                    spec = pathspec.PathSpec.from_lines(&quot;gitwildmatch&quot;, f)
-                return spec.match_file
-            except Exception as e:
-                logger.warning(f&quot;Error parsing .gitignore: {e}&quot;)
-        return lambda x: False
-
-    def read_gitignore_basic(self, path: str) -&gt; List[str]:
-        &quot;&quot;&quot;Read and parse .gitignore file (basic implementation).&quot;&quot;&quot;
-        gitignore_path = os.path.join(path, &quot;.gitignore&quot;)
-        if os.path.isfile(gitignore_path):
-            with open(gitignore_path, &quot;r&quot;, encoding=&quot;utf-8&quot;) as f:
-                return [
-                    line.strip()
-                    for line in f
-                    if line.strip() and not line.startswith(&quot;#&quot;)
-                ]
-        return []
-
-    def should_ignore(self, path: str) -&gt; bool:
-        &quot;&quot;&quot;Determine if a path should be ignored based on .gitignore rules.&quot;&quot;&quot;
-        if pathspec and self.matches:
-            return self.matches(path)
-        else:
-            for rule in self.rules:
-                if fnmatch(os.path.basename(path), rule):
-                    return True
-                if os.path.isdir(path) and fnmatch(os.path.basename(path) + &quot;/&quot;, rule):
-                    return True
-        return False
-
-class XMLPrinter:
-    &quot;&quot;&quot;Prints content in an XML-like format.&quot;&quot;&quot;
-
-    def __init__(self, writer: Callable[[str], None]):
-        self.writer = writer
-        self.index = 1
-
-    def print_header(self):
-        &quot;&quot;&quot;Print the XML header.&quot;&quot;&quot;
-        self.writer(&quot;<section data-filename="xml_code-block.xml" data-code="&quot;)
-self.writer(&quot;&lt;documents&gt;&quot;)
-def print_footer(self):
-&quot;&quot;&quot;Print the XML footer.&quot;&quot;&quot;
-self.writer(&quot;&lt;/documents&gt;&quot;)
-self.writer(&quot;" data-download-link="" data-download-link-label="Download Xml"><code class="language-xml">&quot;)
-self.writer(&quot;&lt;documents&gt;&quot;)
-def print_footer(self):
-&quot;&quot;&quot;Print the XML footer.&quot;&quot;&quot;
-self.writer(&quot;&lt;/documents&gt;&quot;)
-self.writer(&quot;
-&quot;)
-
-    def print(self, path: str, content: str):
-        &quot;&quot;&quot;Print content in XML format.&quot;&quot;&quot;
-        self.writer(f&quot;&lt;document index=\&quot;{self.index}\&quot;&gt;&quot;)
-        self.writer(f&quot;    &lt;source&gt;{path}&lt;/source&gt;&quot;)
-        self.writer(&quot;    &lt;document_content&gt;&quot;)
-        self.writer(f&quot;        {content}&quot;)
-        self.writer(&quot;    &lt;/document_content&gt;&quot;)
-        self.writer(&quot;&lt;/document&gt;&quot;)
-        self.index += 1
-
-class DefaultPrinter:
-    &quot;&quot;&quot;Prints content in the default text format.&quot;&quot;&quot;
-
-    def __init__(self, writer: Callable[[str], None]):
-        self.writer = writer
-
-    def print(self, path: str, content: str):
-        &quot;&quot;&quot;Print content in default format.&quot;&quot;&quot;
-        self.writer(path)
-        self.writer(&quot;---&quot;)
-        self.writer(content)
-        self.writer(&quot;&quot;)
-        self.writer(&quot;---&quot;)
-
-class FileProcessor:
-    &quot;&quot;&quot;Processes files and directories.&quot;&quot;&quot;
-
-    def __init__(
-        self,
-        extensions: List[str],
-        include_hidden: bool,
-        ignore_gitignore: bool,
-        ignore_patterns: List[str],
-        printer: Callable[[str, str], None],
-        max_depth: int = 5,
-    ):
-        self.extensions = extensions
-        self.include_hidden = include_hidden
-        self.ignore_gitignore = ignore_gitignore
-        self.ignore_patterns = ignore_patterns
-        self.printer = printer
-        self.max_depth = max_depth
-
-    def process_path(
-        self,
-        path: str,
-        gitignore_handler: Optional[GitignoreHandler] = None,
-        depth: int = 0,
-    ):
-        &quot;&quot;&quot;Recursively process a given path, handling files and directories.&quot;&quot;&quot;
-        if depth &gt; self.max_depth:
-            logger.warning(f&quot;Maximum recursion depth reached for {path}&quot;)
-            return
-
-        if os.path.isfile(path):
-            self.process_file(path)
-        elif os.path.isdir(path):
-            self.process_directory(path, gitignore_handler, depth)
-
-    def process_file(self, path: str):
-        &quot;&quot;&quot;Process a single file.&quot;&quot;&quot;
-        _, ext = os.path.splitext(path)
-        ext = ext.lower()
-
-        if ext in ARCHIVE_HANDLERS or ext in OFFICE_EXTENSIONS:
-            self.process_archive(path, ext)
-        else:
-            self.print_file_content(path)
-
-    def process_archive(self, path: str, ext: str):
-        &quot;&quot;&quot;Process an archive file.&quot;&quot;&quot;
-        with tempfile.TemporaryDirectory() as extract_dir:
-            if ext.lower() in OFFICE_EXTENSIONS:
-                handler_func = handle_zip  # Use ZIP handler for Office documents
-            else:
-                handler_func = ARCHIVE_HANDLERS.get(ext)
-
-            if handler_func:
-                if ext == &quot;.rar&quot; and rarfile is None:
-                    logger.warning(
-                        f&quot;RAR support not available. Install &apos;rarfile&apos; to handle {path}&quot;
-                    )
-                    return
-                if ext == &quot;.7z&quot; and py7zr is None:
-                    logger.warning(
-                        f&quot;7z support not available. Install &apos;py7zr&apos; to handle {path}&quot;
-                    )
-                    return
-
-                success = handler_func(path, extract_dir)
-                if success:
-                    self.process_path(extract_dir, depth=1)
-                else:
-                    logger.warning(f&quot;Failed to extract archive: {path}&quot;)
-            else:
-                logger.warning(f&quot;No handler for archive type {ext} in {path}&quot;)
-
-    def print_file_content(self, path: str):
-        &quot;&quot;&quot;Print the content of a file.&quot;&quot;&quot;
-        try:
-            with open(path, &quot;r&quot;, encoding=&quot;utf-8&quot;) as f:
-                content = f.read()
-                self.printer.print(path, content)
-        except UnicodeDecodeError:
-            try:
-                with open(path, &quot;r&quot;, encoding=&quot;latin-1&quot;) as f:
-                    content = f.read()
-                    self.printer.print(path, content)
-            except Exception as e:
-                logger.warning(f&quot;Skipping file {path} due to error: {e}&quot;)
-        except Exception as e:
-            logger.warning(f&quot;Skipping file {path} due to error: {e}&quot;)
-
-    def process_directory(
-        self,
-        path: str,
-        gitignore_handler: Optional[GitignoreHandler] = None,
-        depth: int,
-    ):
-        &quot;&quot;&quot;Process a directory.&quot;&quot;&quot;
-        if not self.ignore_gitignore and gitignore_handler is None:
-            gitignore_handler = GitignoreHandler(path)
-
-        for root, dirs, files in os.walk(path):
-            if not self.include_hidden:
-                dirs[:] = [d for d in dirs if not d.startswith(&quot;.&quot;)]
-                files = [f for f in files if not f.startswith(&quot;.&quot;)]
-
-            if gitignore_handler:
-                dirs[:] = [
-                    d
-                    for d in dirs
-                    if not gitignore_handler.should_ignore(os.path.join(root, d))
-                ]
-                files = [
-                    f
-                    for f in files
-                    if not gitignore_handler.should_ignore(os.path.join(root, f))
-                ]
-
-            if self.ignore_patterns:
-                files = [
-                    f
-                    for f in files
-                    if not any(fnmatch(f, pattern) for pattern in self.ignore_patterns)
-                ]
-
-            if self.extensions:
-                files = [
-                    f
-                    for f in files
-                    if any(f.lower().endswith(ext.lower()) for ext in self.extensions)
-                ]
-
-            for file in sorted(files):
-                file_path = os.path.join(root, file)
-                self.process_path(file_path, gitignore_handler, depth + 1)
-
+"""
+Prevent path traversal beyond the intended extraction directory.
+"""
+abs_directory = os.path.abspath(directory)
+abs_target = os.path.abspath(target)
+return os.path.commonprefix([abs_directory, abs_target]) == abs_directory
+def safe_extract(tar: tarfile.TarFile, path: str = ".", members=None) -&gt; None:
+"""
+Extract all members from a tarfile safely, ensuring no path traversal occurs.
+"""
+for member in (members or tar.getmembers()):
+member_path = os.path.join(path, member.name)
+if not is_within_directory(path, member_path):
+raise ValueError("Detected path traversal attempt.")
+tar.extractall(path=path, members=members)
+# ---------------------------------------------------------------------
+# Archive Handlers
+# ---------------------------------------------------------------------
 def handle_zip(file_path: str, extract_dir: str) -&gt; bool:
-    &quot;&quot;&quot;Handle extraction of ZIP archives.&quot;&quot;&quot;
-    try:
-        with zipfile.ZipFile(file_path, &quot;r&quot;) as zip_ref:
-            zip_ref.extractall(extract_dir)
-        return True
-    except zipfile.BadZipFile:
-        logger.warning(f&quot;Bad ZIP file {file_path}&quot;)
-        return False
-
+try:
+with zipfile.ZipFile(file_path, "r") as zf:
+zf.extractall(extract_dir)
+return True
+except zipfile.BadZipFile as e:
+logger.warning(f"Bad ZIP file {file_path}: {str(e)}")
+return False
 def handle_rar(file_path: str, extract_dir: str) -&gt; bool:
-    &quot;&quot;&quot;Handle extraction of RAR archives.&quot;&quot;&quot;
-    if rarfile is None:
-        logger.warning(
-            f&quot;RAR support not available. Install &apos;rarfile&apos; to handle {file_path}&quot;
-        )
-        return False
-    try:
-        with rarfile.RarFile(file_path, &quot;r&quot;) as rar_ref:
-            rar_ref.extractall(extract_dir)
-        return True
-    except rarfile.Error as e:
-        logger.warning(f&quot;Failed to extract RAR file {file_path}: {e}&quot;)
-        return False
-
+if not rarfile:
+logger.warning("RAR handling requires 'rarfile' to be installed.")
+return False
+try:
+with rarfile.RarFile(file_path, "r") as rf:
+rf.extractall(extract_dir)
+return True
+except rarfile.Error as e:
+logger.warning(f"RAR extraction failed: {str(e)}")
+return False
 def handle_7z(file_path: str, extract_dir: str) -&gt; bool:
-    &quot;&quot;&quot;Handle extraction of 7Z archives.&quot;&quot;&quot;
-    if py7zr is None:
-        logger.warning(
-            f&quot;7z support not available. Install &apos;py7zr&apos; to handle {file_path}&quot;
-        )
-        return False
-    try:
-        with py7zr.SevenZipFile(file_path, mode=&quot;r&quot;) as z:
-            z.extractall(path=extract_dir)
-        return True
-    except py7zr.exceptions.Bad7zFile as e:
-        logger.warning(f&quot;Bad 7Z file {file_path}: {e}&quot;)
-        return False
-
+if not py7zr:
+logger.warning("7z handling requires 'py7zr' to be installed.")
+return False
+try:
+with py7zr.SevenZipFile(file_path, "r") as sz:
+sz.extractall(extract_dir)
+return True
+except py7zr.exceptions.Bad7zFile as e:
+logger.warning(f"7z extraction failed: {str(e)}")
+return False
 def handle_tar(file_path: str, extract_dir: str) -&gt; bool:
-    &quot;&quot;&quot;Handle extraction of TAR archives.&quot;&quot;&quot;
-    try:
-        with tarfile.open(file_path, &quot;r:*&quot;) as tar_ref:
-            safe_extract(tar_ref, extract_dir)
-        return True
-    except tarfile.TarError:
-        logger.warning(f&quot;Bad TAR file {file_path}&quot;)
-        return False
-
-@click.command()
-@click.argument(&quot;paths&quot;, nargs=-1, type=click.Path(exists=True))
-@click.option(
-    &quot;extensions&quot;,
-    &quot;-e&quot;,
-    &quot;--extension&quot;,
-    multiple=True,
-    help=&quot;File extensions to include (e.g., .txt, .md)&quot;,
-)
-@click.option(
-    &quot;--include-hidden&quot;,
-    is_flag=True,
-    help=&quot;Include files and folders starting with a dot (.).&quot;,
-)
-@click.option(
-    &quot;--ignore-gitignore&quot;,
-    is_flag=True,
-    help=&quot;Ignore .gitignore files and include all files.&quot;,
-)
-@click.option(
-    &quot;ignore_patterns&quot;,
-    &quot;--ignore&quot;,
-    multiple=True,
-    default=[],
-    help=&quot;List of patterns to ignore (e.g., *.log, temp*).&quot;,
-)
-@click.option(
-    &quot;output_file&quot;,
-    &quot;-o&quot;,
-    &quot;--output&quot;,
-    type=click.Path(writable=True),
-    help=&quot;Output to a file instead of stdout.&quot;,
-)
-@click.option(
-    &quot;claude_xml&quot;,
-    &quot;-c&quot;,
-    &quot;--cxml&quot;,
-    is_flag=True,
-    help=&quot;Output in XML format enclosed within codeblock tags.&quot;,
-)
-@click.option(
-    &quot;max_depth&quot;,
-    &quot;-d&quot;,
-    &quot;--max-depth&quot;,
-    type=int,
-    default=5,
-    help=&quot;Maximum recursion depth for processing nested archives (default: 5).&quot;,
-)
-@click.version_option()
-def cli(
-    paths: Tuple[str, ...],
-    extensions: Tuple[str, ...],
-    include_hidden: bool,
-    ignore_gitignore: bool,
-    ignore_patterns: Tuple[str, ...],
-    output_file: Optional[str],
-    claude_xml: bool,
-    max_depth: int,
+try:
+with tarfile.open(file_path, "r:*") as tf:
+safe_extract(tf, extract_dir)
+return True
+except tarfile.TarError as e:
+logger.warning(f"TAR extraction failed: {str(e)}")
+return False
+ARCHIVE_HANDLERS = {
+".zip": handle_zip,
+".rar": handle_rar,
+".7z": handle_7z,
+".tar": handle_tar,
+".gz": handle_tar,
+".bz2": handle_tar,
+}
+# Office documents use ZIP-based archives internally
+OFFICE_EXTENSIONS = [".docx", ".xlsx", ".pptx", ".odt", ".ods", ".odp"]
+# ---------------------------------------------------------------------
+# Gitignore Handler
+# ---------------------------------------------------------------------
+class GitignoreHandler:
+"""
+Attempts to load and parse a .gitignore file using pathspec when available,
+otherwise uses a basic fnmatch fallback.
+"""
+def __init__(self, directory: str):
+self.spec = None
+self.rules = []
+gitignore_file = os.path.join(directory, ".gitignore")
+if os.path.isfile(gitignore_file):
+with open(gitignore_file, "r", encoding="utf-8") as f:
+lines = [line.strip() for line in f if line.strip() and not line.startswith("#")]
+if pathspec:
+self.spec = pathspec.PathSpec.from_lines("gitwildmatch", lines)
+else:
+self.rules = lines
+def should_ignore(self, path_to_check: str) -&gt; bool:
+if self.spec:
+return self.spec.match_file(path_to_check)
+base = os.path.basename(path_to_check)
+if os.path.isdir(path_to_check):
+base += "/"
+return any(fnmatch(base, rule) for rule in self.rules)
+# ---------------------------------------------------------------------
+# Output Formatting: Plain-text or XML
+# ---------------------------------------------------------------------
+class OutputFormatter:
+def __init__(self, writer: Callable[[str], None], xml_mode: bool):
+self.writer = writer
+self.xml_mode = xml_mode
+self.xml_index = 1
+def write(self, path: str, content: str) -&gt; None:
+if self.xml_mode:
+self.writer(f'<document index="{self.xml_index}">')
+self.writer(f'    <source />{path}&lt;/source&gt;')
+self.writer('    <document_content>')
+# Indent content for clarity in XML
+for line in content.splitlines():
+self.writer(f'        {line}')
+self.writer('    </document_content>')
+self.writer('</document>')
+self.xml_index += 1
+else:
+self.writer(path)
+self.writer("---")
+self.writer(content)
+self.writer("")
+self.writer("---")
+# ---------------------------------------------------------------------
+# File Processing Class
+# ---------------------------------------------------------------------
+class FileProcessor:
+"""
+Recursively processes files and directories, optionally extracting
+archives and applying .gitignore rules. Outputs in plain text or XML.
+"""
+def __init__(
+self,
+extensions: Tuple[str, ...],
+include_hidden: bool,
+ignore_gitignore: bool,
+ignore_patterns: Tuple[str, ...],
+formatter: OutputFormatter,
+max_depth: int = 5,
 ):
-    &quot;&quot;&quot;
-    Process files and directories, including archives and Office/LibreOffice documents.
+self.extensions = [ext.lower() for ext in extensions]
+self.include_hidden = include_hidden
+self.ignore_gitignore = ignore_gitignore
+self.ignore_patterns = ignore_patterns
+self.formatter = formatter
+self.max_depth = max_depth
+def process_path(self, path: str, depth: int = 0) -&gt; None:
+if depth &gt; self.max_depth:
+logger.warning(f"Max recursion depth ({self.max_depth}) reached at {path}.")
+return
+if os.path.isfile(path):
+self._handle_file(path, depth)
+elif os.path.isdir(path):
+self._handle_directory(path, depth)
+def _handle_file(self, path: str, depth: int) -&gt; None:
+ext = os.path.splitext(path)[1].lower()
+# If archive or Office doc, handle as an archive; otherwise just read content
+if ext in ARCHIVE_HANDLERS or ext in OFFICE_EXTENSIONS:
+self._extract_and_recurse(path, ext, depth)
+else:
+self._read_and_output(path)
+def _extract_and_recurse(self, path: str, ext: str, depth: int) -&gt; None:
+handler_func = ARCHIVE_HANDLERS.get(ext)
+# Office documents use the ZIP handler
+if ext in OFFICE_EXTENSIONS:
+handler_func = ARCHIVE_HANDLERS[".zip"]
+if not handler_func:
+logger.warning(f"No valid handler for extension: {ext}")
+return
+with tempfile.TemporaryDirectory() as tmpdir:
+success = handler_func(path, tmpdir)
+if success:
+self.process_path(tmpdir, depth + 1)
+else:
+logger.warning(f"Extraction failed for {path}")
+def _read_and_output(self, path: str) -&gt; None:
+# Attempt to read as UTF-8, fallback to Latin-1
+for encoding in ("utf-8", "latin-1"):
+try:
+with open(path, "r", encoding=encoding) as f:
+content = f.read()
+self.formatter.write(path, content)
+return
+except UnicodeDecodeError:
+pass
+except Exception as e:
+logger.warning(f"Error reading file {path}: {str(e)}")
+return
+logger.warning(f"Could not read file {path} with provided encodings.")
+def _handle_directory(self, directory: str, depth: int) -&gt; None:
+gitignore_handler = None
+if not self.ignore_gitignore:
+gitignore_handler = GitignoreHandler(directory)
+for root, dirs, files in os.walk(directory):
+if not self.include_hidden:
+dirs[:] = [d for d in dirs if not d.startswith(".")]
+files = [f for f in files if not f.startswith(".")]
+if gitignore_handler:
+dirs[:] = [d for d in dirs if not gitignore_handler.should_ignore(os.path.join(root, d))]
+files = [f for f in files if not gitignore_handler.should_ignore(os.path.join(root, f))]
+if self.ignore_patterns:
+files = [
+f
+for f in files
+if not any(fnmatch(f, pattern) for pattern in self.ignore_patterns)
+]
+if self.extensions:
+files = [
+f
+for f in files
+if any(f.lower().endswith(ext) for ext in self.extensions)
+]
+for file_name in sorted(files):
+self.process_path(os.path.join(root, file_name), depth + 1)
+# ---------------------------------------------------------------------
+# Click CLI Declaration
+# ---------------------------------------------------------------------
+@click.command()
+@click.argument("paths", nargs=-1, type=click.Path(exists=True))
+@click.option("-e", "--extension", "extensions", multiple=True,
+help="Specify file extensions (e.g., .txt, .md) to include.")
+@click.option("--include-hidden", is_flag=True, default=False,
+help="Whether to include hidden files and directories.")
+@click.option("--ignore-gitignore", is_flag=True, default=False,
+help="Disable .gitignore-based filtering.")
+@click.option("--ignore", "ignore_patterns", multiple=True,
+help="One or more glob patterns to exclude (e.g., *.log, temp*).")
+@click.option("-o", "--output", "output_file", type=click.Path(writable=True),
+help="File path to save results (stdout by default).")
+@click.option("--xml", "output_xml", is_flag=True, default=False,
+help="Output results in an XML-like format.")
+@click.option("-d", "--max-depth", default=5,
+help="Maximum recursion depth for nested archives.")
+def cli(paths, extensions, include_hidden, ignore_gitignore, ignore_patterns,
+output_file, output_xml, max_depth):
+"""
+This tool processes files and directories, including archive extraction
+and Office document reading, optionally respecting .gitignore rules.
+"""
+writer = click.echo
+file_handle = None
+if output_file:
+try:
+file_handle = open(output_file, "w", encoding="utf-8")
+writer = lambda msg: print(msg, file=file_handle)
+except IOError as e:
+logger.error(f"Could not open output file {output_file}: {str(e)}")
+sys.exit(1)
+formatter = OutputFormatter(writer, output_xml)
+# Print optional XML headers/footers if needed
+if output_xml:
+writer("<section data-filename="xml_code-block.xml" data-code="&quot;)
+writer(&quot;&lt;documents&gt;&quot;)
+processor = FileProcessor(
+extensions=extensions,
+include_hidden=include_hidden,
+ignore_gitignore=ignore_gitignore,
+ignore_patterns=ignore_patterns,
+formatter=formatter,
+max_depth=max_depth,
+)
+# Process each path recursively
+for path in paths:
+processor.process_path(path)
+if output_xml:
+writer(&quot;&lt;/documents&gt;&quot;)
+writer(&quot;" data-download-link="" data-download-link-label="Download Xml"><code class="language-xml">")
+writer("<documents>")
+processor = FileProcessor(
+extensions=extensions,
+include_hidden=include_hidden,
+ignore_gitignore=ignore_gitignore,
+ignore_patterns=ignore_patterns,
+formatter=formatter,
+max_depth=max_depth,
+)
+# Process each path recursively
+for path in paths:
+processor.process_path(path)
+if output_xml:
+writer("</documents>")
+writer("
+")
+if file_handle:
+file_handle.close()
+# Entry point
+if __name__ == "__main__":
+cli()
 
-    This script takes one or more paths to files or directories and outputs every file
-    recursively. It can handle various archive formats and Microsoft Office/LibreOffice documents,
-    extracting their contents for processing. The output can be in plain text or XML format.
-
-    Usage:
-    python script.py [OPTIONS] PATHS...
-
-    Example:
-    python script.py path/to/directory -e .txt .md --cxml -o output.xml
-
-    Prerequisites:
-        - Install required libraries:
-          ```
-          pip install click rarfile py7zr pathspec
-          ```
-    &quot;&quot;&quot;
-    if output_file:
-        try:
-            fp = open(output_file, &quot;w&quot;, encoding=&quot;utf-8&quot;)
-            writer = lambda s: print(s, file=fp)
-        except Exception as e:
-            logger.error(f&quot;Cannot open output file {output_file}: {e}&quot;)
-            sys.exit(1)
-    else:
-        fp = None
-        writer = lambda s: print(s)
-
-    if claude_xml:
-        printer = XMLPrinter(writer)
-        printer.print_header()
-    else:
-        printer = DefaultPrinter(writer)
-
-    processor = FileProcessor(
-        list(extensions),
-        include_hidden,
-        ignore_gitignore,
-        list(ignore_patterns),
-        printer,
-        max_depth,
-    )
-
-    try:
-        for path in paths:
-            processor.process_path(path)
-
-        if claude_xml:
-            printer.print_footer()
-    finally:
-        if fp:
-            fp.close()
-
-if __name__ == &quot;__main__&quot;:
-    cli()"&gt;&lt;/outline&gt;
-&lt;/outline&gt;
-&lt;/body&gt;&lt;/opml&gt;
-</code></section></code></section></code></section></outline></body></opml>]]></content><author><name></name></author><category term="scratchpad" /><category term="scripts&gt;python" /></entry><entry><title type="html">Hamster System</title><link href="https://ib.bsb.br/hamster-system/" rel="alternate" type="text/html" title="Hamster System" /><published>2025-02-04T00:00:00+00:00</published><updated>2025-02-05T14:47:46+00:00</updated><id>https://ib.bsb.br/hamster-system</id><content type="html" xml:base="https://ib.bsb.br/hamster-system/"><![CDATA[<h2 id="structure-of-hamster-folder">Structure of Hamster Folder</h2>
+</code></section></code></section>]]></content><author><name></name></author><category term="scratchpad" /><category term="scripts&gt;python" /></entry><entry><title type="html">Hamster System</title><link href="https://ib.bsb.br/hamster-system/" rel="alternate" type="text/html" title="Hamster System" /><published>2025-02-04T00:00:00+00:00</published><updated>2025-02-05T14:47:46+00:00</updated><id>https://ib.bsb.br/hamster-system</id><content type="html" xml:base="https://ib.bsb.br/hamster-system/"><![CDATA[<h2 id="structure-of-hamster-folder">Structure of Hamster Folder</h2>
 
 <ul>
   <li><strong>Root Folder: <code class="language-plaintext highlighter-rouge">YOUR NAME</code></strong>: This serves as the central digital hub, housing all system-related documents.</li>
