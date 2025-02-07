@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2025-02-07T16:04:02+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">files to prompt (f2p)</title><link href="https://ib.bsb.br/f2p/" rel="alternate" type="text/html" title="files to prompt (f2p)" /><published>2025-02-05T00:00:00+00:00</published><updated>2025-02-07T16:01:50+00:00</updated><id>https://ib.bsb.br/f2p</id><content type="html" xml:base="https://ib.bsb.br/f2p/"><![CDATA[<p>────────────────────────────────────────────────────────────────────────</p>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2025-02-07T17:44:49+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">files to prompt (f2p)</title><link href="https://ib.bsb.br/f2p/" rel="alternate" type="text/html" title="files to prompt (f2p)" /><published>2025-02-05T00:00:00+00:00</published><updated>2025-02-07T17:42:55+00:00</updated><id>https://ib.bsb.br/f2p</id><content type="html" xml:base="https://ib.bsb.br/f2p/"><![CDATA[<p>────────────────────────────────────────────────────────────────────────</p>
 <h2 id="1-installation">1: INSTALLATION</h2>
 <p>────────────────────────────────────────────────────────────────────────</p>
 <ol>
@@ -273,13 +273,285 @@ File: markdown_snippet.j2</p>
 <p>► Rationale: Ideal for those wanting to embed code or text inside a Markdown-compatible document (like GitHub README or a wiki).</p>
 
 <p>────────────────────────────────────────────────────────────────────────
-INTEGRATION NOTES
+1) Summarized Headings Template
 ────────────────────────────────────────────────────────────────────────
-• Place your chosen template in a file (e.g., minimal_example.j2).<br />
-• Run:<br />
-     python f2p.py -t minimal_example.j2 /path/to/files<br />
-• Make sure Jinja2 is installed (pip install jinja2).<br />
-• If you want to adapt these to your own variables, ensure that the script is modified accordingly or that the script supplies those variables to the Jinja2 environment.</p>
+File: summarized_headings.j2</p>
+
+<h2 id="file--index---path--2">[“FILE #{{ index }}”] {{ path }}</h2>
+<p>{% set first_lines = content.split(‘\n’)[:3] %}
+{% for line in first_lines %}
+{{ line }}
+{% endfor %}
+———————————
+(… Content Truncated …)</p>
+
+<p>Purpose: Only shows the first few lines of each file to save space and time.</p>
+
+<p>────────────────────────────────────────────────────────────────────────
+2) JSON-Inspired Output Template
+────────────────────────────────────────────────────────────────────────
+File: json_inspired.j2</p>
+
+<p>{
+  “index”: {{ index }},
+  “path”: “{{ path | replace(‘\’,’\\’) }}”,
+  “content_lines”: [
+{% set lines = content.split(‘\n’) %}
+{% for line in lines %}
+    “{{ line | replace(‘”’,’\”’) }}”{{ “,” if not loop.last else “” }}
+{% endfor %}
+  ]
+}</p>
+
+<p>Purpose: Wraps the path and content in a JSON-like format, convenient for integration with JSON-based tools or services.</p>
+
+<p>────────────────────────────────────────────────────────────────────────
+3) Columnar Key-Value Template
+────────────────────────────────────────────────────────────────────────
+File: columnar_kv.j2</p>
+
+<p>===============
+File #{{ index }}
+===============
+Path: {{ path }}
+—————
+{% for key, val in {
+   ‘Characters’: content|length,
+   ‘Lines’: content.split(‘\n’)|length,
+   ‘First Line’: content.split(‘\n’)[0] if content else ‘’
+}.items() %}
+{{ key }}: {{ val }}
+{% endfor %}
+—————
+{{ content }}</p>
+
+<p>Purpose: Displays quick stats (lines, character count, first line), then prints the full content.</p>
+
+<p>────────────────────────────────────────────────────────────────────────
+4) Interactive-Like Script Template
+────────────────────────────────────────────────────────────────────────
+File: interactive_prompt.j2</p>
+
+<p>=== File #{{ index }} ===
+LOAD FILE: {{ path }}</p>
+
+<p>RUN COMMANDS:
+1) SomeProcess –file “{{ path }}”
+2) AnotherProcess –analyze “{{ path }}”
+3) (optional) Check content below:</p>
+
+<h1 id="-content-">{{ content }}</h1>
+
+<p>Purpose: Provides a stylized “script” approach, generating possible follow-up commands for each file.</p>
+
+<p>────────────────────────────────────────────────────────────────────────
+5) Task-List / To-Do Style Template
+────────────────────────────────────────────────────────────────────────
+File: task_list.j2</p>
+
+<h2 id="file--index---path--3">File #{{ index }}: {{ path }}</h2>
+
+<ul class="task-list">
+  <li class="task-list-item"><input type="checkbox" class="task-list-item-checkbox" disabled="disabled" />Review lines for errors</li>
+  <li class="task-list-item"><input type="checkbox" class="task-list-item-checkbox" disabled="disabled" />Extract useful references</li>
+  <li class="task-list-item"><input type="checkbox" class="task-list-item-checkbox" disabled="disabled" />Create summary</li>
+  <li class="task-list-item"><input type="checkbox" class="task-list-item-checkbox" disabled="disabled" />Mark for final review</li>
+</ul>
+
+<p>Content (Reference):
+{{ content }}</p>
+
+<p>Purpose: Ideal for personal or collaborative auditing of file data, generating a simple checklist next to the file content.</p>
+
+<p>────────────────────────────────────────────────────────────────────────
+6) Blockquote Slicer Template
+────────────────────────────────────────────────────────────────────────
+File: blockquote_slicer.j2</p>
+
+<blockquote>
+  <p><strong>File #{{ index }}</strong>: {{ path }}
+{% for i, line in content.split(‘\n’) | enumerate %}
+{{ “%02d” | format(i+1) }} {{ line }}
+{% endfor %}</p>
+</blockquote>
+
+<p>Purpose: Turns each file’s content into a set of blockquotes with line numbers (handy for review in Markdown).</p>
+
+<p>────────────────────────────────────────────────────────────────────────
+7) Content by Word Count Buckets
+────────────────────────────────────────────────────────────────────────
+File: word_bucket.j2</p>
+
+<h2 id="file--index---path--4">File #{{ index }}: {{ path }}</h2>
+
+<p>{% set words = content.split() %}
+{% if words|length &lt; 30 %}
+(SHORT FILE)
+{{ content }}
+{% elif words|length &lt; 100 %}
+(MEDIUM FILE)
+—BEGIN—
+{{ content }}
+—END—–
+{% else %}
+(LONG FILE - WORD COUNT: {{ words|length }})
+[Preview: First 100 words]
+{{ words[:100]|join(‘ ‘) }}
+[… shortened …]
+{% endif %}</p>
+
+<p>Purpose: Adapts the output to short, medium, or large files, printing partial content for massive files.</p>
+
+<p>────────────────────────────────────────────────────────────────────────
+8) Script-Inlining Template (Code + Comments)
+────────────────────────────────────────────────────────────────────────
+File: inline_script.j2</p>
+
+<h3 id="script-snippet-index--index-">SCRIPT SNIPPET (INDEX: {{ index }})</h3>
+<h1 id="file-path--path-">File Path: {{ path }}</h1>
+
+<p>cat «‘EOF’ &gt; output_file_{{ index }}.txt
+{{ content }}
+EOF</p>
+
+<h1 id="explanation">Explanation:</h1>
+<h1 id="this-snippet-writes-the-file-content-into-output_file_-index-txt">This snippet writes the file content into “output_file_{{ index }}.txt”</h1>
+<h1 id="using-a-here-document-approach">using a here-document approach.</h1>
+
+<p>Purpose: Great for re-creating multiple file contents on another system or environment.</p>
+
+<p>────────────────────────────────────────────────────────────────────────
+9) Directory Tree Logging Template
+────────────────────────────────────────────────────────────────────────
+File: directory_tree.j2</p>
+
+<p>[FILE ENTRY #{{ index }}]
+PATH: {{ path }}
+DIR OR FILE: {% if content == ‘’ and ‘.’ not in path.split(‘/’)[-1] %} Possibly a directory or empty file. {% else %} File with content. {% endif %}</p>
+
+<p>========== CONTENT START ==========
+{{ content }}
+========== CONTENT END ============</p>
+
+<p>Purpose: Distinguishes empty directories vs. actual files in the output text.</p>
+
+<p>────────────────────────────────────────────────────────────────────────
+10) Quick Data Stats with Regex (Custom Filters)
+────────────────────────────────────────────────────────────────────────
+File: quick_regex_stats.j2</p>
+
+<p>{% set lines = content.split(‘\n’) %}
+{% set import_lines = lines | select(“match”, “^(import|from) “) | list %}
+{% set todo_lines = lines | select(“match”, “.<em>TODO.</em>”) | list %}</p>
+
+<h1 id="file--index---path--5">File #{{ index }}: {{ path }}</h1>
+<p>TOTAL LINES: {{ lines|length }}
+IMPORT STATEMENTS: {{ import_lines|length }}
+TODO MARKERS: {{ todo_lines|length }}</p>
+
+<p>– EXCERPT (first 5 lines) –
+{% for l in lines[:5] %}
+{{ l }}
+{% endfor %}
+—————————–</p>
+
+<p>Purpose: Demonstrates text analysis for code files (counting ‘import’ or ‘TODO’ lines). Note that it uses advanced Jinja2 filtering (regex) which may require a custom environment setup if your existing environment doesn’t have “match.”</p>
+
+<p>────────────────────────────────────────────────────────────────────────
+QUICK USAGE RECAP
+────────────────────────────────────────────────────────────────────────
+• Place any one of these templates in, say, “creative_template.j2”.<br />
+• Install Jinja2: pip install jinja2<br />
+• Run the main script with:<br />
+  python framework3.py -t creative_template.j2 /your/file/or/directory<br />
+• The script will pass , &lt;p&gt;⚠️ <em>ATENÇÃO:</em>&lt;/p&gt;</p>
+<ul>
+  <li><em>Sistema 12V:</em> Ambos os veículos usam 12V. Nunca use cabos em sistemas de 6V ou 24V.</li>
+  <li><em>Segurança:</em> Use luvas e óculos. Afaste fontes de combustível ou faíscas.</li>
+  <li><em>Baterias Danificadas:</em> Se houver vazamentos ou corrosão nos terminais (substância branca/azulada), <em>não prossiga</em>. Limpe com água bicarbonatada ou substitua a bateria.</li>
+</ul>
+
+<hr />
+
+<h3 id="1-preparação-inicial"><em>1. Preparação Inicial</em></h3>
+<ul>
+  <li><em>Estacionamento:</em> Aproxime os carros sem contato físico.</li>
+  <li><em>Desligue:</em> Motores e sistemas elétricos (faróis, rádio).
+    <ul>
+      <li>Mantenha a chave no contato do descarregado se o volante estiver travado.</li>
+    </ul>
+  </li>
+  <li><em>Localize as Baterias:</em>
+    <ul>
+      <li>No descarregado: Geralmente no compartimento do motor, sob uma tampa preta.</li>
+      <li>No apoio: À direita do motor, com terminais expostos.</li>
+      <li>⚠️ Se a bateria estiver no porta-malas ou sob o banco, use os terminais de emergência no compartimento do motor (consulte o manual).</li>
+    </ul>
+  </li>
+</ul>
+
+<hr />
+
+<h3 id="2-conexão-dos-cabos-ordem-crucial"><em>2. Conexão dos Cabos (Ordem Crucial!)</em></h3>
+<p><em>Materiais:</em> Cabos com isolamento intacto (≥ 6mm de espessura).</p>
+
+<ol>
+  <li><em>descarregado (Bateria Descarregada):</em>
+    <ul>
+      <li><em>Vermelho (+):</em> Conecte ao terminal <em>positivo</em> (+) do descarregado.</li>
+    </ul>
+  </li>
+  <li><em>apoio (Bateria Carregada):</em>
+    <ul>
+      <li><em>Vermelho (+):</em> Conecte ao terminal <em>positivo</em> (+) do apoio.</li>
+    </ul>
+  </li>
+  <li><em>apoio (Bateria Carregada):</em>
+    <ul>
+      <li><em>Preto (–):</em> Conecte ao terminal <em>negativo</em> (–) do apoio.</li>
+    </ul>
+  </li>
+  <li><em>descarregado (Aterramento):</em>
+    <ul>
+      <li><em>Preto (–):</em> Conecte a uma <em>peça metálica não pintada</em> do descarregado (ex.: suporte do motor, parafuso do chassi).</li>
+      <li>❌ Nunca ao terminal negativo da bateria descarregada!</li>
+    </ul>
+  </li>
+</ol>
+
+<hr />
+
+<h3 id="3-partida-do-motor"><em>3. Partida do Motor</em></h3>
+<ol>
+  <li><em>Ligue o apoio</em> e deixe o motor funcionando por <em>5 minutos</em> para transferir carga.</li>
+  <li><em>Tente ligar o descarregado:</em>
+    <ul>
+      <li>Se falhar, espere 10 minutos e repita.</li>
+      <li>⚠️ Se não iniciar após 2 tentativas, a bateria pode estar inutilizada ou há outros defeitos elétricos.</li>
+    </ul>
+  </li>
+</ol>
+
+<hr />
+
+<h3 id="4-desconexão-dos-cabos"><em>4. Desconexão dos Cabos</em></h3>
+<p><em>Ordem Inversa à Conexão:</em></p>
+<ol>
+  <li>Preto (–) do descarregado (aterramento).</li>
+  <li>Preto (–) do apoio.</li>
+  <li>Vermelho (+) do apoio.</li>
+  <li>Vermelho (+) do descarregado.</li>
+</ol>
+
+<hr />
+
+<h3 id="5-pós-procedimento"><em>5. Pós-Procedimento</em></h3>
+<ul>
+  <li><em>Mantenha o descarregado ligado</em> por <em>30 minutos</em> (ou dirija imediatamente) para recarregar a bateria.</li>
+  <li><em>Teste a Bateria:</em> Desligue o motor e reinicie. Se falhar novamente, substitua a bateria.</li>
+</ul>
+<p>, and  to your template code.<br />
+• Feel free to customize these templates or add your own logic for more specialized outputs.</p>
 
 <p>────────────────────────────────────────────────────────────────────────</p>
 <h2 id="9-further-notes">9: FURTHER NOTES</h2>
