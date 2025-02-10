@@ -7,7 +7,7 @@ layout: post
 published: true
 slug: android2raspberry
 title: 'ANDROID installation guide for raspberry PI 4'
-comment: `https://konstakang.com/devices/rpi4/LineageOS22/` `https://raspberrytips.com/android-raspberry-pi-4/`
+comment: "`https://konstakang.com/devices/rpi4/LineageOS22/` `https://raspberrytips.com/android-raspberry-pi-4/`"
 ---
 ────────────────────────────────────────────────────────
 ## A: QUICK-START SUMMARY FOR BEGINNERS
