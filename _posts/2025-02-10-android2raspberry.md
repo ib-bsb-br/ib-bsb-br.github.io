@@ -5,11 +5,12 @@ date: 2025-02-10
 type: post
 layout: post
 published: true
-slug: android-installation-guide-for-raspberry-pi-4
+slug: android2raspberry
 title: 'ANDROID installation guide for raspberry PI 4'
+comment: `https://konstakang.com/devices/rpi4/LineageOS22/` `https://raspberrytips.com/android-raspberry-pi-4/`
 ---
 ────────────────────────────────────────────────────────
-SECTION A: QUICK-START SUMMARY FOR BEGINNERS
+## A: QUICK-START SUMMARY FOR BEGINNERS
 ────────────────────────────────────────────────────────
 1. Download Essentials  
    – Raspberry Pi Imager or Balena Etcher.  
@@ -35,7 +36,7 @@ SECTION A: QUICK-START SUMMARY FOR BEGINNERS
    – Reflash GApps or Magisk after each OTA, if necessary.
 
 ────────────────────────────────────────────────────────
-SECTION B: DETAILED GUIDE & ADVANCED TOPICS
+## B: DETAILED GUIDE & ADVANCED TOPICS
 ────────────────────────────────────────────────────────
 1. PRE-INSTALLATION PREPARATION  
    – Hardware Requirements: Pi 4 or Pi 5 recommended, 2 GB+ RAM. A good SD card or USB drive for faster performance.  
