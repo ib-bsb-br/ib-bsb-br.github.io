@@ -1,8 +1,5 @@
 <nav class="toc">
-{% assign content_html = content 
-  | replace: '<pre class="highlight"><code>', '<section><code>' 
-  | replace: '</code></pre>', '</code></section>' 
-  | strip %}
+{% assign content_html = content | replace: '<pre class="highlight"><code>', '<section><code>' | replace: '</code></pre>', '</code></section>' | strip %}
 {% assign headers = content_html | split: "<h" %}
 {% assign toc_html = "" %}
 {% assign current_level = 0 %}
@@ -38,31 +35,19 @@
     {% assign header_id = header_text | slugify %}
   {% endif %}
 
-  {% capture list_item %}
-    <li><a href="#{{ header_id }}">{{ header_text }}</a>
-  {% endcapture %}
-
   {% if current_level == 0 %}
-    {% assign toc_html = toc_html 
-      | append: '<' | append: list_tag | append: '>' 
-      | append: list_item %}
+    {% assign toc_html = toc_html | append: '<' | append: list_tag | append: '>' | append: '<li><a href="#' | append: header_id | append: '">' | append: header_text | append: '</a></li>' %}
     {% assign current_level = header_level %}
   {% else %}
     {% if header_level > current_level %}
-      {% capture nested_open %}
-        <{{ list_tag }}><li><a href="#{{ header_id }}">{{ header_text }}</a>
-      {% endcapture %}
-      {% assign toc_html = toc_html | append: nested_open %}
+      {% assign toc_html = toc_html | append: '<' | append: list_tag | append: '>' | append: '<li><a href="#' | append: header_id | append: '">' | append: header_text | append: '</a></li>' %}
       {% assign current_level = header_level %}
     {% elsif header_level < current_level %}
       {% assign diff = current_level | minus: header_level %}
-      {% capture nested_close %}
-        {% for i in (1..diff) %}
-          </li></{{ list_tag }}>
-        {% endfor %}
-        </li><li><a href="#{{ header_id }}">{{ header_text }}</a>
-      {% endcapture %}
-      {% assign toc_html = toc_html | append: nested_close %}
+      {% for i in (1..diff) %}
+        {% assign toc_html = toc_html | append: '</li></' | append: list_tag | append: '>' %}
+      {% endfor %}
+      {% assign toc_html = toc_html | append: '<li><a href="#' | append: header_id | append: '">' | append: header_text | append: '</a></li>' %}
       {% assign current_level = header_level %}
     {% else %}
       {% assign toc_html = toc_html
@@ -75,18 +60,13 @@
   {% endif %}
 
   {% assign remainder = header | split: "</h" | last %}
-  {% assign toc_html = toc_html 
-    | append: "</h" 
-    | append: remainder %}
+  {% assign toc_html = toc_html | append: "</h" | append: remainder %}
 {% endfor %}
 
 {% if current_level > 0 %}
-  {% capture final_close %}
     {% for i in (1..current_level) %}
-      </li></{{ list_tag }}>
+        {% assign toc_html = toc_html | append: '</li></' | append: list_tag | append: '>' %}
     {% endfor %}
-  {% endcapture %}
-  {% assign toc_html = toc_html | append: final_close %}
 {% endif %}
 
 {{ toc_html }}
