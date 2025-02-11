@@ -128,96 +128,164 @@
         <div class="post-content-body">
           
 <ul><li><a href="#1-step-by-step-removal-process">1. Step-by-Step Removal Process</a></li><li><a href="#2-why-this-process-works-technical-rationale">2. Why This Process Works (Technical Rationale)</a></li><li><a href="#3-impacts-on-system-functionality">3. Impacts on System Functionality</a></li><li><a href="#final-verification">Final Verification</a></li></ul>
-          
-
-
-
-
-
-
-
-
-
-
-
-  
-    
-  
-
-  
+          <p>Removing WSL and WSL2 from Windows 11 to work exclusively with Hyper-V involves a set of deliberate steps designed to eliminate the Linux compatibility layer and its associated virtual environment, without disabling Hyper-V itself. Below is a detailed guide that covers how to perform these actions, the technical rationale behind them, and the impacts on your system.</p>
+  <h4 id="1-step-by-step-removal-process">
     
     
+     <a href="#1-step-by-step-removal-process">#</a><a href="#" aria-label="Back to top">1. Step-by-Step Removal Process</a>
+        
     
-    
-    
-    
-    
-  
-
-  
-    
-    
-    
-    
-    
-    
-    
-  
-
-  
-    
-    
-    
-    
-    
-    
-    
-  
-
-  
-    
-    
-    
-    
-    
-    
-    
-  
-
-<p>Removing WSL and WSL2 from Windows 11 to work exclusively with Hyper-V involves a set of deliberate steps designed to eliminate the Linux compatibility layer and its associated virtual environment, without disabling Hyper-V itself. Below is a detailed guide that covers how to perform these actions, the technical rationale behind them, and the impacts on your system.</p>
-
-
-      <h4  id="1-step-by-step-removal-process">
+  </h4>
       
-        1. Step-by-Step Removal Process</h4 
-      <a href="#1-step-by-step-removal-process"   >#</a>
+
+<p><strong>Step 1: Uninstall Linux Distributions</strong></p>
+<ul>
+  <li><strong>Action:</strong> Unregister and remove any installed Linux distributions.</li>
+  <li><strong>Command Example:</strong>
+    <div class="language-powershell highlighter-rouge"><div class="highlight"><section><code><span class="n">wsl</span><span class="w"> </span><span class="nt">--list</span><span class="w"> </span><span class="nt">--quiet</span><span class="w">  </span><span class="c"># Lists all installed distributions</span><span class="w">
+</span><span class="n">wsl</span><span class="w"> </span><span class="nt">--unregister</span><span class="w"> </span><span class="err">&lt;</span><span class="nx">DistributionName</span><span class="err">&gt;</span><span class="w">  </span><span class="c"># Replace &lt;DistributionName&gt; (e.g., Ubuntu) for each distribution</span><span class="w">
+</span></code></section></div>    </div>
+  </li>
+  <li><strong>Rationale:</strong> This step ensures that no residual Linux distributions are left which might continue to consume system resources.</li>
+</ul>
+
+<p><strong>Step 2: Disable WSL and Associated Features</strong></p>
+<ul>
+  <li><strong>Action:</strong> Open the “Turn Windows features on or off” dialog.
+    <ul>
+      <li>Uncheck <strong>Windows Subsystem for Linux</strong>.</li>
+      <li>Uncheck <strong>Virtual Machine Platform</strong>.</li>
+    </ul>
+  </li>
+  <li><strong>Note:</strong> Although the Virtual Machine Platform is used by WSL2, some features like Windows Sandbox also depend on it. Consider whether you need these features before disabling.</li>
+  <li><strong>Action:</strong> Reboot the system to finalize these changes.</li>
+</ul>
+
+<p><strong>Step 3: Remove Residual Files and Configuration Data</strong></p>
+<ul>
+  <li><strong>Action:</strong> Clean up any leftover files that may reside in the user profile.</li>
+  <li><strong>Command Example:</strong>
+    <div class="language-powershell highlighter-rouge"><div class="highlight"><section><code><span class="n">Remove-Item</span><span class="w"> </span><span class="nt">-Recurse</span><span class="w"> </span><span class="nt">-Force</span><span class="w"> </span><span class="s2">"</span><span class="nv">$</span><span class="nn">env</span><span class="p">:</span><span class="nv">USERPROFILE</span><span class="s2">\AppData\Local\Packages\*CanonicalGroup.Ubuntu*"</span><span class="w">
+</span></code></section></div>    </div>
+  </li>
+  <li><strong>Rationale:</strong> This recovers disk space and removes configuration data that is no longer needed.</li>
+</ul>
+
+<p><strong>Step 4: Verify Hyper-V Remains Active</strong></p>
+<ul>
+  <li><strong>Action:</strong> Check that Hyper-V is still enabled, since it is independent of WSL/WSL2.</li>
+  <li><strong>Command Example:</strong>
+    <div class="language-powershell highlighter-rouge"><div class="highlight"><section><code><span class="n">Get-WindowsOptionalFeature</span><span class="w"> </span><span class="nt">-Online</span><span class="w"> </span><span class="nt">-FeatureName</span><span class="w"> </span><span class="nx">Microsoft-Hyper-V</span><span class="w">
+</span></code></section></div>    </div>
+  </li>
+  <li><strong>If needed, re-enable Hyper-V:</strong>
+    <div class="language-powershell highlighter-rouge"><div class="highlight"><section><code><span class="n">Enable-WindowsOptionalFeature</span><span class="w"> </span><span class="nt">-Online</span><span class="w"> </span><span class="nt">-FeatureName</span><span class="w"> </span><span class="nx">Microsoft-Hyper-V-All</span><span class="w">
+</span></code></section></div>    </div>
+  </li>
+  <li><strong>Rationale:</strong> This confirms that the removal of WSL components did not inadvertently disable Hyper-V’s core functionalities.</li>
+</ul>
+  <h4 id="2-why-this-process-works-technical-rationale">
     
-      
-      </h4>
     
-      <h4  id="2-why-this-process-works-technical-rationale">
-      
-        2. Why This Process Works (Technical Rationale)</h4 
-      <a href="#2-why-this-process-works-technical-rationale"   >#</a>
+     <a href="#2-why-this-process-works-technical-rationale">#</a><a href="#" aria-label="Back to top">2. Why This Process Works (Technical Rationale)</a>
+        
     
+  </h4>
       
-      </h4>
+
+<ul>
+  <li><strong>WSL/WSL2 Architecture:</strong>
+    <ul>
+      <li>WSL provides a compatibility layer for running Linux binaries on Windows. WSL2, in particular, utilizes a lightweight VM managed by the Virtual Machine Platform. Removing these components stops the Linux interface and associated VM without affecting Hyper-V.</li>
+    </ul>
+  </li>
+  <li><strong>Hyper-V Independence:</strong>
+    <ul>
+      <li>Hyper-V is a Type 1 hypervisor that operates directly on the hardware abstraction layer. It remains fully operational independent of the WSL components. Therefore, disabling WSL/WSL2 frees up resources while leaving your primary virtualization platform intact.</li>
+    </ul>
+  </li>
+  <li><strong>Clean Removal:</strong>
+    <ul>
+      <li>By unregistering distributions and disabling the specific Windows features, you ensure that no parts of the WSL layer or its supporting services remain active. This prevents resource conflicts and can potentially simplify system configuration, especially if you rely exclusively on Hyper-V for virtual machine management.</li>
+    </ul>
+  </li>
+</ul>
+  <h4 id="3-impacts-on-system-functionality">
     
-      <h4  id="3-impacts-on-system-functionality">
-      
-        3. Impacts on System Functionality</h4 
-      <a href="#3-impacts-on-system-functionality"   >#</a>
     
-      
-      </h4>
+     <a href="#3-impacts-on-system-functionality">#</a><a href="#" aria-label="Back to top">3. Impacts on System Functionality</a>
+        
     
-      <h4  id="final-verification">
+  </h4>
       
-        Final Verification</h4 
-      <a href="#final-verification"   >#</a>
+
+<p><strong>Consequences</strong></p>
+<ul>
+  <li><strong>Loss of Native Linux Integration:</strong>
+    <ul>
+      <li>You will no longer have immediate access to Linux command-line tools or distributions on Windows.</li>
+      <li>Tools and extensions (e.g., for Visual Studio Code) that depend on WSL may no longer work.</li>
+    </ul>
+  </li>
+  <li><strong>Tool Compatibility Changes:</strong>
+    <ul>
+      <li>Docker Desktop users who rely on the WSL2 backend must reconfigure Docker to use the Hyper-V backend or Windows Containers.</li>
+    </ul>
+  </li>
+</ul>
+
+<p><strong>Benefits</strong></p>
+<ul>
+  <li><strong>Resource Optimization:</strong>
+    <ul>
+      <li>Reclaim system resources (memory, CPU, storage allocated for WSL2’s virtual machine) for use by Hyper-V, potentially improving performance.</li>
+    </ul>
+  </li>
+  <li><strong>Simplified Virtualization Environment:</strong>
+    <ul>
+      <li>Reduced complexity in virtualization settings by eliminating duplicate virtualization layers.</li>
+      <li>Less potential for conflicts between different virtualization and containerization environments.</li>
+    </ul>
+  </li>
+</ul>
+
+<p><strong>Limitations</strong></p>
+<ul>
+  <li><strong>Reduced Flexibility:</strong>
+    <ul>
+      <li>Removing WSL/WSL2 means you lose the ability to run Linux applications natively within Windows, which is beneficial for development and testing.</li>
+    </ul>
+  </li>
+  <li><strong>Dependency Impact:</strong>
+    <ul>
+      <li>Certain applications or environments that integrate with WSL2 will require reconfiguration or alternative solutions.</li>
+    </ul>
+  </li>
+</ul>
+  <h4 id="final-verification">
     
+    
+     <a href="#final-verification">#</a><a href="#" aria-label="Back to top">Final Verification</a>
+        
+    
+  </h4>
       
-      </h4>
+
+<p>After completing the steps:</p>
+<ul>
+  <li><strong>Confirm no Linux distributions remain active:</strong>
+    <div class="language-powershell highlighter-rouge"><div class="highlight"><section><code><span class="n">wsl</span><span class="w"> </span><span class="nt">--list</span><span class="w">  </span><span class="c"># Expected output: "No installed distributions."</span><span class="w">
+</span></code></section></div>    </div>
+  </li>
+  <li><strong>Test Hyper-V:</strong>
+    <ul>
+      <li>Use Hyper-V Manager to create and run a virtual machine to verify that Hyper-V operates as expected.</li>
+    </ul>
+  </li>
+</ul>
+
+<p>This comprehensive process ensures that you remove WSL/WSL2 completely while continuing to leverage Hyper-V exclusively, along with an understanding of the technical and practical impacts of this change.</p>
+
         </div>
         
           URL: https://ib.bsb.br/purge-wsl2-from-windows-11-hyper-v-only
@@ -316,7 +384,7 @@
         
         
         <a href="https://ib.bsb.br/404" aria-label="404">
-          2025-02-11 16:48:24
+          2025-02-11 16:53:10
         </a>
         &#x23;
     

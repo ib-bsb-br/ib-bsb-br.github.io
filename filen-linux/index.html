@@ -132,183 +132,180 @@
         <div class="post-content-body">
           
 <ul><li><a href="#setting-up-filen-cli-as-a-systemd-service-on-debian-bullseye-arm64">Setting up Filen CLI as a Systemd Service on Debian Bullseye ARM64</a><ul><li><a href="#1-install-filen-cli">1. Install Filen CLI</a></li><li><a href="#2-set-up-authentication">2. Set up Authentication</a></li><li><a href="#3-create-systemd-service-file">3. Create Systemd Service File</a></li><li><a href="#4-enable-and-start-the-service">4. Enable and Start the Service</a></li><li><a href="#5-verify-service-status">5. Verify Service Status</a></li><li><a href="#6-monitor-logs">6. Monitor Logs</a></li><li><a href="#troubleshooting">Troubleshooting</a></li><li><a href="#maintenance">Maintenance</a></li></ul></li></ul>
-          
-
-
-
-
-
-
-
-
-
-
-
-  
+          <h1 id="setting-up-filen-cli-as-a-systemd-service-on-debian-bullseye-arm64">
     
-  
-
-  
     
+     <a href="#setting-up-filen-cli-as-a-systemd-service-on-debian-bullseye-arm64">#</a><a href="#" aria-label="Back to top">Setting up Filen CLI as a Systemd Service on Debian Bullseye ARM64</a>
+        
     
-    
-    
-    
-    
-    
-  
-
-  
-    
-    
-    
-    
-    
-    
-    
-  
-
-  
-    
-    
-    
-    
-    
-    
-    
-  
-
-  
-    
-    
-    
-    
-    
-    
-    
-  
-
-  
-    
-    
-    
-    
-    
-    
-    
-  
-
-  
-    
-    
-    
-    
-    
-    
-    
-  
-
-  
-    
-    
-    
-    
-    
-    
-    
-  
-
-  
-    
-    
-    
-    
-    
-    
-    
-  
-
-  
-    
-    
-    
-    
-    
-    
-    
-  
-
-<h1  id="setting-up-filen-cli-as-a-systemd-service-on-debian-bullseye-arm64">
+  </h1>
       
-        Setting up Filen CLI as a Systemd Service on Debian Bullseye ARM64</h1 
-      <a href="#setting-up-filen-cli-as-a-systemd-service-on-debian-bullseye-arm64"   >#</a>
+
+<p>This guide outlines the process of installing and configuring the Filen CLI to run as a systemd service for continuous syncing on a Debian Bullseye ARM64 system.</p>
+  <h2 id="1-install-filen-cli">
     
-      
-      </h1>
     
-      <h2  id="1-install-filen-cli">
-      
-        1. Install Filen CLI</h2 
-      <a href="#1-install-filen-cli"   >#</a>
+     <a href="#1-install-filen-cli">#</a><a href="#" aria-label="Back to top">1. Install Filen CLI</a>
+        
     
+  </h2>
       
-      </h2>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><section><code><span class="c"># Download the ARM64 version of filen-cli</span>
+wget https://cdn.filen.io/desktop/release/filen-cli_linux_arm64.tar.gz
+
+<span class="c"># Extract the archive</span>
+<span class="nb">tar</span> <span class="nt">-xzvf</span> filen-cli_linux_arm64.tar.gz
+
+<span class="c"># Move the binary to a location in your PATH</span>
+<span class="nb">sudo mv </span>filen-cli-v0.0.12-linux-arm64 /usr/bin/
+
+<span class="c"># Verify installation</span>
+/usr/bin/filen-cli-v0.0.12-linux-arm64 <span class="nt">--version</span>
+</code></section></div></div>
+  <h2 id="2-set-up-authentication">
     
-      <h2  id="2-set-up-authentication">
-      
-        2. Set up Authentication</h2 
-      <a href="#2-set-up-authentication"   >#</a>
     
-      
-      </h2>
+     <a href="#2-set-up-authentication">#</a><a href="#" aria-label="Back to top">2. Set up Authentication</a>
+        
     
-      <h2  id="3-create-systemd-service-file">
+  </h2>
       
-        3. Create Systemd Service File</h2 
-      <a href="#3-create-systemd-service-file"   >#</a>
+
+<p>Create a file named <code class="language-plaintext highlighter-rouge">.filen-cli-credentials</code> in the root user’s home directory:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><section><code><span class="nb">sudo </span>nano /root/.filen-cli-credentials
+</code></section></div></div>
+
+<p>Add your Filen credentials to this file:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><section><code>your_email@example.com
+your_password
+your_2fa_code  # If 2FA is enabled
+</code></section></div></div>
+
+<p>Secure the credentials file:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><section><code><span class="nb">sudo chmod </span>600 /root/.filen-cli-credentials
+</code></section></div></div>
+  <h2 id="3-create-systemd-service-file">
     
-      
-      </h2>
     
-      <h2  id="4-enable-and-start-the-service">
-      
-        4. Enable and Start the Service</h2 
-      <a href="#4-enable-and-start-the-service"   >#</a>
+     <a href="#3-create-systemd-service-file">#</a><a href="#" aria-label="Back to top">3. Create Systemd Service File</a>
+        
     
+  </h2>
       
-      </h2>
+
+<p>Create a new systemd service file:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><section><code><span class="nb">sudo </span>nano /etc/systemd/system/filen-sync.service
+</code></section></div></div>
+
+<p>Add the following content:</p>
+
+<div class="language-ini highlighter-rouge"><div class="highlight"><section><code><span class="nn">[Unit]</span>
+<span class="py">Description</span><span class="p">=</span><span class="s">Filen CLI Sync Service</span>
+<span class="py">After</span><span class="p">=</span><span class="s">network-online.target</span>
+<span class="py">Wants</span><span class="p">=</span><span class="s">network-online.target</span>
+
+<span class="nn">[Service]</span>
+<span class="py">Type</span><span class="p">=</span><span class="s">simple</span>
+<span class="py">ExecStart</span><span class="p">=</span><span class="s">/usr/bin/filen-cli-v0.0.12-linux-arm64 sync /userdata/000_download/share/:twoWay:/999_SHARED --continuous</span>
+<span class="py">Restart</span><span class="p">=</span><span class="s">on-failure</span>
+<span class="py">RestartSec</span><span class="p">=</span><span class="s">5</span>
+<span class="py">User</span><span class="p">=</span><span class="s">root</span>
+<span class="py">WorkingDirectory</span><span class="p">=</span><span class="s">/root</span>
+
+<span class="nn">[Install]</span>
+<span class="py">WantedBy</span><span class="p">=</span><span class="s">multi-user.target</span>
+</code></section></div></div>
+
+<p>Note: Adjust the paths in the <code class="language-plaintext highlighter-rouge">ExecStart</code> line to match your specific sync requirements.</p>
+  <h2 id="4-enable-and-start-the-service">
     
-      <h2  id="5-verify-service-status">
-      
-        5. Verify Service Status</h2 
-      <a href="#5-verify-service-status"   >#</a>
     
-      
-      </h2>
+     <a href="#4-enable-and-start-the-service">#</a><a href="#" aria-label="Back to top">4. Enable and Start the Service</a>
+        
     
-      <h2  id="6-monitor-logs">
+  </h2>
       
-        6. Monitor Logs</h2 
-      <a href="#6-monitor-logs"   >#</a>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><section><code><span class="c"># Reload systemd configuration</span>
+<span class="nb">sudo </span>systemctl daemon-reload
+
+<span class="c"># Enable the service to start on boot</span>
+<span class="nb">sudo </span>systemctl <span class="nb">enable </span>filen-sync.service
+
+<span class="c"># Start the service</span>
+<span class="nb">sudo </span>systemctl start filen-sync.service
+</code></section></div></div>
+  <h2 id="5-verify-service-status">
     
-      
-      </h2>
     
-      <h2  id="troubleshooting">
-      
-        Troubleshooting</h2 
-      <a href="#troubleshooting"   >#</a>
+     <a href="#5-verify-service-status">#</a><a href="#" aria-label="Back to top">5. Verify Service Status</a>
+        
     
+  </h2>
       
-      </h2>
+
+<p>Check if the service is running correctly:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><section><code><span class="nb">sudo </span>systemctl status filen-sync.service
+</code></section></div></div>
+  <h2 id="6-monitor-logs">
     
-      <h2  id="maintenance">
-      
-        Maintenance</h2 
-      <a href="#maintenance"   >#</a>
     
+     <a href="#6-monitor-logs">#</a><a href="#" aria-label="Back to top">6. Monitor Logs</a>
+        
+    
+  </h2>
       
-      </h2>
+
+<p>To view the service logs:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><section><code>journalctl <span class="nt">-u</span> filen-sync.service <span class="nt">-f</span>
+</code></section></div></div>
+  <h2 id="troubleshooting">
+    
+    
+     <a href="#troubleshooting">#</a><a href="#" aria-label="Back to top">Troubleshooting</a>
+        
+    
+  </h2>
+      
+
+<p>If you encounter issues:</p>
+
+<ol>
+  <li>Check the service status and logs using the commands in steps 5 and 6.</li>
+  <li>Ensure the sync directories exist and have the correct permissions.</li>
+  <li>Verify the credentials in <code class="language-plaintext highlighter-rouge">/root/.filen-cli-credentials</code> are correct.</li>
+  <li>
+    <p>Try running the sync command manually to see if there are any errors:</p>
+
+    <div class="language-bash highlighter-rouge"><div class="highlight"><section><code><span class="nb">sudo</span> /usr/bin/filen-cli-v0.0.12-linux-arm64 <span class="nb">sync</span> /userdata/000_download/share/:twoWay:/999_SHARED
+</code></section></div>    </div>
+  </li>
+  <li>If problems persist, check for updates to the Filen CLI or consult the official Filen documentation.</li>
+</ol>
+  <h2 id="maintenance">
+    
+    
+     <a href="#maintenance">#</a><a href="#" aria-label="Back to top">Maintenance</a>
+        
+    
+  </h2>
+      
+
+<ul>
+  <li>Periodically check for updates to the Filen CLI.</li>
+  <li>To update, download the new version, replace the binary in <code class="language-plaintext highlighter-rouge">/usr/bin/</code>, and restart the service.</li>
+  <li>Regularly review and adjust your sync settings as needed.</li>
+</ul>
+
+<p>Remember to keep your <code class="language-plaintext highlighter-rouge">.filen-cli-credentials</code> file secure and update it if you change your Filen account password.</p>
+
         </div>
         
           URL: https://ib.bsb.br/filen-linux
@@ -439,7 +436,7 @@
         
         
         <a href="https://ib.bsb.br/404" aria-label="404">
-          2025-02-11 16:48:24
+          2025-02-11 16:53:10
         </a>
         &#x23;
     

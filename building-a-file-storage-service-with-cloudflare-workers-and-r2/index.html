@@ -132,258 +132,305 @@
         <div class="post-content-body">
           
 <ul><li><a href="#introduction">Introduction</a></li><li><a href="#implementation">Implementation</a></li><li><a href="#setup-instructions">Setup Instructions</a><ul><li><a href="#1-create-an-r2-bucket">1. Create an R2 Bucket</a></li><li><a href="#2-write-the-worker-script">2. Write the Worker Script</a></li><li><a href="#3-bind-the-r2-bucket-to-the-worker">3. Bind the R2 Bucket to the Worker</a></li><li><a href="#4-set-the-authentication-key">4. Set the Authentication Key</a></li><li><a href="#5-deploy-the-worker">5. Deploy the Worker</a></li></ul></li><li><a href="#usage-examples">Usage Examples</a><ul><li><a href="#uploading-a-file">Uploading a File</a></li><li><a href="#retrieving-a-file">Retrieving a File</a></li><li><a href="#deleting-a-file">Deleting a File</a></li></ul></li><li><a href="#notes-and-considerations">Notes and Considerations</a></li></ul>
-          
-
-
-
-
-
-
-
-
-
-
-
-  
+          <p>How to create a file storage service that handles multiple file types using Cloudflare Workers for the RESTful API and Cloudflare R2 for storage. This implementation allows secure uploading, retrieving, and deleting of files.</p>
+  <h3 id="introduction">
     
-  
-
-  
     
+     <a href="#introduction">#</a><a href="#" aria-label="Back to top">Introduction</a>
+        
     
-    
-    
-    
-    
-    
-  
-
-  
-    
-    
-    
-    
-    
-    
-    
-  
-
-  
-    
-    
-    
-    
-    
-    
-    
-  
-
-  
-    
-    
-    
-    
-    
-    
-    
-  
-
-  
-    
-    
-    
-    
-    
-    
-    
-  
-
-  
-    
-    
-    
-    
-    
-    
-    
-  
-
-  
-    
-    
-    
-    
-    
-    
-    
-  
-
-  
-    
-    
-    
-    
-    
-    
-    
-  
-
-  
-    
-    
-    
-    
-    
-    
-    
-  
-
-  
-    
-    
-    
-    
-    
-    
-    
-  
-
-  
-    
-    
-    
-    
-    
-    
-    
-  
-
-  
-    
-    
-    
-    
-    
-    
-    
-  
-
-  
-    
-    
-    
-    
-    
-    
-    
-  
-
-<p>How to create a file storage service that handles multiple file types using Cloudflare Workers for the RESTful API and Cloudflare R2 for storage. This implementation allows secure uploading, retrieving, and deleting of files.</p>
-
-
-      <h3  id="introduction">
+  </h3>
       
-        Introduction</h3 
-      <a href="#introduction"   >#</a>
+
+<p>The goal is to build a self-hosted file storage solution (图床) that leverages Cloudflare Workers and R2, inspired by the tutorials:</p>
+
+<ul>
+  <li><a href="https://zhul.in/2024/08/12/new-picbed-based-on-cloudflare-and-upyun/">自建图床小记一——图床架构与 DNS 解析</a></li>
+  <li><a href="https://zhul.in/2024/08/13/build-restful-api-for-cloudflare-r2-with-cloudflare-workers/">自建图床小记二——使用 Workers 为 R2 构建 Restful API</a></li>
+</ul>
+
+<p>This service will:</p>
+
+<ul>
+  <li>Support multiple file types (images, documents, etc.).</li>
+  <li>Use Cloudflare R2 for object storage.</li>
+  <li>Provide a RESTful API for file operations.</li>
+  <li>Include basic authentication for secure access.</li>
+</ul>
+  <h3 id="implementation">
     
-      
-      </h3>
     
-      <h3  id="implementation">
-      
-        Implementation</h3 
-      <a href="#implementation"   >#</a>
+     <a href="#implementation">#</a><a href="#" aria-label="Back to top">Implementation</a>
+        
     
+  </h3>
       
-      </h3>
+
+<p>Below is the Cloudflare Worker script with explanations and comments.</p>
+
+<div class="language-javascript highlighter-rouge"><div class="highlight"><section><code><span class="c1">// Cloudflare Worker Script for File Storage Service</span>
+
+<span class="k">export</span> <span class="k">default</span> <span class="p">{</span>
+  <span class="k">async</span> <span class="nf">fetch</span><span class="p">(</span><span class="nx">request</span><span class="p">,</span> <span class="nx">env</span><span class="p">,</span> <span class="nx">ctx</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="k">await</span> <span class="nf">handleRequest</span><span class="p">(</span><span class="nx">request</span><span class="p">,</span> <span class="nx">env</span><span class="p">);</span>
+  <span class="p">},</span>
+<span class="p">};</span>
+
+<span class="cm">/**
+ * Handles incoming requests and routes them based on the HTTP method.
+ * @param {Request} request - The incoming HTTP request.
+ * @param {Object} env - Environment bindings (e.g., R2 bucket).
+ */</span>
+<span class="k">async</span> <span class="kd">function</span> <span class="nf">handleRequest</span><span class="p">(</span><span class="nx">request</span><span class="p">,</span> <span class="nx">env</span><span class="p">)</span> <span class="p">{</span>
+  <span class="c1">// Parse the URL to get the file path</span>
+  <span class="kd">const</span> <span class="nx">url</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">URL</span><span class="p">(</span><span class="nx">request</span><span class="p">.</span><span class="nx">url</span><span class="p">);</span>
+  <span class="kd">const</span> <span class="nx">filePath</span> <span class="o">=</span> <span class="nf">decodeURIComponent</span><span class="p">(</span><span class="nx">url</span><span class="p">.</span><span class="nx">pathname</span><span class="p">.</span><span class="nf">slice</span><span class="p">(</span><span class="mi">1</span><span class="p">));</span> <span class="c1">// Remove leading '/'</span>
+
+  <span class="c1">// Authentication for write operations</span>
+  <span class="kd">const</span> <span class="nx">AUTH_KEY</span> <span class="o">=</span> <span class="nx">env</span><span class="p">.</span><span class="nx">AUTH_KEY_SECRET</span><span class="p">;</span>
+  <span class="kd">const</span> <span class="nx">method</span> <span class="o">=</span> <span class="nx">request</span><span class="p">.</span><span class="nx">method</span><span class="p">.</span><span class="nf">toUpperCase</span><span class="p">();</span>
+  <span class="k">if </span><span class="p">([</span><span class="dl">'</span><span class="s1">PUT</span><span class="dl">'</span><span class="p">,</span> <span class="dl">'</span><span class="s1">DELETE</span><span class="dl">'</span><span class="p">].</span><span class="nf">includes</span><span class="p">(</span><span class="nx">method</span><span class="p">))</span> <span class="p">{</span>
+    <span class="kd">const</span> <span class="nx">authHeader</span> <span class="o">=</span> <span class="nx">request</span><span class="p">.</span><span class="nx">headers</span><span class="p">.</span><span class="nf">get</span><span class="p">(</span><span class="dl">'</span><span class="s1">X-Custom-Auth-Key</span><span class="dl">'</span><span class="p">);</span>
+    <span class="k">if </span><span class="p">(</span><span class="nx">authHeader</span> <span class="o">!==</span> <span class="nx">AUTH_KEY</span><span class="p">)</span> <span class="p">{</span>
+      <span class="k">return</span> <span class="k">new</span> <span class="nc">Response</span><span class="p">(</span><span class="dl">'</span><span class="s1">Forbidden</span><span class="dl">'</span><span class="p">,</span> <span class="p">{</span> <span class="na">status</span><span class="p">:</span> <span class="mi">403</span> <span class="p">});</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+
+  <span class="k">switch </span><span class="p">(</span><span class="nx">method</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">case</span> <span class="dl">'</span><span class="s1">PUT</span><span class="dl">'</span><span class="p">:</span>
+      <span class="c1">// Handle file upload</span>
+      <span class="k">return</span> <span class="k">await</span> <span class="nf">uploadFile</span><span class="p">(</span><span class="nx">request</span><span class="p">,</span> <span class="nx">env</span><span class="p">,</span> <span class="nx">filePath</span><span class="p">);</span>
+    <span class="k">case</span> <span class="dl">'</span><span class="s1">GET</span><span class="dl">'</span><span class="p">:</span>
+      <span class="c1">// Handle file retrieval</span>
+      <span class="k">return</span> <span class="k">await</span> <span class="nf">getFile</span><span class="p">(</span><span class="nx">env</span><span class="p">,</span> <span class="nx">filePath</span><span class="p">);</span>
+    <span class="k">case</span> <span class="dl">'</span><span class="s1">DELETE</span><span class="dl">'</span><span class="p">:</span>
+      <span class="c1">// Handle file deletion</span>
+      <span class="k">return</span> <span class="k">await</span> <span class="nf">deleteFile</span><span class="p">(</span><span class="nx">env</span><span class="p">,</span> <span class="nx">filePath</span><span class="p">);</span>
+    <span class="nl">default</span><span class="p">:</span>
+      <span class="k">return</span> <span class="k">new</span> <span class="nc">Response</span><span class="p">(</span><span class="dl">'</span><span class="s1">Method Not Allowed</span><span class="dl">'</span><span class="p">,</span> <span class="p">{</span>
+        <span class="na">status</span><span class="p">:</span> <span class="mi">405</span><span class="p">,</span>
+        <span class="na">headers</span><span class="p">:</span> <span class="p">{</span> <span class="na">Allow</span><span class="p">:</span> <span class="dl">'</span><span class="s1">GET, PUT, DELETE</span><span class="dl">'</span> <span class="p">},</span>
+      <span class="p">});</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="cm">/**
+ * Uploads a file to the R2 bucket.
+ * @param {Request} request - The incoming HTTP request.
+ * @param {Object} env - Environment bindings.
+ * @param {string} key - The file path in the bucket.
+ */</span>
+<span class="k">async</span> <span class="kd">function</span> <span class="nf">uploadFile</span><span class="p">(</span><span class="nx">request</span><span class="p">,</span> <span class="nx">env</span><span class="p">,</span> <span class="nx">key</span><span class="p">)</span> <span class="p">{</span>
+  <span class="c1">// Optional: Validate file size, type, etc.</span>
+
+  <span class="c1">// Save the file to R2</span>
+  <span class="kd">const</span> <span class="nx">contentType</span> <span class="o">=</span>
+    <span class="nx">request</span><span class="p">.</span><span class="nx">headers</span><span class="p">.</span><span class="nf">get</span><span class="p">(</span><span class="dl">'</span><span class="s1">Content-Type</span><span class="dl">'</span><span class="p">)</span> <span class="o">||</span> <span class="dl">'</span><span class="s1">application/octet-stream</span><span class="dl">'</span><span class="p">;</span>
+  <span class="k">await</span> <span class="nx">env</span><span class="p">.</span><span class="nx">MY_BUCKET</span><span class="p">.</span><span class="nf">put</span><span class="p">(</span><span class="nx">key</span><span class="p">,</span> <span class="nx">request</span><span class="p">.</span><span class="nx">body</span><span class="p">,</span> <span class="p">{</span>
+    <span class="na">httpMetadata</span><span class="p">:</span> <span class="p">{</span> <span class="nx">contentType</span> <span class="p">},</span>
+    <span class="c1">// Optional: Set cache control</span>
+    <span class="na">httpMetadata</span><span class="p">:</span> <span class="p">{</span> <span class="na">cacheControl</span><span class="p">:</span> <span class="dl">'</span><span class="s1">public, max-age=31536000</span><span class="dl">'</span> <span class="p">},</span>
+  <span class="p">});</span>
+  <span class="k">return</span> <span class="k">new</span> <span class="nc">Response</span><span class="p">(</span><span class="s2">`File '</span><span class="p">${</span><span class="nx">key</span><span class="p">}</span><span class="s2">' uploaded successfully`</span><span class="p">,</span> <span class="p">{</span> <span class="na">status</span><span class="p">:</span> <span class="mi">200</span> <span class="p">});</span>
+<span class="p">}</span>
+
+<span class="cm">/**
+ * Retrieves a file from the R2 bucket.
+ * @param {Object} env - Environment bindings.
+ * @param {string} key - The file path in the bucket.
+ */</span>
+<span class="k">async</span> <span class="kd">function</span> <span class="nf">getFile</span><span class="p">(</span><span class="nx">env</span><span class="p">,</span> <span class="nx">key</span><span class="p">)</span> <span class="p">{</span>
+  <span class="kd">const</span> <span class="nx">object</span> <span class="o">=</span> <span class="k">await</span> <span class="nx">env</span><span class="p">.</span><span class="nx">MY_BUCKET</span><span class="p">.</span><span class="nf">get</span><span class="p">(</span><span class="nx">key</span><span class="p">);</span>
+  <span class="k">if </span><span class="p">(</span><span class="o">!</span><span class="nx">object</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="k">new</span> <span class="nc">Response</span><span class="p">(</span><span class="dl">'</span><span class="s1">File Not Found</span><span class="dl">'</span><span class="p">,</span> <span class="p">{</span> <span class="na">status</span><span class="p">:</span> <span class="mi">404</span> <span class="p">});</span>
+  <span class="p">}</span>
+
+  <span class="c1">// Return the file with appropriate headers</span>
+  <span class="kd">const</span> <span class="nx">headers</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">Headers</span><span class="p">();</span>
+  <span class="nx">object</span><span class="p">.</span><span class="nf">writeHttpMetadata</span><span class="p">(</span><span class="nx">headers</span><span class="p">);</span>
+  <span class="nx">headers</span><span class="p">.</span><span class="nf">set</span><span class="p">(</span><span class="dl">'</span><span class="s1">ETag</span><span class="dl">'</span><span class="p">,</span> <span class="nx">object</span><span class="p">.</span><span class="nx">httpEtag</span><span class="p">);</span>
+
+  <span class="k">return</span> <span class="k">new</span> <span class="nc">Response</span><span class="p">(</span><span class="nx">object</span><span class="p">.</span><span class="nx">body</span><span class="p">,</span> <span class="p">{</span> <span class="nx">headers</span> <span class="p">});</span>
+<span class="p">}</span>
+
+<span class="cm">/**
+ * Deletes a file from the R2 bucket.
+ * @param {Object} env - Environment bindings.
+ * @param {string} key - The file path in the bucket.
+ */</span>
+<span class="k">async</span> <span class="kd">function</span> <span class="nf">deleteFile</span><span class="p">(</span><span class="nx">env</span><span class="p">,</span> <span class="nx">key</span><span class="p">)</span> <span class="p">{</span>
+  <span class="k">await</span> <span class="nx">env</span><span class="p">.</span><span class="nx">MY_BUCKET</span><span class="p">.</span><span class="k">delete</span><span class="p">(</span><span class="nx">key</span><span class="p">);</span>
+  <span class="k">return</span> <span class="k">new</span> <span class="nc">Response</span><span class="p">(</span><span class="s2">`File '</span><span class="p">${</span><span class="nx">key</span><span class="p">}</span><span class="s2">' deleted successfully`</span><span class="p">,</span> <span class="p">{</span> <span class="na">status</span><span class="p">:</span> <span class="mi">200</span> <span class="p">});</span>
+<span class="p">}</span>
+</code></section></div></div>
+  <h3 id="setup-instructions">
     
-      <h3  id="setup-instructions">
-      
-        Setup Instructions</h3 
-      <a href="#setup-instructions"   >#</a>
     
-      
-      </h3>
+     <a href="#setup-instructions">#</a><a href="#" aria-label="Back to top">Setup Instructions</a>
+        
     
-      <h4  id="1-create-an-r2-bucket">
+  </h3>
       
-        1. Create an R2 Bucket</h4 
-      <a href="#1-create-an-r2-bucket"   >#</a>
+  <h4 id="1-create-an-r2-bucket">
     
-      
-      </h4>
     
-      <h4  id="2-write-the-worker-script">
-      
-        2. Write the Worker Script</h4 
-      <a href="#2-write-the-worker-script"   >#</a>
+     <a href="#1-create-an-r2-bucket">#</a><a href="#" aria-label="Back to top">1. Create an R2 Bucket</a>
+        
     
+  </h4>
       
-      </h4>
+
+<ul>
+  <li>Log in to your Cloudflare dashboard.</li>
+  <li>Navigate to <strong>R2</strong> and create a new bucket (e.g., <code class="language-plaintext highlighter-rouge">my-file-storage</code>).</li>
+</ul>
+  <h4 id="2-write-the-worker-script">
     
-      <h4  id="3-bind-the-r2-bucket-to-the-worker">
-      
-        3. Bind the R2 Bucket to the Worker</h4 
-      <a href="#3-bind-the-r2-bucket-to-the-worker"   >#</a>
     
-      
-      </h4>
+     <a href="#2-write-the-worker-script">#</a><a href="#" aria-label="Back to top">2. Write the Worker Script</a>
+        
     
-      <h4  id="4-set-the-authentication-key">
+  </h4>
       
-        4. Set the Authentication Key</h4 
-      <a href="#4-set-the-authentication-key"   >#</a>
+
+<ul>
+  <li>Use the script provided above.</li>
+  <li>Save it in your Cloudflare Workers dashboard or use the <a href="https://developers.cloudflare.com/workers/wrangler/">Wrangler CLI</a>.</li>
+</ul>
+  <h4 id="3-bind-the-r2-bucket-to-the-worker">
     
-      
-      </h4>
     
-      <h4  id="5-deploy-the-worker">
-      
-        5. Deploy the Worker</h4 
-      <a href="#5-deploy-the-worker"   >#</a>
+     <a href="#3-bind-the-r2-bucket-to-the-worker">#</a><a href="#" aria-label="Back to top">3. Bind the R2 Bucket to the Worker</a>
+        
     
+  </h4>
       
-      </h4>
+
+<ul>
+  <li>In your Worker settings, go to <strong>Variables &gt; R2 Buckets</strong>.</li>
+  <li>Bind the <code class="language-plaintext highlighter-rouge">MY_BUCKET</code> variable to your R2 bucket (<code class="language-plaintext highlighter-rouge">my-file-storage</code>).</li>
+</ul>
+  <h4 id="4-set-the-authentication-key">
     
-      <h3  id="usage-examples">
-      
-        Usage Examples</h3 
-      <a href="#usage-examples"   >#</a>
     
-      
-      </h3>
+     <a href="#4-set-the-authentication-key">#</a><a href="#" aria-label="Back to top">4. Set the Authentication Key</a>
+        
     
-      <h4  id="uploading-a-file">
+  </h4>
       
-        Uploading a File</h4 
-      <a href="#uploading-a-file"   >#</a>
+
+<ul>
+  <li>In <strong>Variables &gt; Environment Variables</strong>, add <code class="language-plaintext highlighter-rouge">AUTH_KEY_SECRET</code> with a secure value (your secret key).</li>
+</ul>
+  <h4 id="5-deploy-the-worker">
     
-      
-      </h4>
     
-      <h4  id="retrieving-a-file">
-      
-        Retrieving a File</h4 
-      <a href="#retrieving-a-file"   >#</a>
+     <a href="#5-deploy-the-worker">#</a><a href="#" aria-label="Back to top">5. Deploy the Worker</a>
+        
     
+  </h4>
       
-      </h4>
+
+<ul>
+  <li>Assign a route or domain to your Worker (e.g., <code class="language-plaintext highlighter-rouge">https://files.example.com</code>).</li>
+  <li>Deploy the Worker.</li>
+</ul>
+  <h3 id="usage-examples">
     
-      <h4  id="deleting-a-file">
-      
-        Deleting a File</h4 
-      <a href="#deleting-a-file"   >#</a>
     
-      
-      </h4>
+     <a href="#usage-examples">#</a><a href="#" aria-label="Back to top">Usage Examples</a>
+        
     
-      <h3  id="notes-and-considerations">
+  </h3>
       
-        Notes and Considerations</h3 
-      <a href="#notes-and-considerations"   >#</a>
+  <h4 id="uploading-a-file">
     
+    
+     <a href="#uploading-a-file">#</a><a href="#" aria-label="Back to top">Uploading a File</a>
+        
+    
+  </h4>
       
-      </h3>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><section><code>curl <span class="nt">-X</span> PUT <span class="s1">'https://files.example.com/path/to/file.jpg'</span> <span class="se">\</span>
+  <span class="nt">-H</span> <span class="s1">'Content-Type: image/jpeg'</span> <span class="se">\</span>
+  <span class="nt">-H</span> <span class="s1">'X-Custom-Auth-Key: your_auth_key'</span> <span class="se">\</span>
+  <span class="nt">--data-binary</span> <span class="s1">'@local/path/to/file.jpg'</span>
+</code></section></div></div>
+  <h4 id="retrieving-a-file">
+    
+    
+     <a href="#retrieving-a-file">#</a><a href="#" aria-label="Back to top">Retrieving a File</a>
+        
+    
+  </h4>
+      
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><section><code>curl <span class="nt">-X</span> GET <span class="s1">'https://files.example.com/path/to/file.jpg'</span> <span class="nt">--output</span> file.jpg
+</code></section></div></div>
+  <h4 id="deleting-a-file">
+    
+    
+     <a href="#deleting-a-file">#</a><a href="#" aria-label="Back to top">Deleting a File</a>
+        
+    
+  </h4>
+      
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><section><code>curl <span class="nt">-X</span> DELETE <span class="s1">'https://files.example.com/path/to/file.jpg'</span> <span class="se">\</span>
+  <span class="nt">-H</span> <span class="s1">'X-Custom-Auth-Key: your_auth_key'</span>
+</code></section></div></div>
+  <h3 id="notes-and-considerations">
+    
+    
+     <a href="#notes-and-considerations">#</a><a href="#" aria-label="Back to top">Notes and Considerations</a>
+        
+    
+  </h3>
+      
+
+<ul>
+  <li>
+    <p><strong>Supported File Types:</strong></p>
+
+    <ul>
+      <li>All file types are supported. Ensure the <code class="language-plaintext highlighter-rouge">Content-Type</code> is correctly set when uploading.</li>
+    </ul>
+  </li>
+  <li>
+    <p><strong>Authentication:</strong></p>
+
+    <ul>
+      <li>Only <code class="language-plaintext highlighter-rouge">PUT</code> and <code class="language-plaintext highlighter-rouge">DELETE</code> requests require the <code class="language-plaintext highlighter-rouge">X-Custom-Auth-Key</code> header.</li>
+      <li><code class="language-plaintext highlighter-rouge">GET</code> requests are public. Implement additional checks if you need to restrict access.</li>
+    </ul>
+  </li>
+  <li>
+    <p><strong>Caching:</strong></p>
+
+    <ul>
+      <li>The <code class="language-plaintext highlighter-rouge">Cache-Control</code> header is set for one year (<code class="language-plaintext highlighter-rouge">max-age=31536000</code>).</li>
+      <li>Adjust caching policies as needed.</li>
+    </ul>
+  </li>
+  <li>
+    <p><strong>Error Handling:</strong></p>
+
+    <ul>
+      <li>The script provides basic error responses.</li>
+      <li>Expand error handling for production use.</li>
+    </ul>
+  </li>
+  <li>
+    <p><strong>Limits:</strong></p>
+
+    <ul>
+      <li>Cloudflare Workers have <a href="https://developers.cloudflare.com/workers/platform/limits/">limits</a> on request size, CPU time, etc.</li>
+      <li>For large files, consider using direct uploads to R2 or multipart uploads.</li>
+    </ul>
+  </li>
+</ul>
+
         </div>
         
           URL: https://ib.bsb.br/building-a-file-storage-service-with-cloudflare-workers-and-r2
@@ -509,7 +556,7 @@
         
         
         <a href="https://ib.bsb.br/404" aria-label="404">
-          2025-02-11 16:48:24
+          2025-02-11 16:53:10
         </a>
         &#x23;
     

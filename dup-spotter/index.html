@@ -132,93 +132,223 @@
         <div class="post-content-body">
           
 <ul><li><a href="#duplicate-file-remover">Duplicate-File-Remover</a></li><li><a href="#ordering-sort-similar-pairspy">Ordering (sort-SIMILAR-pairs.py):</a></li><li><a href="#grouping-pdf2folderspy">Grouping (pdf2folders.py):</a></li><li><a href="#removing-one-of-the-pair-rmsmallpdfpy">Removing one of the pair (rmSMALLpdf.py):</a></li></ul>
-          
-
-
-
-
-
-
-
-
-
-
-
-  
-    
-  
-
-  
+          <h1 id="duplicate-file-remover">
     
     
+     <a href="#duplicate-file-remover">#</a><a href="#" aria-label="Back to top">Duplicate-File-Remover</a>
+        
     
-    
-    
-    
-    
-  
-
-  
-    
-    
-    
-    
-    
-    
-    
-  
-
-  
-    
-    
-    
-    
-    
-    
-    
-  
-
-  
-    
-    
-    
-    
-    
-    
-    
-  
-
-<h1  id="duplicate-file-remover">
+  </h1>
       
-        Duplicate-File-Remover</h1 
-      <a href="#duplicate-file-remover"   >#</a>
+
+<p>A command-line tool that takes input directories and create an output directory containing only unique files from the provided input directories. The files are determined as being unique based on its content hash.</p>
+  <h1 id="ordering-sort-similar-pairspy">
     
-      
-      </h1>
     
-      <h1  id="ordering-sort-similar-pairspy">
-      
-        Ordering (sort-SIMILAR-pairs.py):</h1 
-      <a href="#ordering-sort-similar-pairspy"   >#</a>
+     <a href="#ordering-sort-similar-pairspy">#</a><a href="#" aria-label="Back to top">Ordering (sort-SIMILAR-pairs.py):</a>
+        
     
+  </h1>
       
-      </h1>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><section><code><span class="kn">import</span> <span class="n">base64</span>
+<span class="kn">import</span> <span class="n">email</span>
+<span class="kn">from</span> <span class="n">bs4</span> <span class="kn">import</span> <span class="n">BeautifulSoup</span>
+<span class="kn">import</span> <span class="n">pandas</span> <span class="k">as</span> <span class="n">pd</span>
+
+<span class="c1"># Path to the .mhtml file
+</span><span class="n">mhtml_file_path</span> <span class="o">=</span> <span class="sh">"</span><span class="s">/&lt;!-- INSERT PATH --&gt;/_results.mhtml</span><span class="sh">"</span>
+<span class="n">output_file_path</span> <span class="o">=</span> <span class="sh">"</span><span class="s">/&lt;!-- INSERT PATH --&gt;/sorted_pairs.txt</span><span class="sh">"</span>
+
+<span class="c1"># Function to extract HTML content from .mhtml file
+</span><span class="k">def</span> <span class="nf">extract_html_from_mhtml</span><span class="p">(</span><span class="n">file_path</span><span class="p">):</span>
+    <span class="k">with</span> <span class="nf">open</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="sh">'</span><span class="s">rb</span><span class="sh">'</span><span class="p">)</span> <span class="k">as</span> <span class="nb">file</span><span class="p">:</span>
+        <span class="n">mhtml_content</span> <span class="o">=</span> <span class="nb">file</span><span class="p">.</span><span class="nf">read</span><span class="p">()</span>
+
+    <span class="c1"># Parse the mhtml content
+</span>    <span class="n">msg</span> <span class="o">=</span> <span class="n">email</span><span class="p">.</span><span class="nf">message_from_bytes</span><span class="p">(</span><span class="n">mhtml_content</span><span class="p">)</span>
+
+    <span class="c1"># Find the HTML part
+</span>    <span class="k">for</span> <span class="n">part</span> <span class="ow">in</span> <span class="n">msg</span><span class="p">.</span><span class="nf">walk</span><span class="p">():</span>
+        <span class="k">if</span> <span class="n">part</span><span class="p">.</span><span class="nf">get_content_type</span><span class="p">()</span> <span class="o">==</span> <span class="sh">"</span><span class="s">text/html</span><span class="sh">"</span><span class="p">:</span>
+            <span class="n">html_content</span> <span class="o">=</span> <span class="n">part</span><span class="p">.</span><span class="nf">get_payload</span><span class="p">(</span><span class="n">decode</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">html_content</span><span class="p">.</span><span class="nf">decode</span><span class="p">(</span><span class="sh">'</span><span class="s">utf-8</span><span class="sh">'</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="bp">None</span>
+
+<span class="c1"># Function to parse HTML and extract table data
+</span><span class="k">def</span> <span class="nf">parse_html_table</span><span class="p">(</span><span class="n">html_content</span><span class="p">):</span>
+    <span class="n">soup</span> <span class="o">=</span> <span class="nc">BeautifulSoup</span><span class="p">(</span><span class="n">html_content</span><span class="p">,</span> <span class="sh">'</span><span class="s">html5lib</span><span class="sh">'</span><span class="p">)</span>
+    <span class="n">table</span> <span class="o">=</span> <span class="n">soup</span><span class="p">.</span><span class="nf">find</span><span class="p">(</span><span class="sh">'</span><span class="s">table</span><span class="sh">'</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">pd</span><span class="p">.</span><span class="nf">read_html</span><span class="p">(</span><span class="nf">str</span><span class="p">(</span><span class="n">table</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span>
+
+<span class="c1"># Function to process and sort the table data
+</span><span class="k">def</span> <span class="nf">process_and_sort_table</span><span class="p">(</span><span class="n">df</span><span class="p">):</span>
+    <span class="c1"># Extract the document names from the first row and column
+</span>    <span class="n">document_names</span> <span class="o">=</span> <span class="n">df</span><span class="p">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">:].</span><span class="nf">tolist</span><span class="p">()</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="p">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">1</span><span class="p">:,</span> <span class="mi">1</span><span class="p">:]</span>
+    <span class="n">df</span><span class="p">.</span><span class="n">columns</span> <span class="o">=</span> <span class="n">document_names</span>
+    <span class="n">df</span><span class="p">.</span><span class="n">index</span> <span class="o">=</span> <span class="n">document_names</span>
+
+    <span class="c1"># Melt the DataFrame to get pairs and their similarity scores
+</span>    <span class="n">melted_df</span> <span class="o">=</span> <span class="n">df</span><span class="p">.</span><span class="nf">reset_index</span><span class="p">().</span><span class="nf">melt</span><span class="p">(</span><span class="n">id_vars</span><span class="o">=</span><span class="sh">'</span><span class="s">index</span><span class="sh">'</span><span class="p">,</span> <span class="n">var_name</span><span class="o">=</span><span class="sh">'</span><span class="s">Document Pair</span><span class="sh">'</span><span class="p">,</span> <span class="n">value_name</span><span class="o">=</span><span class="sh">'</span><span class="s">Similarity Score</span><span class="sh">'</span><span class="p">)</span>
+    <span class="n">melted_df</span><span class="p">.</span><span class="n">columns</span> <span class="o">=</span> <span class="p">[</span><span class="sh">'</span><span class="s">Document 1</span><span class="sh">'</span><span class="p">,</span> <span class="sh">'</span><span class="s">Document 2</span><span class="sh">'</span><span class="p">,</span> <span class="sh">'</span><span class="s">Similarity Score</span><span class="sh">'</span><span class="p">]</span>
+
+    <span class="c1"># Drop NaN values and convert similarity scores to numeric
+</span>    <span class="n">melted_df</span> <span class="o">=</span> <span class="n">melted_df</span><span class="p">.</span><span class="nf">dropna</span><span class="p">()</span>
+    <span class="n">melted_df</span><span class="p">[</span><span class="sh">'</span><span class="s">Similarity Score</span><span class="sh">'</span><span class="p">]</span> <span class="o">=</span> <span class="n">pd</span><span class="p">.</span><span class="nf">to_numeric</span><span class="p">(</span><span class="n">melted_df</span><span class="p">[</span><span class="sh">'</span><span class="s">Similarity Score</span><span class="sh">'</span><span class="p">],</span> <span class="n">errors</span><span class="o">=</span><span class="sh">'</span><span class="s">coerce</span><span class="sh">'</span><span class="p">)</span>
+
+    <span class="c1"># Sort the DataFrame by similarity scores
+</span>    <span class="n">sorted_df</span> <span class="o">=</span> <span class="n">melted_df</span><span class="p">.</span><span class="nf">sort_values</span><span class="p">(</span><span class="n">by</span><span class="o">=</span><span class="sh">'</span><span class="s">Similarity Score</span><span class="sh">'</span><span class="p">,</span> <span class="n">ascending</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">sorted_df</span>
+
+<span class="c1"># Function to write the sorted pairs to a text file
+</span><span class="k">def</span> <span class="nf">write_sorted_pairs_to_file</span><span class="p">(</span><span class="n">sorted_df</span><span class="p">,</span> <span class="n">file_path</span><span class="p">):</span>
+    <span class="k">with</span> <span class="nf">open</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="sh">'</span><span class="s">w</span><span class="sh">'</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="sh">'</span><span class="s">utf-8</span><span class="sh">'</span><span class="p">)</span> <span class="k">as</span> <span class="nb">file</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">sorted_df</span><span class="p">.</span><span class="nf">iterrows</span><span class="p">():</span>
+            <span class="nb">file</span><span class="p">.</span><span class="nf">write</span><span class="p">(</span><span class="sa">f</span><span class="sh">"</span><span class="s">Pair: &lt;!__</span><span class="si">{</span><span class="n">row</span><span class="p">[</span><span class="sh">'</span><span class="s">Document 1</span><span class="sh">'</span><span class="p">]</span><span class="si">}</span><span class="s">__&gt; - &lt;!__</span><span class="si">{</span><span class="n">row</span><span class="p">[</span><span class="sh">'</span><span class="s">Document 2</span><span class="sh">'</span><span class="p">]</span><span class="si">}</span><span class="s">__&gt;, Similarity Score: </span><span class="si">{</span><span class="n">row</span><span class="p">[</span><span class="sh">'</span><span class="s">Similarity Score</span><span class="sh">'</span><span class="p">]</span><span class="si">}</span><span class="se">\n</span><span class="sh">"</span><span class="p">)</span>
+
+<span class="c1"># Main script execution
+</span><span class="n">html_content</span> <span class="o">=</span> <span class="nf">extract_html_from_mhtml</span><span class="p">(</span><span class="n">mhtml_file_path</span><span class="p">)</span>
+<span class="k">if</span> <span class="n">html_content</span><span class="p">:</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="nf">parse_html_table</span><span class="p">(</span><span class="n">html_content</span><span class="p">)</span>
+    <span class="n">sorted_df</span> <span class="o">=</span> <span class="nf">process_and_sort_table</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
+    <span class="nf">write_sorted_pairs_to_file</span><span class="p">(</span><span class="n">sorted_df</span><span class="p">,</span> <span class="n">output_file_path</span><span class="p">)</span>
+    <span class="nf">print</span><span class="p">(</span><span class="sa">f</span><span class="sh">"</span><span class="s">Sorted pairs have been written to </span><span class="si">{</span><span class="n">output_file_path</span><span class="si">}</span><span class="sh">"</span><span class="p">)</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="nf">print</span><span class="p">(</span><span class="sh">"</span><span class="s">No HTML content found in the .mhtml file.</span><span class="sh">"</span><span class="p">)</span>
+</code></section></div></div>
+  <h1 id="grouping-pdf2folderspy">
     
-      <h1  id="grouping-pdf2folderspy">
-      
-        Grouping (pdf2folders.py):</h1 
-      <a href="#grouping-pdf2folderspy"   >#</a>
     
-      
-      </h1>
+     <a href="#grouping-pdf2folderspy">#</a><a href="#" aria-label="Back to top">Grouping (pdf2folders.py):</a>
+        
     
-      <h1  id="removing-one-of-the-pair-rmsmallpdfpy">
+  </h1>
       
-        Removing one of the pair (rmSMALLpdf.py):</h1 
-      <a href="#removing-one-of-the-pair-rmsmallpdfpy"   >#</a>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><section><code><span class="kn">import</span> <span class="n">os</span>
+<span class="kn">import</span> <span class="n">shutil</span>
+<span class="kn">import</span> <span class="n">re</span>
+
+<span class="k">def</span> <span class="nf">clean_filename</span><span class="p">(</span><span class="n">filename</span><span class="p">):</span>
+    <span class="sh">"""</span><span class="s">Removes special characters and converts spaces to underscores.</span><span class="sh">"""</span>
+    <span class="k">return</span> <span class="n">re</span><span class="p">.</span><span class="nf">sub</span><span class="p">(</span><span class="sa">r</span><span class="sh">'</span><span class="s">[^\w\s-]</span><span class="sh">'</span><span class="p">,</span> <span class="sh">''</span><span class="p">,</span> <span class="n">filename</span><span class="p">).</span><span class="nf">replace</span><span class="p">(</span><span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">,</span> <span class="sh">'</span><span class="s">_</span><span class="sh">'</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">find_pdf</span><span class="p">(</span><span class="n">pdf_name</span><span class="p">,</span> <span class="n">pdf_dir</span><span class="p">):</span>
+    <span class="sh">"""</span><span class="s">Searches for a PDF file in the directory that matches the given name.</span><span class="sh">"""</span>
+    <span class="k">for</span> <span class="n">filename</span> <span class="ow">in</span> <span class="n">os</span><span class="p">.</span><span class="nf">listdir</span><span class="p">(</span><span class="n">pdf_dir</span><span class="p">):</span>
+        <span class="n">cleaned_filename</span> <span class="o">=</span> <span class="nf">clean_filename</span><span class="p">(</span><span class="n">filename</span><span class="p">).</span><span class="nf">lower</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">cleaned_filename</span> <span class="o">==</span> <span class="nf">clean_filename</span><span class="p">(</span><span class="n">pdf_name</span><span class="p">).</span><span class="nf">lower</span><span class="p">():</span>
+            <span class="k">return</span> <span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span><span class="n">pdf_dir</span><span class="p">,</span> <span class="n">filename</span><span class="p">)</span>
+    <span class="k">return</span> <span class="bp">None</span>
+
+<span class="k">def</span> <span class="nf">create_and_move</span><span class="p">(</span><span class="n">pairs_file</span><span class="p">,</span> <span class="n">pdf_dir</span><span class="p">):</span>
+    <span class="sh">"""</span><span class="s">
+    Creates folders for each PDF pair and moves the PDFs into them.
+
+    Args:
+        pairs_file (str): Path to the file containing the PDF pairs.
+        pdf_dir (str): Path to the directory containing the PDFs.
+    </span><span class="sh">"""</span>
+    <span class="n">folder_count</span> <span class="o">=</span> <span class="mi">1</span>
+
+    <span class="k">with</span> <span class="nf">open</span><span class="p">(</span><span class="n">pairs_file</span><span class="p">,</span> <span class="sh">'</span><span class="s">r</span><span class="sh">'</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">match</span> <span class="o">=</span> <span class="n">re</span><span class="p">.</span><span class="nf">match</span><span class="p">(</span><span class="sa">r</span><span class="sh">"</span><span class="s">Pair: &lt;!\s*(.*?)\s*&gt; - &lt;!\s*(.*?)\s*&gt;, Similarity Score.*</span><span class="sh">"</span><span class="p">,</span> <span class="n">line</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">match</span><span class="p">:</span>
+                <span class="n">pdf1_name</span> <span class="o">=</span> <span class="n">match</span><span class="p">.</span><span class="nf">group</span><span class="p">(</span><span class="mi">1</span><span class="p">).</span><span class="nf">strip</span><span class="p">()</span>
+                <span class="n">pdf2_name</span> <span class="o">=</span> <span class="n">match</span><span class="p">.</span><span class="nf">group</span><span class="p">(</span><span class="mi">2</span><span class="p">).</span><span class="nf">strip</span><span class="p">()</span>
+
+                <span class="c1"># Remove leading and trailing underscores
+</span>                <span class="n">pdf1_name</span> <span class="o">=</span> <span class="n">pdf1_name</span><span class="p">.</span><span class="nf">strip</span><span class="p">(</span><span class="sh">'</span><span class="s">_</span><span class="sh">'</span><span class="p">)</span> <span class="o">+</span> <span class="sh">"</span><span class="s">.pdf</span><span class="sh">"</span>
+                <span class="n">pdf2_name</span> <span class="o">=</span> <span class="n">pdf2_name</span><span class="p">.</span><span class="nf">strip</span><span class="p">(</span><span class="sh">'</span><span class="s">_</span><span class="sh">'</span><span class="p">)</span> <span class="o">+</span> <span class="sh">"</span><span class="s">.pdf</span><span class="sh">"</span>
+
+                <span class="c1"># Find the actual PDF files
+</span>                <span class="n">pdf1_path</span> <span class="o">=</span> <span class="nf">find_pdf</span><span class="p">(</span><span class="n">pdf1_name</span><span class="p">,</span> <span class="n">pdf_dir</span><span class="p">)</span>
+                <span class="n">pdf2_path</span> <span class="o">=</span> <span class="nf">find_pdf</span><span class="p">(</span><span class="n">pdf2_name</span><span class="p">,</span> <span class="n">pdf_dir</span><span class="p">)</span>
+
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">pdf1_path</span><span class="p">:</span>
+                    <span class="nf">print</span><span class="p">(</span><span class="sa">f</span><span class="sh">"</span><span class="s">Warning: Could not find PDF: </span><span class="si">{</span><span class="n">pdf1_name</span><span class="si">}</span><span class="sh">"</span><span class="p">)</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">pdf2_path</span><span class="p">:</span>
+                    <span class="nf">print</span><span class="p">(</span><span class="sa">f</span><span class="sh">"</span><span class="s">Warning: Could not find PDF: </span><span class="si">{</span><span class="n">pdf2_name</span><span class="si">}</span><span class="sh">"</span><span class="p">)</span>
+
+                <span class="k">if</span> <span class="n">pdf1_path</span> <span class="ow">and</span> <span class="n">pdf2_path</span><span class="p">:</span>
+                    <span class="c1"># Create a folder name using numeric notation
+</span>                    <span class="n">folder_name</span> <span class="o">=</span> <span class="sa">f</span><span class="sh">"</span><span class="s">folder</span><span class="si">{</span><span class="n">folder_count</span><span class="si">:</span><span class="mi">03</span><span class="n">d</span><span class="si">}</span><span class="sh">"</span>
+                    <span class="n">folder_path</span> <span class="o">=</span> <span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span><span class="n">pdf_dir</span><span class="p">,</span> <span class="n">folder_name</span><span class="p">)</span>
+
+                    <span class="c1"># Create the folder if it doesn't exist
+</span>                    <span class="n">os</span><span class="p">.</span><span class="nf">makedirs</span><span class="p">(</span><span class="n">folder_path</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+
+                    <span class="c1"># Move the PDFs into the folder
+</span>                    <span class="k">try</span><span class="p">:</span>
+                        <span class="n">shutil</span><span class="p">.</span><span class="nf">move</span><span class="p">(</span><span class="n">pdf1_path</span><span class="p">,</span> <span class="n">folder_path</span><span class="p">)</span>
+                        <span class="n">shutil</span><span class="p">.</span><span class="nf">move</span><span class="p">(</span><span class="n">pdf2_path</span><span class="p">,</span> <span class="n">folder_path</span><span class="p">)</span>
+                        <span class="nf">print</span><span class="p">(</span><span class="sa">f</span><span class="sh">"</span><span class="s">Moved </span><span class="si">{</span><span class="n">pdf1_name</span><span class="si">}</span><span class="s"> and </span><span class="si">{</span><span class="n">pdf2_name</span><span class="si">}</span><span class="s"> to </span><span class="si">{</span><span class="n">folder_path</span><span class="si">}</span><span class="sh">"</span><span class="p">)</span>
+                        <span class="n">folder_count</span> <span class="o">+=</span> <span class="mi">1</span>
+                    <span class="k">except</span> <span class="nb">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                        <span class="nf">print</span><span class="p">(</span><span class="sa">f</span><span class="sh">"</span><span class="s">Error moving files: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="sh">"</span><span class="p">)</span>
+
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="sh">"</span><span class="s">__main__</span><span class="sh">"</span><span class="p">:</span>
+    <span class="n">pairs_file</span> <span class="o">=</span> <span class="sh">"</span><span class="s">/&lt;!-- INSERT PATH --&gt;/sorted_pairs.txt</span><span class="sh">"</span>  <span class="c1"># Replace with the actual path to your pairs file
+</span>    <span class="n">pdf_dir</span> <span class="o">=</span> <span class="sh">"</span><span class="s">/&lt;!-- INSERT PATH --&gt;/030.REFS</span><span class="sh">"</span>  <span class="c1"># Replace with the actual path to your PDF directory
+</span>    <span class="nf">create_and_move</span><span class="p">(</span><span class="n">pairs_file</span><span class="p">,</span> <span class="n">pdf_dir</span><span class="p">)</span>
+</code></section></div></div>
+  <h1 id="removing-one-of-the-pair-rmsmallpdfpy">
     
+    
+     <a href="#removing-one-of-the-pair-rmsmallpdfpy">#</a><a href="#" aria-label="Back to top">Removing one of the pair (rmSMALLpdf.py):</a>
+        
+    
+  </h1>
       
-      </h1>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><section><code><span class="kn">import</span> <span class="n">os</span>
+
+<span class="k">def</span> <span class="nf">delete_smaller_pdf</span><span class="p">(</span><span class="n">folder_path</span><span class="p">):</span>
+    <span class="sh">"""</span><span class="s">
+    Deletes the smaller PDF in the given folder.
+
+    Args:
+        folder_path (str): Path to the folder containing the PDFs.
+    </span><span class="sh">"""</span>
+    <span class="n">pdf_files</span> <span class="o">=</span> <span class="p">[</span><span class="n">f</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">os</span><span class="p">.</span><span class="nf">listdir</span><span class="p">(</span><span class="n">folder_path</span><span class="p">)</span> <span class="k">if</span> <span class="n">f</span><span class="p">.</span><span class="nf">endswith</span><span class="p">(</span><span class="sh">'</span><span class="s">.pdf</span><span class="sh">'</span><span class="p">)]</span>
+    
+    <span class="k">if</span> <span class="nf">len</span><span class="p">(</span><span class="n">pdf_files</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="nf">print</span><span class="p">(</span><span class="sa">f</span><span class="sh">"</span><span class="s">Skipping folder </span><span class="si">{</span><span class="n">folder_path</span><span class="si">}</span><span class="s"> as it does not contain exactly two PDFs.</span><span class="sh">"</span><span class="p">)</span>
+        <span class="k">return</span>
+
+    <span class="n">pdf1_path</span> <span class="o">=</span> <span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span><span class="n">folder_path</span><span class="p">,</span> <span class="n">pdf_files</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">pdf2_path</span> <span class="o">=</span> <span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span><span class="n">folder_path</span><span class="p">,</span> <span class="n">pdf_files</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+
+    <span class="n">pdf1_size</span> <span class="o">=</span> <span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="nf">getsize</span><span class="p">(</span><span class="n">pdf1_path</span><span class="p">)</span>
+    <span class="n">pdf2_size</span> <span class="o">=</span> <span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="nf">getsize</span><span class="p">(</span><span class="n">pdf2_path</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">pdf1_size</span> <span class="o">&lt;</span> <span class="n">pdf2_size</span><span class="p">:</span>
+        <span class="n">os</span><span class="p">.</span><span class="nf">remove</span><span class="p">(</span><span class="n">pdf1_path</span><span class="p">)</span>
+        <span class="nf">print</span><span class="p">(</span><span class="sa">f</span><span class="sh">"</span><span class="s">Deleted smaller PDF: </span><span class="si">{</span><span class="n">pdf1_path</span><span class="si">}</span><span class="sh">"</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">os</span><span class="p">.</span><span class="nf">remove</span><span class="p">(</span><span class="n">pdf2_path</span><span class="p">)</span>
+        <span class="nf">print</span><span class="p">(</span><span class="sa">f</span><span class="sh">"</span><span class="s">Deleted smaller PDF: </span><span class="si">{</span><span class="n">pdf2_path</span><span class="si">}</span><span class="sh">"</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">iterate_folders</span><span class="p">(</span><span class="n">base_dir</span><span class="p">):</span>
+    <span class="sh">"""</span><span class="s">
+    Iterates through each folder in the base directory and deletes the smaller PDF.
+
+    Args:
+        base_dir (str): Path to the base directory containing the folders.
+    </span><span class="sh">"""</span>
+    <span class="k">for</span> <span class="n">root</span><span class="p">,</span> <span class="n">dirs</span><span class="p">,</span> <span class="n">files</span> <span class="ow">in</span> <span class="n">os</span><span class="p">.</span><span class="nf">walk</span><span class="p">(</span><span class="n">base_dir</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">dir_name</span> <span class="ow">in</span> <span class="n">dirs</span><span class="p">:</span>
+            <span class="n">folder_path</span> <span class="o">=</span> <span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span><span class="n">root</span><span class="p">,</span> <span class="n">dir_name</span><span class="p">)</span>
+            <span class="nf">delete_smaller_pdf</span><span class="p">(</span><span class="n">folder_path</span><span class="p">)</span>
+
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="sh">"</span><span class="s">__main__</span><span class="sh">"</span><span class="p">:</span>
+    <span class="n">base_dir</span> <span class="o">=</span> <span class="sh">"</span><span class="s">/&lt;!-- INSERT PATH --&gt;/030.REFS</span><span class="sh">"</span>  <span class="c1"># Replace with the actual path to your base directory
+</span>    <span class="nf">iterate_folders</span><span class="p">(</span><span class="n">base_dir</span><span class="p">)</span>
+</code></section></div></div>
+
         </div>
         
           URL: https://ib.bsb.br/dup-spotter
@@ -401,7 +531,7 @@
         
         
         <a href="https://ib.bsb.br/404" aria-label="404">
-          2025-02-11 16:48:24
+          2025-02-11 16:53:10
         </a>
         &#x23;
     

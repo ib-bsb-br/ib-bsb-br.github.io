@@ -127,129 +127,295 @@
         <div class="post-content-body">
           
 <ul><li><a href="#setup-ftp-server-using-pure-ftpd-on-debian-bullseye">Setup FTP Server Using <code class="language-plaintext highlighter-rouge">pure-ftpd</code> on Debian Bullseye</a></li><li><a href="#connect-a-windows-11-machine-to-the-debian-ftp-server-using-filezilla">Connect a Windows 11 Machine to the Debian FTP Server Using FileZilla</a><ul><li><a href="#prerequisites">Prerequisites</a></li><li><a href="#step-by-step-process">Step-by-Step Process</a></li></ul></li><li><a href="#security-best-practices">Security Best Practices</a></li><li><a href="#troubleshooting-common-issues">Troubleshooting Common Issues</a></li></ul>
-          
-
-
-
-
-
-
-
-
-
-
-
-  
-    
-  
-
-  
+          <h3 id="setup-ftp-server-using-pure-ftpd-on-debian-bullseye">
     
     
+     <a href="#setup-ftp-server-using-pure-ftpd-on-debian-bullseye">#</a><a href="#" aria-label="Back to top">Setup FTP Server Using <code class="language-plaintext highlighter-rouge">pure-ftpd</code> on Debian Bullseye</a>
+        
     
-    
-    
-    
-    
-  
-
-  
-    
-    
-    
-    
-    
-    
-    
-  
-
-  
-    
-    
-    
-    
-    
-    
-    
-  
-
-  
-    
-    
-    
-    
-    
-    
-    
-  
-
-  
-    
-    
-    
-    
-    
-    
-    
-  
-
-  
-    
-    
-    
-    
-    
-    
-    
-  
-
-<h3  id="setup-ftp-server-using-pure-ftpd-on-debian-bullseye">
+  </h3>
       
-        Setup FTP Server Using <code class="language-plaintext highlighter-rouge" 
-      <a href="#setup-ftp-server-using-pure-ftpd-on-debian-bullseye"   >#</a>
+
+<ol>
+  <li><strong>Update Your System</strong>
+    <ul>
+      <li>Ensure your Debian system is up-to-date to avoid any compatibility issues. Open a terminal and execute the following commands:
+        <div class="language-bash highlighter-rouge"><div class="highlight"><section><code><span class="nb">sudo </span>apt-get update
+<span class="nb">sudo </span>apt-get upgrade
+</code></section></div>        </div>
+      </li>
+    </ul>
+  </li>
+  <li><strong>Install <code class="language-plaintext highlighter-rouge">pure-ftpd</code></strong>
+    <ul>
+      <li>Install the <code class="language-plaintext highlighter-rouge">pure-ftpd</code> package by running:
+        <div class="language-bash highlighter-rouge"><div class="highlight"><section><code><span class="nb">sudo </span>apt-get <span class="nb">install </span>pure-ftpd
+</code></section></div>        </div>
+      </li>
+    </ul>
+  </li>
+  <li><strong>Basic Configuration</strong>
+    <ul>
+      <li><code class="language-plaintext highlighter-rouge">pure-ftpd</code> comes with a sensible set of defaults, but you can customize its behavior by creating configuration files in <code class="language-plaintext highlighter-rouge">/etc/pure-ftpd/conf/</code>.</li>
+      <li><strong>Enable Passive Mode Ports:</strong>
+        <ul>
+          <li>Define a range of ports for passive mode to enhance firewall compatibility.
+            <div class="language-bash highlighter-rouge"><div class="highlight"><section><code><span class="nb">echo</span> <span class="s2">"30000 35000"</span> | <span class="nb">sudo tee</span> /etc/pure-ftpd/conf/PassivePortRange
+</code></section></div>            </div>
+          </li>
+        </ul>
+      </li>
+      <li><strong>Restrict to Local Users:</strong>
+        <ul>
+          <li>Ensure only local system users can access the FTP server.
+            <div class="language-bash highlighter-rouge"><div class="highlight"><section><code><span class="nb">echo</span> <span class="s2">"yes"</span> | <span class="nb">sudo tee</span> /etc/pure-ftpd/conf/NoAnonymous
+</code></section></div>            </div>
+          </li>
+        </ul>
+      </li>
+      <li><strong>Enable TLS (Optional for FTPS):</strong>
+        <ul>
+          <li>For encrypted connections, generate a TLS certificate.
+            <div class="language-bash highlighter-rouge"><div class="highlight"><section><code><span class="nb">sudo </span>openssl req <span class="nt">-x509</span> <span class="nt">-nodes</span> <span class="nt">-days</span> 365 <span class="nt">-newkey</span> rsa:2048 <span class="nt">-keyout</span> /etc/ssl/private/pure-ftpd.pem <span class="nt">-out</span> /etc/ssl/private/pure-ftpd.pem
+<span class="nb">sudo chmod </span>600 /etc/ssl/private/pure-ftpd.pem
+<span class="nb">echo</span> <span class="s2">"2"</span> | <span class="nb">sudo tee</span> /etc/pure-ftpd/conf/TLS
+</code></section></div>            </div>
+          </li>
+        </ul>
+      </li>
+      <li><strong>Restart <code class="language-plaintext highlighter-rouge">pure-ftpd</code> to Apply Changes:</strong>
+        <div class="language-bash highlighter-rouge"><div class="highlight"><section><code><span class="nb">sudo </span>systemctl restart pure-ftpd
+</code></section></div>        </div>
+      </li>
+    </ul>
+  </li>
+  <li><strong>Creating an FTP User</strong>
+    <ul>
+      <li>It’s a good practice to create a dedicated user for FTP access to limit system exposure and enhance security.</li>
+      <li><strong>Create a New User <code class="language-plaintext highlighter-rouge">ftpuser</code> with a Home Directory:</strong>
+        <div class="language-bash highlighter-rouge"><div class="highlight"><section><code><span class="nb">sudo </span>useradd <span class="nt">-m</span> ftpuser <span class="nt">-d</span> /home/ftpuser <span class="nt">-s</span> /usr/sbin/nologin
+<span class="nb">sudo </span>passwd ftpuser
+</code></section></div>        </div>
+      </li>
+      <li><strong>Set Appropriate Permissions:</strong>
+        <ul>
+          <li>Ensure the FTP user has necessary permissions on their home directory.
+            <div class="language-bash highlighter-rouge"><div class="highlight"><section><code><span class="nb">sudo chown</span> <span class="nt">-R</span> ftpuser:ftpuser /home/ftpuser
+</code></section></div>            </div>
+          </li>
+        </ul>
+      </li>
+    </ul>
+  </li>
+  <li><strong>Adjust Firewall Settings</strong>
+    <ul>
+      <li>If you have a firewall enabled, ensure it allows traffic on the FTP port (<code class="language-plaintext highlighter-rouge">21</code> by default) and the passive mode port range defined earlier.</li>
+      <li><strong>Using UFW:</strong>
+        <div class="language-bash highlighter-rouge"><div class="highlight"><section><code><span class="nb">sudo </span>ufw allow 21/tcp
+<span class="nb">sudo </span>ufw allow 30000:35000/tcp
+<span class="nb">sudo </span>ufw reload
+</code></section></div>        </div>
+      </li>
+      <li><strong>Using iptables:</strong>
+        <div class="language-bash highlighter-rouge"><div class="highlight"><section><code><span class="nb">sudo </span>iptables <span class="nt">-A</span> INPUT <span class="nt">-p</span> tcp <span class="nt">--dport</span> 21 <span class="nt">-j</span> ACCEPT
+<span class="nb">sudo </span>iptables <span class="nt">-A</span> INPUT <span class="nt">-p</span> tcp <span class="nt">--dport</span> 30000:35000 <span class="nt">-j</span> ACCEPT
+<span class="nb">sudo </span>netfilter-persistent save
+</code></section></div>        </div>
+      </li>
+      <li><em>Ensure that your server’s firewall rules are configured correctly to allow FTP traffic.</em></li>
+    </ul>
+  </li>
+  <li><strong>Start and Enable <code class="language-plaintext highlighter-rouge">pure-ftpd</code></strong>
+    <ul>
+      <li>To ensure <code class="language-plaintext highlighter-rouge">pure-ftpd</code> starts automatically at boot, enable it using:
+        <div class="language-bash highlighter-rouge"><div class="highlight"><section><code><span class="nb">sudo </span>systemctl <span class="nb">enable </span>pure-ftpd
+</code></section></div>        </div>
+      </li>
+      <li>Start the <code class="language-plaintext highlighter-rouge">pure-ftpd</code> service:
+        <div class="language-bash highlighter-rouge"><div class="highlight"><section><code><span class="nb">sudo </span>systemctl start pure-ftpd
+</code></section></div>        </div>
+      </li>
+    </ul>
+  </li>
+</ol>
+  <h3 id="connect-a-windows-11-machine-to-the-debian-ftp-server-using-filezilla">
     
-      
-      </h3>
     
-      <h3  id="connect-a-windows-11-machine-to-the-debian-ftp-server-using-filezilla">
-      
-        Connect a Windows 11 Machine to the Debian FTP Server Using FileZilla</h3 
-      <a href="#connect-a-windows-11-machine-to-the-debian-ftp-server-using-filezilla"   >#</a>
+     <a href="#connect-a-windows-11-machine-to-the-debian-ftp-server-using-filezilla">#</a><a href="#" aria-label="Back to top">Connect a Windows 11 Machine to the Debian FTP Server Using FileZilla</a>
+        
     
+  </h3>
       
-      </h3>
+  <h4 id="prerequisites">
     
-      <h4  id="prerequisites">
-      
-        Prerequisites</h4 
-      <a href="#prerequisites"   >#</a>
     
-      
-      </h4>
+     <a href="#prerequisites">#</a><a href="#" aria-label="Back to top">Prerequisites</a>
+        
     
-      <h4  id="step-by-step-process">
+  </h4>
       
-        Step-by-Step Process</h4 
-      <a href="#step-by-step-process"   >#</a>
+<ul>
+  <li><strong>FTP Server Details:</strong> Ensure you have the Debian server’s IP address, FTP username (<code class="language-plaintext highlighter-rouge">ftpuser</code>), and password.</li>
+  <li><strong>FileZilla Client Installed:</strong> Download and install the <a href="https://filezilla-project.org/download.php?platform=win64">FileZilla Client</a> on your Windows machine.</li>
+</ul>
+  <h4 id="step-by-step-process">
     
-      
-      </h4>
     
-      <h3  id="security-best-practices">
-      
-        Security Best Practices</h3 
-      <a href="#security-best-practices"   >#</a>
+     <a href="#step-by-step-process">#</a><a href="#" aria-label="Back to top">Step-by-Step Process</a>
+        
     
+  </h4>
       
-      </h3>
+
+<ol>
+  <li><strong>Download and Install FileZilla</strong>
+    <ul>
+      <li>Visit the <a href="https://filezilla-project.org/download.php?platform=win64">FileZilla download page</a> to download the FileZilla FTP client for Windows.</li>
+      <li>Run the installer and follow the on-screen instructions to complete the installation.</li>
+    </ul>
+  </li>
+  <li><strong>Launch FileZilla</strong>
+    <ul>
+      <li>Open the FileZilla application. Upon first launch, a welcome pop-up may appear; click <strong>OK</strong> to proceed.</li>
+    </ul>
+  </li>
+  <li><strong>Configure FTP Connection</strong>
+    <ul>
+      <li>At the top of the FileZilla window, locate the <strong>Quickconnect</strong> bar with fields for <strong>Host</strong>, <strong>Username</strong>, <strong>Password</strong>, and <strong>Port</strong>.</li>
+      <li><strong>Enter the Following Details:</strong>
+        <ul>
+          <li><strong>Host:</strong> <code class="language-plaintext highlighter-rouge">&lt;IP-of-the-FTP-Server&gt;</code> (e.g., <code class="language-plaintext highlighter-rouge">192.168.1.100</code>)</li>
+          <li><strong>Username:</strong> <code class="language-plaintext highlighter-rouge">ftpuser</code></li>
+          <li><strong>Password:</strong> <em>Your FTP user’s password</em></li>
+          <li><strong>Port:</strong> <code class="language-plaintext highlighter-rouge">21</code> for FTP or <code class="language-plaintext highlighter-rouge">22</code> for SFTP (if configured)</li>
+        </ul>
+      </li>
+      <li><strong>Example:</strong>
+        <div class="language-plaintext highlighter-rouge"><div class="highlight"><section><code>Host: 192.168.1.100
+Username: ftpuser
+Password: yourpassword
+Port: 21
+</code></section></div>        </div>
+        <p><em>Note: Do not include <code class="language-plaintext highlighter-rouge">ftp://</code> in the Host field.</em></p>
+      </li>
+    </ul>
+  </li>
+  <li><strong>Connect to the FTP Server</strong>
+    <ul>
+      <li>Click the <strong>Quickconnect</strong> button.</li>
+      <li><strong>Security Prompt:</strong> If connecting via FTPS, a certificate warning may appear. Verify the certificate details and click <strong>Yes</strong> to trust the connection.</li>
+      <li><strong>Successful Connection Indicators:</strong>
+        <ul>
+          <li>The <strong>Remote Site</strong> pane (right side) will populate with directories from the Debian FTP server.</li>
+          <li>The <strong>Local Site</strong> pane (left side) displays your Windows machine’s directories.</li>
+        </ul>
+      </li>
+    </ul>
+  </li>
+  <li><strong>Browse and Transfer Files</strong>
+    <ul>
+      <li><strong>Uploading Files:</strong>
+        <ul>
+          <li>Navigate to the desired local directory in the <strong>Local Site</strong> pane.</li>
+          <li>Drag and drop files or folders to the desired location in the <strong>Remote Site</strong> pane.</li>
+        </ul>
+      </li>
+      <li><strong>Downloading Files:</strong>
+        <ul>
+          <li>Navigate to the desired directory in the <strong>Remote Site</strong> pane.</li>
+          <li>Drag and drop files or folders to the desired location in the <strong>Local Site</strong> pane.</li>
+        </ul>
+      </li>
+      <li><em>File transfers will display progress and status in the bottom pane.</em></li>
+    </ul>
+  </li>
+  <li><strong>Using Site Manager for Future Connections (Optional)</strong>
+    <ul>
+      <li><strong>Save Connection Details for Easy Access:</strong>
+        <ul>
+          <li>Go to <strong>File</strong> &gt; <strong>Site Manager</strong>.</li>
+          <li>Click <strong>New Site</strong> and enter a name (e.g., <code class="language-plaintext highlighter-rouge">Debian FTP Server</code>).</li>
+          <li><strong>Enter Connection Details:</strong>
+            <ul>
+              <li><strong>Host:</strong> <code class="language-plaintext highlighter-rouge">&lt;IP-of-the-FTP-Server&gt;</code></li>
+              <li><strong>Port:</strong> <code class="language-plaintext highlighter-rouge">21</code> for FTP or <code class="language-plaintext highlighter-rouge">22</code> for SFTP</li>
+              <li><strong>Protocol:</strong> Choose <strong>FTP - File Transfer Protocol</strong> or <strong>SFTP - SSH File Transfer Protocol</strong> based on your server configuration.</li>
+              <li><strong>Encryption:</strong> Select <strong>Use explicit FTP over TLS if available</strong> for FTPS or <strong>Only use plain FTP (not recommended)</strong>.</li>
+              <li><strong>Logon Type:</strong> Select <strong>Normal</strong>.</li>
+              <li><strong>User:</strong> <code class="language-plaintext highlighter-rouge">ftpuser</code></li>
+              <li><strong>Password:</strong> <em>Your FTP user’s password</em></li>
+            </ul>
+          </li>
+          <li>Click <strong>Connect</strong> to save and establish the connection.</li>
+        </ul>
+      </li>
+      <li><strong>Access Saved Sites Quickly:</strong>
+        <ul>
+          <li>Launch FileZilla and open <strong>Site Manager</strong>.</li>
+          <li>Select your saved site and click <strong>Connect</strong> to establish a connection without re-entering credentials.</li>
+        </ul>
+      </li>
+    </ul>
+  </li>
+</ol>
+  <h3 id="security-best-practices">
     
-      <h3  id="troubleshooting-common-issues">
-      
-        Troubleshooting Common Issues</h3 
-      <a href="#troubleshooting-common-issues"   >#</a>
     
+     <a href="#security-best-practices">#</a><a href="#" aria-label="Back to top">Security Best Practices</a>
+        
+    
+  </h3>
       
-      </h3>
+
+<ul>
+  <li><strong>Use SFTP or FTPS:</strong> To secure your FTP connections, consider using SFTP (which uses SSH) or FTPS (FTP over TLS). This encrypts data transfers, protecting sensitive information.</li>
+  <li><strong>Strong Passwords:</strong> Ensure that FTP user accounts use strong, unique passwords to prevent unauthorized access.</li>
+  <li><strong>Limit User Permissions:</strong> Restrict FTP users to only the directories they need access to, minimizing potential security risks.</li>
+  <li><strong>Regular Updates:</strong> Keep both the FTP server (<code class="language-plaintext highlighter-rouge">pure-ftpd</code>) and FileZilla client updated to the latest versions to benefit from security patches and new features.</li>
+</ul>
+  <h3 id="troubleshooting-common-issues">
+    
+    
+     <a href="#troubleshooting-common-issues">#</a><a href="#" aria-label="Back to top">Troubleshooting Common Issues</a>
+        
+    
+  </h3>
+      
+
+<ol>
+  <li><strong>Cannot Connect to FTP Server:</strong>
+    <ul>
+      <li><strong>Check Server Status:</strong> Ensure that the <code class="language-plaintext highlighter-rouge">pure-ftpd</code> service is running on the Debian server.
+        <div class="language-bash highlighter-rouge"><div class="highlight"><section><code><span class="nb">sudo </span>systemctl status pure-ftpd
+</code></section></div>        </div>
+      </li>
+      <li><strong>Verify Firewall Settings:</strong> Confirm that the firewall allows traffic on the FTP and passive ports.</li>
+      <li><strong>Confirm Credentials:</strong> Double-check the FTP username and password for accuracy.</li>
+    </ul>
+  </li>
+  <li><strong>Connection Times Out:</strong>
+    <ul>
+      <li><strong>Network Issues:</strong> Verify that both machines are on the same network or that the server is accessible over the internet.</li>
+      <li><strong>Port Blocking:</strong> Ensure that no intermediate firewalls or network policies are blocking FTP ports.</li>
+    </ul>
+  </li>
+  <li><strong>Permission Denied Errors:</strong>
+    <ul>
+      <li><strong>User Permissions:</strong> Ensure the FTP user has the necessary permissions for the target directories.</li>
+      <li><strong>Directory Ownership:</strong> Verify that directories are owned by the FTP user.
+        <div class="language-bash highlighter-rouge"><div class="highlight"><section><code><span class="nb">sudo chown</span> <span class="nt">-R</span> ftpuser:ftpuser /home/ftpuser
+</code></section></div>        </div>
+      </li>
+    </ul>
+  </li>
+  <li><strong>Encryption Errors with FTPS/SFTP:</strong>
+    <ul>
+      <li><strong>Certificate Validity:</strong> Ensure that the TLS certificate is correctly configured and not expired.</li>
+      <li><strong>Protocol Compatibility:</strong> Confirm that both FileZilla and <code class="language-plaintext highlighter-rouge">pure-ftpd</code> are configured to use compatible encryption settings.</li>
+    </ul>
+  </li>
+</ol>
+
         </div>
         
           URL: https://ib.bsb.br/ftpd
@@ -392,7 +558,7 @@
         
         
         <a href="https://ib.bsb.br/404" aria-label="404">
-          2025-02-11 16:48:24
+          2025-02-11 16:53:10
         </a>
         &#x23;
     

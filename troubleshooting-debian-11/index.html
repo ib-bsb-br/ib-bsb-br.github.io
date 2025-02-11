@@ -128,150 +128,114 @@
         <div class="post-content-body">
           
 <ul><li><a href="#1-immediate-actions">1. Immediate Actions</a></li><li><a href="#2-basic-diagnostics">2. Basic Diagnostics</a></li><li><a href="#3--rockchiparm64-specific-checks">3.  Rockchip/ARM64 Specific Checks</a></li><li><a href="#4-software-and-configuration-diagnostics">4. Software and Configuration Diagnostics</a></li><li><a href="#5-advanced-troubleshooting">5. Advanced Troubleshooting</a></li><li><a href="#6-prevention">6. Prevention</a></li><li><a href="#7-reconstructing-changes-if-necessary">7. Reconstructing Changes (If Necessary)</a></li></ul>
-          
-
-
-
-
-
-
-
-
-
-
-
-  
-    
-  
-
-  
+          <p>Systematic approach to troubleshoot and resolve slow performance issues on a Debian 11</p>
+  <h3 id="1-immediate-actions">
     
     
+     <a href="#1-immediate-actions">#</a><a href="#" aria-label="Back to top">1. Immediate Actions</a>
+        
     
-    
-    
-    
-    
-  
-
-  
-    
-    
-    
-    
-    
-    
-    
-  
-
-  
-    
-    
-    
-    
-    
-    
-    
-  
-
-  
-    
-    
-    
-    
-    
-    
-    
-  
-
-  
-    
-    
-    
-    
-    
-    
-    
-  
-
-  
-    
-    
-    
-    
-    
-    
-    
-  
-
-  
-    
-    
-    
-    
-    
-    
-    
-  
-
-<p>Systematic approach to troubleshoot and resolve slow performance issues on a Debian 11</p>
-
-
-      <h3  id="1-immediate-actions">
+  </h3>
       
-        1. Immediate Actions</h3 
-      <a href="#1-immediate-actions"   >#</a>
+
+<p>If your system is extremely slow, try these first:</p>
+
+<ul>
+  <li><strong>Recovery Mode:</strong> Boot into recovery mode (usually by pressing Esc, Shift, or F2 during boot). This starts the system with minimal services, potentially bypassing the performance issue.</li>
+  <li><strong>Kill Resource-Intensive Processes:</strong> If you can access a terminal, use <code class="language-plaintext highlighter-rouge">top</code> to identify and stop processes consuming excessive resources: <code class="language-plaintext highlighter-rouge">sudo pkill -STOP &lt;process_name&gt;</code>.</li>
+  <li><strong>Clear System Cache:</strong>  <code class="language-plaintext highlighter-rouge">sudo sync &amp;&amp; sudo echo 3 &gt; /proc/sys/vm/drop_caches</code></li>
+</ul>
+  <h3 id="2-basic-diagnostics">
     
-      
-      </h3>
     
-      <h3  id="2-basic-diagnostics">
-      
-        2. Basic Diagnostics</h3 
-      <a href="#2-basic-diagnostics"   >#</a>
+     <a href="#2-basic-diagnostics">#</a><a href="#" aria-label="Back to top">2. Basic Diagnostics</a>
+        
     
+  </h3>
       
-      </h3>
+
+<ul>
+  <li><strong>CPU Usage:</strong> <code class="language-plaintext highlighter-rouge">top</code> (or <code class="language-plaintext highlighter-rouge">htop</code> if installed) - Look for processes consistently using a high percentage of CPU.</li>
+  <li><strong>Memory Usage:</strong> <code class="language-plaintext highlighter-rouge">free -h</code> - Check for low available memory, which could indicate excessive swapping.</li>
+  <li><strong>Disk I/O:</strong> <code class="language-plaintext highlighter-rouge">iostat</code> - High <code class="language-plaintext highlighter-rouge">%util</code> values suggest disk bottlenecks.</li>
+</ul>
+  <h3 id="3--rockchiparm64-specific-checks">
     
-      <h3  id="3--rockchiparm64-specific-checks">
-      
-        3.  Rockchip/ARM64 Specific Checks</h3 
-      <a href="#3--rockchiparm64-specific-checks"   >#</a>
     
-      
-      </h3>
+     <a href="#3--rockchiparm64-specific-checks">#</a><a href="#" aria-label="Back to top">3.  Rockchip/ARM64 Specific Checks</a>
+        
     
-      <h3  id="4-software-and-configuration-diagnostics">
+  </h3>
       
-        4. Software and Configuration Diagnostics</h3 
-      <a href="#4-software-and-configuration-diagnostics"   >#</a>
+
+<ul>
+  <li><strong>CPU Governor:</strong> <code class="language-plaintext highlighter-rouge">cat /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor</code> -  Should be <code class="language-plaintext highlighter-rouge">performance</code>. If not: <code class="language-plaintext highlighter-rouge">echo performance | sudo tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor</code></li>
+  <li><strong>Thermal Throttling:</strong> <code class="language-plaintext highlighter-rouge">cat /sys/class/thermal/thermal_zone*/temp</code> - Check for overheating.</li>
+</ul>
+  <h3 id="4-software-and-configuration-diagnostics">
     
-      
-      </h3>
     
-      <h3  id="5-advanced-troubleshooting">
-      
-        5. Advanced Troubleshooting</h3 
-      <a href="#5-advanced-troubleshooting"   >#</a>
+     <a href="#4-software-and-configuration-diagnostics">#</a><a href="#" aria-label="Back to top">4. Software and Configuration Diagnostics</a>
+        
     
+  </h3>
       
-      </h3>
+
+<ul>
+  <li><strong>Boot Logs:</strong> <code class="language-plaintext highlighter-rouge">dmesg | less</code> - Look for errors or warnings during boot.</li>
+  <li><strong>System Logs:</strong> <code class="language-plaintext highlighter-rouge">journalctl -p err -b</code> - Check for recent errors.  For specific services: <code class="language-plaintext highlighter-rouge">journalctl -u &lt;service_name&gt;</code>.</li>
+  <li><strong>Package Management Logs:</strong>
+    <ul>
+      <li><code class="language-plaintext highlighter-rouge">less /var/log/apt/history.log</code> - Review recent installations or updates.</li>
+      <li><code class="language-plaintext highlighter-rouge">less /var/log/dpkg.log</code> - Check for package installation errors.</li>
+    </ul>
+  </li>
+  <li><strong>Recently Modified Files:</strong> <code class="language-plaintext highlighter-rouge">sudo find /etc -type f -mtime -7 -ls</code> (lists files modified in the last 7 days).</li>
+</ul>
+  <h3 id="5-advanced-troubleshooting">
     
-      <h3  id="6-prevention">
-      
-        6. Prevention</h3 
-      <a href="#6-prevention"   >#</a>
     
-      
-      </h3>
+     <a href="#5-advanced-troubleshooting">#</a><a href="#" aria-label="Back to top">5. Advanced Troubleshooting</a>
+        
     
-      <h3  id="7-reconstructing-changes-if-necessary">
+  </h3>
       
-        7. Reconstructing Changes (If Necessary)</h3 
-      <a href="#7-reconstructing-changes-if-necessary"   >#</a>
+
+<ul>
+  <li><strong>Hardware Checks:</strong>  <code class="language-plaintext highlighter-rouge">sensors</code> (if installed) to monitor hardware temperatures and voltages.  Consider running <code class="language-plaintext highlighter-rouge">memtester</code> to check for memory issues.</li>
+  <li><strong>Detailed System Information:</strong> Install <code class="language-plaintext highlighter-rouge">sysstat</code>: <code class="language-plaintext highlighter-rouge">sudo apt install sysstat</code>.  Use <code class="language-plaintext highlighter-rouge">sar</code> to collect detailed system performance data.</li>
+  <li><strong>Live Boot Environment:</strong> Boot from a Debian Live USB/SD card to test if the slowdown persists, which could indicate a hardware problem.</li>
+</ul>
+  <h3 id="6-prevention">
     
+    
+     <a href="#6-prevention">#</a><a href="#" aria-label="Back to top">6. Prevention</a>
+        
+    
+  </h3>
       
-      </h3>
+
+<ul>
+  <li><strong>Regular Backups:</strong> Use <code class="language-plaintext highlighter-rouge">timeshift</code> (or similar tools) to create system snapshots: <code class="language-plaintext highlighter-rouge">sudo timeshift --create --comments "Before making changes"</code>.</li>
+  <li><strong>System Updates:</strong> Keep your system updated: <code class="language-plaintext highlighter-rouge">sudo apt update &amp;&amp; sudo apt upgrade -y</code>.</li>
+  <li><strong>Configuration Management:</strong> Use version control (e.g., Git) or dedicated tools like <code class="language-plaintext highlighter-rouge">etckeeper</code> to track changes to configuration files.</li>
+</ul>
+  <h3 id="7-reconstructing-changes-if-necessary">
+    
+    
+     <a href="#7-reconstructing-changes-if-necessary">#</a><a href="#" aria-label="Back to top">7. Reconstructing Changes (If Necessary)</a>
+        
+    
+  </h3>
+      
+
+<p>If the above steps don’t pinpoint the cause, you can try to reconstruct your recent changes:</p>
+
+<ul>
+  <li><strong>Command History:</strong> <code class="language-plaintext highlighter-rouge">history</code></li>
+  <li><strong>Audit Logs (if configured):</strong> <code class="language-plaintext highlighter-rouge">ausearch -k &lt;event_key&gt;</code></li>
+</ul>
+
         </div>
         
           URL: https://ib.bsb.br/troubleshooting-debian-11
@@ -362,7 +326,7 @@
         
         
         <a href="https://ib.bsb.br/404" aria-label="404">
-          2025-02-11 16:48:24
+          2025-02-11 16:53:10
         </a>
         &#x23;
     

@@ -128,44 +128,98 @@
         <div class="post-content-body">
           
 <ul><li><a href="#spaced-inbox-documentation">Spaced Inbox Documentation</a></li></ul>
-          
-
-
-
-
-
-
-
-
-
-
-
-  
-    
-  
-
-  
-    
-    
-    
-    
-    
-    
-    
-  
-
-<blockquote>
+          <blockquote>
   <p>source <code class="language-plaintext highlighter-rouge">https://github.com/riceissa/spaced-inbox</code></p>
 </blockquote>
-
-
-      <h1  id="spaced-inbox-documentation">
-      
-        Spaced Inbox Documentation</h1 
-      <a href="#spaced-inbox-documentation"   >#</a>
+  <h1 id="spaced-inbox-documentation">
     
+    
+     <a href="#spaced-inbox-documentation">#</a><a href="#" aria-label="Back to top">Spaced Inbox Documentation</a>
+        
+    
+  </h1>
       
-      </h1>
+
+<blockquote>
+  <p>This system provides spaced repetition for your notes written in plain text files, using a simple command-line interface and your favorite text editor. It aims to surface the most relevant and “exciting” notes at optimal intervals for long-term retention, while providing flexibility and control over your review process.</p>
+</blockquote>
+
+<p><strong>1. Note Format</strong></p>
+<ul>
+  <li>Write your notes in a plain text file (e.g., <code class="language-plaintext highlighter-rouge">notes.txt</code>).</li>
+  <li><strong>New Note Delimiters:</strong> Two blank lines, or a line containing at least three equals signs (and nothing else) like <code class="language-plaintext highlighter-rouge">======</code>, signifies the start of a new note.</li>
+</ul>
+
+<p><strong>2. Defining Inbox Files</strong></p>
+<ul>
+  <li><strong><code class="language-plaintext highlighter-rouge">inbox_files.txt</code>:</strong> Create a file named <code class="language-plaintext highlighter-rouge">inbox_files.txt</code> to tell the script where your notes are located.</li>
+  <li><strong>Format:</strong> Each line should follow this structure: <code class="language-plaintext highlighter-rouge">&lt;short name&gt;&lt;tab&gt;&lt;file path&gt;</code>.
+    <ul>
+      <li><strong>Example:</strong> <code class="language-plaintext highlighter-rouge">personal_notes /path/to/my/notes.txt</code></li>
+      <li><code class="language-plaintext highlighter-rouge">&lt;short name&gt;</code>: A user-defined identifier for your inbox file, used by the script to distinguish between different inbox sources.</li>
+    </ul>
+  </li>
+</ul>
+
+<p><strong>3. Initializing and Updating the Database</strong></p>
+<ul>
+  <li><strong>Initialization:</strong> Running <code class="language-plaintext highlighter-rouge">script.py</code> for the first time creates a SQLite database (<code class="language-plaintext highlighter-rouge">data.db</code>) and imports your notes into it to manage the review schedule.</li>
+  <li><strong>Subsequent Runs:</strong>  <code class="language-plaintext highlighter-rouge">script.py</code> performs the following actions on each subsequent execution:
+    <ul>
+      <li><strong>Import new notes:</strong> Detects and adds new notes from your inbox files that haven’t been imported previously.</li>
+      <li><strong>Update note locations:</strong> If you’ve edited your inbox file and moved notes around (e.g., by adding or deleting lines), the script updates the corresponding line numbers in the database to ensure accurate navigation during review.</li>
+      <li><strong>Handle soft-deletions:</strong> If you remove a note from an inbox file, the script detects its absence and marks it as “soft-deleted” in the database. This prevents the deleted note from appearing in future reviews unless you add it back to the inbox file.</li>
+    </ul>
+  </li>
+</ul>
+
+<p><strong>4. Daily Review Process</strong></p>
+<ul>
+  <li><strong>Start a Review Session:</strong> Run <code class="language-plaintext highlighter-rouge">script.py</code> to initiate a review session. The script will analyze your notes based on due dates, note states, and overdueness to select the most appropriate note for review.</li>
+  <li><strong>Note Display:</strong> The script displays the beginning of the selected note along with its corresponding line numbers within the inbox file. This allows you to easily locate the note in your text editor.</li>
+  <li><strong>Review in Editor:</strong>
+    <ul>
+      <li>Open your preferred text editor.</li>
+      <li>Navigate to the indicated line numbers to find the full note content.</li>
+      <li>Review the note, make edits if necessary, or delete the note entirely from the inbox file if you no longer need it (this will trigger a soft-deletion on the next <code class="language-plaintext highlighter-rouge">script.py</code> run).</li>
+    </ul>
+  </li>
+  <li><strong>Record Your Response (in <code class="language-plaintext highlighter-rouge">script.py</code>’s prompt)</strong>
+    <ul>
+      <li><strong><code class="language-plaintext highlighter-rouge">[e]xciting</code>:</strong> Use this command if the note is particularly valuable, stimulating, or if you want to ensure you review it more frequently, even if it’s not the most overdue. <em>The script prioritizes “exciting” notes for selection, especially when they are overdue. The more overdue they get, the more likely they are to be chosen.</em></li>
+      <li><strong><code class="language-plaintext highlighter-rouge">[i]nteresting</code>, <code class="language-plaintext highlighter-rouge">[y]eah</code>, <code class="language-plaintext highlighter-rouge">[l]ol</code>, <code class="language-plaintext highlighter-rouge">[m]eh</code>, <code class="language-plaintext highlighter-rouge">[c]ringe</code>, <code class="language-plaintext highlighter-rouge">[t]axing</code>:</strong> These commands represent varying degrees of positive or neutral feedback. They trigger the standard spaced repetition interval increase according to the SM2 algorithm, but <em>they don’t influence the note’s priority in the selection process beyond its regular due date</em>. The note state is recorded, which could potentially be used for refined note selection logic in future versions.</li>
+      <li><strong><code class="language-plaintext highlighter-rouge">again</code>:</strong>  If you failed to recall the note’s content effectively, use this command. The review interval will be shortened (multiplied by 0.9), giving you another chance to learn it sooner. <em>The note state remains unchanged as an “again” response is considered a failure to recall, preventing a proper judgment of its emotional impact.</em></li>
+      <li><strong><code class="language-plaintext highlighter-rouge">[r]eroll</code>:</strong> If you want to skip the currently displayed note without reviewing it, use this command to request a different note.</li>
+      <li><strong><code class="language-plaintext highlighter-rouge">[q]uit</code>:</strong>  When you’re finished with your review session, use this command to exit the script.</li>
+    </ul>
+  </li>
+</ul>
+
+<p><strong>5. Spacing Algorithm</strong></p>
+<ul>
+  <li><strong>Simplified SM2:</strong> The core of the scheduling algorithm is a simplified version of the <a href="https://gist.github.com/riceissa/1ead1b9881ffbb48793565ce69d7dbdd">Anki/SM2</a> algorithm, widely recognized for its effectiveness in spaced repetition learning.</li>
+  <li><strong>Initial Interval:</strong>  The default starting interval for new notes is 50 days.</li>
+  <li><strong>Subsequent Intervals:</strong>  Future review intervals are dynamically calculated based on your review responses (using the ease factor) and the SM2 algorithm. Specifically, the <code class="language-plaintext highlighter-rouge">good_interval</code> function calculates the new interval by multiplying the current interval by the ease factor (which is always 300 in this implementation) and dividing by 100.</li>
+  <li><strong>Note Prioritization (Not just due-date based):</strong>
+    <ul>
+      <li><strong>“Exciting” notes:</strong> Notes marked as “exciting” are highly prioritized for review, especially when they become overdue.  The more overdue an exciting note is, the more likely it is to be selected for review. This is achieved through a weighted probability selection process in the <code class="language-plaintext highlighter-rouge">get_exciting_note</code> function, where the weight is proportional to the square of the number of days the note is overdue.</li>
+      <li><strong>Newly created notes:</strong> To reinforce initial learning, newly created notes that have not yet been reviewed receive a probability boost for selection during the 50-100 day period after their creation. This ensures you encounter new notes relatively soon after adding them. This is implemented in the <code class="language-plaintext highlighter-rouge">get_recent_unreviewed_note</code> function.</li>
+      <li><strong>Regular reviewed notes:</strong> For notes that have been reviewed at least once (and are not marked as “exciting”), the script uses a weighted probability based on overdueness.  The more overdue a note is, the higher the chance it will be selected for review. This helps ensure you don’t completely neglect notes even if you skip reviews for a period of time. This is implemented in the <code class="language-plaintext highlighter-rouge">get_all_other_note</code> function, similar to how “exciting” notes are prioritized.</li>
+    </ul>
+  </li>
+  <li><strong>Ease Factor:</strong> The ease factor, a measure of how easily you recall a note, starts at 300% and remains constant throughout the note’s lifecycle in this implementation.</li>
+  <li><strong>“Again” Interval Adjustment:</strong> When a note is marked as “again”, the <code class="language-plaintext highlighter-rouge">again_interval</code> function is used to calculate the new interval, which is simply the current interval multiplied by 0.9.</li>
+</ul>
+
+<p><strong>Benefits</strong></p>
+<ul>
+  <li><strong>Flexibility:</strong> Use your preferred text editor and any plain text format or markup language you like for your notes.</li>
+  <li><strong>Control:</strong> You decide when and how many notes to review each day – there are no strict daily review quotas.</li>
+  <li><strong>Intelligent Note Selection:</strong> The script’s note prioritization logic helps you focus on the most relevant and “exciting” notes, making your review sessions more efficient and engaging.</li>
+  <li><strong>Editor Integration:</strong>  Seamlessly use your text editor of choice to review and edit notes.  (The optional <code class="language-plaintext highlighter-rouge">--external-program emacs</code> flag provides even deeper integration with Emacs, allowing automatic navigation to the selected note).</li>
+  <li><strong>Non-Destructive:</strong> The script only reads from your inbox files and does not modify them in any way. Your notes remain entirely under your control.</li>
+</ul>
+
         </div>
         
           URL: https://ib.bsb.br/srs
@@ -256,7 +310,7 @@
         
         
         <a href="https://ib.bsb.br/404" aria-label="404">
-          2025-02-11 16:48:24
+          2025-02-11 16:53:10
         </a>
         &#x23;
     
