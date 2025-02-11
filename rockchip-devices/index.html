@@ -126,9 +126,23 @@
     <main class="content">
       <article class="post-wrapper">
         <div class="post-content-body">
-          
+          <nav class="toc">
 
-          <p>URL Source: https://sites.google.com/site/tweakradje/android/rockchip-device</p>
+
+
+
+
+
+
+
+
+  
+    
+    
+
+
+
+<p>URL Source: https://sites.google.com/site/tweakradje/android/rockchip-device</p>
 
 <p>Many Android devices use the RockChip soc these days. I have some using the ARM7 rk3066 dual core. I love it. It is fast but it must come with mali400 gpu. On this page I will try to explain how to customize these devices. Also some tools to do just that are added as downloads to the bottom of this page. I don’t use ClockWorkMod recovery much. All can be done with adb and some unix commands.</p>
 
@@ -466,7 +480,362 @@
 <p>mkdosfs -F 32 /dev/block/mtdblock9</p>
 
 <p>and reboot.</p>
+</nav>
 
+          
+
+
+
+
+
+
+
+
+
+
+
+  
+    
+  
+
+<p>URL Source: https://sites.google.com/site/tweakradje/android/rockchip-device</p>
+
+<p>Many Android devices use the RockChip soc these days. I have some using the ARM7 rk3066 dual core. I love it. It is fast but it must come with mali400 gpu. On this page I will try to explain how to customize these devices. Also some tools to do just that are added as downloads to the bottom of this page. I don’t use ClockWorkMod recovery much. All can be done with adb and some unix commands.</p>
+
+<p>I use adb on this page. But adb sometimes doesn’t recognize newer devices. You can help it by creating a <strong>.android</strong> folder in your windows profile folder. Put <strong>adb_usb.ini</strong> in there with the USB VID of your device. RockChip has Vendor ID <strong>0x2207</strong>. See adb download below.</p>
+
+<p>You device needs to be rooted (but most are from the factory).</p>
+
+<p><strong>Backup Backup Backup</strong></p>
+
+<p>The first thing you do before anything is create a proper backup of your new device. Just common sense.</p>
+
+<p>Creating a backup of your device is very simple. You need an sdcard (or use internal /sdcard partition). From the Short Overview page we now know that Android roms are stored in mtd NAND partitions. So we need to get them to the PC.</p>
+
+<p>After turning on your device manage to get an ADB connection working to your PC and follow these instructions:</p>
+
+<ul>
+  <li>
+    <ul>
+      <li>
+        <p>adb shell</p>
+      </li>
+      <li>
+        <p>su (if not pre-rooted)</p>
+      </li>
+      <li>
+        <p>stop</p>
+      </li>
+      <li>
+        <p>cat /proc/mtd</p>
+      </li>
+      <li>
+        <p>copy and paste the content of the output to a text file on your pc</p>
+      </li>
+    </ul>
+  </li>
+</ul>
+
+<p>mtd0: 00400000 00004000 “misc”</p>
+
+<p>mtd1: 00800000 00004000 “kernel”</p>
+
+<p>mtd2: 01000000 00004000 “boot”</p>
+
+<p>mtd3: 01000000 00004000 “recovery”</p>
+
+<p>mtd4: 18000000 00004000 “backup”</p>
+
+<p>mtd5: 08000000 00004000 “cache”</p>
+
+<p>mtd6: 20000000 00004000 “userdata”</p>
+
+<p>mtd7: 00400000 00004000 “kpanic”</p>
+
+<p>mtd8: 20000000 00004000 “system”</p>
+
+<p>mtd9: 16bc00000 00004000 “user”</p>
+
+<ul>
+  <li>
+    <p>cat /dev/mtd/mtd0 &gt; /sdcard/mtd0_misc.img</p>
+
+    <ul>
+      <li>
+        <p>cat /dev/mtd/mtd1 &gt; /sdcard/mtd1_kernel.img</p>
+      </li>
+      <li>
+        <p>… do that for all mtd’s</p>
+      </li>
+      <li>
+        <p>exit</p>
+      </li>
+    </ul>
+  </li>
+</ul>
+
+<p><em><strong>Note:</strong></em> “user” is your internal /sdcard partition which size could be up to 12 Gb !!! Do not backup that one, this is the user installed packages and settings :)</p>
+
+<p>Now back on your PC you need to copy them img’s to the PC with adb. Create a folder on your pc and use:</p>
+
+<ul>
+  <li>
+    <p>adb pull /sdcard/mtd0_misc.img</p>
+  </li>
+  <li>
+    <p>adb pull /sdcard/mtd1_kernel.img</p>
+  </li>
+  <li>
+    <p>… do that for all mtd’s</p>
+  </li>
+</ul>
+
+<p>For tablet you can also use ClockWorkMod Recovery to do it. I use CWMRecovery_RK3060_5.5.0.4 and flash it using flashtool (only flash recovery!)</p>
+
+<p>Even easier is <a href="https://play.google.com/store/apps/details?id=com.h3r3t1c.onnandbup"></a> <a href="https://play.google.com/store/apps/details?id=com.h3r3t1c.onnandbup">NanDroid Backup</a>. You can install it from the PlayStore and perform a MTD backup on a live device. Choose CWM format.</p>
+
+<p>Now you are safe as you can be and you can start changing some things on your device.</p>
+
+<p><strong>Restoring</strong></p>
+
+<p>This shows how to restore your device or flash it with other mtd partitions. There are tools for official RockChip roms. I will attach them below. But on this page I do not use them.</p>
+
+<p>I will show how to restore mtd partitions with unix binary called <strong>flash_image</strong> on a running device. After that I will show how to do it on a dead device using the fastboot method. Fastboot is a low level Android device state which allows you to write mtd nand partitions too. The official RockChip flasher uses that Android device state too.</p>
+
+<p><strong>With adb</strong></p>
+
+<p>You need flash_image from below. And you need your original mtd images created earlier or other mtd images you want to try. Put your device in adb mode first.</p>
+
+<ul>
+  <li>
+    <ul>
+      <li>
+        <p>adb push flash_image /sdcard</p>
+      </li>
+      <li>
+        <p>adb push mtd0_misc.img /sdcard/mtd0_misc.img</p>
+      </li>
+      <li>
+        <p>adb push mtd1_kernel.img /sdcard/mtd1_kernel.img</p>
+      </li>
+      <li>
+        <p>… do that for all mtd’s</p>
+      </li>
+      <li>
+        <p>adb shell</p>
+      </li>
+      <li>
+        <p>su (if not pre-rooted)</p>
+      </li>
+      <li>
+        <p>stop</p>
+      </li>
+      <li>
+        <p>busybox cp /sdcard/flash_image /dev</p>
+      </li>
+      <li>
+        <p>cd /dev</p>
+      </li>
+      <li>
+        <p>chmod 777 fl*</p>
+      </li>
+      <li>
+        <p>./flash_image misc /sdcard/mtd0_misc.img</p>
+      </li>
+      <li>
+        <p>./flash_image kernel /sdcard/mtd1_kernel.img</p>
+      </li>
+      <li>
+        <p>… do that for all mtd’s</p>
+      </li>
+      <li>
+        <p>cd /data/dalvik-cache</p>
+      </li>
+      <li>
+        <p>rm *</p>
+      </li>
+      <li>
+        <p>sync</p>
+      </li>
+      <li>
+        <p>reboot</p>
+      </li>
+    </ul>
+  </li>
+</ul>
+
+<p>The first thing after the reboot is to do a factory reset to wipe the data partition. You will loose all user installed apps and data.</p>
+
+<p><strong>With fastboot</strong></p>
+
+<p>When your device is “bricked” you will not be able to get a proper adb connection. There is an escape: <strong>fastboot</strong>. How to enter fastboot on power up is different on every device. But you need to push and hold a button during boot or push and hold a paperclip in the hole. If in fastboot mode you will see a RK30SDK or similar device in your Windows hardware tree. It requires other USB drivers then regular adb. You can get it from the RockChipBatchTool below.</p>
+
+<p>Fastboot is a <strong>Windows utility</strong>. All commands are done from the pc and are similar to that of the unix flash_image tool described earlier.</p>
+
+<p>example: fastboot flash system mtd8_system.img</p>
+
+<p><strong>Wendal.img: Unpack the firmare image (Rockchip_TOOLS)</strong></p>
+
+<p>The Rockchip firmware image is packed as one img file containing these partitions (example RK3229 firmware):</p>
+
+<p>boot.img</p>
+
+<p>kernel.img</p>
+
+<p>misc.img</p>
+
+<p>recovery.img</p>
+
+<p>resource.img</p>
+
+<p>system.img</p>
+
+<p>trust.img</p>
+
+<p>uboot.img</p>
+
+<p>You can Pack/Unpack it with the RK3066_IMG_Mod_Tool.zip you can download <a href="https://www.google.com/url?q=https%3A%2F%2Fgithub.com%2Fronniehd%2Fandroid.projects.ec%2Ftree%2Fmaster%2FMK808%2FRockchip_TOOLS&amp;sa=D&amp;sntz=1&amp;usg=AOvVaw3M2BDJvvk30-gBHBPUPBg2"></a> <a href="https://www.google.com/url?q=https%3A%2F%2Fgithub.com%2Fronniehd%2Fandroid.projects.ec%2Ftree%2Fmaster%2FMK808%2FRockchip_TOOLS&amp;sa=D&amp;sntz=1&amp;usg=AOvVaw3M2BDJvvk30-gBHBPUPBg2">here</a>.</p>
+
+<p>Put your image in the Mod Tool folder and rename it to <strong>wendal.img</strong></p>
+
+<p>Run the Runme.bat file to Unpack or Pack it. It will be unpacked in the <strong>temp\Image</strong> folder.</p>
+
+<p><strong>Unpack the system.img</strong></p>
+
+<p>You can unpack system.img with <a href="http://www.google.com/url?q=http%3A%2F%2Fforum.xda-developers.com%2Fshowthread.php%3Ft%3D1921399&amp;sa=D&amp;sntz=1&amp;usg=AOvVaw0pXTRtpPu148sy-dHJFvOH"></a> <a href="http://www.google.com/url?q=http%3A%2F%2Fforum.xda-developers.com%2Fshowthread.php%3Ft%3D1921399&amp;sa=D&amp;sntz=1&amp;usg=AOvVaw0pXTRtpPu148sy-dHJFvOH">EXT4 Unpacker</a> (or 7-zip now).</p>
+
+<p><strong>System Mods</strong></p>
+
+<p>You might want to change some things on your device’s system partition. Add some things to your build.prop ( better put them in your own /system/default.prop) or remove/add/update some apk’s.</p>
+
+<p>The /system partition is readonly by default. Goto adb shell and mount the partition read-write: <strong>mount -o remount,rw /system</strong></p>
+
+<p>Some interesting read from Finless <a href="http://www.google.com/url?q=http%3A%2F%2Fwww.freaktab.com%2Fshowthread.php%3F287-RockChip-ROM-Building-Tips-and-Tricks-by-Finless&amp;sa=D&amp;sntz=1&amp;usg=AOvVaw1PXsFNV1IynPdVXFxKAg-u"></a> <a href="http://www.google.com/url?q=http%3A%2F%2Fwww.freaktab.com%2Fshowthread.php%3F287-RockChip-ROM-Building-Tips-and-Tricks-by-Finless&amp;sa=D&amp;sntz=1&amp;usg=AOvVaw1PXsFNV1IynPdVXFxKAg-u">here</a>.</p>
+
+<p><strong>Deep Sleep</strong></p>
+
+<p>On the RK3066 tablets it is common that Deep Sleep system state is not happening. This is because of the ril daemon and a process that provides 3G USB dongle support. If you don’t use the 3G USB dongle you are better of with Deep Sleep. In standy your tablet battery last much longer.</p>
+
+<p>The easiest way to kill this problem is to kill the rild process. This process starts as a service from the /init.rc file that belongs to the kernel.</p>
+
+<p>service ril-daemon /system/bin/rild</p>
+
+<p>class main</p>
+
+<p>socket rild stream 660 root radio</p>
+
+<p>socket rild-debug stream 660 radio system</p>
+
+<p>user root</p>
+
+<p>group radio cache inet misc audio sdcard_r sdcard_rw log</p>
+
+<p>In a shell you can use this command to stop it each time after a reboot: <strong>stop ril-daemon</strong></p>
+
+<p>Take a close look at that /init.rc file. You will see that /system/etc/install-recovery.sh is called there like this:</p>
+
+<p>service flash_recovery /system/etc/install-recovery.sh</p>
+
+<p>class main</p>
+
+<p>oneshot</p>
+
+<p>Now we can create a shell script <strong>/system/etc/install-recovery.sh</strong> that executes stop ril-daemon</p>
+
+<p>#!/system/bin/sh</p>
+
+<p>stop ril-daemon</p>
+
+<p>Of course you can put into the install-recovery script what you want. Most setprop or sysctl commands or even use it for a semi init.d mechanism.</p>
+
+<p><strong>Changing Wifi and BT drivers</strong></p>
+
+<p>Leave alone all other mtd’s and only concentrate on /system. There are kernels that are in the boot.img but there are also devices that have a small boot.img and the kernel.img is used. In the kernel there is the low level driver for the hardware such as bluetooth, wifi and infrared remote control.</p>
+
+<p>But the Android drivers are loaded by modules or libraries in the /system partition.</p>
+
+<p>Check with dmesg command which hardware you have before you change the system.img. For the wifi chip you can also</p>
+
+<p><strong>cat /sys/class/rkwifi/chip</strong> (like MT5931)</p>
+
+<p>For changing the Wifi you need to replace or add with that from your original ROM</p>
+
+<p>/system/lib/<strong>libhardware_legacy.so</strong> (loads proper driver module)</p>
+
+<p>/system/lib/modules/xxxxx.ko (use <strong>lsmod</strong> to find the proper one that is loaded, in case of MT5931 <strong>wlan.ko</strong> is loaded )</p>
+
+<p>/system/etc/firmware/yyyyy (where yyyyy is the file needed for your specific hardware loaded by xxxxx.ko, wlan.ko loads <strong>WIFI_RAM_CODE</strong> )</p>
+
+<p>/system/bin/<strong>netd</strong></p>
+
+<p>/system/bin/<strong>wpa_supplicant</strong></p>
+
+<p>For changing Bluetooth you need to replace or add with that of your original ROM</p>
+
+<p>/system/lib/<strong>libbluedroid.so</strong></p>
+
+<p>/system/lib/<strong>libbluetooth_mtk.so</strong> (or other for specific hardware, this one it for MT6622 )</p>
+
+<p>/system/etc/firmware/<strong>yyyyy</strong> (in this case /system/etc/firmware/<strong>MTK_MT6622_E2_Patch.nb0</strong> )</p>
+
+<p>/system/bin/<strong>hciattach</strong></p>
+
+<p>Of course you need to set the proper owner and permissions.</p>
+
+<p>In /system/build.prop you sometimes find these lines to activate the options in the Android Settings app:</p>
+
+<p>ro.version.radiocontrols=1</p>
+
+<p>ro.version.bluetooth=1</p>
+
+<p>ro.version.ethernet=1</p>
+
+<table>
+  <tbody>
+    <tr>
+      <td>You find them by extracting the classes.dex from the Settings.apk file and do a: strings classes.dex</td>
+      <td>find “ro.” (strings is sysinternals windows util)</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><strong>Enable multitouch rotate and tilt (jazzhand) on tablet</strong></p>
+
+<p>On some Rockchip tablets you can only use multitouch zoom, not rotate or tilt. There is an easy fix on your rooted tablet.</p>
+
+<p>Edit the /etc/permissions/android.hardware.touchscreen.multitouch file to read like this and write it back to /etc/permissions folder.</p>
+
+<permissions>
+
+<feature name="android.hardware.faketouch" />
+
+<feature name="android.hardware.touchscreen" />
+
+<feature name="android.hardware.touchscreen.multitouch" />
+
+**<feature name="android.hardware.touchscreen.multitouch.distinct" />**
+
+**<feature name="android.hardware.touchscreen.multitouch.jazzhand" />**
+
+</permissions>
+
+<p><strong>CrewRKTablets Tablet Roms</strong></p>
+
+<p>CrewRKTablets is a german group that creates nice tablet roms for RockChip devices. <strong>You only need to flash the system.img and keep kernel</strong> (must be 3.0.8 or higher). They have made CM and JB/AOSP 4.x roms and can be found <a href="http://www.google.com/url?q=http%3A%2F%2Fcrewrktablets.arctablet.com%2F&amp;sa=D&amp;sntz=1&amp;usg=AOvVaw3U3PCyybtzxMl3XgqFwYaw"></a> <a href="http://www.google.com/url?q=http%3A%2F%2Fcrewrktablets.arctablet.com%2F&amp;sa=D&amp;sntz=1&amp;usg=AOvVaw3U3PCyybtzxMl3XgqFwYaw">here</a>. On <a href="http://www.google.com/url?q=http%3A%2F%2Fforum.xda-developers.com%2Fshowthread.php%3Ft%3D2108704&amp;sa=D&amp;sntz=1&amp;usg=AOvVaw2PkQmfm_NriXyDLgfVYQ2X"></a> <a href="http://www.google.com/url?q=http%3A%2F%2Fforum.xda-developers.com%2Fshowthread.php%3Ft%3D2108704&amp;sa=D&amp;sntz=1&amp;usg=AOvVaw2PkQmfm_NriXyDLgfVYQ2X">XDA</a> there are some threads too. Try <a href="http://www.google.com/url?q=http%3A%2F%2Fcrewrktablets.arctablet.com%2F%3Fp%3D2315&amp;sa=D&amp;sntz=1&amp;usg=AOvVaw2eaoB8zz_7fVoY8LVMWUAg"></a> <a href="http://www.google.com/url?q=http%3A%2F%2Fcrewrktablets.arctablet.com%2F%3Fp%3D2315&amp;sa=D&amp;sntz=1&amp;usg=AOvVaw2eaoB8zz_7fVoY8LVMWUAg">AOSP 4.2.2 v3.3</a> first (fastest).</p>
+
+<p>But not always your Wifi/Bluetooth/Rotation sensor (<a href="http://www.google.com/url?q=http%3A%2F%2Fforum.xda-developers.com%2Fshowpost.php%3Fp%3D46532663%26postcount%3D619&amp;sa=D&amp;sntz=1&amp;usg=AOvVaw0cBeoX-MhH8YPcEDYA0KXD">fix</a>) is supported by default. But you can find fixes there or on the xda thread.</p>
+
+<p>The rotation sensor is <strong>/system/lib/hw/sensors/sensors.rk30board.so</strong></p>
+
+<p>Sometimes you internal SD card is not recognized. That can be <a href="http://www.google.com/url?q=http%3A%2F%2Fforum.xda-developers.com%2Fshowpost.php%3Fp%3D48004974%26postcount%3D736&amp;sa=D&amp;sntz=1&amp;usg=AOvVaw1dlU6Hyw_wCPJZps25-oCa"></a> <a href="http://www.google.com/url?q=http%3A%2F%2Fforum.xda-developers.com%2Fshowpost.php%3Fp%3D48004974%26postcount%3D736&amp;sa=D&amp;sntz=1&amp;usg=AOvVaw1dlU6Hyw_wCPJZps25-oCa">fixed</a> with reformatting it FAT32 directly again after flashing.</p>
+
+<p>If e.g. your internal sdcard (mtd called user) is mtd9:</p>
+
+<p>0x0000eb400000-0x0003db800000 : “user” mtd9 /sdcard (FAT) internal</p>
+
+<p>mkdosfs -F 32 /dev/block/mtdblock9</p>
+
+<p>and reboot.</p>
         </div>
         
           URL: https://ib.bsb.br/rockchip-devices
@@ -565,7 +934,7 @@
         
         
         <a href="https://ib.bsb.br/404" aria-label="404">
-          2025-02-10 08:40:04
+          2025-02-11 16:34:08
         </a>
         &#x23;
     

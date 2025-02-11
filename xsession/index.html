@@ -126,9 +126,23 @@
     <main class="content">
       <article class="post-wrapper">
         <div class="post-content-body">
-          
+          <nav class="toc">
 
-          <div class="language-plaintext highlighter-rouge"><div class="highlight"><section><code>#!/bin/sh
+
+
+
+
+
+
+
+
+  
+    
+    
+
+
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><section><code>#!/bin/sh
 #
 # /etc/X11/Xsession
 #
@@ -244,7 +258,140 @@ exit 0
 
 # vim:set ai et sts=2 sw=2 tw=80:
 </code></section></div></div>
+</nav>
 
+          
+
+
+
+
+
+
+
+
+
+
+
+  
+    
+  
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>#!/bin/sh
+#
+# /etc/X11/Xsession
+#
+# global Xsession file -- used by display managers and xinit (startx)
+
+# $Id: Xsession 967 2005-12-27 07:20:55Z dnusinow $
+
+set -e
+
+PROGNAME=Xsession
+
+message () {
+  # pretty-print messages of arbitrary length; use xmessage if it
+  # is available and $DISPLAY is set
+  MESSAGE="$PROGNAME: $*"
+  echo "$MESSAGE" | fold -s -w ${COLUMNS:-80} &gt;&amp;2
+  if [ -n "$DISPLAY" ] &amp;&amp; which xmessage &gt; /dev/null 2&gt;&amp;1; then
+    echo "$MESSAGE" | fold -s -w ${COLUMNS:-80} | xmessage -center -file -
+  fi
+}
+
+message_nonl () {
+  # pretty-print messages of arbitrary length (no trailing newline); use
+  # xmessage if it is available and $DISPLAY is set
+  MESSAGE="$PROGNAME: $*"
+  echo -n "$MESSAGE" | fold -s -w ${COLUMNS:-80} &gt;&amp;2;
+  if [ -n "$DISPLAY" ] &amp;&amp; which xmessage &gt; /dev/null 2&gt;&amp;1; then
+    echo -n "$MESSAGE" | fold -s -w ${COLUMNS:-80} | xmessage -center -file -
+  fi
+}
+
+errormsg () {
+  # exit script with error
+  message "$*"
+  exit 1
+}
+
+internal_errormsg () {
+  # exit script with error; essentially a "THIS SHOULD NEVER HAPPEN" message
+  # One big call to message() for the sake of xmessage; if we had two then
+  # the user would have dismissed the error we want reported before seeing the
+  # request to report it.
+  errormsg "$*" \
+           "Please report the installed version of the \"x11-common\"" \
+           "package and the complete text of this error message to" \
+           "&lt;debian-x@lists.debian.org&gt;."
+}
+
+# initialize variables for use by all session scripts
+
+OPTIONFILE=/etc/X11/Xsession.options
+
+SYSRESOURCES=/etc/X11/Xresources
+USRRESOURCES=$HOME/.Xresources
+
+SYSSESSIONDIR=/etc/X11/Xsession.d
+USERXSESSION=$HOME/.xsession
+USERXSESSIONRC=$HOME/.xsessionrc
+ALTUSERXSESSION=$HOME/.Xsession
+ERRFILE=$HOME/.xsession-errors
+
+# attempt to create an error file; abort if we cannot
+if (umask 077 &amp;&amp; touch "$ERRFILE") 2&gt; /dev/null &amp;&amp; [ -w "$ERRFILE" ] &amp;&amp;
+  [ ! -L "$ERRFILE" ]; then
+  chmod 600 "$ERRFILE"
+elif ERRFILE=$(tempfile 2&gt; /dev/null); then
+  if ! ln -sf "$ERRFILE" "${TMPDIR:=/tmp}/xsession-$USER"; then
+    message "warning: unable to symlink \"$TMPDIR/xsession-$USER\" to" \
+             "\"$ERRFILE\"; look for session log/errors in" \
+             "\"$TMPDIR/xsession-$USER\"."
+  fi
+else
+  errormsg "unable to create X session log/error file; aborting."
+fi
+
+exec &gt;&gt;"$ERRFILE" 2&gt;&amp;1
+
+echo "$PROGNAME: X session started for $LOGNAME at $(date)"
+
+# sanity check; is our session script directory present?
+if [ ! -d "$SYSSESSIONDIR" ]; then
+  errormsg "no \"$SYSSESSIONDIR\" directory found; aborting."
+fi
+
+# Attempt to create a file of non-zero length in /tmp; a full filesystem can
+# cause mysterious X session failures.  We do not use touch, :, or test -w
+# because they won't actually create a file with contents.  We also let standard
+# error from tempfile and echo go to the error file to aid the user in
+# determining what went wrong.
+WRITE_TEST=$(tempfile)
+if ! echo "*" &gt;&gt;"$WRITE_TEST"; then
+  message "warning: unable to write to ${WRITE_TEST%/*}; X session may exit" \
+          "with an error"
+fi
+rm -f "$WRITE_TEST"
+
+# use run-parts to source every file in the session directory; we source
+# instead of executing so that the variables and functions defined above
+# are available to the scripts, and so that they can pass variables to each
+# other
+SESSIONFILES=$(run-parts --list $SYSSESSIONDIR)
+if [ -n "$SESSIONFILES" ]; then
+  set +e
+  for SESSIONFILE in $SESSIONFILES; do
+    . $SESSIONFILE
+  done
+  set -e
+fi
+
+exec ratpoison
+
+exit 0
+
+# vim:set ai et sts=2 sw=2 tw=80:
+</code></pre></div></div>
         </div>
         
           URL: https://ib.bsb.br/Xsession
@@ -337,7 +484,7 @@ exit 0
         
         
         <a href="https://ib.bsb.br/404" aria-label="404">
-          2025-02-10 08:40:04
+          2025-02-11 16:34:08
         </a>
         &#x23;
     

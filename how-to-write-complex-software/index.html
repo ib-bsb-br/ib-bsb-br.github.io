@@ -126,19 +126,245 @@
     <main class="content">
       <article class="post-wrapper">
         <div class="post-content-body">
-          
-<ul><li><a href="#overview"><a href="#overview">Overview</a></a></li><li><a href="#when-this-post-applies"><a href="#when-this-post-applies">When this post applies</a></a></li><li><a href="#getting-started"><a href="#getting-started">Getting started</a></a></li><li><a href="#working-top-to-bottom"><a href="#working-top-to-bottom">Working top to bottom</a></a></li><li><a href="#implementing-a-layer"><a href="#implementing-a-layer">Implementing a layer</a></a></li><li><a href="#stubbing-implementations"><a href="#stubbing-implementations">Stubbing implementations</a></a></li><li><a href="#when-to-really-mock"><a href="#when-to-really-mock">When to really mock</a></a></li><li><a href="#collaboration"><a href="#collaboration">Collaboration</a></a></li><li><a href="#pitfalls"><a href="#pitfalls">Pitfalls</a></a></li><li><a href="#closing-thoughts"><a href="#closing-thoughts">Closing thoughts</a></a><ul><li><a href="#no-hard-and-fast-rules"><a href="#no-hard-and-fast-rules">No hard and fast rules</a></a></li><li><a href="#ai-devs"><a href="#ai-devs">AI Devs</a></a></li></ul></li></ul>
-          <p>Suppose you are implementing some complex piece of software — a database, a word processor, a filesystem, a web browser, whatever. How do you get started? How do you actually organize the code?</p>
+          <nav class="toc">
+
+
+
+
+
+
+
+
+
+  
+    
+    
+  
+
+  
+  
+
+  
+
+  
+  
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+  
+
+  
+
+  
+  
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+  
+
+  
+
+  
+  
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+  
+
+  
+
+  
+  
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+  
+
+  
+
+  
+  
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+  
+
+  
+
+  
+  
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+  
+
+  
+
+  
+  
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+  
+
+  
+
+  
+  
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+  
+
+  
+
+  
+  
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+  
+
+  
+
+  
+  
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+  
+
+  
+
+  
+  
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+  
+
+  
+
+  
+  
+  
+
+  
+
+  
+
+  
+  
+
+
+
+
+<p>Suppose you are implementing some complex piece of software — a database, a word processor, a filesystem, a web browser, whatever. How do you get started? How do you actually organize the code?</p>
 
 <p>This post attempts to lay out a general method for approaching this problem with some specific techniques and guiding heuristics.</p>
-  <h2 id="overview">
-    
-    
-     <a href="#overview">#</a><a href="#" aria-label="Back to top"><a href="#overview">Overview</a></a>
-        
-    
+
+<ul>
+    <li><a href="#id-overview-overview">id="overview"Overview</a>
   </h2>
-      
 
 <p>The 10,000 foot view of what we’ll discuss:</p>
 
@@ -152,28 +378,16 @@
   <li>Continue until you are done</li>
   <li>Only implement mockable abstract interfaces for parts of the code that do IO — everything else should be concrete</li>
 </ul>
-  <h2 id="when-this-post-applies">
-    
-    
-     <a href="#when-this-post-applies">#</a><a href="#" aria-label="Back to top"><a href="#when-this-post-applies">When this post applies</a></a>
-        
-    
-  </h2>
-      
+
+</li><li><a href="#id-when-this-post-applies-when-this-post-applies">id="when-this-post-applies"When this post applies</a></h2>
 
 <p>Developing complex software is really different than small software. If your whole program can fit in under 5000 lines or so, you’ll often be best served by a single giant file with minimal abstractions.</p>
 
 <p>Minimal abstraction means making changes will often involve mutating a lot of code, the total amount of code in the whole project is small, so this is fine.</p>
 
 <p>When working on a large project, one that is unavoidably tens or hundreds of thousands of lines of code, this strategy does not work, and abstraction and organization is needed.</p>
-  <h2 id="getting-started">
-    
-    
-     <a href="#getting-started">#</a><a href="#" aria-label="Back to top"><a href="#getting-started">Getting started</a></a>
-        
-    
-  </h2>
-      
+
+</li><li><a href="#id-getting-started-getting-started">id="getting-started"Getting started</a></h2>
 
 <p>Before actually writing any software, we want to find the boundaries of the space of possible solutions.</p>
 
@@ -188,14 +402,8 @@
 <p>I think of this part of the process as carving off large, coarse chunks of the solution space. You might find out something like “well, there is no way I can compute a checksum of every individual file, it uses way too much CPU, so I know whatever design I use must batch files with at least 100 files per batch”.</p>
 
 <p>These are the types of learnings you’ll want to keep in mind while actually implementing the software.</p>
-  <h2 id="working-top-to-bottom">
-    
-    
-     <a href="#working-top-to-bottom">#</a><a href="#" aria-label="Back to top"><a href="#working-top-to-bottom">Working top to bottom</a></a>
-        
-    
-  </h2>
-      
+
+</li><li><a href="#id-working-top-to-bottom-working-top-to-bottom">id="working-top-to-bottom"Working top to bottom</a></h2>
 
 <p>A trap some engineers fall into is to view software development as a <a href="https://en.wikipedia.org/wiki/Directed_acyclic_graph">directed acyclic graph</a> (DAG) of components that depend on each other, and the natural place to start developing software is the components with no dependencies.</p>
 
@@ -216,14 +424,8 @@
 <p>Another advantage of this method is you always have semi-working software. You always have a UI to show the boss or an API the other team can start testing against. It may not be functionally complete yet, but partial is better than nothing!</p>
 
 <p>A disadvantage of this method is you will spend a little time implementing dummy placeholder implementations while you work. The mock implementation will probably only take 5% of the time as the real implementation, so your total velocity will only be slowed by 5%. You’ll gain that time back — and more — elsewhere with this method.</p>
-  <h2 id="implementing-a-layer">
-    
-    
-     <a href="#implementing-a-layer">#</a><a href="#" aria-label="Back to top"><a href="#implementing-a-layer">Implementing a layer</a></a>
-        
-    
-  </h2>
-      
+
+</li><li><a href="#id-implementing-a-layer-implementing-a-layer">id="implementing-a-layer"Implementing a layer</a></h2>
 
 <p>Each layer of your software should ideally be easily readable. If it’s not readable, this means it’s peeling off too much logic. Consider these two toy examples:</p>
 
@@ -268,14 +470,8 @@
 <p>The right way to do it is to <em>code the simple version first</em>. Code it that way <em>before</em> you have implemented the <code class="language-plaintext highlighter-rouge">rate_limiter</code> or the <code class="language-plaintext highlighter-rouge">article_store</code> or whatever. Just imagine they exist. Code as if the perfect API to implement this layer already existed.</p>
 
 <p>Then, once your code looks beautiful, go implement those things.</p>
-  <h2 id="stubbing-implementations">
-    
-    
-     <a href="#stubbing-implementations">#</a><a href="#" aria-label="Back to top"><a href="#stubbing-implementations">Stubbing implementations</a></a>
-        
-    
-  </h2>
-      
+
+</li><li><a href="#id-stubbing-implementations-stubbing-implementations">id="stubbing-implementations"Stubbing implementations</a></h2>
 
 <p>Once you code a layer, you need to implement the APIs you imagined. You should start by simply stubbing them.</p>
 
@@ -286,14 +482,8 @@
 <p>Stubs can also be somewhat more fully-fledged <em>mocks</em>. An example mock article store might be a hash table of a few sample articles, to enable testing something like an article index page. Maybe it even allows creating new articles, but doesn’t persist them to any permanent storage.</p>
 
 <p>You want to minimize the amount of time you spend implementing stubs and mocks, because you’re going to be implementing the real thing soon. Do whatever the minimum needed is. Feel free to use temporary hacks.</p>
-  <h2 id="when-to-really-mock">
-    
-    
-     <a href="#when-to-really-mock">#</a><a href="#" aria-label="Back to top"><a href="#when-to-really-mock">When to really mock</a></a>
-        
-    
-  </h2>
-      
+
+</li><li><a href="#id-when-to-really-mock-when-to-really-mock">id="when-to-really-mock"When to really mock</a></h2>
 
 <p>The only thing you want to consider producing separate “real” mocks for is the IO layer. You want to do this for tests, because you probably want your tests to be fast and deterministic. You don’t want them making network calls or whatever.</p>
 
@@ -304,14 +494,8 @@
 <p>Now with your mock, you can do things like deterministically inject corruptions, failures, etc to test your software in those scenarios.</p>
 
 <p>Do <em>not</em> mock things that don’t do IO. Why would you? You have the real implementation! Test your real implementation! Only swap out the IO dependencies with your IO mocks.</p>
-  <h2 id="collaboration">
-    
-    
-     <a href="#collaboration">#</a><a href="#" aria-label="Back to top"><a href="#collaboration">Collaboration</a></a>
-        
-    
-  </h2>
-      
+
+</li><li><a href="#id-collaboration-collaboration">id="collaboration"Collaboration</a></h2>
 
 <p>An advantage of this method is once you get the process started, it becomes natural to have one person implement one API while someone else implements another.</p>
 
@@ -322,49 +506,272 @@
 <p>They have a well-defined API to implement. You’ve provided a stub implementation. Your layer that exercises it hopefully comes with unit tests. You have set them up for success!</p>
 
 <p>This does mean most projects will need to <em>start</em> with only 1 developer who codes the very top layer. But this is a good thing! It’s a great responsibility and sets the tone for the whole project.</p>
-  <h2 id="pitfalls">
-    
-    
-     <a href="#pitfalls">#</a><a href="#" aria-label="Back to top"><a href="#pitfalls">Pitfalls</a></a>
-        
-    
-  </h2>
-      
+
+</li><li><a href="#id-pitfalls-pitfalls">id="pitfalls"Pitfalls</a></h2>
 
 <p>It’s rare, but you can code a layer in terms of an API that isn’t actually possible to implement.</p>
 
 <p>Maybe you go to implement it and realize there is no way for this sub-layer to have all the information it needs to do its job, or the plumbing is just wacky. It happens.</p>
 
 <p>In this case, rather than trying to force it to work or tweak things into place, I recommend just deleting this code, backtracking up the stack, and re-implementing the layer above with your newfound knowledge with a new API you think will be implementable.</p>
-  <h2 id="closing-thoughts">
-    
-    
-     <a href="#closing-thoughts">#</a><a href="#" aria-label="Back to top"><a href="#closing-thoughts">Closing thoughts</a></a>
-        
-    
-  </h2>
-      
-  <h3 id="no-hard-and-fast-rules">
-    
-    
-     <a href="#no-hard-and-fast-rules">#</a><a href="#" aria-label="Back to top"><a href="#no-hard-and-fast-rules">No hard and fast rules</a></a>
-        
-    
-  </h3>
-      
+
+</li><li><a href="#id-closing-thoughts-closing-thoughts">id="closing-thoughts"Closing thoughts</a></h2>
+
+
+        <ul><li><a href="#id-no-hard-and-fast-rules-no-hard-and-fast-rules">id="no-hard-and-fast-rules"No hard and fast rules</a>
+      </h3>
 
 <p>All such heuristics should be applied judiciously. This is a general guide, not a formal algorithm. You will need to deviate from it when appropriate. Becoming a better software engineer is the process of learning when to deviate from paths like this.</p>
-  <h3 id="ai-devs">
-    
-    
-     <a href="#ai-devs">#</a><a href="#" aria-label="Back to top"><a href="#ai-devs">AI Devs</a></a>
-        
-    
-  </h3>
-      
+
+</li><li><a href="#id-ai-devs-ai-devs">id="ai-devs"AI Devs</a></h3>
 
 <p>This general method is particularly well-suited to developing software with LLM agents, since it’s kind of a general flow chart and chunks up work nicely to fit into context windows, etc.</p>
+    
+      </li></ul>
+    
+      </li></ul>
+    
+      </li></ul>
+    
+  
+</nav>
 
+          
+
+
+
+
+
+
+
+
+
+
+
+  
+    
+  
+
+  
+    
+    
+    
+    
+    
+    
+    
+  
+
+  
+    
+    
+    
+    
+    
+    
+    
+  
+
+  
+    
+    
+    
+    
+    
+    
+    
+  
+
+  
+    
+    
+    
+    
+    
+    
+    
+  
+
+  
+    
+    
+    
+    
+    
+    
+    
+  
+
+  
+    
+    
+    
+    
+    
+    
+    
+  
+
+  
+    
+    
+    
+    
+    
+    
+    
+  
+
+  
+    
+    
+    
+    
+    
+    
+    
+  
+
+  
+    
+    
+    
+    
+    
+    
+    
+  
+
+  
+    
+    
+    
+    
+    
+    
+    
+  
+
+  
+    
+    
+    
+    
+    
+    
+    
+  
+
+  
+    
+    
+    
+    
+    
+    
+    
+  
+
+<p>Suppose you are implementing some complex piece of software — a database, a word processor, a filesystem, a web browser, whatever. How do you get started? How do you actually organize the code?</p>
+
+<p>This post attempts to lay out a general method for approaching this problem with some specific techniques and guiding heuristics.</p>
+
+
+      <h2  id="overview">
+      
+        <a href="#overview" 
+      <a href="#overview"   >#</a>
+    
+      
+      </h2>
+    
+      <h2  id="when-this-post-applies">
+      
+        <a href="#when-this-post-applies" 
+      <a href="#when-this-post-applies"   >#</a>
+    
+      
+      </h2>
+    
+      <h2  id="getting-started">
+      
+        <a href="#getting-started" 
+      <a href="#getting-started"   >#</a>
+    
+      
+      </h2>
+    
+      <h2  id="working-top-to-bottom">
+      
+        <a href="#working-top-to-bottom" 
+      <a href="#working-top-to-bottom"   >#</a>
+    
+      
+      </h2>
+    
+      <h2  id="implementing-a-layer">
+      
+        <a href="#implementing-a-layer" 
+      <a href="#implementing-a-layer"   >#</a>
+    
+      
+      </h2>
+    
+      <h2  id="stubbing-implementations">
+      
+        <a href="#stubbing-implementations" 
+      <a href="#stubbing-implementations"   >#</a>
+    
+      
+      </h2>
+    
+      <h2  id="when-to-really-mock">
+      
+        <a href="#when-to-really-mock" 
+      <a href="#when-to-really-mock"   >#</a>
+    
+      
+      </h2>
+    
+      <h2  id="collaboration">
+      
+        <a href="#collaboration" 
+      <a href="#collaboration"   >#</a>
+    
+      
+      </h2>
+    
+      <h2  id="pitfalls">
+      
+        <a href="#pitfalls" 
+      <a href="#pitfalls"   >#</a>
+    
+      
+      </h2>
+    
+      <h2  id="closing-thoughts">
+      
+        <a href="#closing-thoughts" 
+      <a href="#closing-thoughts"   >#</a>
+    
+      
+      </h2>
+    
+      <h3  id="no-hard-and-fast-rules">
+      
+        <a href="#no-hard-and-fast-rules" 
+      <a href="#no-hard-and-fast-rules"   >#</a>
+    
+      
+      </h3>
+    
+      <h3  id="ai-devs">
+      
+        <a href="#ai-devs" 
+      <a href="#ai-devs"   >#</a>
+    
+      
+      </h3>
         </div>
         
           URL: https://ib.bsb.br/how-to-write-complex-software
@@ -464,7 +871,7 @@
         
         
         <a href="https://ib.bsb.br/404" aria-label="404">
-          2025-02-10 08:40:04
+          2025-02-11 16:34:08
         </a>
         &#x23;
     
