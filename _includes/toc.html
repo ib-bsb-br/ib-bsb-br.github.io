@@ -1,5 +1,8 @@
 <nav class="toc">
-{% assign content_html = content | replace: '<pre class="highlight"><code>', '<section><code>' | replace: '</code></pre>', '</code></section>' | strip %}
+{% assign content_html = content 
+  | replace: '<pre class="highlight"><code>', '<section><code>' 
+  | replace: '</code></pre>', '</code></section>' 
+  | strip %}
 {% assign headers = content_html | split: "<h" %}
 {% assign toc_html = "" %}
 {% assign current_level = 0 %}
@@ -29,14 +32,20 @@
     {{ header | split: "</h" | first | remove: level_char | remove_first: ">" }}
   {% endcapture %}
   {% assign header_text = header_text_chunk | strip_html | strip %}
-  {% assign header_id = header_text | slugify %}
+  {% if header_text == "" %}
+    {% assign header_id = "section-" | append: forloop.index %}
+  {% else %}
+    {% assign header_id = header_text | slugify %}
+  {% endif %}
 
   {% capture list_item %}
     <li><a href="#{{ header_id }}">{{ header_text }}</a>
   {% endcapture %}
 
   {% if current_level == 0 %}
-    {% assign toc_html = toc_html | append: "<" | append: list_tag | append: ">" | append: list_item %}
+    {% assign toc_html = toc_html 
+      | append: '<' | append: list_tag | append: '>' 
+      | append: list_item %}
     {% assign current_level = header_level %}
   {% else %}
     {% if header_level > current_level %}
@@ -56,12 +65,19 @@
       {% assign toc_html = toc_html | append: nested_close %}
       {% assign current_level = header_level %}
     {% else %}
-      {% assign toc_html = toc_html | append: "</li><li><a href=\"#{{ header_id }}\">{{ header_text }}</a>" %}
+      {% assign toc_html = toc_html
+        | append: '</li><li><a href="#'
+        | append: header_id
+        | append: '">'
+        | append: header_text
+        | append: '</a>' %}
     {% endif %}
   {% endif %}
 
   {% assign remainder = header | split: "</h" | last %}
-  {% assign toc_html = toc_html | append: "</h" | append: remainder %}
+  {% assign toc_html = toc_html 
+    | append: "</h" 
+    | append: remainder %}
 {% endfor %}
 
 {% if current_level > 0 %}
