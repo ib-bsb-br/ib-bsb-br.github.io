@@ -2,7 +2,7 @@
 
 title: parameter.txt
 date: 2023-12-08
-tags: [linux>dotfile, hardware]
+tags: [linux>dotfile, hardware>rockchip]
 comment: 
 info: fechado.
 type: post
