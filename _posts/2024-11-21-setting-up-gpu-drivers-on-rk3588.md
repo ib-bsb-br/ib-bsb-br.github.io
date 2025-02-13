@@ -1,6 +1,6 @@
 ---
 
-tags: [linux, hardware]
+tags: [linux, hardware>rockchip]
 info: aberto.
 date: 2024-11-21
 type: post
