@@ -21,7 +21,8 @@ The browser launcher utilizes a configuration file named `browser_config.ini` to
     *   `VersionUrl`: Provides a URL for checking updates. For example, for Thorium, you might use `https://api.github.com/repos/Alex313031/Thorium-Win/releases/latest`. The launcher fetches the latest version information from this URL and compares it with the current browser version.
     *   `Flags`: Contains custom command-line flags to be passed to the browser:
     *   
-{% codeblock plaintext %}
+
+```
 --allow-insecure-downloads
 --allow-insecure-localhost
 --allow-outdated-plugins
@@ -58,7 +59,7 @@ The browser launcher utilizes a configuration file named `browser_config.ini` to
 --use-gl=angle
 --enable-features=EnableUnsafeWebGPU,AllowAllSitesToInitiateMirroring,CastAllowAllIPs,CastStreamingAv1,CastStreamingVp8,CastStreamingVp9,CastStreamingWinHardwareH264,ShowCastPermissionRejectedError,VaapiVideoDecodeLinuxGL,ExtensionsMenuAccessControl,FluentOverlayScrollbar,GlobalMediaControlsUpdatedUI,LensEnableImageTranslate,LensOverlay,LensStandalone,MediaRouter,NTPRealboxContextualAndTrendingSuggestions,NtpRealboxMatchSearchboxTheme,NtpRealboxPedals,NtpRealboxUseGoogleGIcon,OverlayScrollbar,PrivateNetworkAccessPermissionPrompt,StarterPackExpansion,TabGroupsSaveUIUpdate,Thorium2024,ToolbarPinning,UnexpireFlagsM126,UnexpireFlagsM127,BuiltInHlsPlayer,CameraMicEffects,CameraMicPreview,DesktopScreenshots,GlobalMediaControlsCastStartStop,OneTimePermission,PageInfoHistoryDesktop,ParallelDownloading,UnexpireFlagsM122,UnexpireFlagsM123,UnexpireFlagsM129,UnexpireFlagsM130,Vulkan,AiSettingsPageRefresh,ChromeLabs:chrome_labs_activation_percentage/100,CompactMode,CustomizeChromeSidePanelExtensionsCard,CustomizeChromeWallpaperSearch,CustomizeChromeWallpaperSearchButton,CustomizeChromeWallpaperSearchInspirationCard,DataSharing,DevToolsPrivacyUI,EnableAIPromptAPIForWebPlatform,EnableAIRewriterAPI,EnableAISummarizationAPI,EnableAIWriterAPI,FluentScrollbar,ImprovedSigninUIOnDesktop,LensOverlay:omnibox-entry-point/true/omnibox-entry-point-always-visible/true,LensOverlayContextualSearchbox:use-pdfs-as-context/true,LensOverlayImageContextMenuActions:enable-copy-as-image/true/enable-save-as-image/true,LensOverlayTranslateButton,LinkPreview:trigger_type/alt_click,LiveCaptionMultiLanguage,MultiTabOrganization,NtpCalendarModule:NtpCalendarModuleDataParam/fake,NtpMobilePromo,NtpModulesRedesigned,NtpOutlookCalendarModule:NtpOutlookCalendarModuleDataParam/fake,NtpSharepointModule,NtpWallpaperSearchButton,NtpWallpaperSearchButtonAnimation,PdfCr23,PermissionPredictionsV3,ResponsiveToolbar,ShowRelatedWebsiteSetsPermissionGrants,SidePanelResizing,SupportTool,SupportToolScreenshot,TabOrganization,TabOrganizationSettingsVisibility,TabReorganization,TabReorganizationDivider,TabstripDeclutter,TaskManagerDesktopRefresh,ToastFramework,TranslateOpenSettings,VideoPictureInPictureControlsUpdate2024
 --disable-features=BlockInsecurePrivateNetworkRequests,InsecureDownloadWarnings,SideSearch,ChromeRefresh2023,ChromeRefresh2023NTB,ChromeRefresh2023TopChromeFont,ChromeWebuiRefresh2023,Cr2023ActionChips,Cr2023ActionChipsIcons,CustomizeChromeColorExtraction,CustomizeChromeSidePanel,FtpProtocol,OmniboxExpandedLayout,OmniboxExpandedStateColors,OmniboxExpandedStateHeight,OmniboxExpandedStateShape,OmniboxExpandedStateSuggestIcons,OmniboxSteadyStateBackgroundColor,OmniboxSteadyStateHeight,OmniboxSteadyStateTextColor,OmniboxSteadyStateTextStyle,OmniboxSuggestionHoverFillShape,PageInfoHideSiteSettings,PowerBookmarkBackend,SystemNotifications,kOmniboxCR23SteadyStateIcons
-{% endcodeblock %}
+```
 
 *   **`[General]` Section:**
     *   `UpdateCheck`: A boolean value (`true` or `false`) that determines whether the launcher should check for updates.
