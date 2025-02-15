@@ -1,12 +1,11 @@
 ---
-
-tags: [software>windows]
+tags: [scratchpad, software>windows]
 info: aberto.
 date: 2024-12-19
 type: post
 layout: post
 published: true
-slug: browser-srware-iron
+slug: srware-iron
 title: 'SRWare Iron Browser launcher in C++'
 ---
 ## Introduction
@@ -20,7 +19,47 @@ The browser launcher utilizes a configuration file named `browser_config.ini` to
 *   **`[Browser]` Section:**
     *   `Executable`: Specifies the path to the browser executable (e.g., `G:\05-portable\IronPortable64\Iron\chrome.exe`).
     *   `VersionUrl`: Provides a URL for checking updates. For example, for Thorium, you might use `https://api.github.com/repos/Alex313031/Thorium-Win/releases/latest`. The launcher fetches the latest version information from this URL and compares it with the current browser version.
-    *   `Flags`: Contains custom command-line flags to be passed to the browser (e.g., `--user-data-dir="G:\05-portable\IronPortable64\Iron\User Data" --no-default-browser-check --disable-logging --disable-breakpad --disable-features=PrintCompositorLPAC --enable-quic`).
+    *   `Flags`: Contains custom command-line flags to be passed to the browser:
+    *   
+{% codeblock plaintext %}
+--allow-insecure-downloads
+--allow-insecure-localhost
+--allow-outdated-plugins
+--cast-streaming-force-enable-hardware-h264
+--cast-streaming-force-enable-hardware-vp8
+--cast-streaming-force-enable-hardware-vp9
+--classic-omnibox
+--close-window-with-last-tab=never
+--disable-breakpad
+--disable-composited-antialiasing
+--disable-encryption
+--disable-logging
+--disable-machine-id
+--disable-overscroll-edge-effect
+--disable-popup-blocking
+--disable-smooth-scrolling
+--disable-thorium-icons
+--disable-threaded-scrolling
+--enable-chrome-browser-cloud-management
+--enable-download-warning-improvements
+--enable-fast-unload
+--enable-gpu-rasterization
+--enable-quic
+--enable-unsafe-webgpu
+--force-ntp-mobile-promo
+--hide-sidepanel-button
+--ignore-gpu-blocklist
+--keep-all-history
+--left-aligned-tab-search-button
+--ozone-platform-hint=auto
+--show-component-extension-options
+--unsafely-treat-insecure-origin-as-secure
+--use-angle=d3d11
+--use-gl=angle
+--enable-features=EnableUnsafeWebGPU,AllowAllSitesToInitiateMirroring,CastAllowAllIPs,CastStreamingAv1,CastStreamingVp8,CastStreamingVp9,CastStreamingWinHardwareH264,ShowCastPermissionRejectedError,VaapiVideoDecodeLinuxGL,ExtensionsMenuAccessControl,FluentOverlayScrollbar,GlobalMediaControlsUpdatedUI,LensEnableImageTranslate,LensOverlay,LensStandalone,MediaRouter,NTPRealboxContextualAndTrendingSuggestions,NtpRealboxMatchSearchboxTheme,NtpRealboxPedals,NtpRealboxUseGoogleGIcon,OverlayScrollbar,PrivateNetworkAccessPermissionPrompt,StarterPackExpansion,TabGroupsSaveUIUpdate,Thorium2024,ToolbarPinning,UnexpireFlagsM126,UnexpireFlagsM127,BuiltInHlsPlayer,CameraMicEffects,CameraMicPreview,DesktopScreenshots,GlobalMediaControlsCastStartStop,OneTimePermission,PageInfoHistoryDesktop,ParallelDownloading,UnexpireFlagsM122,UnexpireFlagsM123,UnexpireFlagsM129,UnexpireFlagsM130,Vulkan,AiSettingsPageRefresh,ChromeLabs:chrome_labs_activation_percentage/100,CompactMode,CustomizeChromeSidePanelExtensionsCard,CustomizeChromeWallpaperSearch,CustomizeChromeWallpaperSearchButton,CustomizeChromeWallpaperSearchInspirationCard,DataSharing,DevToolsPrivacyUI,EnableAIPromptAPIForWebPlatform,EnableAIRewriterAPI,EnableAISummarizationAPI,EnableAIWriterAPI,FluentScrollbar,ImprovedSigninUIOnDesktop,LensOverlay:omnibox-entry-point/true/omnibox-entry-point-always-visible/true,LensOverlayContextualSearchbox:use-pdfs-as-context/true,LensOverlayImageContextMenuActions:enable-copy-as-image/true/enable-save-as-image/true,LensOverlayTranslateButton,LinkPreview:trigger_type/alt_click,LiveCaptionMultiLanguage,MultiTabOrganization,NtpCalendarModule:NtpCalendarModuleDataParam/fake,NtpMobilePromo,NtpModulesRedesigned,NtpOutlookCalendarModule:NtpOutlookCalendarModuleDataParam/fake,NtpSharepointModule,NtpWallpaperSearchButton,NtpWallpaperSearchButtonAnimation,PdfCr23,PermissionPredictionsV3,ResponsiveToolbar,ShowRelatedWebsiteSetsPermissionGrants,SidePanelResizing,SupportTool,SupportToolScreenshot,TabOrganization,TabOrganizationSettingsVisibility,TabReorganization,TabReorganizationDivider,TabstripDeclutter,TaskManagerDesktopRefresh,ToastFramework,TranslateOpenSettings,VideoPictureInPictureControlsUpdate2024
+--disable-features=BlockInsecurePrivateNetworkRequests,InsecureDownloadWarnings,SideSearch,ChromeRefresh2023,ChromeRefresh2023NTB,ChromeRefresh2023TopChromeFont,ChromeWebuiRefresh2023,Cr2023ActionChips,Cr2023ActionChipsIcons,CustomizeChromeColorExtraction,CustomizeChromeSidePanel,FtpProtocol,OmniboxExpandedLayout,OmniboxExpandedStateColors,OmniboxExpandedStateHeight,OmniboxExpandedStateShape,OmniboxExpandedStateSuggestIcons,OmniboxSteadyStateBackgroundColor,OmniboxSteadyStateHeight,OmniboxSteadyStateTextColor,OmniboxSteadyStateTextStyle,OmniboxSuggestionHoverFillShape,PageInfoHideSiteSettings,PowerBookmarkBackend,SystemNotifications,kOmniboxCR23SteadyStateIcons
+{% endcodeblock %}
+
 *   **`[General]` Section:**
     *   `UpdateCheck`: A boolean value (`true` or `false`) that determines whether the launcher should check for updates.
 
