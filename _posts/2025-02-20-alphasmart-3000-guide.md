@@ -1,16 +1,18 @@
 ---
-tags: [scratchpad]
+tags:
+- scratchpad
 info: aberto.
 date: 2025-02-20
 type: post
 layout: post
 published: true
 slug: alphasmart-3000-guide
-title: 'AlphaSmart 3000 Guide'
+title: AlphaSmart 3000 Guide
+comment: '`https://tilde.club/~jy4m/alphasmart/AlphaSmart%203000%20User''s%20Guide.pdf`'
 ---
+
 Title: 
 
-bibref: `https://tilde.club/~jy4m/alphasmart/AlphaSmart%203000%20User's%20Guide.pdf`
 
 Markdown Content:
 > AlphaSmart 3000
