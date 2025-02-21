@@ -1,4 +1,153 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2025-02-21T16:04:04+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">AlphaSmart 3000 Guide</title><link href="https://ib.bsb.br/alphasmart-3000-guide/" rel="alternate" type="text/html" title="AlphaSmart 3000 Guide" /><published>2025-02-20T00:00:00+00:00</published><updated>2025-02-20T15:29:14+00:00</updated><id>https://ib.bsb.br/alphasmart-3000-guide</id><content type="html" xml:base="https://ib.bsb.br/alphasmart-3000-guide/"><![CDATA[<p>Title:</p>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2025-02-21T16:23:10+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">VPN on Raspberry with Alpine</title><link href="https://ib.bsb.br/vpn-on-raspberry-with-alpine/" rel="alternate" type="text/html" title="VPN on Raspberry with Alpine" /><published>2025-02-21T00:00:00+00:00</published><updated>2025-02-21T16:21:05+00:00</updated><id>https://ib.bsb.br/vpn-on-raspberry-with-alpine</id><content type="html" xml:base="https://ib.bsb.br/vpn-on-raspberry-with-alpine/"><![CDATA[<h1 id="1--prepare-hardware-and-flash-alpine-linux">1 – Prepare Hardware and Flash Alpine Linux</h1>
+
+<ol>
+  <li>Gather a Raspberry Pi 3B, a microSD card (≥8 GB), and a reliable power supply (5 V, 2.5 A or more). 2. Download the official Alpine Linux image for Raspberry Pi (e.g., “alpine-rpi-3.17.0-armhf.iso”) from the Alpine Linux website. 3. Flash the image onto the microSD card using dd (Linux) or a similar flashing tool: 
+<code class="language-plaintext highlighter-rouge">umount /dev/sdX*</code></li>
+</ol>
+
+<p><code class="language-plaintext highlighter-rouge">dd if=alpine-rpi-3.17.0-armhf.iso of=/dev/sdX bs=4M status=progress &amp;amp;&amp;amp; sync</code>
+(Replace /dev/sdX with your actual device name.) 4. Insert the card into the Pi 3B and power it on. 5. When prompted, log in as root and run the Alpine setup process: 
+<code class="language-plaintext highlighter-rouge">setup-alpine</code>
+Follow prompts to configure keyboard, timezone, network, hostname, etc.
+• “sys” mode: Installs Alpine on the SD card.
+• “diskless” mode: Runs from RAM; changes require “lbu commit.”</p>
+
+<h1 id="2--system-update-and-required-package-installation">2 – System Update and Required Package Installation</h1>
+
+<ol>
+  <li>Update Alpine and upgrade any existing packages: 
+<code class="language-plaintext highlighter-rouge">apk update &amp;amp;&amp;amp; apk upgrade</code></li>
+  <li>Install essential packages for PiVPN operation: 
+<code class="language-plaintext highlighter-rouge">apk add bash curl git nano iptables iproute2 openvpn wireguard-tools tcpdump</code></li>
+  <li>(Optional) For cryptographic key generation to have sufficient entropy: 
+<code class="language-plaintext highlighter-rouge">apk add haveged</code>
+Then start and enable haveged: 
+<code class="language-plaintext highlighter-rouge">rc-service haveged start</code></li>
+</ol>
+
+<p><code class="language-plaintext highlighter-rouge">rc-update add haveged default</code></p>
+
+<h1 id="3--enable-tunnels-ip-forwarding-and-persist-settings">3 – Enable Tunnels, IP Forwarding, and Persist Settings</h1>
+
+<ol>
+  <li>Ensure the “tun” module is loaded immediately: 
+<code class="language-plaintext highlighter-rouge">modprobe tun</code></li>
+</ol>
+
+<p><code class="language-plaintext highlighter-rouge">echo "tun" &amp;gt; /etc/modules-load.d/tun.conf</code></p>
+<ol>
+  <li>Enable IP forwarding so VPN traffic can flow properly: 
+<code class="language-plaintext highlighter-rouge">sysctl -w net.ipv4.ip_forward=1</code></li>
+</ol>
+
+<p><code class="language-plaintext highlighter-rouge">sysctl -w net.ipv6.conf.all.forwarding=1</code>
+Persist these in /etc/sysctl.conf or /etc/sysctl.d/ so they reapply on reboot: net.ipv4.ip_forward=1 net.ipv6.conf.all.forwarding=1 3. (Optional) For diskless mode users, commit changes: 
+<code class="language-plaintext highlighter-rouge">lbu commit</code></p>
+
+<h1 id="4--static-ip-recommended">4 – Static IP (Recommended)</h1>
+
+<ol>
+  <li>(Optional, but strongly recommended) Assign a static address to your Raspberry Pi 3B: 
+<code class="language-plaintext highlighter-rouge">nano /etc/network/interfaces</code>
+Example stanza: auto eth0 iface eth0 inet static address 192.168.1.100 netmask 255.255.255.0 gateway 192.168.1.1 Adjust according to your LAN’s configuration. 2. Restart networking or reboot to confirm changes: 
+<code class="language-plaintext highlighter-rouge">ifdown eth0 &amp;amp;&amp;amp; ifup eth0</code>
+or: 
+<code class="language-plaintext highlighter-rouge">reboot</code></li>
+</ol>
+
+<h1 id="5--run-the-pivpn-installer">5 – Run the PiVPN Installer</h1>
+
+<ol>
+  <li>Switch to Bash (if not already): 
+<code class="language-plaintext highlighter-rouge">bash</code></li>
+  <li>Download and run the PiVPN script: 
+<code class="language-plaintext highlighter-rouge">curl -L https://install.pivpn.io | bash</code></li>
+  <li>Follow PiVPN’s interactive prompts:
+• Choose “OpenVPN” or “WireGuard” as your VPN protocol.
+• If using OpenVPN: The installer configures EasyRSA, server certificate, keys.
+• If using WireGuard: The script sets up keys and default conf parameters.
+• Specify your selected UDP port (1194 for OpenVPN, 51820 for WireGuard) or accept defaults.
+• Pick a DNS provider (e.g., Google’s 8.8.8.8).
+• Let PiVPN adjust iptables rules automatically.</li>
+</ol>
+
+<h1 id="6--configure-services-to-start-on-boot">6 – Configure Services to Start on Boot</h1>
+
+<ol>
+  <li>For OpenVPN: 
+<code class="language-plaintext highlighter-rouge">rc-update add openvpn default</code></li>
+</ol>
+
+<p><code class="language-plaintext highlighter-rouge">rc-service openvpn start</code></p>
+<ol>
+  <li>For WireGuard (depending on your interface name, e.g., wg0): 
+<code class="language-plaintext highlighter-rouge">rc-update add wg-quick.default default</code></li>
+</ol>
+
+<p><code class="language-plaintext highlighter-rouge">rc-service wg-quick.default start</code>
+(If the wg-quick service is present; otherwise configure manually under /etc/conf.d/.)</p>
+
+<h1 id="7--creating-and-managing-vpn-client-profiles">7 – Creating and Managing VPN Client Profiles</h1>
+
+<ol>
+  <li>Add a client profile (example: client1): 
+<code class="language-plaintext highlighter-rouge">pivpn add -n client1</code>
+OpenVPN → generates client1.ovpn; WireGuard → generates client1.conf. 2. Transfer this file safely to the client device (SCP/USB).</li>
+</ol>
+
+<h1 id="8--router-port-forwarding">8 – Router Port Forwarding</h1>
+
+<ol>
+  <li>In your home router’s UI, locate Port Forwarding:
+• OpenVPN: - Protocol: UDP - External Port: 1194 - Internal IP: 192.168.1.100 - Internal Port: 1194
+• WireGuard: - Protocol: UDP - External Port: 51820 - Internal IP: 192.168.1.100 - Internal Port: 51820 2. Save or apply settings and reboot router if needed.</li>
+</ol>
+
+<h1 id="9--testing-your-vpn">9 – Testing Your VPN</h1>
+
+<ol>
+  <li>
+    <p>Securely transfer the generated client configuration file to an external device:
+• For OpenVPN: <code class="language-plaintext highlighter-rouge">scp /root/ovpns/client1.ovpn user@remote-device:/home/user/Documents/</code>
+• For WireGuard, similarly transfer <code class="language-plaintext highlighter-rouge">client1.conf</code>.</p>
+  </li>
+  <li>
+    <p>On your computer or mobile device, install the respective VPN client:
+• OpenVPN: Use the official OpenVPN client.
+• WireGuard: Install the official WireGuard client.</p>
+  </li>
+  <li>
+    <p>Import the configuration file into the VPN client.</p>
+  </li>
+  <li>
+    <p>Connect to the VPN and verify connectivity by checking:
+• The tunnel’s IP address assignment.
+• Your public IP change via an IP lookup service.
+• Access to local network resources (if configured).</p>
+  </li>
+</ol>
+
+<h1 id="10--maintenance-and-troubleshooting">10 – Maintenance and Troubleshooting</h1>
+
+<ol>
+  <li>Check service logs:
+• OpenVPN logs: tail -f /var/log/openvpn.log
+• WireGuard info: wg show 2. Tweak or review iptables rules; changes can be saved with: 
+<code class="language-plaintext highlighter-rouge">rc-update add iptables</code></li>
+</ol>
+
+<p><code class="language-plaintext highlighter-rouge">service iptables save</code></p>
+<ol>
+  <li>Update the system regularly: 
+<code class="language-plaintext highlighter-rouge">apk update &amp;amp;&amp;amp; apk upgrade</code></li>
+  <li>For diskless mode, always: 
+<code class="language-plaintext highlighter-rouge">lbu commit</code>
+after changes to persist them. 5. If encountering issues, use: 
+<code class="language-plaintext highlighter-rouge">tcpdump -i eth0 port 1194 (OpenVPN)</code></li>
+</ol>
+
+<p><code class="language-plaintext highlighter-rouge">tcpdump -i eth0 port 51820 (WireGuard)</code>
+to capture traffic and help debug.</p>]]></content><author><name></name></author><category term="scratchpad" /></entry><entry><title type="html">AlphaSmart 3000 Guide</title><link href="https://ib.bsb.br/alphasmart-3000-guide/" rel="alternate" type="text/html" title="AlphaSmart 3000 Guide" /><published>2025-02-20T00:00:00+00:00</published><updated>2025-02-20T15:29:14+00:00</updated><id>https://ib.bsb.br/alphasmart-3000-guide</id><content type="html" xml:base="https://ib.bsb.br/alphasmart-3000-guide/"><![CDATA[<p>Title:</p>
 
 <p>Markdown Content:</p>
 <blockquote>
@@ -3890,234 +4039,4 @@ Net Worth: $78,000 - $155,000 = -$77,000
   </li>
 </ul>
 
-<p>This comprehensive process ensures that you remove WSL/WSL2 completely while continuing to leverage Hyper-V exclusively, along with an understanding of the technical and practical impacts of this change.</p>]]></content><author><name></name></author><category term="scratchpad" /></entry><entry><title type="html">KHOJ Emacs</title><link href="https://ib.bsb.br/khoj-emacs/" rel="alternate" type="text/html" title="KHOJ Emacs" /><published>2025-01-29T00:00:00+00:00</published><updated>2025-02-01T21:29:53+00:00</updated><id>https://ib.bsb.br/khoj-emacs</id><content type="html" xml:base="https://ib.bsb.br/khoj-emacs/"><![CDATA[<h3 id="step-1-install-emacs"><strong>Step 1: Install Emacs</strong></h3>
-
-<p><strong>For Linux:</strong></p>
-
-<ul>
-  <li>Open your terminal and run:
-    <ul>
-      <li><strong>Debian/Ubuntu:</strong> <code class="language-plaintext highlighter-rouge">sudo apt-get install emacs</code></li>
-      <li><strong>Fedora:</strong> <code class="language-plaintext highlighter-rouge">sudo dnf install emacs</code></li>
-      <li><strong>Arch Linux:</strong> <code class="language-plaintext highlighter-rouge">sudo pacman -S emacs</code></li>
-    </ul>
-  </li>
-</ul>
-
-<p><strong>For macOS:</strong></p>
-
-<ul>
-  <li>If you have Homebrew installed, run:
-    <ul>
-      <li><code class="language-plaintext highlighter-rouge">brew install emacs</code></li>
-    </ul>
-  </li>
-  <li>Or download Emacs directly from <a href="https://emacsformacosx.com/">emacsformacosx.com</a>.</li>
-</ul>
-
-<p><strong>For Windows:</strong></p>
-
-<ul>
-  <li>Download the installer from the <a href="https://www.gnu.org/software/emacs/download.html#windows">GNU Emacs website</a>.</li>
-  <li>Run the installer and follow the prompts.</li>
-</ul>
-
-<hr />
-
-<h3 id="step-2-get-your-khoj-api-key"><strong>Step 2: Get Your Khoj API Key</strong></h3>
-
-<ol>
-  <li>
-    <p><strong>Sign Up or Log In:</strong></p>
-
-    <ul>
-      <li>Go to <a href="https://khoj.ai/">Khoj.ai</a> and create an account or log in.</li>
-    </ul>
-  </li>
-  <li>
-    <p><strong>Access the Web App:</strong></p>
-
-    <ul>
-      <li>Navigate to the <a href="https://app.khoj.dev/">Khoj Web App</a>.</li>
-    </ul>
-  </li>
-  <li>
-    <p><strong>Generate an API Key:</strong></p>
-
-    <ul>
-      <li>Click on your profile or settings.</li>
-      <li>Find the <strong>API Keys</strong> section.</li>
-      <li>Generate a new API key.</li>
-      <li><strong>Important:</strong> Copy and save this API key—you’ll need it soon.</li>
-    </ul>
-  </li>
-</ol>
-
-<hr />
-
-<h3 id="step-3-set-up-your-emacs-configuration"><strong>Step 3: Set Up Your Emacs Configuration</strong></h3>
-
-<p>We’ll create a minimal configuration file to set up Khoj in Emacs.</p>
-
-<p><strong>Locate or Create the Emacs Init File (<code class="language-plaintext highlighter-rouge">init.el</code>):</strong></p>
-
-<ul>
-  <li>
-    <p><strong>On Linux/macOS:</strong></p>
-
-    <ul>
-      <li>The file is typically located at <code class="language-plaintext highlighter-rouge">~/.emacs.d/init.el</code>.</li>
-      <li>If it doesn’t exist, you can create it:
-        <ul>
-          <li>Open a terminal.</li>
-          <li>Run <code class="language-plaintext highlighter-rouge">mkdir -p ~/.emacs.d</code> to ensure the directory exists.</li>
-          <li>Run <code class="language-plaintext highlighter-rouge">touch ~/.emacs.d/init.el</code> to create the file.</li>
-        </ul>
-      </li>
-    </ul>
-  </li>
-  <li>
-    <p><strong>On Windows:</strong></p>
-
-    <ul>
-      <li>The file may be located at <code class="language-plaintext highlighter-rouge">C:\Users\YourUsername\AppData\Roaming\.emacs.d\init.el</code>.</li>
-      <li>You might need to enable viewing hidden files to see the AppData folder.</li>
-      <li>Create the <code class="language-plaintext highlighter-rouge">.emacs.d</code> folder and <code class="language-plaintext highlighter-rouge">init.el</code> file if they don’t exist.</li>
-    </ul>
-  </li>
-</ul>
-
-<p><strong>Edit <code class="language-plaintext highlighter-rouge">init.el</code>:</strong></p>
-
-<p>Open <code class="language-plaintext highlighter-rouge">init.el</code> in Emacs or any text editor and add the following content:</p>
-
-<div class="language-emacs-lisp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">;;; Minimal init.el for using Khoj</span>
-
-<span class="c1">;; 1. Initialize package sources</span>
-<span class="p">(</span><span class="nb">require</span> <span class="ss">'package</span><span class="p">)</span>
-<span class="p">(</span><span class="k">setq</span> <span class="nv">package-archives</span>
-      <span class="o">'</span><span class="p">((</span><span class="s">"gnu"</span> <span class="o">.</span> <span class="s">"https://elpa.gnu.org/packages/"</span><span class="p">)</span>
-        <span class="p">(</span><span class="s">"melpa-stable"</span> <span class="o">.</span> <span class="s">"https://stable.melpa.org/packages/"</span><span class="p">)))</span>
-<span class="p">(</span><span class="nv">package-initialize</span><span class="p">)</span>
-
-<span class="c1">;; 2. Install use-package if it's not already installed</span>
-<span class="p">(</span><span class="nb">unless</span> <span class="p">(</span><span class="nv">package-installed-p</span> <span class="ss">'use-package</span><span class="p">)</span>
-  <span class="p">(</span><span class="nb">unless</span> <span class="nv">package-archive-contents</span>
-    <span class="p">(</span><span class="nv">package-refresh-contents</span><span class="p">))</span>
-  <span class="p">(</span><span class="nv">package-install</span> <span class="ss">'use-package</span><span class="p">))</span>
-<span class="p">(</span><span class="nb">require</span> <span class="ss">'use-package</span><span class="p">)</span>
-<span class="p">(</span><span class="k">setq</span> <span class="nv">use-package-always-ensure</span> <span class="no">t</span><span class="p">)</span>
-
-<span class="c1">;; 3. Install and configure Khoj</span>
-<span class="p">(</span><span class="nb">use-package</span> <span class="nv">khoj</span>
-  <span class="ss">:pin</span> <span class="nv">melpa-stable</span>
-  <span class="ss">:bind</span> <span class="p">(</span><span class="s">"C-c s"</span> <span class="o">.</span> <span class="nv">khoj</span><span class="p">)</span>  <span class="c1">;; Press Ctrl+c then s to open Khoj</span>
-  <span class="ss">:config</span>
-  <span class="p">(</span><span class="k">setq</span> <span class="nv">khoj-api-key</span> <span class="s">"YOUR_KHOJ_API_KEY"</span>  <span class="c1">;; Replace with your API key</span>
-        <span class="nv">khoj-server-url</span> <span class="s">"https://app.khoj.dev"</span><span class="p">))</span>
-</code></pre></div></div>
-
-<p><strong>Replace <code class="language-plaintext highlighter-rouge">YOUR_KHOJ_API_KEY</code> with the API key you obtained earlier.</strong></p>
-
-<hr />
-
-<h3 id="step-4-start-emacs-and-install-khoj"><strong>Step 4: Start Emacs and Install Khoj</strong></h3>
-
-<ol>
-  <li>
-    <p><strong>Launch Emacs:</strong></p>
-
-    <ul>
-      <li>Open Emacs as you normally would (e.g., by clicking its icon or running <code class="language-plaintext highlighter-rouge">emacs</code> in the terminal).</li>
-    </ul>
-  </li>
-  <li>
-    <p><strong>Allow Packages to Install:</strong></p>
-
-    <ul>
-      <li>Emacs will read your <code class="language-plaintext highlighter-rouge">init.el</code> file and start installing the packages specified (<code class="language-plaintext highlighter-rouge">use-package</code> and <code class="language-plaintext highlighter-rouge">khoj</code>).</li>
-      <li>This may take a few minutes depending on your internet connection.</li>
-      <li>You can monitor the installation progress in the <code class="language-plaintext highlighter-rouge">*Messages*</code> buffer or the minibuffer at the bottom.</li>
-    </ul>
-  </li>
-  <li>
-    <p><strong>Restart Emacs (Recommended):</strong></p>
-
-    <ul>
-      <li>After installation completes, it’s a good idea to restart Emacs to ensure all settings take effect.</li>
-    </ul>
-  </li>
-</ol>
-
-<hr />
-
-<h3 id="step-5-use-khoj-in-emacs"><strong>Step 5: Use Khoj in Emacs</strong></h3>
-
-<p><strong>Access the Khoj Interface:</strong></p>
-
-<ul>
-  <li>Press <code class="language-plaintext highlighter-rouge">Ctrl + c</code> then <code class="language-plaintext highlighter-rouge">s</code> (<code class="language-plaintext highlighter-rouge">C-c s</code>) to open the Khoj menu.</li>
-  <li>Alternatively, you can use <code class="language-plaintext highlighter-rouge">M-x khoj</code> (press <code class="language-plaintext highlighter-rouge">Alt + x</code>, then type <code class="language-plaintext highlighter-rouge">khoj</code>, and press <code class="language-plaintext highlighter-rouge">Enter</code>).</li>
-</ul>
-
-<p><strong>Perform a Search:</strong></p>
-
-<ol>
-  <li>After opening Khoj, press <code class="language-plaintext highlighter-rouge">s</code> for search.</li>
-  <li>Type your query in natural language, for example:
-    <ul>
-      <li>“What meetings do I have next week?”</li>
-    </ul>
-  </li>
-  <li>Press <code class="language-plaintext highlighter-rouge">Enter</code> to see search results from your notes.</li>
-</ol>
-
-<p><strong>Start a Chat Session:</strong></p>
-
-<ol>
-  <li>Open Khoj (<code class="language-plaintext highlighter-rouge">C-c s</code>), then press <code class="language-plaintext highlighter-rouge">c</code> for chat.</li>
-  <li>Ask a question or start a conversation, such as:
-    <ul>
-      <li>“Summarize my notes on project X.”</li>
-    </ul>
-  </li>
-  <li>Khoj will provide responses based on your data.</li>
-</ol>
-
-<hr />
-
-<h3 id="tips-to-keep-things-simple"><strong>Tips to Keep Things Simple</strong></h3>
-
-<ul>
-  <li>
-    <p><strong>Avoid Overloading Emacs:</strong></p>
-
-    <ul>
-      <li>Stick to this minimal setup to prevent getting overwhelmed.</li>
-      <li>Refrain from adding extra plugins or configurations until you’re comfortable.</li>
-    </ul>
-  </li>
-  <li>
-    <p><strong>Learn Gradually:</strong></p>
-
-    <ul>
-      <li>Familiarize yourself with basic Emacs commands.</li>
-      <li>Use <code class="language-plaintext highlighter-rouge">C-h t</code> (Ctrl + h, then t) to access the Emacs tutorial.</li>
-      <li>Remember that it’s okay to take it slow.</li>
-    </ul>
-  </li>
-  <li>
-    <p><strong>Get Help When Needed:</strong></p>
-
-    <ul>
-      <li>Consult the <a href="https://docs.khoj.dev/clients/emacs">Khoj Documentation</a> for more details.</li>
-      <li>Join communities or forums if you have questions.</li>
-    </ul>
-  </li>
-</ul>
-
-<hr />
-
-<p><strong>You’re all set!</strong></p>
-
-<p>With this minimal configuration, you can now use Khoj within Emacs without the complexity. Enjoy exploring your notes and leveraging Khoj’s powerful features in a simplified environment.</p>]]></content><author><name></name></author><category term="software" /></entry></feed>
+<p>This comprehensive process ensures that you remove WSL/WSL2 completely while continuing to leverage Hyper-V exclusively, along with an understanding of the technical and practical impacts of this change.</p>]]></content><author><name></name></author><category term="scratchpad" /></entry></feed>
