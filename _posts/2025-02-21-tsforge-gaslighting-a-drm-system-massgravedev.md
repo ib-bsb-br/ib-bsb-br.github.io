@@ -1,5 +1,6 @@
 ---
-tags: [scratchpad]
+tags:
+- scratchpad
 info: aberto.
 date: 2025-02-21
 type: post
@@ -7,8 +8,9 @@ layout: post
 published: true
 slug: tsforge-gaslighting-a-drm-system-massgravedev
 title: 'TSforge: Gaslighting a DRM system (massgrave.dev)'
+comment: massgrave.dev/blog/tsforge
 ---
-bibref: massgrave.dev/blog/tsforge
+
 
 ## Introduction
 
