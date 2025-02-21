@@ -1,6 +1,5 @@
 ---
-tags:
-- scratchpad
+tags: [scratchpad]
 info: aberto.
 date: 2025-02-20
 type: post
@@ -8,56 +7,12 @@ layout: post
 published: true
 slug: alphasmart-3000-guide
 title: AlphaSmart 3000 Guide
-comment: '`https://tilde.club/~jy4m/alphasmart/AlphaSmart%203000%20User''s%20Guide.pdf`'
+comment: "https://tilde.club/~jy4m/alphasmart/AlphaSmart%203000%20User's%20Guide.pdf"
 ---
 
-Title: 
-
-
-Markdown Content:
 > AlphaSmart 3000
-> User’s Guide Registration Card
-> ❏ AlphaSmart  ❏ SmartApplet Software (product model)  (product name) Please mail or fax this card to (530) 528-3906 First Name  Last Name Title Institution/School Mailing Address City  State  Zip/Postal Code  Country Daytime Phone Number  Evening Phone Number Email Address Purchased From  Date Purchased Where are you using the product?  ❏ School  ❏ College or University  ❏ Home  ❏ Other Are you?  ❏ Teacher or Educator  ❏ Student  ❏ Other Number of AlphaSmart keyboards at site:  ❏ 1-10  ❏ 11-25  ❏ 26-99  ❏ 100+ Would you like to receive the AlphaSmart email Newsletter?  ❏ Yes  ❏ No Would you like to receive the AlphaSmart HotNews email Bulletin?  ❏ Yes  ❏ No Would you like to receive information as new SmartApplets are developed?  ❏ Yes  ❏ No ALPHASMART, INC. PO BOX 506 RED BLUFF CA  96080-9938 NO POSTAGE NECESSARY IF MAILED IN THE UNITED STATES BUSINESS REPLY MAIL FIRST-CLASS MAIL  PERMIT NO 7  RED BLUFF CA POSTAGE WILL BE PAID BY ADDRESSEE i
 
-# AlphaSmart 3000 User’s Guide ii AlphaSmart Services 
-
-For technical questions or problems, please e-mail our Technical Service Center at support@alphasmart.com or call us at (888) 274-2720. To request an evaluation of the AlphaSmart 3000, please e-mail evalu-ation@alphasmart.com or call us at (888) 274-0680. For general information or sales questions, please e-mail info@alphasmart.com or call us at (888) 274-0680 To purchase an AlphaSmart, visit our online store at www.alphasmart.com, or call us at (888) 274-0680. Register online at http://www.alphasmart.com/registration. Nothing in this manual may be reproduced in any manner, either wholly or in part, for any purpose whatsoever without written permission from AlphaSmart, Inc. Apple, the Apple logo, Apple IIGS, AppleWorks, iMac, and Macintosh are registered trademarks of Apple Computer, Inc. Classic is a registered trademark licensed to Apple Computer, Inc. Apple Desktop Bus, Performa, and PowerBook are trademarks of Apple Computer, Inc. Microsoft is a registered trademark of Microsoft Corporation. IBM is a registered trademark of International Business Machines. Revised May 2002 AlphaSmart 3000 User’s Guide iii Table of Contents CHAPTER 1 - Introduction . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 1 CHAPTER 2 - Quick Start . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 3 CHAPTER 3 - System Requirements . . . . . . . . . . . . . . . . . . . . . . . . 5 CHAPTER 4 - Hardware Installation and Maintenance . . . . . . . . . . 7 
-
-Connecting Your AlphaSmart 3000 to a USB Computer . . . . . . . . 7Connecting the Mac Y Cable . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 8Connecting the PC Y Cable . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 9Batteries and Power Requirements . . . . . . . . . . . . . . . . . . . . . . . . 12 Rechargeable Battery Pack . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .13 Storing a Rechargeable Battery Pack . . . . . . . . . . . . . . . . . . . 15 Lifetime of the Rechargeable Battery Pack . . . . . . . . . . . . . . . 15 Low Battery Indication. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 15 Power . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .17 Auto Power-On . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 18 
-
-CHAPTER 5 - Using Your AlphaSmart 3000 . . . . . . . . . . . . . . . . . 19 
-
-Entering Text . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 19 Text Formatting . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 20 Editing Text . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 21 Find Feature . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 22 Working with Files . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 23 File Capacity . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 23 File Status. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 23 Erasing Files . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .23 Data Recovery . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 24 Spell Check . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 25 Using Spell Check. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 25 Disabling Spell Check. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 26 iv AlphaSmart 3000 User’s Guide CHAPTER 6 - Transferring Text to a Computer . . . . . . . . . . . . . . 27 
-
-Sending Text to a Computer . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 27 For Macs: . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 27 For PCs: . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 27 Connecting to PC-compatible Laptops . . . . . . . . . . . . . . . . . . 29 Transferring Text Using Infrared . . . . . . . . . . . . . . . . . . . . . . . . . 30 AlphaBeam™ for Mac . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 31 AlphaBeam™ for PC. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 31 Sending Text to Applications . . . . . . . . . . . . . . . . . . . . . . . . . . . . 32 Databases . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 33 Changing the Transfer Speed . . . . . . . . . . . . . . . . . . . . . . . . . . . . 35 
-
-CHAPTER 7 - SmartApplets . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 37 
-
-AlphaWord SmartApplet . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 37 Calculator SmartApplet . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 38 Control of Access to Calculator . . . . . . . . . . . . . . . . . . . . . . . 38 Installing a SmartApplet on the AlphaSmart 3000 . . . . . . . . . . . . 38 
-
-CHAPTER 8 - Printing from the AlphaSmart 3000 . . . . . . . . . . . . 41 
-
-Printing directly from an AlphaSmart 3000 . . . . . . . . . . . . . . . . . 41 
-
-CHAPTER 9 - Advanced AlphaSmart 3000 Features . . . . . . . . . . . 45 
-
-AutoRepeat/Key Repeat Control. . . . . . . . . . . . . . . . . . . . . . . . . . 45 Sticky Keys . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 46 Slow Keys . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 47 Show Marks . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 47 Alternate Keyboard Layouts . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 48 International Character Support . . . . . . . . . . . . . . . . . . . . . . . . . . 51 Keyboarding Timer . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 52 Status Screen . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 53 AlphaSmart 3000 Password Protection . . . . . . . . . . . . . . . . . . . . . 53 Battery Status Indicator . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 56 AlphaSmart 3000 User’s Guide vCHAPTER 10 - Software for the AlphaSmart 3000 . . . . . . . . . . . . 57 
-
-AlphaHub Compatibility . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 57 Get Utility Software . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 57 Turbo Transfer Software For Macintosh . . . . . . . . . . . . . . . . . . . 58 
-
-CHAPTER 11 - Troubleshooting and Frequently Asked Questions . 59 
-
-Troubleshooting . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 59 FAQs—Frequently Asked Questions. . . . . . . . . . . . . . . . . . . . . . . 62 
-
-CHAPTER 12 - Warranty, Return Procedures and Guarantee . . . . . 67 
-
-Warranty . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .67 Return Procedures . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 67 Guarantee . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 68 
-
-CHAPTER 13 - AlphaSmart 3000 Maintenance and Safety Guidelines . . . . . . . . . . . . . . . . . . . . . . 69 
-
-Safety, Care, and Maintenance . . . . . . . . . . . . . . . . . . . . . . . . . . . 69 
-
-CHAPTER 14 -Appendix A - Keyboard Commands, International and Special Characters . . . . . . . . . 75 vi AlphaSmart 3000 User’s Guide AlphaSmart 3000 1CHAPTER 1 Introduction 
+CHAPTER 1 Introduction 
 
 The AlphaSmart 3000 is the practical, portable, and affordable computing solution for students, researchers, and professionals on the go. It enables users to type, edit and electronically store text, practice keyboarding, and collaborate on documents, without requiring an expensive and cumbersome computer. The AlphaSmart 3000 offers you a solution that is: 
 
@@ -1125,70 +1080,4 @@ Character Keystroke(s)
 
 Ω (omega) option-Z 
 
-Table 7: Currency Symbols 82 Appendix A - Keyboard Commands, International and Special Characters Index 83 Index A
-
-ADB live connect 9 AlphaBeam for Mac 31 for PC 31 transferring text 30 AlphaHub compatibility 57 AlphaSmart keyboard commands table 80 password protection 53 safety, care, and maintenance 69 AlphaWord SmartApplet 37 alternate keyboard layouts 48 auto power off 4 AutoRepeat function 45 
-
-B
-
-batteries 12 caring for 17 life span 12 replacing 12 status indicator 56 battery pack, rechargeable 13 battery status indicator 16 
-
-C
-
-Calculator SmartApplet 38 caps lock indicator 20 care 69 changing passwords 54 clear all files command 24 clear file key 23 commands clear all files 24 copy 21 cut 21 delete 21 paste 21 recover 40 characters 24 connecting your AlphaSmart to a computer 7 connecting, laptops 29 copy command 21 cut command 21 
-
-D
-
-data recovery 24 databases, downloading to 33 DIP switch settings 42 disabling spell check 26 Dvorak keyboard layout 49 
-
-E
-
-editing text 21 entering text 19 erasing files 23 
-
-F
-
-FAQs 62, 66 files capacity 23 erasing 23 status of 23 find feature 22 find key 22 frequently asked questions 62, 66 84 AlphaSmart 3000 User ’s Guide G
-
-Get Utility software 57 guarantee 68 
-
-I
-
-infrared using to transfer text 30 installation Mac Y cable 8 PC Y cable 9 international characters support 51 table 80 
-
-K
-
-Key Repeat Control 45 Keyboarding Timer 52 keyboards alternate layouts 48 command differences 29 Dvorak layout 49 left-handed layout 50 right-handed layout 49 
-
-L
-
-laptops, connecting to 29 left-hand keyboard layout 50 left-handed keyboard layout 50 lithium battery 16 low battery indication 15 
-
-M
-
-Mac Y Cable 8 installation 8 Mini-DIN connector 10 
-
-P
-
-parallel cable 41 passwords changing 54 enabling 53 reset 55 setting 54 paste command 21 PC Y cable 9 installation 9 power 17 auto power-on 18 requirements 17 printer DIP switch settings 42 printers supported by AlphaSmart 41 printing from the AlphaSmart 41, 43 
-
-Q
-
-quick start 3 QWERTY keyboard layout 48 
-
-R
-
-radio and television Interference 73 rechargeable battery pack charging 14 installing 13 recover 40 characters command 24 return material authorization numbers 67 return procedures 67, 68 right-handed keyboard layout 49 RMA number 68 RMA numbers 67 Index 85 S
-
-safety 69, 72 send speed 36 sending text to a computer 27 sending text to applications 32 serial printer cable 42 setting passwords 54 Show Marks function 47 Slow Keys function 47 SmartApplets AlphaWord 37 Calculator 38 installing 38 special characters table 80 spell check 25 disabling 26 spreadsheets, downloading to 32 Status Screen 53 Sticky Keys function 46 system requirements 5 
-
-T
-
-Technical and System Requirements 1, 3, 5, 7, 19, 27, 37, 41, 45, 57, 59, 67, 69, 75 television and radio interference 73 text editing 21 entering 19 formatting 20 text formatting 20 Timer, Keyboarding 52 toxic elements statement 15 transfer speed, changing 35 transferring text using infrared 30 troubleshooting 59, 62 Turbo Transfer software for Mac 58 
-
-U
-
-USB connection 7 
-
-W
-
-warranty 67 work environment 70 working with files 23 AlphaSmart, Inc. 973 University Avenue Los Gatos, CA 95032 (408) 355-1000 or (888) 274-0680 (toll-free) Fax: (408) 355-1055 www.alphasmart.com
+Table 7: Currency Symbols 82 Appendix A - Keyboard Commands, International and Special Characters
