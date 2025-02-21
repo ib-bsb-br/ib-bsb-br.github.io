@@ -1,4 +1,265 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2025-02-21T18:01:23+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">VPN on Raspberry with Alpine</title><link href="https://ib.bsb.br/vpn-on-raspberry-with-alpine/" rel="alternate" type="text/html" title="VPN on Raspberry with Alpine" /><published>2025-02-21T00:00:00+00:00</published><updated>2025-02-21T16:21:05+00:00</updated><id>https://ib.bsb.br/vpn-on-raspberry-with-alpine</id><content type="html" xml:base="https://ib.bsb.br/vpn-on-raspberry-with-alpine/"><![CDATA[<h1 id="1--prepare-hardware-and-flash-alpine-linux">1 – Prepare Hardware and Flash Alpine Linux</h1>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2025-02-21T18:42:03+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">TSforge: Gaslighting a DRM system (massgrave.dev)</title><link href="https://ib.bsb.br/tsforge-gaslighting-a-drm-system-massgravedev/" rel="alternate" type="text/html" title="TSforge: Gaslighting a DRM system (massgrave.dev)" /><published>2025-02-21T00:00:00+00:00</published><updated>2025-02-21T18:39:35+00:00</updated><id>https://ib.bsb.br/tsforge-gaslighting-a-drm-system-massgravedev</id><content type="html" xml:base="https://ib.bsb.br/tsforge-gaslighting-a-drm-system-massgravedev/"><![CDATA[<p>bibref: massgrave.dev/blog/tsforge</p>
+
+<h2 id="introduction">Introduction</h2>
+
+<p>2025 marks nearly 20 years since the introduction of Windows’ current DRM system, the Software Protection Platform (SPP). With it serving as the primary gateway to activation since <a href="https://betawiki.net/wiki/Windows_Vista_build_5212_(winmain)">early in Windows Vista’s development</a>, many have come up with clever ways of tricking it, from <a href="https://www.mydigitallife.net/activate-64-bit-windows-vista-ultimate-and-x64-with-timerstop-v2a-crack-plus-2099-trick/">resetting grace period timers</a> to <a href="https://forums.mydigitallife.net/threads/kmsemulator-kms-client-and-server-emulation-source.41010/">emulating KMS servers</a> to <a href="https://forums.mydigitallife.net/threads/windows-loader-download.58464/">hooking bootloaders</a>. While all of these systems abuse various activation methods, there has never been an exploit that directly attacked SPP itself… until now.</p>
+
+<!-- truncate -->
+
+<p>In this blogpost, we introduce <a href="https://github.com/massgravel/TSforge">TSforge</a>, one of our most powerful activation exploits ever. Capable of activating every edition of every version of Windows since Windows 7, as well as every Windows addon and Office version since Office 2013, TSforge is both the most complex and most wide-reaching exploit we’ve implemented in MAS to date, rivaled only by our ill-fated <a href="https://massgrave.dev/blog/keyhole">Keyhole</a> exploit. Aside from discussing how TSforge works, I’ll also be discussing the wild path we took to discover and understand it, as well as some of the fun things we did with it along the way.</p>
+
+<h2 id="spp">SPP</h2>
+
+<p>SPP is a very complex system with several moving parts involved. To keep things simple, we’ll only focus on the parts relevant to this exploit:</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">sppsvc.exe</code>/<code class="language-plaintext highlighter-rouge">slsvc.exe</code> - The primary usermode service for SPP, responsible for managing licenses and activation statuses</li>
+  <li><code class="language-plaintext highlighter-rouge">spsys.sys</code> - (Windows Vista/7 only) Responsible for storing sensitive activation information, merged into sppsvc since Windows 8</li>
+  <li><code class="language-plaintext highlighter-rouge">sppobjs.dll</code> - A plugin library containing most of the logic for product key and confirmation ID validation</li>
+</ul>
+
+<h2 id="cid-trick">CID Trick</h2>
+
+<p>Our first hint of a universal SPP exploit was in 2023, with the discovery of a method we called the “CID trick”, which allowed us to deposit fake confirmation IDs.</p>
+
+<p>Confirmation IDs (CIDs) are numeric values used for <a href="https://support.microsoft.com/en-us/windows/product-activation-for-windows-online-support-telephone-numbers-35f6a805-1259-88b4-f5e9-b52cccef91a0">activating Windows by phone</a>, either through a dialog or with the <code class="language-plaintext highlighter-rouge">slmgr /atp</code> command. Because phone activation can be done without being connected to any network, all Windows editions and addons have at least one licensing channel that can be phone-activated, including otherwise uncrackable products like KMS servers and ESU addons.</p>
+
+<p>Recognizing this, asdcorp decided to investigate how CID validation worked internally. After doing a simple in-memory patch to make any provided CID valid, they noticed it had some odd effects:</p>
+
+<p>import ReactPlayer from ‘react-player’</p>
+
+<ReactPlayer controls="" width="100%" height="auto" url="/cidtrick.mp4" />
+
+<p>As shown in the video, patching the CID validation code in <code class="language-plaintext highlighter-rouge">sppobjs.dll</code> allowed us to use a CID made of all zeroes for activation. Crucially though, this activation remained even after clearing the patch by restarting sppsvc. To us, this suggested something very important: <strong>whatever data SPP saves to remember that it’s activated is never validated after being written</strong>.</p>
+
+<p>This was a very exciting discovery for us, as it meant that if we could write this same data, we could easily activate any copy of Windows without needing to use debuggers or <a href="https://github.com/itm4n/PPLcontrol">exploit kernel drivers</a>. More importantly for me, it also meant that this method could possibly be extended to work on older versions like <a href="https://en.wikipedia.org/wiki/Special_interest_(autism)">Windows 7</a> and 8, where patching SPP code at runtime is much more difficult.</p>
+
+<p>In order make this a viable method, though, we needed to answer these questions:</p>
+
+<ul>
+  <li>Where is activation data being written?</li>
+  <li>What data is written during the CID trick that causes activation?</li>
+  <li>How is this data encoded?</li>
+</ul>
+
+<h2 id="initial-work">Initial Work</h2>
+
+<p>From prior investigations, we had a partial answer to the first question. Observing sppsvc using <a href="https://learn.microsoft.com/en-us/sysinternals/downloads/procmon">Process Monitor</a>, we could see exactly where it was storing activation data:</p>
+
+<p><img src="./assets/tsf/procmon1.png" alt="image" /></p>
+
+<p>On Windows 8.1 and 10, we observed that data is mainly stored in the following locations:</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">C:\Windows\System32\spp\store\2.0\data.dat</code></li>
+  <li><code class="language-plaintext highlighter-rouge">C:\Windows\System32\spp\store\2.0\tokens.dat</code></li>
+  <li><code class="language-plaintext highlighter-rouge">HKEY_LOCAL_MACHINE\SYSTEM\WPA</code></li>
+</ul>
+
+<p>Windows 8 is almost identical, except that the <code class="language-plaintext highlighter-rouge">.dat</code> files are stored under <code class="language-plaintext highlighter-rouge">C:\Windows\System32\spp\store</code>.</p>
+
+<p>Windows 7, however, is a very different story:</p>
+
+<p><img src="./assets/tsf/procmon2.png" alt="image" /></p>
+
+<p>Here, I saw references to the following locations:</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">C:\Windows\System32\7B296FB0-376B-497e-B012-9C450E1B7327-5P-0.C7483456-A289-439d-8115-601632D005A0</code></li>
+  <li><code class="language-plaintext highlighter-rouge">C:\Windows\System32\7B296FB0-376B-497e-B012-9C450E1B7327-5P-1.C7483456-A289-439d-8115-601632D005A0</code></li>
+  <li><code class="language-plaintext highlighter-rouge">C:\Windows\ServiceProfiles\NetworkService\AppData\Roaming\Microsoft\SoftwareProtectionPlatform\tokens.dat</code></li>
+  <li><code class="language-plaintext highlighter-rouge">HKEY_LOCAL_MACHINE\SYSTEM\WPA</code></li>
+</ul>
+
+<p>More strangely, though, I found that sppsvc wouldn’t write to either of the “7B296…” files or WPA registry keys directly. Instead, it would use the <a href="https://learn.microsoft.com/en-us/windows/win32/api/ioapiset/nf-ioapiset-deviceiocontrol"><code class="language-plaintext highlighter-rouge">DeviceIoControl</code></a> method to call a driver known as <code class="language-plaintext highlighter-rouge">spsys.sys</code>. This driver would then handle writing to “7B296…” files and WPA registry keys.</p>
+
+<p><img src="./assets/tsf/procmon3.png" alt="image" /></p>
+
+<p>In comparing these files and registry keys, I saw quite a few similarities. The <code class="language-plaintext highlighter-rouge">tokens.dat</code> files were mostly uninteresting at first, since across all versions, these files seemed to just hold the contents of the XML licenses in a similarly named folder: <code class="language-plaintext highlighter-rouge">C:\Windows\System32\spp\tokens</code>.</p>
+
+<p>The “7B296…” and <code class="language-plaintext highlighter-rouge">data.dat</code> files seemed to serve similar roles, as these files were not only encrypted, but they seemed to have some kind of hash or signature included as well. Corrupting or deleting these files would uninstall all installed product keys and reset all other activation data (rearm counts, KMS client counts, etc.). On Windows 7, it would also show this lovely error message:</p>
+
+<p><img src="./assets/tsf/unauth_error.png" alt="image" /></p>
+
+<p>Setting aside the question of how I can’t be authorized to make changes to my own computer, after installing a product key, I get a notification for “tampering with the trusted store” across several versions:</p>
+
+<p><img src="./assets/tsf/tamper.png" alt="image" /></p>
+
+<p>Putting all this together, it would seem like the “7B296…” files and <code class="language-plaintext highlighter-rouge">data.dat</code> both serve as storage for important activation data, and they seem to be referred to internally as the “trusted store”.</p>
+
+<p>A similar process of brute-force tampering with the WPA registry keys showed that they were somehow linked with the trusted store. New keys with seemingly encrypted data were added under <code class="language-plaintext highlighter-rouge">HKEY_LOCAL_MACHINE\SYSTEM\WPA</code> periodically, as well as after significant licensing changes. Additionally, thanks to the <a href="https://www.tiraniddo.dev/2017/07/locking-your-registry-keys-for-fun-and.html"><code class="language-plaintext highlighter-rouge">NtLockProductActivationKeys</code></a> function, these keys were entirely read-only and unable to be deleted, unless you messed with them from a Windows PE environment. Tampering with or deleting these keys caused similar “license tampering” errors to appear, but if we copied these keys along with trusted store files from one installation to another, sppsvc didn’t seem to complain about tampering anymore.</p>
+
+<p>From all of this work, we learned the following things:</p>
+
+<ul>
+  <li>Critical activation data like product keys and rearm counts are stored in something known as the “trusted store”</li>
+  <li>The trusted store’s data is held in encrypted files</li>
+  <li>This data is somehow linked with seemingly encrypted registry keys under <code class="language-plaintext highlighter-rouge">HKLM\SYSTEM\WPA</code></li>
+</ul>
+
+<p>Unfortunately, we didn’t know much more than this for quite a long time. My work on deobfuscating both <a href="https://github.com/UMSKT/peacestone">older</a> and <a href="https://github.com/WitherOrNot/warbird-docs">newer</a> versions of sppsvc helped us in confirming some of our theories, but without an understanding of <code class="language-plaintext highlighter-rouge">spsys.sys</code>, they didn’t contribute much. In the meantime, SpCreatePackaedLicense built an automated version of the CID trick, using a custom kernel driver to patch sppsvc without adjusting its <a href="https://www.alex-ionescu.com/why-protected-processes-are-a-bad-idea/">protected process</a> status, which helped greatly with testing CID trick.</p>
+
+<p><img src="./assets/tsf/miieow1.png" alt="image" /></p>
+
+<p>Aside from this, though, we mostly shelved this work in favor of investigating CLiP, which seemed to have more promising avenues for exploitation.</p>
+
+<h2 id="when-it-leaks-it-floods">When It Leaks, It Floods</h2>
+
+<p>Although we focus heavily on Windows piracy, many of us MASSGRAVE members are also interested in its development history, or more specifically, its various pre-release beta builds. Studying and messing with these builds is not only fun as a novelty, but the artifacts that get left in during development can help us learn a lot about how Windows works.</p>
+
+<p>While discussing activation mechanisms of recently leaked Windows 8 builds with some beta conoisseurs, I was casually blindsided with a couple major reveals:</p>
+
+<p><img src="./assets/tsf/convo1.png" alt="image" /></p>
+
+<p><img src="./assets/tsf/convo2.png" alt="image" /></p>
+
+<p>Although <a href="https://betawiki.net/wiki/Windows_8_build_7792">build 7792</a> and <a href="https://betawiki.net/wiki/Windows_8_build_7850">build 7850</a> were on the path to Windows 8 development, their build numbers were close enough to Windows 7 (build 7600) that I was hopeful for some new information on spsys. Indeed, within a <a href="https://archive.org/details/Win8_7850_x64fre_symbols">symbol archive for build 7850</a>, I found symbols for spsys, along with the rest of the activation subsystem.</p>
+
+<p><img src="./assets/tsf/symlist.png" alt="image" /></p>
+
+<p>Build 7792 also had a version of spsys that was entirely unobfuscated, just as advertised, but with no symbols. Build 7850’s spsys, on the other hand, had full symbols along with full obfuscation. While I wasn’t able to have my cake and eat it too, this pairing was still an incredibly lucky finding, so I decided to use it to figure out how the trusted store works.</p>
+
+<h2 id="spells-and-curses">Spells and Curses</h2>
+
+<p>As usual with lucky breaks, this one came with strings attached. The biggest one was that, unlike with any other normal Windows build, kernel debugging with WinDBG didn’t work at all on build 7792, as this was one of the earliest ARM ports of Windows.</p>
+
+<p><img src="./assets/tsf/convo3.png" alt="image" /></p>
+
+<p>So, although I had a completely deobfuscated copy of spsys without any annoying anti-debug features, I had very few options to actually debug it. Since this build was being emulated in QEMU, I still had the option of using its built-in GDB debugging server, but this would be very difficult to use, as I would have to manually locate the kernel and drivers in memory to do anything useful. Luckily, I was able to get in touch with Rairii, who was more familiar with this debugging method thanks to his work on <a href="https://github.com/Wack0/tegra2_qemu_woa">emulating early Windows on ARM</a>.</p>
+
+<p>Unfortunately, I knew little about QEMU OS debugging, or ARM, or very low-level Windows internals, so his advice was a bit difficult to follow at first…</p>
+
+<p><img src="./assets/tsf/convo4.png" alt="image" /></p>
+
+<p>Compounding the problem was my choice to write custom tooling for this project, using a GDB client library to control QEMU and automatically break whenever spsys loaded. Much like most of my attempts at custom tooling, this ended up being a gigantic waste of time that ultimately didn’t even work in the end, not least due to my inexperience with GDB in general. After wasting even more time trying to add Windows support to GDB through its <a href="https://sourceware.org/gdb/current/onlinedocs/gdb.html/Python-API.html#Python-API">Python API</a>, I ended up biting the bullet and choosing the devil I knew, the IDA Pro debugger.</p>
+
+<p>Yes, it’s the least “appropriate” choice for debugging a kernel or debugging QEMU (or really anything at all), but what was more important to me was that I’m familiar with it. Using the various kernel structs I grabbed and modified from <a href="https://betawiki.net/wiki/Windows_8_build_7915">build 7915</a>’s symbol set, I was able to crap out a script that would breakpoint on various kernel functions and grab important data, like the kernel base address and list of loaded kernel modules. By programmatically breaking on <code class="language-plaintext highlighter-rouge">IopLoadDriver</code>, I could even automatically update the module list as each driver was loaded.</p>
+
+<p><img src="./assets/tsf/modlist1.png" alt="image" /></p>
+
+<p>However, even with this monitoring system, I still couldn’t catch the moment that <code class="language-plaintext highlighter-rouge">spsys.sys</code> loaded. It was only after checking the code for its loader, <code class="language-plaintext highlighter-rouge">spldr.sys</code>, that I spotted an interesting call to <code class="language-plaintext highlighter-rouge">ZwSetSystemInformation</code>:</p>
+
+<p><img src="./assets/tsf/spsys_ld.png" alt="image" /></p>
+
+<p>Referencing <a href="https://www.geoffchappell.com/studies/windows/km/ntoskrnl/api/ex/sysinfo/set.htm">Geoff Chappell’s table</a>, I saw that this corresponded to <code class="language-plaintext highlighter-rouge">SystemLoadGdiDriverInSystemSpace</code>, which, of course, has it’s own branch in the kernel code that can load drivers without invoking <code class="language-plaintext highlighter-rouge">IopLoadDriver</code>.</p>
+
+<p><img src="./assets/tsf/kbranch.png" alt="image" /></p>
+
+<p>After breaking at this branch as well, I could finally catch <code class="language-plaintext highlighter-rouge">spsys.sys</code> as soon as it loaded!</p>
+
+<p><img src="./assets/tsf/spsys_gotcha.png" alt="image" /></p>
+
+<p>All this work, mind you, ended up implementing what would’ve been just <code class="language-plaintext highlighter-rouge">sxe ld spsys</code> if WinDBG worked. Regardless, I was now able to catch and debug build 7792’s spsys right as it loaded, without the annoying obfuscation and anti-debug in the way.</p>
+
+<p>Speaking of obfuscation, I still needed to unpack build 7850’s spsys to make any sense of it. Fortunately, this was much easier, since I could search for where calls to encrypted functions are made.</p>
+
+<p><img src="./assets/tsf/spsys_7850.png" alt="image" /></p>
+
+<p>Then, I just had to break at these calls in the kernel debugger and dump the driver from memory, and I got all of the the code decrypted fairly easily. From here, it was just a long process of transferring symbols by eye, and I was finally at square one.</p>
+
+<p><img src="./assets/tsf/labeled_funcs.png" alt="image" /></p>
+
+<h2 id="progress-at-last">Progress At Last</h2>
+
+<p>With all of the functions labeled, I noticed an interesting pattern in the code that generates the trusted store file, which seems to be called the “physical store”. Rather than the typical approach of storing encrypted data in a separate buffer, Microsoft seemed to opt for doing their encryption in-place.</p>
+
+<p><img src="./assets/tsf/encrypt_data.png" alt="image" /></p>
+
+<p>This probably prevents some kind of side-channel attack, but more importantly, it means that I can “decrypt” the physical store by simply skipping this call in the debugger and letting spsys write the un-encrypted contents to the disk. And so I did:</p>
+
+<p><img src="./assets/tsf/decrypt_ps.png" alt="image" /></p>
+
+<p>asdcorp and abbodi1406 immediately went to work, figuring out the data format and what kind of data is stored within. Meanwhile, I was focused on replicating this trick on Windows 10, where analysis would be far easier, not least due to having an actual debugger (x64dbg) available. Conveniently, the function HIDHash had some very unique constants in it:</p>
+
+<p><img src="./assets/tsf/hidhash1.png" alt="image" /></p>
+
+<p>Searching for these constants in Windows 10’s sppsvc led me to the same function in sppsvc:</p>
+
+<p><img src="./assets/tsf/hidhash2.png" alt="image" /></p>
+
+<p>As I found out, most of spsys’s code ended up being included in sppsvc on Windows 10. Comparing these codebases, I found all of the encryption, decryption, signature check, and hash check routines. Patching all of these routines out in the debugger, we could get sppsvc to not only decrypt its <code class="language-plaintext highlighter-rouge">data.dat</code> for us, but also to load and accept any modifications we made in it.</p>
+
+<p><img src="./assets/tsf/rearm_42069.png" alt="image" /></p>
+
+<p>In the process of testing these patches, we ended up finding the long-lost product key for <a href="https://betawiki.net/wiki/Feature_lockout_in_Windows#Windows_8">Redpill</a>, a feature lockout system for beta releases of Windows 8.</p>
+
+<p><img src="./assets/tsf/redpill_key.png" alt="image" /></p>
+
+<p>With some experimentation and a bit of assistance from me, asdcorp managed to reproduce the CID trick, but this time without patching the CID verification routine.</p>
+
+<p><img src="./assets/tsf/cidtrick2.png" alt="image" /></p>
+
+<p>From here, asdcorp and Lyssa figured out and tested even more exploits, including a method to KMS-activate offline for over 4000 years.</p>
+
+<p><img src="./assets/tsf/kms4k.png" alt="image" /></p>
+
+<p>Although these results marked significant progress, we still needed to use a debugger to test these methods, since we had no way to decrypt and re-encrypt the physical store by ourselves. So, my next task was to figure out how to do just that.</p>
+
+<h2 id="private-key-derivation">Private Key Derivation</h2>
+
+<p>I knew from looking at spsys that the only real key I needed to derive was an RSA key, which encrypts an AES key that encrypts the physical store data. I also knew from tests conducted with asdcorp that there were only two such keys: one for production/official beta versions and one for internal testing/Windows Insider versions. In the absence of raw key data, we found this out with a highly advanced method: copying physical store files, editing its version, and waiting for sppsvc to crash horrifically, signaling that it could decrypt but not parse the swapped file.</p>
+
+<p>Examining the RSA decryption routine, called <code class="language-plaintext highlighter-rouge">SpModExpPrv</code>, I found a interpreter for a bytecode system known as <code class="language-plaintext highlighter-rouge">ExecCodes</code>. With a lot of drudgery and regexes, I was able to write a simulator of this system in Python.</p>
+
+<p><img src="./assets/tsf/execcodes.png" alt="image" /></p>
+
+<p>Observing the output of this simulation, I realized that all of this obfuscation covered up a technique I had vaguely heard of before, known as <a href="https://en.wikipedia.org/wiki/Addition-chain_exponentiation">addition-chain exponentiation</a>. With a bit of thinking, I realized that I could just track and dump the inputs and outputs of each modular multiplication and use this to derive the private key. All it took was x64dbg logging and a few more lines of python:</p>
+
+<p><img src="./assets/tsf/keyderiv.png" alt="image" /></p>
+
+<p>And at last, I had the complete production key for all of SPP, from Windows Vista to Windows 11.</p>
+
+<p><img src="./assets/tsf/prodkey.png" alt="image" /></p>
+
+<p>Deriving the test key took a little while longer, due to some weird differences in how the modular multiplications were implemented, but eventually, we had every SPP private key we needed.</p>
+
+<h2 id="nailing-the-coffin">Nailing The Coffin</h2>
+
+<p>With the private key in hand, we were able to activate almost any edition we wanted with ease. There was still one bit of trouble, though, and that was in obtaining generic keys to enable activation.</p>
+
+<p>On Windows 8 and up, it’s rather <a href="https://github.com/awuctl/licensing-stuff">trivial</a> to generate generic keys for any channel of any edition you wanted. However, Windows 7 and CSVLKs (KMS host keys) up to Server 2022 used <a href="https://github.com/UMSKT/writeups/blob/main/PKEY2005.md">PKEY2005</a>, a much more complicated encoding system that needed private keys to generate even generic keys. Since I didn’t have any cryptographic tricks left up my sleeve, we decided the best way through this problem was around.</p>
+
+<p>Within the physical store are large blobs for each product key, containing various pre-computed information, such as the product IDs and phone activation data. Additionally, we found that the token store (<code class="language-plaintext highlighter-rouge">tokens.dat</code>) also contains metadata tying product keys to the current edition of Windows. Therefore, we figured that simply replicating this data was enough to trick Windows into thinking a key was installed, and for once, we were right.</p>
+
+<p><img src="./assets/tsf/igpk.png" alt="image" /></p>
+
+<p>In the meantime, while developing a programmatic method for the new CID trick, which we now called ZeroCID, we were having trouble with the HWID data we needed to write into the physical store. Originally, we tried using a <a href="https://github.com/laomms/HwidGenerator">C# port of GatherOsState’s HWID derivation</a>, but this ended up failing to validate in some rare cases. Since we had few options to debug or fix this port, asdcorp decided to create an HWID value that would apply to all hardware, and yet again, it worked perfectly, even allowing transfer of activation between machines.</p>
+
+<p><img src="./assets/tsf/uhwid.png" alt="image" /></p>
+
+<p>With the HWID validation and PKEY2005 defeated, we had now almost entirely defeated SPP’s offline protections.</p>
+
+<h2 id="closing-thoughts">Closing Thoughts</h2>
+
+<p>Even with the amount of damage we were able to do to SPP with a debugger and a hex editor, I still think it’s a rather advanced and well-built DRM system. Its internals certainly improve upon those of Windows XP’s DRM, which, despite whatever some might tell you, was rather poorly designed. It also manages to defend itself fairly well against the most common attacks, such as resetting evaluation timers by swapping physical store files. Additionally, there are still parts of SPP that we haven’t managed to crack, like the signed XML licenses used to define its behavior. After all, it’s not like there’s another <a href="https://github.com/massgravel/MIIEow">trivial patch</a> that can bypass their signature checks…</p>
+
+<p><img src="./assets/tsf/starterd.png" alt="image" /></p>
+
+<h2 id="credits">Credits</h2>
+
+<h4 id="core-research-and-development">Core Research and Development</h4>
+
+<ul>
+  <li>WitherOrNot - Lead tool development, reverse engineering, testing</li>
+  <li>asdcorp - Initial demonstrations, reverse engineering, tool development, testing</li>
+  <li>abbodi1406 - Reverse engineering, development, testing</li>
+  <li>Lyssa - Reverse engineering, tool development, testing</li>
+</ul>
+
+<h4 id="other-contributions">Other Contributions</h4>
+
+<ul>
+  <li>SpCreatePackaedLicense - Tool development, testing</li>
+  <li>May - Code formatting, build setup</li>
+</ul>
+
+<h4 id="special-thanks">Special Thanks</h4>
+
+<ul>
+  <li>BetaWiki - Documenting leaked beta builds used for reverse engineering</li>
+  <li>Rairii - Assistance with initial reverse engineering efforts</li>
+  <li>Microsoft - A fun challenge</li>
+</ul>]]></content><author><name></name></author><category term="scratchpad" /></entry><entry><title type="html">VPN on Raspberry with Alpine</title><link href="https://ib.bsb.br/vpn-on-raspberry-with-alpine/" rel="alternate" type="text/html" title="VPN on Raspberry with Alpine" /><published>2025-02-21T00:00:00+00:00</published><updated>2025-02-21T16:21:05+00:00</updated><id>https://ib.bsb.br/vpn-on-raspberry-with-alpine</id><content type="html" xml:base="https://ib.bsb.br/vpn-on-raspberry-with-alpine/"><![CDATA[<h1 id="1--prepare-hardware-and-flash-alpine-linux">1 – Prepare Hardware and Flash Alpine Linux</h1>
 
 <ol>
   <li>Gather a Raspberry Pi 3B, a microSD card (≥8 GB), and a reliable power supply (5 V, 2.5 A or more). 2. Download the official Alpine Linux image for Raspberry Pi (e.g., “alpine-rpi-3.17.0-armhf.iso”) from the Alpine Linux website. 3. Flash the image onto the microSD card using dd (Linux) or a similar flashing tool: 
@@ -3798,136 +4059,4 @@ Net Worth: $78,000 - $155,000 = -$77,000
   <li><strong>Advanced Networking:</strong> Explore advanced networking configurations in Hyper-V and WSL 2, such as creating virtual networks, VLANs, and configuring network bridging or bonding.</li>
   <li><strong>Automation:</strong> Enhance your home lab management by automating tasks using PowerShell for Windows and scripting in Linux (e.g., Bash scripting).</li>
   <li><strong>Further Security Hardening:</strong> Implement more advanced security measures, such as intrusion detection/prevention systems (IDS/IPS), web application firewalls (WAFs), and regular security audits.</li>
-</ul>]]></content><author><name></name></author><category term="scratchpad" /></entry><entry><title type="html">Purge WSL2 from Windows 11 (Hyper-V only)</title><link href="https://ib.bsb.br/purge-wsl2-from-windows-11-hyper-v-only/" rel="alternate" type="text/html" title="Purge WSL2 from Windows 11 (Hyper-V only)" /><published>2025-02-03T00:00:00+00:00</published><updated>2025-02-04T15:48:29+00:00</updated><id>https://ib.bsb.br/purge-wsl2-from-windows-11-hyper-v-only</id><content type="html" xml:base="https://ib.bsb.br/purge-wsl2-from-windows-11-hyper-v-only/"><![CDATA[<p>Removing WSL and WSL2 from Windows 11 to work exclusively with Hyper-V involves a set of deliberate steps designed to eliminate the Linux compatibility layer and its associated virtual environment, without disabling Hyper-V itself. Below is a detailed guide that covers how to perform these actions, the technical rationale behind them, and the impacts on your system.</p>
-
-<h4 id="1-step-by-step-removal-process">1. Step-by-Step Removal Process</h4>
-
-<p><strong>Step 1: Uninstall Linux Distributions</strong></p>
-<ul>
-  <li><strong>Action:</strong> Unregister and remove any installed Linux distributions.</li>
-  <li><strong>Command Example:</strong>
-    <div class="language-powershell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">wsl</span><span class="w"> </span><span class="nt">--list</span><span class="w"> </span><span class="nt">--quiet</span><span class="w">  </span><span class="c"># Lists all installed distributions</span><span class="w">
-</span><span class="n">wsl</span><span class="w"> </span><span class="nt">--unregister</span><span class="w"> </span><span class="err">&lt;</span><span class="nx">DistributionName</span><span class="err">&gt;</span><span class="w">  </span><span class="c"># Replace &lt;DistributionName&gt; (e.g., Ubuntu) for each distribution</span><span class="w">
-</span></code></pre></div>    </div>
-  </li>
-  <li><strong>Rationale:</strong> This step ensures that no residual Linux distributions are left which might continue to consume system resources.</li>
-</ul>
-
-<p><strong>Step 2: Disable WSL and Associated Features</strong></p>
-<ul>
-  <li><strong>Action:</strong> Open the “Turn Windows features on or off” dialog.
-    <ul>
-      <li>Uncheck <strong>Windows Subsystem for Linux</strong>.</li>
-      <li>Uncheck <strong>Virtual Machine Platform</strong>.</li>
-    </ul>
-  </li>
-  <li><strong>Note:</strong> Although the Virtual Machine Platform is used by WSL2, some features like Windows Sandbox also depend on it. Consider whether you need these features before disabling.</li>
-  <li><strong>Action:</strong> Reboot the system to finalize these changes.</li>
-</ul>
-
-<p><strong>Step 3: Remove Residual Files and Configuration Data</strong></p>
-<ul>
-  <li><strong>Action:</strong> Clean up any leftover files that may reside in the user profile.</li>
-  <li><strong>Command Example:</strong>
-    <div class="language-powershell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">Remove-Item</span><span class="w"> </span><span class="nt">-Recurse</span><span class="w"> </span><span class="nt">-Force</span><span class="w"> </span><span class="s2">"</span><span class="nv">$</span><span class="nn">env</span><span class="p">:</span><span class="nv">USERPROFILE</span><span class="s2">\AppData\Local\Packages\*CanonicalGroup.Ubuntu*"</span><span class="w">
-</span></code></pre></div>    </div>
-  </li>
-  <li><strong>Rationale:</strong> This recovers disk space and removes configuration data that is no longer needed.</li>
-</ul>
-
-<p><strong>Step 4: Verify Hyper-V Remains Active</strong></p>
-<ul>
-  <li><strong>Action:</strong> Check that Hyper-V is still enabled, since it is independent of WSL/WSL2.</li>
-  <li><strong>Command Example:</strong>
-    <div class="language-powershell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">Get-WindowsOptionalFeature</span><span class="w"> </span><span class="nt">-Online</span><span class="w"> </span><span class="nt">-FeatureName</span><span class="w"> </span><span class="nx">Microsoft-Hyper-V</span><span class="w">
-</span></code></pre></div>    </div>
-  </li>
-  <li><strong>If needed, re-enable Hyper-V:</strong>
-    <div class="language-powershell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">Enable-WindowsOptionalFeature</span><span class="w"> </span><span class="nt">-Online</span><span class="w"> </span><span class="nt">-FeatureName</span><span class="w"> </span><span class="nx">Microsoft-Hyper-V-All</span><span class="w">
-</span></code></pre></div>    </div>
-  </li>
-  <li><strong>Rationale:</strong> This confirms that the removal of WSL components did not inadvertently disable Hyper-V’s core functionalities.</li>
-</ul>
-
-<h4 id="2-why-this-process-works-technical-rationale">2. Why This Process Works (Technical Rationale)</h4>
-
-<ul>
-  <li><strong>WSL/WSL2 Architecture:</strong>
-    <ul>
-      <li>WSL provides a compatibility layer for running Linux binaries on Windows. WSL2, in particular, utilizes a lightweight VM managed by the Virtual Machine Platform. Removing these components stops the Linux interface and associated VM without affecting Hyper-V.</li>
-    </ul>
-  </li>
-  <li><strong>Hyper-V Independence:</strong>
-    <ul>
-      <li>Hyper-V is a Type 1 hypervisor that operates directly on the hardware abstraction layer. It remains fully operational independent of the WSL components. Therefore, disabling WSL/WSL2 frees up resources while leaving your primary virtualization platform intact.</li>
-    </ul>
-  </li>
-  <li><strong>Clean Removal:</strong>
-    <ul>
-      <li>By unregistering distributions and disabling the specific Windows features, you ensure that no parts of the WSL layer or its supporting services remain active. This prevents resource conflicts and can potentially simplify system configuration, especially if you rely exclusively on Hyper-V for virtual machine management.</li>
-    </ul>
-  </li>
-</ul>
-
-<h4 id="3-impacts-on-system-functionality">3. Impacts on System Functionality</h4>
-
-<p><strong>Consequences</strong></p>
-<ul>
-  <li><strong>Loss of Native Linux Integration:</strong>
-    <ul>
-      <li>You will no longer have immediate access to Linux command-line tools or distributions on Windows.</li>
-      <li>Tools and extensions (e.g., for Visual Studio Code) that depend on WSL may no longer work.</li>
-    </ul>
-  </li>
-  <li><strong>Tool Compatibility Changes:</strong>
-    <ul>
-      <li>Docker Desktop users who rely on the WSL2 backend must reconfigure Docker to use the Hyper-V backend or Windows Containers.</li>
-    </ul>
-  </li>
-</ul>
-
-<p><strong>Benefits</strong></p>
-<ul>
-  <li><strong>Resource Optimization:</strong>
-    <ul>
-      <li>Reclaim system resources (memory, CPU, storage allocated for WSL2’s virtual machine) for use by Hyper-V, potentially improving performance.</li>
-    </ul>
-  </li>
-  <li><strong>Simplified Virtualization Environment:</strong>
-    <ul>
-      <li>Reduced complexity in virtualization settings by eliminating duplicate virtualization layers.</li>
-      <li>Less potential for conflicts between different virtualization and containerization environments.</li>
-    </ul>
-  </li>
-</ul>
-
-<p><strong>Limitations</strong></p>
-<ul>
-  <li><strong>Reduced Flexibility:</strong>
-    <ul>
-      <li>Removing WSL/WSL2 means you lose the ability to run Linux applications natively within Windows, which is beneficial for development and testing.</li>
-    </ul>
-  </li>
-  <li><strong>Dependency Impact:</strong>
-    <ul>
-      <li>Certain applications or environments that integrate with WSL2 will require reconfiguration or alternative solutions.</li>
-    </ul>
-  </li>
-</ul>
-
-<h4 id="final-verification">Final Verification</h4>
-
-<p>After completing the steps:</p>
-<ul>
-  <li><strong>Confirm no Linux distributions remain active:</strong>
-    <div class="language-powershell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">wsl</span><span class="w"> </span><span class="nt">--list</span><span class="w">  </span><span class="c"># Expected output: "No installed distributions."</span><span class="w">
-</span></code></pre></div>    </div>
-  </li>
-  <li><strong>Test Hyper-V:</strong>
-    <ul>
-      <li>Use Hyper-V Manager to create and run a virtual machine to verify that Hyper-V operates as expected.</li>
-    </ul>
-  </li>
-</ul>
-
-<p>This comprehensive process ensures that you remove WSL/WSL2 completely while continuing to leverage Hyper-V exclusively, along with an understanding of the technical and practical impacts of this change.</p>]]></content><author><name></name></author><category term="scratchpad" /></entry></feed>
+</ul>]]></content><author><name></name></author><category term="scratchpad" /></entry></feed>
