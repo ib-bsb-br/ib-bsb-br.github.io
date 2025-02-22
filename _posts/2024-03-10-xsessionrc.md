@@ -1,17 +1,15 @@
 ---
-
-title: "/root/.xsessionrc"
-date: 2024-03-10
 tags: [linux>dotfile]
-comment: 
 info: aberto.
+date: 2024-03-10
 type: post
 layout: post
-sha: 
+published: true
+slug: xsessionrc
+title: '/root/.xsessionrc'
 ---
 
 ```
-
 #!/bin/sh
 
 # /etc/X11/xinit/xinitrc
@@ -29,6 +27,4 @@ xrandr --addmode HDMI-1 "2560x1080_60.00"
 
 xrandr --output HDMI-1 --mode "2560x1080_60.00"
 xrandr --output DP-1 --mode "1152x864_60.00"
-
-
 ```
