@@ -6,7 +6,7 @@ type: post
 layout: post
 published: true
 slug: performance-governors
-title: '/etc/init.d/performance_governors.sh'
+title: 'performance_governors.sh'
 ---
 
 First, remove the init.d script registration: `sudo update-rc.d performance_governors.sh remove`
