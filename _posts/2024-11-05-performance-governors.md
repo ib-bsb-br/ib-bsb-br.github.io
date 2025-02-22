@@ -1,12 +1,11 @@
 ---
-
 tags: [linux>dotfile]
 info: aberto.
 date: 2024-11-05
 type: post
 layout: post
 published: true
-slug: etcinitdperformance_governorssh
+slug: performance-governors
 title: '/etc/init.d/performance_governors.sh'
 ---
 
