@@ -1,14 +1,16 @@
 ---
-tags: [scratchpad]
+tags:
+- scratchpad
 info: aberto.
 date: 2025-02-23
 type: post
 layout: post
 published: true
 slug: setting-up-desktop-switching-in-ratpoison
-title: 'Setting Up Desktop Switching in Ratpoison'
+title: Setting Up Desktop Switching in Ratpoison
+comment: '`https://ozi-blog.ru/nastroyka-pereklyucheniya-rabochih-stolov-v-ratpoison/`'
 ---
-bibref: `https://ozi-blog.ru/nastroyka-pereklyucheniya-rabochih-stolov-v-ratpoison/`
+
 
 Ratpoison is a minimalist window manager for X11. It is designed to be efficient and fast, providing a simple, keyboard-driven interface with no unnecessary decorations or features. It doesn't rely on external libraries and allows for efficient window management. Although the lack of a traditional desktop environment might feel unusual at first, users find that it increases productivity by minimizing the need for window resizing, opening, or hiding.
 
