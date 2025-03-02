@@ -1,6 +1,6 @@
 ---
 
-tags: [tasks>mlo]
+tags: [scratchpad, tasks>mlo]
 info: aberto.
 date: 2025-01-03
 type: post
