@@ -1,100 +1,94 @@
 ---
-
 tags: [tools]
 layout: default
 slug: extract-urls
 comment: https://tools.simonwillison.net/extract-urls
 ---
-<div id="input-container">
-  <h2>Copy content and paste here to extract linked URLs:</h2>
-  <div id="input" contenteditable="true" aria-label="Input Area" tabindex="0" role="textbox" aria-multiline="true">
-    <p>Paste your content here...</p>
-  </div>
+<h2>Paste content here to extract URLs:</h2>
+<div id="input" contenteditable="true"
+     aria-label="Pasting Area"
+     style="width: 90%; height: 150px; border: 1px solid black;">
+  <p>Paste your content here...</p>
 </div>
 
-<div id="output-container" style="display: none;">
-  <h2>Extracted URLs</h2>
-  <textarea id="output" readonly aria-label="Extracted URLs"></textarea>
-  <button id="copy-button">Copy to clipboard</button>
-</div>
+<h2>Extracted URLs</h2>
+<textarea id="output" readonly style="width: 90%; height: 150px;"></textarea>
+<br>
+<button id="copy-button">Copy to clipboard</button>
 
 <script>
   const inputDiv = document.getElementById('input');
-  const outputContainer = document.getElementById('output-container');
   const outputTextarea = document.getElementById('output');
   const copyButton = document.getElementById('copy-button');
 
   /**
-   * Extracts URLs from the pasted content.
-   * @param {ClipboardEvent} e - The paste event.
+   * Removes trailing punctuation from URLs safely.
    */
-  const handlePaste = (e) => {
+  function cleanUrl(url) {
+    return url.replace(/[)\]\}\.,!?;:'"]+$/, '');
+  }
+
+  /**
+   * Extracts URLs explicitly from markdown links and plain text.
+   */
+  function extractUrls(text) {
+    const urls = [];
+
+    // Extract markdown-style links [text](url)
+    const markdownLinkRegex = /\[.*?\]\((https?:\/\/[^\s)]+)\)/g;
+    let match;
+    while ((match = markdownLinkRegex.exec(text)) !== null) {
+      urls.push(cleanUrl(match[1]));
+    }
+
+    // Remove markdown links from text to avoid duplication
+    const textWithoutMarkdownLinks = text.replace(markdownLinkRegex, '');
+
+    // Extract plain URLs (robustly handling parentheses)
+    const plainUrlRegex = /\bhttps?:\/\/[^\s<>"'`)\]]+/gi;
+    const plainUrls = textWithoutMarkdownLinks.match(plainUrlRegex) || [];
+    plainUrls.forEach(url => urls.push(cleanUrl(url)));
+
+    return urls;
+  }
+
+  /**
+   * Handles paste events and displays extracted URLs.
+   */
+  function handlePaste(e) {
     e.preventDefault();
     const clipboardData = e.clipboardData || window.clipboardData;
-    const pastedData = clipboardData.getData('text/html') || clipboardData.getData('text/plain');
+    const pastedText = clipboardData.getData('text/plain');
 
-    let urls = [];
-
-    if (clipboardData.types.includes('text/html')) {
-      // Extract URLs from HTML content
-      const tempDiv = document.createElement('div');
-      tempDiv.innerHTML = pastedData;
-      // If robust sanitization is needed, consider using a library like DOMPurify:
-      // tempDiv.innerHTML = DOMPurify.sanitize(pastedData);
-      const links = tempDiv.getElementsByTagName('a');
-      urls = Array.from(links)
-        .map(link => link.href)
-        .filter(url => url.startsWith('http'));
-    } else {
-      // Extract URLs from plain text using a regular expression
-      const urlRegex = /(https?:\/\/[^\s]+)/g;
-      urls = pastedData.match(urlRegex) || [];
-    }
+    const urls = extractUrls(pastedText);
 
     if (urls.length > 0) {
       outputTextarea.value = urls.join('\n');
-      outputContainer.style.display = 'block';
-      inputDiv.innerHTML = '<p>Content pasted. URLs extracted.</p>';
+      inputDiv.innerText = 'Content pasted. URLs extracted.';
     } else {
-      outputContainer.style.display = 'block'; // Show output container even if no URLs are found
-      outputTextarea.value = 'No valid URLs found in the pasted content.';
-      inputDiv.innerHTML = '<p>Content pasted. No URLs found.</p>';
+      outputTextarea.value = 'No valid URLs found.';
+      inputDiv.innerText = 'Content pasted. No URLs found.';
     }
-  };
+  }
 
   /**
-   * Clears the input message when the input area gains focus.
+   * Copies extracted URLs to clipboard.
    */
-  const handleFocus = () => {
-    const messages = ['Content pasted. URLs extracted.', 'Content pasted. No URLs found.', '<p>Paste your content here...</p>'];
-    if (messages.includes(inputDiv.innerHTML)) {
-      inputDiv.innerHTML = '';
-    }
-  };
-
-  /**
-   * Copies the extracted URLs to the clipboard.
-   */
-  const handleCopy = async () => {
-    if (outputTextarea.value.trim() === '') {
-      outputTextarea.value = 'No content to copy!';
+  async function handleCopy() {
+    if (!outputTextarea.value.trim()) {
+      alert('No URLs to copy!');
       return;
     }
     try {
       await navigator.clipboard.writeText(outputTextarea.value);
-      const originalText = copyButton.textContent;
       copyButton.textContent = 'Copied!';
-      setTimeout(() => {
-        copyButton.textContent = originalText;
-      }, 1500);
-    } catch (err) {
-      console.error('Failed to copy!', err);
-      outputTextarea.value = 'Failed to copy the URLs. Please try again.';
+      setTimeout(() => copyButton.textContent = 'Copy to clipboard', 1500);
+    } catch {
+      alert('Failed to copy. Please try again.');
     }
-  };
+  }
 
-  // Event Listeners
+  // Event listeners
   inputDiv.addEventListener('paste', handlePaste);
-  inputDiv.addEventListener('focus', handleFocus);
   copyButton.addEventListener('click', handleCopy);
 </script>
