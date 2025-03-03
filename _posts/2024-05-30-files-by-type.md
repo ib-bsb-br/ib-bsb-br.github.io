@@ -423,7 +423,9 @@ After testing, remove the test environment:
 rm -rf test_environment
 ```
 
-```python name=file_organizer.py
+# Python script code
+
+{% codeblock python %}
 #!/usr/bin/env python3
 """
 File Organizer
@@ -684,9 +686,11 @@ def main():
 
 if __name__ == "__main__":
     main()
-```
+{% endcodeblock %}
 
-```json name=example_config.json
+## Example config
+
+```json
 {
   "work": [".doc", ".docx", ".pdf", ".xls", ".xlsx", ".ppt", ".pptx"],
   "photos": [".jpg", ".jpeg", ".png", ".gif", ".webp"],
