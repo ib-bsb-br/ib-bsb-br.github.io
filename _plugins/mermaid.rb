@@ -8,9 +8,9 @@ module Jekyll
 
       <<~HTML
         <div class='mermaid' style='white-space: pre-wrap;'>#{text}</div>
-        <script src="https://cdn.jsdelivr.net/npm/svg-pan-zoom@3.6.1/dist/svg-pan-zoom.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/svg-pan-zoom@latest/dist/svg-pan-zoom.min.js"></script>
         <script type='module'>
-          import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+          import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@latest/dist/mermaid.esm.min.mjs';
           #{mermaid_script}
         </script>
       HTML
