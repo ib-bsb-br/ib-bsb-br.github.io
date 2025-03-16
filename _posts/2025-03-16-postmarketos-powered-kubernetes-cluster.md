@@ -1,14 +1,16 @@
 ---
-tags: [scratchpad]
+tags:
+- scratchpad
 info: aberto.
 date: 2025-03-16
 type: post
 layout: post
 published: true
 slug: postmarketos-powered-kubernetes-cluster
-title: 'postmarketOS-powered Kubernetes cluster'
+title: postmarketOS-powered Kubernetes cluster
+comment: https://blog.denv.it/posts/pmos-k3s-cluster/
 ---
-bibref https://blog.denv.it/posts/pmos-k3s-cluster/
+
 
 Having a few Raspberry Pi 4s at my disposal, I found myself somewhat dissatisfied with their processing capabilities and power management features.
 This led me to explore alternative solutions, particularly given the collection of old smartphones gathering dust in my drawer. 
