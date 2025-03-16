@@ -23,7 +23,7 @@ comment: https://tools.simonwillison.net/extract-urls
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/dompurify@2.4.3/dist/purify.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify@latest/dist/purify.min.js"></script>
 <script>
   // DOM Element References
   const inputDiv = document.getElementById('input');
