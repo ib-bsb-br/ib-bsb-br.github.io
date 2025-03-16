@@ -1,4 +1,287 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2025-03-16T09:36:57+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">Web scraping and RSS aggregation using older devices</title><link href="https://ib.bsb.br/web-scraping-and-rss-aggregation-using-older-devices/" rel="alternate" type="text/html" title="Web scraping and RSS aggregation using older devices" /><published>2025-03-16T00:00:00+00:00</published><updated>2025-03-16T09:34:53+00:00</updated><id>https://ib.bsb.br/web-scraping-and-rss-aggregation-using-older-devices</id><content type="html" xml:base="https://ib.bsb.br/web-scraping-and-rss-aggregation-using-older-devices/"><![CDATA[<p>─────────────────────────────────────────────────────
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2025-03-16T09:41:08+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">OPNsense + Unbound + Docker (AdGuard Home or Pi-hole) + Ansible Automation</title><link href="https://ib.bsb.br/opnsense-unbound-docker-adguard-home-or-pi-hole-ansible-automation/" rel="alternate" type="text/html" title="OPNsense + Unbound + Docker (AdGuard Home or Pi-hole) + Ansible Automation" /><published>2025-03-16T00:00:00+00:00</published><updated>2025-03-16T09:37:34+00:00</updated><id>https://ib.bsb.br/opnsense-unbound-docker-adguard-home-or-pi-hole-ansible-automation</id><content type="html" xml:base="https://ib.bsb.br/opnsense-unbound-docker-adguard-home-or-pi-hole-ansible-automation/"><![CDATA[<h2 id="scenario-overview">Scenario Overview</h2>
+
+<ul>
+  <li><strong>Purpose</strong>: Construct a resilient, robust homelab infrastructure to cover firewall, routing, DHCP, DNS resolution and ad-blocking using proven open-source tools.</li>
+  <li><strong>Components Integrated</strong>:
+    <ul>
+      <li><strong>OPNsense</strong> — Firewall, Router, DHCP, DNS rebinding protection</li>
+      <li><strong>Unbound</strong> (integrated within OPNsense) — Local recursive DNS resolver (self-hosted DNS queries)</li>
+      <li><strong>AdGuard Home OR Pi-hole</strong> (in Docker) — DNS sinkhole (ad-blocking, tracker blocking, DNS-over-HTTPS capability)</li>
+      <li><strong>Docker</strong> — Lightweight and flexible service encapsulation</li>
+      <li><strong>Ansible</strong> — Automated infrastructure deployment, backups, and recovery.</li>
+    </ul>
+  </li>
+</ul>
+
+<hr />
+
+<h2 id="step-1---deploy-opnsense-firewall-router-bare-metal--virtual-machine">STEP 1 - Deploy OPNsense Firewall Router (Bare Metal / Virtual Machine)</h2>
+
+<h3 id="installation">Installation</h3>
+
+<p>Download installer from official source:</p>
+<ul>
+  <li>Official Image: <a href="https://opnsense.org/download/">https://opnsense.org/download/</a></li>
+  <li>Recommendation: latest stable ISO version, amd64 architecture</li>
+</ul>
+
+<p>Install OPNsense on dedicated hardware or virtualization hypervisor (recommended hypervisors: Proxmox, VMware ESXi, XCP-ng).</p>
+
+<h3 id="network-interfaces">Network Interfaces</h3>
+
+<ul>
+  <li>Assign at least two interfaces:
+    <ul>
+      <li><code class="language-plaintext highlighter-rouge">WAN</code> → ISP modem (public facing)</li>
+      <li><code class="language-plaintext highlighter-rouge">LAN</code> → Switch (internal network, client-facing)</li>
+    </ul>
+  </li>
+</ul>
+
+<p>Adjust default interface settings to match your network.</p>
+
+<hr />
+
+<h2 id="step-2---opnsense-configuration-essentials">STEP 2 - OPNsense Configuration Essentials</h2>
+
+<p>Login:<br />
+<code class="language-plaintext highlighter-rouge">https://opnsense-ip</code> (Web GUI default user: root, password: opnsense)</p>
+
+<h3 id="lan-interface-configuration">LAN Interface Configuration</h3>
+
+<p>Example addressing scheme:</p>
+<ul>
+  <li>LAN Network: <code class="language-plaintext highlighter-rouge">192.168.10.0/24</code></li>
+  <li>OPNsense LAN IP: <code class="language-plaintext highlighter-rouge">192.168.10.1</code></li>
+</ul>
+
+<p>Configure at:</p>
+<ul>
+  <li>Interfaces → LAN: static IPv4, CIDR <code class="language-plaintext highlighter-rouge">192.168.10.1/24</code></li>
+</ul>
+
+<h3 id="dhcp-server-setup">DHCP Server Setup</h3>
+
+<ul>
+  <li>In <strong>Services → DHCPv4 → LAN</strong>:
+    <ul>
+      <li>Enable DHCPv4 server</li>
+      <li>Range: <code class="language-plaintext highlighter-rouge">192.168.10.100 - 192.168.10.200</code></li>
+      <li>Gateway: <code class="language-plaintext highlighter-rouge">192.168.10.1</code></li>
+      <li>DNS Server: Will be assigned later (AdGuard Home)</li>
+    </ul>
+  </li>
+</ul>
+
+<h3 id="firewall-basic-rules-default-recommended-rules">Firewall Basic Rules (default recommended rules):</h3>
+
+<ul>
+  <li>LAN interface → allow LAN to Any via IPv4 (default outbound rule provided by OPNsense)</li>
+  <li>WAN interface → default deny incoming, allow responses from LAN initiated traffic (default)</li>
+</ul>
+
+<hr />
+
+<h2 id="step-3---unbound-dns-configuration-in-opnsense">STEP 3 - Unbound DNS Configuration (In OPNsense)</h2>
+
+<p>Location: <code class="language-plaintext highlighter-rouge">Services → Unbound DNS</code></p>
+
+<ul>
+  <li>Enable Unbound service (<strong>check</strong>)</li>
+  <li>DNSSEC Validation (<strong>check</strong>)</li>
+  <li>Listen interfaces (<strong>check both</strong>): LAN and Localhost only</li>
+  <li>Access Lists: Allowed networks (“192.168.10.0/24”)</li>
+  <li>Advanced settings (recommended):
+    <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>server:
+cache-max-ttl: 86400
+cache-min-ttl: 300
+num-threads: 2
+outgoing-num-tcp: 10
+incoming-num-tcp: 10
+msg-cache-size: 32m
+rrset-cache-size: 64m
+infra-cache-numhosts: 5000
+infra-host-ttl: 3600
+ratelimit: 1000
+</code></pre></div>    </div>
+  </li>
+  <li>Enable DNS rebinding protection (<strong>check</strong>) under System → Settings → Administration → DNS settings (“Enable DNS Rebinding Checks”).</li>
+</ul>
+
+<hr />
+
+<h2 id="step-4---docker-host-preparation-adguard-home-or-pi-hole">STEP 4 - Docker Host Preparation (AdGuard Home or Pi-hole)</h2>
+
+<p>Deploy on dedicated physical server or VM, e.g., Ubuntu Server 22.04 LTS:</p>
+
+<h3 id="set-static-ip-on-docker-host-example">Set static IP on Docker host (example):</h3>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>sudo nano /etc/netplan/00-installer-config.yaml
+</code></pre></div></div>
+
+<p>Configure static IP:</p>
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">network</span><span class="pi">:</span>
+  <span class="na">ethernets</span><span class="pi">:</span>
+    <span class="na">ens18</span><span class="pi">:</span>
+      <span class="na">dhcp4</span><span class="pi">:</span> <span class="kc">false</span>
+      <span class="na">addresses</span><span class="pi">:</span> <span class="pi">[</span><span class="nv">192.168.10.5/24</span><span class="pi">]</span>
+      <span class="na">gateway4</span><span class="pi">:</span> <span class="s">192.168.10.1</span>
+      <span class="na">nameservers</span><span class="pi">:</span>
+        <span class="na">addresses</span><span class="pi">:</span> <span class="pi">[</span><span class="nv">192.168.10.1</span><span class="pi">]</span>
+  <span class="na">version</span><span class="pi">:</span> <span class="m">2</span>
+</code></pre></div></div>
+
+<p>Apply and reboot:</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>sudo netplan apply
+sudo reboot
+</code></pre></div></div>
+
+<h3 id="installing-docker-ubuntu-example">Installing Docker (Ubuntu Example):</h3>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>apt update
+<span class="nb">sudo </span>apt <span class="nb">install </span>ca-certificates curl gnupg apt-transport-https software-properties-common <span class="nt">-y</span>
+curl <span class="nt">-fsSL</span> https://download.docker.com/linux/ubuntu/gpg | <span class="nb">sudo </span>gpg <span class="nt">--dearmor</span> <span class="nt">-o</span> /usr/share/keyrings/docker-archive-keyring.gpg
+<span class="nb">echo</span> <span class="s2">"deb [arch=</span><span class="si">$(</span>dpkg <span class="nt">--print-architecture</span><span class="si">)</span><span class="s2"> signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu jammy stable"</span> | <span class="nb">sudo tee</span> /etc/apt/sources.list.d/docker.list
+<span class="nb">sudo </span>apt update
+<span class="nb">sudo </span>apt <span class="nb">install </span>docker-ce docker-ce-cli docker-compose-plugin <span class="nt">-y</span>
+<span class="nb">sudo </span>usermod <span class="nt">-aG</span> docker <span class="nv">$USER</span>
+<span class="nb">sudo </span>reboot
+</code></pre></div></div>
+
+<hr />
+
+<h2 id="step-5---deploy-dns-sinkhole-pick-one">STEP 5 - Deploy DNS Sinkhole (Pick One)</h2>
+
+<h3 id="option-a-adguard-home-via-docker">OPTION A) AdGuard Home via Docker</h3>
+
+<p>Create directories:</p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">mkdir</span> <span class="nt">-p</span> ~/docker/adguard/<span class="o">{</span>work,conf<span class="o">}</span>
+</code></pre></div></div>
+
+<p>Launch AdGuard Home via Docker Compose:</p>
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># ~/docker/adguard/docker-compose.yml</span>
+<span class="na">version</span><span class="pi">:</span> <span class="s1">'</span><span class="s">3'</span>
+<span class="na">services</span><span class="pi">:</span>
+  <span class="na">adguardhome</span><span class="pi">:</span>
+    <span class="na">image</span><span class="pi">:</span> <span class="s">adguard/adguardhome:latest</span>
+    <span class="na">container_name</span><span class="pi">:</span> <span class="s">adguardhome</span>
+    <span class="na">restart</span><span class="pi">:</span> <span class="s">unless-stopped</span>
+    <span class="na">network_mode</span><span class="pi">:</span> <span class="s">host</span>
+    <span class="na">volumes</span><span class="pi">:</span>
+      <span class="pi">-</span> <span class="s">./work:/opt/adguardhome/work</span>
+      <span class="pi">-</span> <span class="s">./conf:/opt/adguardhome/conf</span>
+</code></pre></div></div>
+
+<p>Deploy:</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>docker compose up -d
+</code></pre></div></div>
+
+<p>Web login to AdGuard Home at:<br />
+<code class="language-plaintext highlighter-rouge">http://192.168.10.5:3000</code></p>
+
+<p>After setup, change DHCP DNS entry in OPNsense DHCP server to <code class="language-plaintext highlighter-rouge">192.168.10.5</code></p>
+
+<h3 id="option-b-pi-hole-via-docker">OPTION B) Pi-hole via Docker</h3>
+
+<p>Create directories:</p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">mkdir</span> <span class="nt">-p</span> ~/docker/pihole/<span class="o">{</span>etc-pihole,etc-dnsmasq.d<span class="o">}</span>
+</code></pre></div></div>
+
+<p>Docker Compose YAML (<code class="language-plaintext highlighter-rouge">~/docker/pihole/docker-compose.yml</code>):</p>
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">version</span><span class="pi">:</span> <span class="s2">"</span><span class="s">3"</span>
+<span class="na">services</span><span class="pi">:</span>
+  <span class="na">pihole</span><span class="pi">:</span>
+    <span class="na">image</span><span class="pi">:</span> <span class="s">pihole/pihole:latest</span>
+    <span class="na">container_name</span><span class="pi">:</span> <span class="s">pihole</span>
+    <span class="na">restart</span><span class="pi">:</span> <span class="s">unless-stopped</span>
+    <span class="na">environment</span><span class="pi">:</span>
+      <span class="na">TZ</span><span class="pi">:</span> <span class="s1">'</span><span class="s">Europe/Berlin'</span>
+      <span class="na">WEBPASSWORD</span><span class="pi">:</span> <span class="s1">'</span><span class="s">StrongPasswordHere'</span>
+    <span class="na">ports</span><span class="pi">:</span>
+      <span class="pi">-</span> <span class="s2">"</span><span class="s">53:53/tcp"</span>
+      <span class="pi">-</span> <span class="s2">"</span><span class="s">53:53/udp"</span>
+      <span class="pi">-</span> <span class="s2">"</span><span class="s">80:80/tcp"</span>
+    <span class="na">volumes</span><span class="pi">:</span>
+      <span class="pi">-</span> <span class="s">./etc-pihole:/etc/pihole</span>
+      <span class="pi">-</span> <span class="s">./etc-dnsmasq.d:/etc/dnsmasq.d</span>
+</code></pre></div></div>
+
+<p>Start Pi-hole:</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>docker compose up -d
+</code></pre></div></div>
+
+<p>Access WebGUI at:<br />
+<code class="language-plaintext highlighter-rouge">http://192.168.10.5/admin</code></p>
+
+<p>Set DHCP DNS IP to <code class="language-plaintext highlighter-rouge">192.168.10.5</code> in OPNsense DHCP server.</p>
+
+<hr />
+
+<h2 id="step-6---ansible-infrastructure-as-code--backups">STEP 6 - Ansible Infrastructure-as-Code &amp; Backups</h2>
+
+<p>Install Ansible (on local PC, Linux):</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>sudo apt install ansible git -y
+</code></pre></div></div>
+
+<p>Project Directory structure:</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>homelab-ansible/
+├── inventory.yml
+├── roles/
+│   ├── docker_host/
+│   │   └── tasks/main.yml
+│   └── opnsense_backup/
+│       └── tasks/main.yml
+└── site.yml
+</code></pre></div></div>
+
+<p><code class="language-plaintext highlighter-rouge">inventory.yml</code>:</p>
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">docker_host</span><span class="pi">:</span>
+  <span class="na">hosts</span><span class="pi">:</span>
+    <span class="na">docker01</span><span class="pi">:</span>
+      <span class="na">ansible_host</span><span class="pi">:</span> <span class="s">192.168.10.5</span>
+      <span class="na">ansible_user</span><span class="pi">:</span> <span class="s">youruser</span>
+<span class="na">opnsense_host</span><span class="pi">:</span>
+  <span class="na">hosts</span><span class="pi">:</span>
+    <span class="na">firewall</span><span class="pi">:</span>
+      <span class="na">ansible_host</span><span class="pi">:</span> <span class="s">192.168.10.1</span>
+      <span class="na">ansible_user</span><span class="pi">:</span> <span class="s">root</span>
+</code></pre></div></div>
+
+<p><code class="language-plaintext highlighter-rouge">site.yml</code>:</p>
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="pi">-</span> <span class="na">hosts</span><span class="pi">:</span> <span class="s">docker_host</span>
+  <span class="na">roles</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="s">docker_host</span>
+<span class="pi">-</span> <span class="na">hosts</span><span class="pi">:</span> <span class="s">opnsense_host</span>
+  <span class="na">roles</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="s">opnsense_backup</span>
+</code></pre></div></div>
+
+<p><code class="language-plaintext highlighter-rouge">roles/docker_host/tasks/main.yml</code>:</p>
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">Copy config files and restart containers</span>
+  <span class="na">copy</span><span class="pi">:</span>
+    <span class="na">src</span><span class="pi">:</span> <span class="s">~/docker/</span>
+    <span class="na">dest</span><span class="pi">:</span> <span class="s">~/docker/</span>
+  <span class="na">notify</span><span class="pi">:</span> <span class="s">restart docker compose</span>
+</code></pre></div></div>
+
+<p><code class="language-plaintext highlighter-rouge">roles/opnsense_backup/tasks/main.yml</code> (ex. OPNsense backup):</p>
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">Backup OPNsense config.xml</span>
+  <span class="na">fetch</span><span class="pi">:</span>
+    <span class="na">src</span><span class="pi">:</span> <span class="s">/conf/config.xml</span>
+    <span class="na">dest</span><span class="pi">:</span> <span class="s">backups/firewall_config.xml</span>
+</code></pre></div></div>
+
+<p>Run Ansible Playbook (periodically):</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>ansible-playbook -i inventory.yml site.yml
+</code></pre></div></div>
+
+<hr />
+
+<h2 id="step-7---confirm-final-integration">STEP 7 - Confirm Final Integration</h2>
+
+<p>Clients → DHCP DNS server (<code class="language-plaintext highlighter-rouge">192.168.10.5</code>) → AdGuard or Pi-hole → Unbound (OPNsense at <code class="language-plaintext highlighter-rouge">192.168.10.1</code>) → Internet DNS Root servers</p>
+
+<p><strong>Backup strategy</strong> — Fully automated via Ansible, consistently reproducible.</p>
+
+<p>Homelab complete and optimized!</p>]]></content><author><name></name></author><category term="scratchpad" /></entry><entry><title type="html">Web scraping and RSS aggregation using older devices</title><link href="https://ib.bsb.br/web-scraping-and-rss-aggregation-using-older-devices/" rel="alternate" type="text/html" title="Web scraping and RSS aggregation using older devices" /><published>2025-03-16T00:00:00+00:00</published><updated>2025-03-16T09:34:53+00:00</updated><id>https://ib.bsb.br/web-scraping-and-rss-aggregation-using-older-devices</id><content type="html" xml:base="https://ib.bsb.br/web-scraping-and-rss-aggregation-using-older-devices/"><![CDATA[<p>─────────────────────────────────────────────────────
 1) CHOOSE AND INSTALL A LIGHTWEIGHT OPERATING SYSTEM
 ─────────────────────────────────────────────────────
 • Netbooks: Install a lightweight distro such as Debian, Xubuntu, or MX Linux (32-bit if needed, otherwise 64-bit).<br />
@@ -9262,398 +9545,4 @@ podman run <span class="nt">-d</span> <span class="se">\</span>
 
 <hr />
 
-<p><strong>Disclaimer</strong>: Use <code class="language-plaintext highlighter-rouge">simple-fileserver</code> at your own risk. The authors and maintainers are not responsible for any security issues or data loss resulting from its use.</p>]]></content><author><name></name></author><category term="scratchpad" /></entry><entry><title type="html">Alienware M11x</title><link href="https://ib.bsb.br/alienware-m11x/" rel="alternate" type="text/html" title="Alienware M11x" /><published>2025-02-24T00:00:00+00:00</published><updated>2025-03-15T16:42:12+00:00</updated><id>https://ib.bsb.br/alienware-m11x</id><content type="html" xml:base="https://ib.bsb.br/alienware-m11x/"><![CDATA[<h2 id="motherboard">Motherboard</h2>
-<p>| Attribute              | Value                                                                                         |
-|————————|———————————————————————————————–|
-| CPU Type               | Mobile DualCore Intel Core 2 Duo SU7300, 1733 MHz (6 x 289) [118]                               |
-| Motherboard Name       | Alienware M11x                                                                                |
-| Motherboard Chipset    | Intel Cantiga GS45 [119]                                                                        |
-| System Memory          | 8156 MB (DDR3 SDRAM)                                                                            |
-| BIOS Type              | Phoenix (08/06/10) [120]                                                                        |</p>
-
-<p>–––––––––––––––––––––––––––––––––––</p>
-<h2 id="display">Display</h2>
-<p>| Attribute         | Value                                                                                     |
-|——————-|——————————————————————————————-|
-| Video Adapter     | GeForce GT 335M (1 GB) [121]                                                                |
-| 3D Accelerator    | nVIDIA GeForce GT 335M [122]                                                               |
-| Monitor           | Integrated Monitor [NoDB] {2010}                                                            |</p>
-
-<p>–––––––––––––––––––––––––––––––––––</p>
-<h2 id="multimedia">Multimedia</h2>
-<p>| Attribute       | Value                                                                                                          |
-|—————–|—————————————————————————————————————-|
-| Audio Adapter 1 | nVIDIA GT215 HDMI/DP @ nVIDIA GT215 - High Definition Audio Controller [123]                                     |
-| Audio Adapter 2 | nVIDIA GT215 HDMI/DP @ nVIDIA GT215 - High Definition Audio Controller [124]                                     |
-| Audio Adapter 3 | nVIDIA GT215 HDMI/DP @ nVIDIA GT215 - High Definition Audio Controller [125]                                     |
-| Audio Adapter 4 | nVIDIA GT215 HDMI/DP @ nVIDIA GT215 - High Definition Audio Controller [126]                                     |
-| Audio Adapter 5 | Realtek ALC665 @ Intel 82801IB ICH9 - High Definition Audio Controller [A3] [127]                                |</p>
-
-<p>–––––––––––––––––––––––––––––––––––</p>
-<h2 id="storage">Storage</h2>
-<p>| Attribute                 | Value                                                                                                      |
-|—————————|————————————————————————————————————|
-| IDE Controller            | Intel(R) ICH9M/M-E Family 4 Port SATA AHCI Controller - 2929 [128]                                           |
-| Storage Controller        | Microsoft Storage Spaces Controller                                                                        |
-| Disk Drive (1)            | Q-90 (83 GB)                                                                                               |
-| Disk Drive (2)            | TOSHIBA MQ01ABD050V USB Device (500 GB, 5400 RPM, SATA-II) [129]                                             |
-| SMART Hard Disks Status   | OK                                                                                                         |</p>
-
-<p>–––––––––––––––––––––––––––––––––––</p>
-<h2 id="partitions">Partitions</h2>
-<p>| Attribute       | Value                                                                                       |
-|—————–|———————————————————————————————|
-| C: (NTFS)       | 85855 MB (37683 MB free)                                                                     |
-| D: (NTFS)       | 476937 MB (464111 MB free)                                                                    |
-| Total Size      | 549.6 GB (490.0 GB free)                                                                      |</p>
-
-<p>–––––––––––––––––––––––––––––––––––</p>
-<h2 id="input-devices">Input Devices</h2>
-<p>| Attribute        | Value                                 |
-|——————|—————————————|
-| Keyboard (1)     | HID Keyboard Device                   |
-| Keyboard (2)     | HID Keyboard Device                   |
-| Keyboard (3)     | Standard PS/2 Keyboard                |
-| Mouse (1)        | HID-compliant mouse                   |
-| Mouse (2)        | HID-compliant mouse                   |
-| Mouse (3)        | Synaptics SMBus TouchPad              |</p>
-
-<p>–––––––––––––––––––––––––––––––––––</p>
-<h2 id="network">Network</h2>
-<p>| Attribute             | Value                                                                                       |
-|———————–|———————————————————————————————|
-| Primary IP Address    | 192.168.15.18                                                                               |
-| Primary MAC Address   | C0-CB-38-80-A0-2C                                                                            |
-| Network Adapter (1)   | Broadcom 802.11n Network Adapter (192.168.15.18) [130]                                       |
-| Network Adapter (2)   | Microsoft Wi-Fi Direct Virtual Adapter #2                                                    |
-| Network Adapter (3)   | Microsoft Wi-Fi Direct Virtual Adapter                                                       |
-| Network Adapter (4)   | Qualcomm Atheros AR8132 PCI-E Fast Ethernet Controller (NDIS 6.30) [131]                       |</p>
-
-<p>–––––––––––––––––––––––––––––––––––</p>
-<h2 id="peripherals">Peripherals</h2>
-<p>| Attribute            | Value                                                                                                   |
-|———————-|———————————————————————————————————|
-| Printer              | Microsoft Print to PDF                                                                                  |
-| USB1 Controller (1)  | Intel 82801IB ICH9 - USB Universal Host Controller [A3] [132]                                            |
-| USB1 Controller (2)  | Intel 82801IB ICH9 - USB Universal Host Controller [A3] [133]                                            |
-| USB1 Controller (3)  | Intel 82801IB ICH9 - USB Universal Host Controller [A3] [134]                                            |
-| USB1 Controller (4)  | Intel 82801IB ICH9 - USB Universal Host Controller [A3] [135]                                            |
-| USB2 Controller (1)  | Intel 82801IB ICH9 - USB2 Enhanced Host Controller [A3] [136]                                            |
-| USB2 Controller (2)  | Intel 82801IB ICH9 - USB2 Enhanced Host Controller [A3] [137]                                            |
-| USB Device (1)       | Dell Wireless 365 Bluetooth Module                                                                      |
-| USB Device (2)       | Generic USB Hub                                                                                         |
-| USB Device (3)       | Integrated Webcam                                                                                       |
-| USB Device (4)       | USB Composite Device                                                                                     |
-| USB Device (5)       | USB Composite Device                                                                                     |
-| USB Device (6)       | USB Human Interface Device                                                                               |
-| USB Device (7)       | USB Human Interface Device                                                                               |
-| USB Device (8)       | USB Input Device                                                                                         |
-| USB Device (9)       | USB Input Device                                                                                         |
-| USB Device (10)      | USB Input Device                                                                                         |
-| USB Device (11)      | USB Mass Storage Device                                                                                  |
-| Battery (1)          | Microsoft AC Adapter                                                                                      |
-| Battery (2)          | Microsoft ACPI-Compliant Control Method Battery                                                          |</p>
-
-<p>–––––––––––––––––––––––––––––––––––</p>
-<h2 id="dmi-information">DMI Information</h2>
-<p>| Attribute                        | Value                                                                                           |
-|———————————-|————————————————————————————————-|
-| DMI BIOS Vendor                  | Alienware                                                                                       |
-| DMI BIOS Version                 | A05                                                                                             |
-| DMI System Manufacturer          | Alienware                                                                                       |
-| DMI System Product               | M11x                                                                                            |
-| DMI System Version               | A05                                                                                             |
-| DMI System Serial Number         | 35QB3Q1                                                                                         |
-| DMI System UUID                  | 44454C4C-35001051-8042B3C0-4F335131                                                              |
-| DMI Motherboard Manufacturer     | Alienware                                                                                       |
-| DMI Motherboard Product          | 0VWGCV                                                                                          |
-| DMI Motherboard Version          | A05                                                                                             |
-| DMI Motherboard Serial Number    | .35QB3Q1.CN12961132000D.                                                                         |
-| DMI Chassis Manufacturer         | Alienware                                                                                       |
-| DMI Chassis Version              | A05                                                                                             |
-| DMI Chassis Serial Number        | 35QB3Q1                                                                                         |
-| DMI Chassis Asset Tag / Type     | Portable                                                                                        |</p>
-
-<p>–––––––––––––––––––––––––––––––––––</p>
-<h2 id="computer-name-details">Computer Name Details</h2>
-<p>| Attribute                      | Value               |
-|——————————–|———————|
-| Computer Comment               | * * *               |
-| Logical NetBIOS Name           | DESKTOP-559QF5D     |
-| Logical DNS Host Name          | DESKTOP-559QF5D     |
-| Logical DNS Domain Name        | (not separately given)  |
-| Logical Fully Qualified DNS    | DESKTOP-559QF5D     |
-| Physical NetBIOS Name          | DESKTOP-559QF5D     |
-| Physical DNS Host Name         | DESKTOP-559QF5D     |
-| Physical DNS Domain Name       | (not separately given)  |
-| Physical Fully Qualified DNS   | DESKTOP-559QF5D     |</p>
-
-<p>–––––––––––––––––––––––––––––––––––</p>
-<h2 id="bios-properties">BIOS Properties</h2>
-<p>| Attribute                            | Value                                                        |
-|————————————–|————————————————————–|
-| Vendor                               | Alienware                                                    |
-| Version                              | A05                                                          |
-| Release Date                         | 08/06/2010                                                   |
-| Size                                 | 64 KB                                                        |
-| System BIOS Version                  | 1.1                                                          |
-| Embedded Controller Firmware Version | 1.1                                                        |
-| Boot Devices                         | Floppy Disk, Hard Disk, CD-ROM                               |
-| Capabilities                         | Flash BIOS, Shadow BIOS, Selectable Boot, Network Service Boot, EDD, BBS, Smart Battery |
-| Supported Standards                  | DMI, ACPI, ESCD, PnP                                           |
-| Expansion Capabilities               | PCI, USB                                                     |
-| Virtual Machine                      | No                                                           |</p>
-
-<p>–––––––––––––––––––––––––––––––––––</p>
-<h2 id="system-properties">System Properties</h2>
-<p>| Attribute             | Value                                                                                        |
-|———————–|———————————————————————————————-|
-| Manufacturer          | Alienware                                                                                     |
-| Product               | M11x                                                                                          |
-| Version               | A05                                                                                           |
-| Serial Number         | 35QB3Q1                                                                                       |
-| SKU#                  | Null                                                                                          |
-| Family                | Phantom                                                                                       |
-| Universal Unique ID   | 44454C4C-35001051-8042B3C0-4F335131                                                            |
-| Universal Unique ID (GUID) | 4C4C4544-0035-5110-8042-B3C04F335131                                                     |
-| Wake-Up Type          | Power Switch                                                                                  |</p>
-
-<p>–––––––––––––––––––––––––––––––––––</p>
-<h2 id="motherboard-dmi-properties">Motherboard (DMI) Properties</h2>
-<p>| Attribute       | Value                           |
-|—————–|———————————|
-| Manufacturer    | Alienware                       |
-| Product         | 0VWGCV                          |
-| Version         | A05                             |
-| Serial Number   | .35QB3Q1.CN12961132000D.         |</p>
-
-<p>–––––––––––––––––––––––––––––––––––</p>
-<h2 id="chassis-properties">Chassis Properties</h2>
-<p>| Attribute            | Value         |
-|———————-|—————|
-| Manufacturer         | Alienware     |
-| Version              | A05           |
-| Serial Number        | 35QB3Q1       |
-| Chassis Type         | Portable      |
-| Boot-Up State        | Safe          |
-| Power Supply State   | Safe          |
-| Thermal State        | Safe          |
-| Security Status      | None          |</p>
-
-<p>–––––––––––––––––––––––––––––––––––</p>
-<h2 id="processor-properties">Processor Properties</h2>
-<p>| Attribute                | Value                                                                       |
-|————————–|—————————————————————————–|
-| Manufacturer             | Intel                                                                       |
-| Version                  | Genuine Intel(R) CPU U7300 @ 1.30GHz                                          |
-| External Clock           | 200 MHz                                                                     |
-| Maximum Clock            | 1730 MHz                                                                    |
-| Current Clock            | 1730 MHz                                                                    |
-| Type                     | Central Processor                                                           |
-| Voltage                  | 1.1 V                                                                       |
-| Status                   | Enabled                                                                     |
-| Upgrade                  | ZIF                                                                         |
-| Socket Designation       | U2E1                                                                        |</p>
-
-<p>–––––––––––––––––––––––––––––––––––</p>
-<h2 id="cpu-manufacturer-details">CPU Manufacturer Details</h2>
-<p>| Attribute          | Value                                                                                              |
-|——————–|—————————————————————————————————-|
-| Company Name       | Intel Corporation                                                                                  |
-| Product Information| https://www.intel.com/content/www/us/en/search.html?ws=text#q=Intel%20Core%202%20Duo%20SU7300&amp;sort=relevancy [138] |
-| Driver Update      | http://www.aida64.com/goto/?p=drvupdates [139]                                                      |</p>
-
-<p>–––––––––––––––––––––––––––––––––––</p>
-<h2 id="l1-cache-properties">L1 Cache Properties</h2>
-<p>| Attribute                 | Value                                                |
-|—————————|——————————————————|
-| Type                      | Data                                                 |
-| Status                    | Enabled                                              |
-| Operational Mode          | Write-Back                                           |
-| Associativity             | 8-way Set-Associative                                |
-| Maximum Size              | 32 KB                                                |
-| Installed Size            | 32 KB                                                |
-| Supported SRAM Type       | Asynchronous, Burst, Pipeline Burst                  |
-| Current SRAM Type         | Asynchronous                                         |
-| Error Correction          | Single-bit ECC                                       |
-| Socket Designation        | L1 Cache                                             |</p>
-
-<p>–––––––––––––––––––––––––––––––––––</p>
-<h2 id="l2-cache-properties">L2 Cache Properties</h2>
-<p>| Attribute                 | Value                                                |
-|—————————|——————————————————|
-| Type                      | Unified                                              |
-| Status                    | Enabled                                              |
-| Operational Mode          | Write-Back                                           |
-| Maximum Size              | 3 MB                                                 |
-| Installed Size            | 3 MB                                                 |
-| Supported SRAM Type       | Asynchronous, Burst, Pipeline Burst                  |
-| Current SRAM Type         | Burst                                                |
-| Error Correction          | Single-bit ECC                                       |
-| Socket Designation        | L2 Cache                                             |</p>
-
-<p>–––––––––––––––––––––––––––––––––––</p>
-<h2 id="memory-array-properties">Memory Array Properties</h2>
-<p>| Attribute             | Value                    |
-|———————–|————————–|
-| Location              | Motherboard              |
-| Memory Array Function | System Memory            |
-| Error Correction      | None                     |
-| Max. Memory Capacity  | 4 GB                     |
-| Memory Devices        | 2                        |</p>
-
-<p>–––––––––––––––––––––––––––––––––––</p>
-<h2 id="memory-device-m1-properties">Memory Device (M1) Properties</h2>
-<p>| Attribute           | Value                                                     |
-|———————|———————————————————–|
-| Form Factor         | SODIMM                                                    |
-| Type Detail         | Synchronous                                               |
-| Size                | 4 GB                                                      |
-| Max. Clock Speed    | 800 MT/s                                                  |
-| Total/ Data Width   | 64-bit / 64-bit                                           |
-| Device Locator      | M1                                                        |
-| Bank Locator        | Bank 0                                                    |
-| Manufacturer        | 0198                                                      |
-| Serial Number       | 951A5157                                                  |
-| Asset Tag           | 1919                                                      |</p>
-
-<p>–––––––––––––––––––––––––––––––––––</p>
-<h2 id="system-slot-jmb380-properties">System Slot (JMB380) Properties</h2>
-<p>| Attribute         | Value               |
-|——————-|———————|
-| Slot Designation  | JMB380              |
-| Type              | PCI-E               |
-| Usage             | In Use              |
-| Data Bus Width    | 32-bit              |
-| Length            | Long                |
-| ID                | 6                   |</p>
-
-<p>–––––––––––––––––––––––––––––––––––</p>
-<h2 id="port-connectors">Port Connectors</h2>
-<h3 id="usb">USB</h3>
-<p>| Attribute                          | Value           |
-|————————————|—————–|
-| Port Type                          | USB             |
-| Internal Reference Designator      | USB             |
-| Internal Connector Type            | None            |
-| External Connector Type            | USB             |</p>
-
-<h3 id="ethernet">Ethernet</h3>
-<p>| Attribute                          | Value           |
-|————————————|—————–|
-| Port Type                          | Network Port    |
-| Internal Reference Designator      | Ethernet        |
-| Internal Connector Type            | None            |
-| External Connector Type            | RJ-45           |</p>
-
-<p>–––––––––––––––––––––––––––––––––––</p>
-<h2 id="pointing-device-touch-pad-properties">Pointing Device (Touch Pad) Properties</h2>
-<p>| Attribute       | Value           |
-|—————–|—————–|
-| Device Type     | Touch Pad       |
-| Interface       | Bus Mouse       |
-| Buttons         | 2               |</p>
-
-<p>–––––––––––––––––––––––––––––––––––</p>
-<h2 id="on-board-device-realtek-hda-03-properties">On-Board Device (Realtek HDA-03) Properties</h2>
-<p>| Attribute     | Value       |
-|—————|————-|
-| Description   | Realtek HDA-03  |
-| Type          | Sound       |
-| Status        | Enabled     |</p>
-
-<p>–––––––––––––––––––––––––––––––––––</p>
-<h2 id="battery-properties">Battery Properties</h2>
-<p>| Attribute                | Value                            |
-|————————–|———————————-|
-| Device Name              | Alienware                        |
-| Manufacturer             | Alienware                        |
-| Manufacture Date         | 01/01/2009                       |
-| Serial Number            | 1                                |
-| Location                 | System Battery Bay               |
-| Battery Type             | Li-Ion                           |
-| Designed Capacity        | 64530 mWh                        |
-| Designed Voltage         | 14.800 V                         |
-| SDDS Version             | BATT_1234                        |</p>
-
-<p>–––––––––––––––––––––––––––––––––––</p>
-<h2 id="temperature-probe-properties">Temperature Probe Properties</h2>
-<p>| Attribute         | Value             |
-|——————-|——————-|
-| Device Description| Temperature Probe |
-| Location          | Processor         |
-| Status            | OK                |
-| Nominal Value     | 2594.0 °C         |</p>
-
-<p>–––––––––––––––––––––––––––––––––––</p>
-<h2 id="cooling-device-properties">Cooling Device Properties</h2>
-<p>| Attribute      | Value    |
-|—————-|———-|
-| Device Type    | Fan      |
-| Status         | OK       |
-| Nominal Speed  | 0 RPM    |</p>
-
-<p>–––––––––––––––––––––––––––––––––––</p>
-<h2 id="miscellaneous">Miscellaneous</h2>
-<p>| Attribute                | Value                                              |
-|————————–|—————————————————-|
-| OEM String (1)           | Dell System                                        |
-| OEM String (2)           | 1[0443]                                            |
-| OEM String (3)           | 5[0443]                                            |
-| OEM String (4)           | 13[0443]                                           |
-| System Configuration     | Jumper settings can be described here.             |</p>
-
-<p>–––––––––––––––––––––––––––––––––––</p>
-<h2 id="overclock-information">Overclock Information</h2>
-<h3 id="cpu-properties">CPU Properties</h3>
-<p>| Attribute           | Value                                                       |
-|———————|————————————————————-|
-| CPU Type            | Mobile DualCore Intel Core 2 Duo SU7300                       |
-| CPU Alias           | Penryn-3M                                                   |
-| CPU Stepping        | R0                                                          |
-| Engineering Sample  | No                                                          |
-| CPUID CPU Name      | Genuine Intel(R) CPU U7300 @ 1.30GHz                           |
-| CPUID Revision      | 0001067Ah                                                   |
-| CPU VID             | 0.9000 V                                                    |</p>
-
-<h3 id="cpu-speed">CPU Speed</h3>
-<p>| Attribute         | Value                                                          |
-|——————-|—————————————————————-|
-| CPU Clock         | 1729.0 MHz (original: 1300 MHz, overclock: 32%)                |
-| CPU Multiplier    | 6x                                                             |
-| CPU FSB           | 288.2 MHz (original: 200 MHz, overclock: 44%)                  |
-| Memory Bus        | 432.2 MHz                                                     |
-| DRAM:FSB Ratio    | 12:8                                                          |</p>
-
-<h3 id="cpu-cache">CPU Cache</h3>
-<p>| Attribute         | Value                                         |
-|——————-|———————————————–|
-| L1 Code Cache     | 32 KB per core                                |
-| L1 Data Cache     | 32 KB per core                                |
-| L2 Cache          | 3 MB (On-Die, ECC, ASC, Full-Speed)           |</p>
-
-<h3 id="motherboard--chipset">Motherboard &amp; Chipset</h3>
-<p>| Attribute                   | Value                                                                                                         |
-|—————————–|—————————————————————————————————————|
-| Motherboard ID              | <DMI>                                                                                                         |
-| Motherboard Name            | Alienware M11x                                                                                                |
-| Motherboard Chipset         | Intel Cantiga GS45                                                                                             |
-| Memory Timings              | 6-6-6-15 (CL-RCD-RP-RAS)                                                                                        |
-| DIMM1                       | Kingston, 4 GB DDR3-1066, DDR3 SDRAM (7-7-7-20 @ 533 MHz, 6-6-6-18 @ 457 MHz, 5-5-5-15 @ 380 MHz)            |
-| DIMM3                       | Kingston, 4 GB DDR3-1066, DDR3 SDRAM (7-7-7-20 @ 533 MHz, 6-6-6-18 @ 457 MHz, 5-5-5-15 @ 380 MHz)            |</DMI></p>
-
-<h3 id="bios-properties-overclock-section">BIOS Properties (Overclock Section)</h3>
-<p>| Attribute          | Value         |
-|——————–|—————|
-| System BIOS Date   | 08/06/10      |
-| Video BIOS Date    | 01/22/10      |
-| DMI BIOS Version   | A05           |</p>
-
-<h3 id="graphics-processor-properties">Graphics Processor Properties</h3>
-<p>| Attribute                  | Value                                                         |
-|—————————-|—————————————————————|
-| Video Adapter              | nVIDIA GeForce GT 335M (Dell)                                   |
-| GPU Code Name              | GT215M (PCI Express 2.0 x16 10DE / 0CAF, Rev A2)               |
-| GPU Clock (Geometric)      | 135 MHz                                                       |
-| GPU Clock (Shader)         | 270 MHz                                                       |
-| Memory Clock               | 135 MHz                                                       |</p>]]></content><author><name></name></author><category term="windows&gt;hardware&gt;AIDA64" /></entry></feed>
+<p><strong>Disclaimer</strong>: Use <code class="language-plaintext highlighter-rouge">simple-fileserver</code> at your own risk. The authors and maintainers are not responsible for any security issues or data loss resulting from its use.</p>]]></content><author><name></name></author><category term="scratchpad" /></entry></feed>
