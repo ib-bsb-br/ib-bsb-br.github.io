@@ -1,5 +1,5 @@
 ---
-tags: [AI>prompt]
+tags: [scratchpad, AI>prompt]
 info: aberto.
 date: 2025-02-10
 type: post
