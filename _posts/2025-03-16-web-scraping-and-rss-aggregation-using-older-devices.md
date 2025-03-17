@@ -8,15 +8,15 @@ published: true
 slug: web-scraping-and-rss-aggregation-using-older-devices
 title: 'Web scraping and RSS aggregation using older devices'
 ---
-─────────────────────────────────────────────────────
+
 1) CHOOSE AND INSTALL A LIGHTWEIGHT OPERATING SYSTEM
-─────────────────────────────────────────────────────
+
 • Netbooks: Install a lightweight distro such as Debian, Xubuntu, or MX Linux (32-bit if needed, otherwise 64-bit).  
 • Raspberry Pi 3B: Use Raspberry Pi OS (Lite version for minimal resources, or the standard Raspberry Pi OS if you prefer a GUI).
 
-─────────────────────────────────────────────────────
+
 2) SYSTEM PREPARATION AND SECURITY
-─────────────────────────────────────────────────────
+
 • Update Package Repositories:
   sudo apt-get update && sudo apt-get upgrade -y
 • (Optional) Harden SSH:
@@ -27,9 +27,9 @@ title: 'Web scraping and RSS aggregation using older devices'
 • Install some helpful tools:
   sudo apt-get install git curl wget nano ufw -y
 
-─────────────────────────────────────────────────────
+
 3) SET UP BASIC PROJECT ENVIRONMENT
-─────────────────────────────────────────────────────
+
 a) Create a dedicated directory:
   mkdir -p ~/personal_info_retrieval  
   cd ~/personal_info_retrieval
@@ -44,9 +44,9 @@ c) Create a Python virtual environment:
 d) Install important libraries:
   pip install requests beautifulsoup4 feedparser lxml
 
-─────────────────────────────────────────────────────
+
 4) RSS AGGREGATION (SIMPLER, LOW-RESOURCE TASK)
-─────────────────────────────────────────────────────
+
 RSS (Really Simple Syndication) is an XML-based feed that many websites and blogs provide for publishing their updates.
 
 a) Minimal Example Script (rss_aggregator.py):
@@ -86,9 +86,9 @@ b) Extended or More Advanced RSS Readers:
 • Tiny Tiny RSS (TT-RSS), Miniflux, or FreshRSS can run on older hardware without heavy overhead.  
 • If you want a GUI-based feed reader on a netbook, consider Newsboat (terminal-based) or Liferea (lightweight desktop application).
 
-─────────────────────────────────────────────────────
+
 5) BASIC WEB SCRAPING WORKFLOW
-─────────────────────────────────────────────────────
+
 Scraping retrieves HTML directly and extracts desired information—headlines, prices, etc.
 
 a) Example: Basic Python Scraper (scraper.py)
@@ -132,9 +132,9 @@ b) Notes on Performance:
 • Limit the depth of scraping. Stick to single pages or specifically targeted pages rather than crawling the entire domain.  
 • Consider short timeouts (5–10 seconds) to prevent old devices from hanging if a site is unresponsive.
 
-─────────────────────────────────────────────────────
+
 6) STORING AND MANAGING SCRAPED DATA
-─────────────────────────────────────────────────────
+
 Double-check you don’t fill your HDD with logs or data.
 
 a) SQLite Database (light footprint):
@@ -143,7 +143,8 @@ a) SQLite Database (light footprint):
 • Python usage:
   pip install sqlite3 (some distributions already have the sqlite3 module built in)
 • In your Python script:
-  
+
+```
   import sqlite3
   
   conn = sqlite3.connect("mydata.db")
@@ -157,6 +158,7 @@ a) SQLite Database (light footprint):
   c.execute("INSERT INTO headlines VALUES (?, ?, ?)", (timestamp, url, headline))
   conn.commit()
   conn.close()
+```
 
 b) Simple Files or CSV:
 • If your data volume is low, store results in JSON or CSV.  
@@ -168,25 +170,30 @@ b) Simple Files or CSV:
       json.dump(data_dict, f)
       f.write("\n")
 
-─────────────────────────────────────────────────────
+
 7) AUTOMATION WITH CRON
-─────────────────────────────────────────────────────
+
 Use cron to schedule tasks so your netbook or Pi does not require manual intervention.
 
 1. Edit crontab:
    crontab -e  
 2. Add lines like:
+
+```   
    # Run RSS aggregator every 6 hours
    0 */6 * * * /home/pi/personal_info_retrieval/venv/bin/python /home/pi/personal_info_retrieval/rss_aggregator.py >> /home/pi/rss_aggregator.log 2>&1
+```
 
+```
    # Run web scraper every day at 01:00
    0 1 * * * /home/pi/personal_info_retrieval/venv/bin/python /home/pi/personal_info_retrieval/scraper.py >> /home/pi/scraper.log 2>&1
+```
 
 Adjust paths and times as needed. This ensures automatic updates without using extra memory.
 
-─────────────────────────────────────────────────────
+
 8) LIGHTWEIGHT DASHBOARD OR OUTPUT VIEW
-─────────────────────────────────────────────────────
+
 You can visualize your data in a minimal form:
 
 • Console Tools:
@@ -213,22 +220,22 @@ You can visualize your data in a minimal form:
 • Access from LAN:
   http://<DEVICE_IP>:5000
 
-─────────────────────────────────────────────────────
+
 9) HARDWARE AND PERFORMANCE TIPS
-─────────────────────────────────────────────────────
+
 • Use minimal or no GUI on older netbooks and the Pi 3B.  
 • Avoid persistent high CPU tasks. Space out scrape intervals to prevent HDD thrashing.  
 • Maintain a single “control node” (e.g., Pi 3B) with data stored locally, and you can run remote scraping scripts on netbooks that send results back via scp/rsync if desired.  
 • Keep the entire environment updated to avoid library vulnerabilities.
 
-─────────────────────────────────────────────────────
+
 10) TROUBLESHOOTING
-─────────────────────────────────────────────────────
+
 • If scraping fails or times out, check connectivity, site structure changes, or blocklists. Adjust user-agent or add small random sleep intervals in the script to avoid being flagged as a bot.  
 • If the device slows down or runs hot, lower the scraping frequency.  
 • If storage becomes scarce on the HDD, rotate or prune old data.
 
-─────────────────────────────────────────────────────
+
 CONCLUSION
-─────────────────────────────────────────────────────
+
 Following this guide, your 2010-era netbooks and Raspberry Pi 3B can continuously gather and organize online content with minimal overhead. RSS aggregation provides a quick, low-resource approach for sites offering feeds, while web scraping covers any sources lacking an accessible feed. By tying everything together with lightweight databases or file logging and a simple cron schedule, you can maintain efficient, automated personalized information retrieval despite modest hardware resources.
