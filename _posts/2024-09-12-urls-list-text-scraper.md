@@ -1,6 +1,6 @@
 ---
 
-tags: [scripts>powershell, software>windows]
+tags: [scratchpad]
 info: aberto.
 date: 2024-09-12
 type: post
