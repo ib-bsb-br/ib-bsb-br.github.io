@@ -1,6 +1,6 @@
 ---
 
-tags: [scripts>python]
+tags: [scratchpad]
 info: aberto.
 date: 2025-01-15
 type: post
