@@ -1,6 +1,6 @@
 ---
 
-tags: [saúde]
+tags: [health]
 info: aberto.
 date: 2024-08-13
 type: post
