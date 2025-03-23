@@ -1,4 +1,85 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2025-03-23T10:59:24+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">using openSUSE uboot/grub to dualboot raspberry pi</title><link href="https://ib.bsb.br/using-opensuse-ubootgrub-to-dualboot-raspberry-pi/" rel="alternate" type="text/html" title="using openSUSE uboot/grub to dualboot raspberry pi" /><published>2025-03-23T00:00:00+00:00</published><updated>2025-03-23T10:57:05+00:00</updated><id>https://ib.bsb.br/using-opensuse-ubootgrub-to-dualboot-raspberry-pi</id><content type="html" xml:base="https://ib.bsb.br/using-opensuse-ubootgrub-to-dualboot-raspberry-pi/"><![CDATA[<p>──────────────────────────────</p>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2025-03-23T20:22:35+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">Backing up Windows machines using rsync and ssh</title><link href="https://ib.bsb.br/backing-up-windows-machines-using-rsync-and-ssh/" rel="alternate" type="text/html" title="Backing up Windows machines using rsync and ssh" /><published>2025-03-23T00:00:00+00:00</published><updated>2025-03-23T20:20:24+00:00</updated><id>https://ib.bsb.br/backing-up-windows-machines-using-rsync-and-ssh</id><content type="html" xml:base="https://ib.bsb.br/backing-up-windows-machines-using-rsync-and-ssh/"><![CDATA[<p>bibref https://articles.manugarg.com/backup_rsync.html</p>
+
+<p>Markdown Content:
+Economical backup solution: rsync and ssh
+—————————————–</p>
+
+<p>As all other unix tricks this is also the result of laziness and the need. I wanted to backup data on my windows laptop to a central linux/unix server. I didn’t want all the features of available expensive backup solutions. Just a simple updated copy of my data on a central machine which is backed up to the tape daily. rsync is known for fast incremental transfer and was an obvious choice for the purpose.</p>
+
+<p>We have a unix machine at our workplace which has a directory structure /backup/username allocated for backing up user data. rsync has a client/server architecture, where rsync client talks to an rsync daemon at the server side (This statement may not be completely true. I am not sure and don’t care also. You can refer to rsync manpage for complete discussion over rsync.). rsync client can connect to rsync server directly or through other remote transport programs like rsh, ssh etc. I decided to use ssh for transport for security and simplicity.</p>
+
+<p>rsync daemon requires a configuration file rsyncd.conf. For my use, I have set it up like this:</p>
+
+<p>[manu@amusbocldmon01 ~]$ cat rsyncd.conf
+use chroot = no
+[backup]
+        path = /backup
+        read only = no
+        comment = backup area</p>
+
+<p>This says,</p>
+
+<p>-do no chroot (required because I’ll run it as a non-root user)<br />
+-[backup] specifies a module named backup.<br />
+-/backup is the path to backup module on filesystem</p>
+
+<p>That’s all we need at the server side. We don’t need to keep rsync deamon running on the server. We’ll start rsync daemon from the client using ssh before starting the backup.</p>
+
+<p>At Windows side, we need rsync and some ssh client. rsync is available for windows through cygwin port. You can download cygwin from <a href="http://www.cygwin.com/">http://www.cygwin.com/</a>. While installing cygwin, remember to select rsync. For ssh client, you can either use ssh that comes with cygwin or plink command line tool that comes with putty. Since, I have already set up my putty for password-less authentication using public/private key pair and pageant, I’ll demonstrate this solution using plink. However you can use any other ssh client too. You can download putty and plink from <a href="http://www.chiark.greenend.org.uk/~sgtatham/putty/">http://www.chiark.greenend.org.uk/~sgtatham/putty/.</a> You can find much information about ssh password less authentication on the web. To keep commands short, add rsync and plink to Windows path. Let’s start our backup now.</p>
+
+<p>First, we need to start rsync daemon at the server. It can be started from the client using following command:</p>
+
+<p>plink -v -t -l manu fileserver.local.com rsync –daemon –port=1873 –config=$HOME/rsyncd.conf</p>
+
+<p>where, fileserver.local.com is the central server where we are going to store our data. This logs in user ‘manu’ on fileserver and starts a rsync daemon there at the port 1873. rsync goes to the background and plink returns immediately.</p>
+
+<p>Next we need to setup an ssh transport tunnel using plink:</p>
+
+<p>plink -v -N -L 873:localhost:1873 -l manu fileserver.local.com</p>
+
+<p>This sets up the local port forwarding – forwarding local port 873 to port 1873 on the remote server.</p>
+
+<p>After running this, we have port 873 on our windows box connected to the port 1873 on the fileserver on which rsync daemon is listening. So, now we just need to run rsync on windows machine with localhost as the target server:</p>
+
+<p>rsync -av src 127.0.0.1::backup/manu</p>
+
+<p>This command copies file or dir ‘<code class="language-plaintext highlighter-rouge">src</code>’ incrementally to directory ‘<code class="language-plaintext highlighter-rouge">manu</code>’ inside ‘backup’ module. Since this rsync is the one that comes with cygwin, it understand only cygwin paths for the files. For that reason, ‘src’ needs to be specified in cygwin terms. For example, <code class="language-plaintext highlighter-rouge">D:\project </code>becomes <code class="language-plaintext highlighter-rouge">/cygdrive/d/project</code> in cygwin terms.</p>
+
+<h2 id="putting-it-all-in-scripts">Putting it all in scripts:</h2>
+
+<p>This trick is not much handy, unless you put it in the scripts and make it easy to run. To automate the process, I created 2 small scripts:</p>
+
+<p>plink_rsync.bat: (To start plink for rsync)</p>
+
+<p>REM Start rsync daemon the server
+plink -v -t %* rsync –daemon –port=1873 –config=$HOME/rsyncd.conf
+REM Setup ssh transport tunnel.
+plink -v -N -L 873:localhost:1873 %*</p>
+
+<p>runrsync.bat: (Main script - calls plink_rsync.bat and starts rsync)</p>
+
+<p>REM Start plink_rsync.bat
+START /MIN “PLINK_FOR_RSYNC” plink_rsync.bat -l manu fileserver.local.com
+REM Sleep for 15 seconds to give plink enough time to finish
+sleep 15
+REM Iterate through filenames in filelist.txt and rsync them
+for /F “delims=” %%i in (filelist.txt) do rsync -av %%i 127.0.0.1::backup/manu
+REM Kill plink_rsync.bat window
+TASKKILL /T /F /FI “WINDOWTITLE eq PLINK_FOR_RSYNC *”
+REM Kill remote rsync daemon
+plink -l manu fileserver.local.com pkill rsync</p>
+
+<p>The main script starts <code class="language-plaintext highlighter-rouge">plink_rsync.bat</code> in another window and sleeps for 15 seconds to make sure that connection is set up. Then it runs rsync over the files and directories list in<code class="language-plaintext highlighter-rouge"> filelist.txt</code>. After rsyncing is done, it kills <code class="language-plaintext highlighter-rouge">plink_rsync.bat</code> window and kills rsync daemon on the remote server by running pkill though plink.</p>
+
+<p>filelist.txt contains the list of files and directories that you want to take backup of. For example, my <code class="language-plaintext highlighter-rouge">filelist.txt</code> contains:</p>
+
+<p>filelist.txt:</p>
+
+<p>“/cygdrive/d/Documents and Settings/501106700/My Documents/project”
+“/cygdrive/d/Documents and Settings/501106700/My Documents/Outlook”
+“/cygdrive/c/Program Files/Lotus/Sametime Client/Chat Transcripts”</p>
+
+<p>You can schedule runrsync.bat to run everyday or every week depending on your requirement.</p>]]></content><author><name></name></author><category term="scratchpad" /></entry><entry><title type="html">using openSUSE uboot/grub to dualboot raspberry pi</title><link href="https://ib.bsb.br/using-opensuse-ubootgrub-to-dualboot-raspberry-pi/" rel="alternate" type="text/html" title="using openSUSE uboot/grub to dualboot raspberry pi" /><published>2025-03-23T00:00:00+00:00</published><updated>2025-03-23T10:57:05+00:00</updated><id>https://ib.bsb.br/using-opensuse-ubootgrub-to-dualboot-raspberry-pi</id><content type="html" xml:base="https://ib.bsb.br/using-opensuse-ubootgrub-to-dualboot-raspberry-pi/"><![CDATA[<p>──────────────────────────────</p>
 <ol>
   <li>BACK UP AND PREPARE</li>
 </ol>
@@ -2204,57 +2285,4 @@ CRM: <strong>__</strong>/__ | Assinatura: <strong>__</strong><strong>__</strong>
 Carimbo e carimbo de autenticação hospitalar</p>
 
 <p>Data: <strong><em>/</em></strong>/<strong>_ | Hora: __<em>h</em>__min<br />
-Local: __</strong><strong>__</strong><strong>__</strong><strong>__</strong><strong>__</strong><strong>__</strong><strong>__</strong><strong>__</strong><em>__</em></p>]]></content><author><name></name></author><category term="trabalho" /></entry><entry><title type="html">CPF &amp;amp; plates whisper transcription fix</title><link href="https://ib.bsb.br/cpf-plates-whisper-transcription-fix/" rel="alternate" type="text/html" title="CPF &amp;amp; plates whisper transcription fix" /><published>2025-03-07T00:00:00+00:00</published><updated>2025-03-07T15:27:47+00:00</updated><id>https://ib.bsb.br/cpf-plates-whisper-transcription-fix</id><content type="html" xml:base="https://ib.bsb.br/cpf-plates-whisper-transcription-fix/"><![CDATA[<p>You are a specialized AI system designed to accurately process, verify, reassess, and refine audio transcriptions of Brazilian vehicle license plates and CPF numbers spelled out using the NATO (OTAN) phonetic alphabet. The user will provide two transcriptions:</p>
-
-<ol>
-  <li>An initial transcription, potentially ambiguous, incomplete, or containing placeholder terms (e.g., “negativo”).</li>
-  <li>A second transcription generated by modern audio technology, intended to help verify and clarify the first transcription.</li>
-</ol>
-
-<p>Your task is to carefully compare and reconcile these two transcriptions to produce a third, final, accurate, and clearly documented transcription. Follow these explicit instructions:</p>
-
-<p>Step 1: Brazilian License Plates</p>
-<ul>
-  <li>Convert spelled-out letters into their correct alphabetic characters according to the NATO phonetic alphabet.</li>
-  <li>Convert ordinal references (“primeiro,” “segundo,” “terceiro,” “quarto,” etc.) explicitly into numeric digits (1, 2, 3, 4, etc.).</li>
-  <li>Interpret the ambiguous term “negativo” explicitly as the digit zero (0). Clearly document this assumption whenever applied.</li>
-  <li>Ensure each license plate strictly adheres to one of the two official Brazilian formats:
-    <ul>
-      <li>Old format: Three letters followed by four numeric digits (e.g., ABC1234).</li>
-      <li>Mercosul format: Three letters, followed by one numeric digit, one letter, and two numeric digits (e.g., ABC1D23).</li>
-    </ul>
-  </li>
-  <li>If data is incomplete or contradictory, explicitly document the uncertainty and clearly state any assumptions made.</li>
-</ul>
-
-<p>Step 2: Brazilian CPF Numbers</p>
-<ul>
-  <li>Convert all spelled-out numeric references explicitly into numeric digits.</li>
-  <li>Interpret the ambiguous term “negativo” explicitly as the digit zero (0). Clearly document this assumption whenever applied.</li>
-  <li>Ensure each CPF number strictly consists of exactly 11 numeric digits, without punctuation, spaces, or special characters.</li>
-  <li>If data is incomplete or contradictory, explicitly document the uncertainty and clearly state any assumptions made.</li>
-</ul>
-
-<p>Step 3: Documentation and Transparency</p>
-<ul>
-  <li>Clearly document and justify every assumption or interpretation made, especially regarding ambiguous terms (“negativo”) or incomplete data.</li>
-  <li>Explicitly state any uncertainties or unresolved ambiguities remaining after reconciliation.</li>
-</ul>
-
-<p>Step 4: Final Output Format</p>
-<ul>
-  <li>Present each finalized license plate clearly in a single line, strictly adhering to the specified Brazilian formats (old or Mercosul).</li>
-  <li>Immediately below each plate, present the corresponding CPF number clearly in a single line, strictly as an 11-digit numeric sequence without punctuation or spaces.</li>
-</ul>
-
-<p>Maintain a professional, clear, precise, and explicitly instructive tone throughout your analysis and final transcription. Prioritize accuracy, transparency, and consistency in your final output.</p>
-
-<p>Here it is the first transcription:</p>
-
-<pre><code class="language-initial_transcription">placeholder
-</code></pre>
-
-<p>and the second transcription:</p>
-
-<pre><code class="language-last_transcription">placeholder
-</code></pre>]]></content><author><name></name></author><category term="AI&gt;prompt" /></entry></feed>
+Local: __</strong><strong>__</strong><strong>__</strong><strong>__</strong><strong>__</strong><strong>__</strong><strong>__</strong><strong>__</strong><em>__</em></p>]]></content><author><name></name></author><category term="trabalho" /></entry></feed>
