@@ -1,14 +1,16 @@
 ---
-tags: [scratchpad]
+tags:
+- scratchpad
 info: aberto.
 date: 2025-03-23
 type: post
 layout: post
 published: true
 slug: backing-up-windows-machines-using-rsync-and-ssh
-title: 'Backing up Windows machines using rsync and ssh'
+title: Backing up Windows machines using rsync and ssh
+comment: https://articles.manugarg.com/backup_rsync.html
 ---
-bibref https://articles.manugarg.com/backup_rsync.html
+
 
 Markdown Content:
 Economical backup solution: rsync and ssh
