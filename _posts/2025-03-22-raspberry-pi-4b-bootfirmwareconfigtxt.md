@@ -1,14 +1,16 @@
 ---
-tags: [scratchpad]
+tags:
+- scratchpad
 info: aberto.
 date: 2025-03-22
 type: post
 layout: post
 published: true
 slug: raspberry-pi-4b-bootfirmwareconfigtxt
-title: 'raspberry pi 4B /boot/firmware/config.txt'
+title: raspberry pi 4B /boot/firmware/config.txt
+comment: https://ib.bsb.br/raspberry-overclock
 ---
-bibref https://ib.bsb.br/raspberry-overclock
+
 
 {% codeblock %}
 # Raspberry Pi 4B Config.txt - Optimized for Dual-Monitor Video Playback
