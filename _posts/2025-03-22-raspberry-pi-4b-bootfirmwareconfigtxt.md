@@ -45,9 +45,8 @@ dtparam=audio=on
 
 # ---- Graphics Driver Configuration ----
 # Full KMS driver with improved video performance and reduced tearing
-# cma-512 allocates 512MB continuous memory blocks for GPU (important for smooth video)
 # nocomposite disables analog video output to free up resources
-dtoverlay=vc4-kms-v3d-pi4,nocomposite,cma-768
+dtoverlay=vc4-kms-v3d-pi4,nocomposite,cma-default
 dtoverlay=enable-bt
 dtoverlay=smbios
 dtoverlay=upstream
