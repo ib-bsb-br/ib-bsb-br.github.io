@@ -8,6 +8,7 @@ published: true
 slug: raspberry-overclock
 title: 'Overclocking Raspberry Pi 3B (debian), 4B (openSUSE)'
 ---
+bibref https://ib.bsb.br/raspberry-pi-4b-bootfirmwareconfigtxt
 
 # Overclocking Raspberry Pi 4B on openSUSE Tumbleweed (aarch64)
 
