@@ -1,14 +1,16 @@
 ---
-tags: [scratchpad]
+tags:
+- scratchpad
 info: aberto.
 date: 2025-03-27
 type: post
 layout: post
 published: true
 slug: raspberry-pi-3b-bootfirmwareconfigtxt
-title: 'raspberry pi 3B /boot/firmware/config.txt'
+title: raspberry pi 3B /boot/firmware/config.txt
+comment: https://ib.bsb.br/raspberry-overclock
 ---
-bibref https://ib.bsb.br/raspberry-overclock
+
 
 {% codeblock %}
 [all]
