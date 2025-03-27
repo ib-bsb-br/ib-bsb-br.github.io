@@ -1,6 +1,160 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2025-03-27T10:17:12+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">raspberry pi 3B /boot/firmware/config.txt</title><link href="https://ib.bsb.br/raspberry-pi-3b-bootfirmwareconfigtxt/" rel="alternate" type="text/html" title="raspberry pi 3B /boot/firmware/config.txt" /><published>2025-03-27T00:00:00+00:00</published><updated>2025-03-27T10:14:54+00:00</updated><id>https://ib.bsb.br/raspberry-pi-3b-bootfirmwareconfigtxt</id><content type="html" xml:base="https://ib.bsb.br/raspberry-pi-3b-bootfirmwareconfigtxt/"><![CDATA[<p>bibref https://ib.bsb.br/raspberry-overclock</p>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2025-03-27T11:44:07+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">ext4 filesystem backup script</title><link href="https://ib.bsb.br/ext4-filesystem-backup-script/" rel="alternate" type="text/html" title="ext4 filesystem backup script" /><published>2025-03-27T00:00:00+00:00</published><updated>2025-03-27T11:41:39+00:00</updated><id>https://ib.bsb.br/ext4-filesystem-backup-script</id><content type="html" xml:base="https://ib.bsb.br/ext4-filesystem-backup-script/"><![CDATA[<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c">#!/bin/bash</span>
+<span class="nb">set</span> <span class="nt">-e</span>  <span class="c"># Exit on any error</span>
 
-<section data-filename="_code-block.txt" data-code="[all]
+<span class="c"># Configuration</span>
+<span class="nv">DATE</span><span class="o">=</span><span class="si">$(</span><span class="nb">date</span> +%Y-%m-%d<span class="si">)</span>
+<span class="nv">BACKUP_DEVICE</span><span class="o">=</span><span class="s2">"/dev/sda1"</span>  <span class="c"># Change to your external drive</span>
+<span class="nv">MOUNT_POINT</span><span class="o">=</span><span class="s2">"/mnt/backup"</span>
+<span class="nv">BACKUP_DIR</span><span class="o">=</span><span class="s2">"</span><span class="nv">$MOUNT_POINT</span><span class="s2">/opensuse_backups/</span><span class="nv">$DATE</span><span class="s2">"</span>
+<span class="nv">LOG_FILE</span><span class="o">=</span><span class="s2">"/var/log/opensuse-backup.log"</span>
+<span class="nv">RETENTION_COUNT</span><span class="o">=</span>4  <span class="c"># Number of backups to keep</span>
+
+<span class="c"># Ensure log directory exists</span>
+<span class="nb">mkdir</span> <span class="nt">-p</span> <span class="s2">"</span><span class="si">$(</span><span class="nb">dirname</span> <span class="s2">"</span><span class="nv">$LOG_FILE</span><span class="s2">"</span><span class="si">)</span><span class="s2">"</span>
+
+<span class="c"># Redirect all output to log and console</span>
+<span class="nb">exec</span> <span class="o">&gt;</span> <span class="o">&gt;(</span><span class="nb">tee</span> <span class="nt">-a</span> <span class="s2">"</span><span class="nv">$LOG_FILE</span><span class="s2">"</span><span class="o">)</span> 2&gt;&amp;1
+<span class="nb">echo</span> <span class="s2">"===== Backup started at </span><span class="si">$(</span><span class="nb">date</span><span class="si">)</span><span class="s2"> ====="</span>
+
+<span class="c"># Check if backup device exists</span>
+<span class="k">if</span> <span class="o">[</span> <span class="o">!</span> <span class="nt">-b</span> <span class="s2">"</span><span class="nv">$BACKUP_DEVICE</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then
+    </span><span class="nb">echo</span> <span class="s2">"ERROR: Backup device </span><span class="nv">$BACKUP_DEVICE</span><span class="s2"> not found"</span>
+    <span class="nb">exit </span>1
+<span class="k">fi</span>
+
+<span class="c"># Create mount point if needed</span>
+<span class="nb">mkdir</span> <span class="nt">-p</span> <span class="s2">"</span><span class="nv">$MOUNT_POINT</span><span class="s2">"</span>
+
+<span class="c"># Check if already mounted</span>
+<span class="k">if</span> <span class="o">!</span> mountpoint <span class="nt">-q</span> <span class="s2">"</span><span class="nv">$MOUNT_POINT</span><span class="s2">"</span><span class="p">;</span> <span class="k">then
+    </span><span class="nb">echo</span> <span class="s2">"Mounting backup device..."</span>
+    mount <span class="s2">"</span><span class="nv">$BACKUP_DEVICE</span><span class="s2">"</span> <span class="s2">"</span><span class="nv">$MOUNT_POINT</span><span class="s2">"</span> <span class="o">||</span> <span class="o">{</span>
+        <span class="nb">echo</span> <span class="s2">"ERROR: Failed to mount backup device"</span>
+        <span class="nb">exit </span>1
+    <span class="o">}</span>
+    <span class="nv">MOUNTED</span><span class="o">=</span><span class="nb">true
+</span><span class="k">else
+    </span><span class="nb">echo</span> <span class="s2">"Backup device already mounted"</span>
+    <span class="nv">MOUNTED</span><span class="o">=</span><span class="nb">false
+</span><span class="k">fi</span>
+
+<span class="c"># Create backup directory</span>
+<span class="nb">mkdir</span> <span class="nt">-p</span> <span class="s2">"</span><span class="nv">$BACKUP_DIR</span><span class="s2">"</span>
+
+<span class="c"># Check available space (need at least 10GB free)</span>
+<span class="nv">AVAILABLE_SPACE</span><span class="o">=</span><span class="si">$(</span><span class="nb">df</span> <span class="nt">-BG</span> <span class="s2">"</span><span class="nv">$MOUNT_POINT</span><span class="s2">"</span> | <span class="nb">awk</span> <span class="s1">'NR==2 {print $4}'</span> | <span class="nb">sed</span> <span class="s1">'s/G//'</span><span class="si">)</span>
+<span class="k">if</span> <span class="o">[</span> <span class="s2">"</span><span class="nv">$AVAILABLE_SPACE</span><span class="s2">"</span> <span class="nt">-lt</span> 10 <span class="o">]</span><span class="p">;</span> <span class="k">then
+    </span><span class="nb">echo</span> <span class="s2">"ERROR: Not enough space on backup device (</span><span class="k">${</span><span class="nv">AVAILABLE_SPACE</span><span class="k">}</span><span class="s2">GB available, need at least 10GB)"</span>
+    <span class="nb">exit </span>1
+<span class="k">fi</span>
+
+<span class="c"># Perform backup with resource constraints</span>
+<span class="nb">echo</span> <span class="s2">"Starting backup to </span><span class="nv">$BACKUP_DIR</span><span class="s2">..."</span>
+ionice <span class="nt">-c</span> 3 <span class="nb">nice</span> <span class="nt">-n</span> 19 rsync <span class="nt">-aAXHSv</span> <span class="nt">--numeric-ids</span> <span class="nt">--delete</span> <span class="nt">--delete-excluded</span> <span class="se">\</span>
+  <span class="nt">--bwlimit</span><span class="o">=</span>10000 <span class="nt">--info</span><span class="o">=</span>progress2 <span class="se">\</span>
+  <span class="nt">--exclude</span><span class="o">={</span><span class="s2">"/dev/*"</span>,<span class="s2">"/proc/*"</span>,<span class="s2">"/sys/*"</span>,<span class="s2">"/tmp/*"</span>,<span class="s2">"/run/*"</span>,<span class="s2">"/mnt/*"</span>,<span class="s2">"/media/*"</span>,<span class="s2">"/lost+found"</span>,<span class="s2">"/var/cache/*"</span>,<span class="s2">"/var/tmp/*"</span>,<span class="s2">"*.iso"</span>,<span class="s2">"*.tmp"</span><span class="o">}</span> <span class="se">\</span>
+  / <span class="s2">"</span><span class="nv">$BACKUP_DIR</span><span class="s2">/"</span> 2&gt;&amp;1
+
+<span class="c"># Capture rsync exit code</span>
+<span class="nv">RSYNC_EXIT_CODE</span><span class="o">=</span><span class="k">${</span><span class="nv">PIPESTATUS</span><span class="p">[0]</span><span class="k">}</span>
+<span class="k">if</span> <span class="o">[</span> <span class="nv">$RSYNC_EXIT_CODE</span> <span class="nt">-ne</span> 0 <span class="o">]</span><span class="p">;</span> <span class="k">then
+    </span><span class="nb">echo</span> <span class="s2">"ERROR: Backup failed with exit code </span><span class="nv">$RSYNC_EXIT_CODE</span><span class="s2">"</span>
+    
+    <span class="c"># Cleanup if we mounted the device</span>
+    <span class="k">if</span> <span class="o">[</span> <span class="s2">"</span><span class="nv">$MOUNTED</span><span class="s2">"</span> <span class="o">=</span> <span class="nb">true</span> <span class="o">]</span><span class="p">;</span> <span class="k">then
+        </span><span class="nb">echo</span> <span class="s2">"Unmounting backup device..."</span>
+        umount <span class="s2">"</span><span class="nv">$MOUNT_POINT</span><span class="s2">"</span>
+    <span class="k">fi
+    
+    </span><span class="nb">exit</span> <span class="nv">$RSYNC_EXIT_CODE</span>
+<span class="k">fi</span>
+
+<span class="c"># Verify backup integrity</span>
+<span class="nb">echo</span> <span class="s2">"Verifying backup integrity..."</span>
+<span class="k">if</span> <span class="o">[</span> <span class="o">!</span> <span class="nt">-f</span> <span class="s2">"</span><span class="nv">$BACKUP_DIR</span><span class="s2">/etc/fstab"</span> <span class="o">]</span> <span class="o">||</span> <span class="o">[</span> <span class="o">!</span> <span class="nt">-f</span> <span class="s2">"</span><span class="nv">$BACKUP_DIR</span><span class="s2">/etc/passwd"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then
+    </span><span class="nb">echo</span> <span class="s2">"ERROR: Critical system files missing from backup"</span>
+    <span class="nb">exit </span>1
+<span class="k">fi</span>
+
+<span class="c"># Rotate backups - keep only the last N</span>
+<span class="nb">echo</span> <span class="s2">"Rotating backups..."</span>
+<span class="nb">cd</span> <span class="s2">"</span><span class="nv">$MOUNT_POINT</span><span class="s2">/opensuse_backups"</span>
+<span class="nv">BACKUPS</span><span class="o">=</span><span class="si">$(</span><span class="nb">ls</span> <span class="nt">-1tr</span> | <span class="nb">head</span> <span class="nt">-n</span> -<span class="nv">$RETENTION_COUNT</span><span class="si">)</span>
+<span class="k">if</span> <span class="o">[</span> <span class="nt">-n</span> <span class="s2">"</span><span class="nv">$BACKUPS</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then
+    </span><span class="nb">echo</span> <span class="s2">"</span><span class="nv">$BACKUPS</span><span class="s2">"</span> | xargs <span class="nb">rm</span> <span class="nt">-rf</span>
+    <span class="nb">echo</span> <span class="s2">"Removed old backups: </span><span class="nv">$BACKUPS</span><span class="s2">"</span>
+<span class="k">fi</span>
+
+<span class="c"># Cleanup</span>
+<span class="k">if</span> <span class="o">[</span> <span class="s2">"</span><span class="nv">$MOUNTED</span><span class="s2">"</span> <span class="o">=</span> <span class="nb">true</span> <span class="o">]</span><span class="p">;</span> <span class="k">then
+    </span><span class="nb">echo</span> <span class="s2">"Unmounting backup device..."</span>
+    umount <span class="s2">"</span><span class="nv">$MOUNT_POINT</span><span class="s2">"</span>
+<span class="k">fi
+
+</span><span class="nb">echo</span> <span class="s2">"===== Backup completed successfully at </span><span class="si">$(</span><span class="nb">date</span><span class="si">)</span><span class="s2"> ====="</span>
+</code></pre></div></div>
+
+<p>And here are the systemd service and timer files:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code># /etc/systemd/system/backup-opensuse.service
+[Unit]
+Description=Backup OpenSUSE to external drive
+After=network-online.target local-fs.target
+Wants=network-online.target
+RequiresMountsFor=/mnt
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/backup-opensuse.sh
+# Resource constraints
+IOSchedulingClass=idle
+IOSchedulingPriority=7
+CPUSchedulingPolicy=idle
+CPUSchedulingPriority=19
+Nice=19
+# Timeout after 12 hours
+TimeoutStartSec=12h
+# Restart on failure, but not too aggressively
+RestartSec=30min
+Restart=on-failure
+# Security hardening
+ProtectSystem=strict
+ReadWritePaths=/mnt /var/log
+PrivateTmp=true
+</code></pre></div></div>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code># /etc/systemd/system/backup-opensuse.timer
+[Unit]
+Description=Weekly backup of OpenSUSE
+
+[Timer]
+# Run at 2:00 AM on Sundays
+OnCalendar=Sun *-*-* 02:00:00
+# If system was off when timer should have triggered, run it when system starts
+Persistent=true
+# Add randomized delay to avoid resource contention
+RandomizedDelaySec=30min
+# Don't run immediately after boot
+AccuracySec=1min
+
+[Install]
+WantedBy=timers.target
+</code></pre></div></div>
+
+<p>To implement this solution:</p>
+
+<ol>
+  <li>Save the backup script as <code class="language-plaintext highlighter-rouge">/usr/local/bin/backup-opensuse.sh</code></li>
+  <li>Make it executable: <code class="language-plaintext highlighter-rouge">sudo chmod +x /usr/local/bin/backup-opensuse.sh</code></li>
+  <li>Save the service file as <code class="language-plaintext highlighter-rouge">/etc/systemd/system/backup-opensuse.service</code></li>
+  <li>Save the timer file as <code class="language-plaintext highlighter-rouge">/etc/systemd/system/backup-opensuse.timer</code></li>
+  <li>Enable and start the timer:
+    <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>sudo systemctl daemon-reload
+sudo systemctl enable backup-opensuse.timer
+sudo systemctl start backup-opensuse.timer
+</code></pre></div>    </div>
+  </li>
+</ol>]]></content><author><name></name></author><category term="scratchpad" /></entry><entry><title type="html">raspberry pi 3B /boot/firmware/config.txt</title><link href="https://ib.bsb.br/raspberry-pi-3b-bootfirmwareconfigtxt/" rel="alternate" type="text/html" title="raspberry pi 3B /boot/firmware/config.txt" /><published>2025-03-27T00:00:00+00:00</published><updated>2025-03-27T10:15:56+00:00</updated><id>https://ib.bsb.br/raspberry-pi-3b-bootfirmwareconfigtxt</id><content type="html" xml:base="https://ib.bsb.br/raspberry-pi-3b-bootfirmwareconfigtxt/"><![CDATA[<section data-filename="_code-block.txt" data-code="[all]
 # Basic System Settings
 disable_overscan=1
 disable_splash=1
@@ -1822,287 +1976,4 @@ php bin/fusio adduser
   <li><strong>API Documentation (Fusio’s OpenAPI):</strong> Leverage Fusio’s automatic OpenAPI specification and ReDoc integration to create and maintain up-to-date documentation for your APIs.</li>
 </ul>
 
-<p>By following these steps and best practices, you can build a powerful, reliable, and maintainable personal API integration system using Fusio to automate your digital life and connect your favorite online services and offline tools. Remember to start small, iterate, and continuously improve your system as your needs evolve. Happy automating! 🚀</p>]]></content><author><name></name></author><category term="scratchpad" /></entry><entry><title type="html">OPNsense + Unbound + Docker (AdGuard Home or Pi-hole) + Ansible Automation</title><link href="https://ib.bsb.br/opnsense-unbound-docker-adguard-home-or-pi-hole-ansible-automation/" rel="alternate" type="text/html" title="OPNsense + Unbound + Docker (AdGuard Home or Pi-hole) + Ansible Automation" /><published>2025-03-16T00:00:00+00:00</published><updated>2025-03-16T09:37:34+00:00</updated><id>https://ib.bsb.br/opnsense-unbound-docker-adguard-home-or-pi-hole-ansible-automation</id><content type="html" xml:base="https://ib.bsb.br/opnsense-unbound-docker-adguard-home-or-pi-hole-ansible-automation/"><![CDATA[<h2 id="scenario-overview">Scenario Overview</h2>
-
-<ul>
-  <li><strong>Purpose</strong>: Construct a resilient, robust homelab infrastructure to cover firewall, routing, DHCP, DNS resolution and ad-blocking using proven open-source tools.</li>
-  <li><strong>Components Integrated</strong>:
-    <ul>
-      <li><strong>OPNsense</strong> — Firewall, Router, DHCP, DNS rebinding protection</li>
-      <li><strong>Unbound</strong> (integrated within OPNsense) — Local recursive DNS resolver (self-hosted DNS queries)</li>
-      <li><strong>AdGuard Home OR Pi-hole</strong> (in Docker) — DNS sinkhole (ad-blocking, tracker blocking, DNS-over-HTTPS capability)</li>
-      <li><strong>Docker</strong> — Lightweight and flexible service encapsulation</li>
-      <li><strong>Ansible</strong> — Automated infrastructure deployment, backups, and recovery.</li>
-    </ul>
-  </li>
-</ul>
-
-<hr />
-
-<h2 id="step-1---deploy-opnsense-firewall-router-bare-metal--virtual-machine">STEP 1 - Deploy OPNsense Firewall Router (Bare Metal / Virtual Machine)</h2>
-
-<h3 id="installation">Installation</h3>
-
-<p>Download installer from official source:</p>
-<ul>
-  <li>Official Image: <a href="https://opnsense.org/download/">https://opnsense.org/download/</a></li>
-  <li>Recommendation: latest stable ISO version, amd64 architecture</li>
-</ul>
-
-<p>Install OPNsense on dedicated hardware or virtualization hypervisor (recommended hypervisors: Proxmox, VMware ESXi, XCP-ng).</p>
-
-<h3 id="network-interfaces">Network Interfaces</h3>
-
-<ul>
-  <li>Assign at least two interfaces:
-    <ul>
-      <li><code class="language-plaintext highlighter-rouge">WAN</code> → ISP modem (public facing)</li>
-      <li><code class="language-plaintext highlighter-rouge">LAN</code> → Switch (internal network, client-facing)</li>
-    </ul>
-  </li>
-</ul>
-
-<p>Adjust default interface settings to match your network.</p>
-
-<hr />
-
-<h2 id="step-2---opnsense-configuration-essentials">STEP 2 - OPNsense Configuration Essentials</h2>
-
-<p>Login:<br />
-<code class="language-plaintext highlighter-rouge">https://opnsense-ip</code> (Web GUI default user: root, password: opnsense)</p>
-
-<h3 id="lan-interface-configuration">LAN Interface Configuration</h3>
-
-<p>Example addressing scheme:</p>
-<ul>
-  <li>LAN Network: <code class="language-plaintext highlighter-rouge">192.168.10.0/24</code></li>
-  <li>OPNsense LAN IP: <code class="language-plaintext highlighter-rouge">192.168.10.1</code></li>
-</ul>
-
-<p>Configure at:</p>
-<ul>
-  <li>Interfaces → LAN: static IPv4, CIDR <code class="language-plaintext highlighter-rouge">192.168.10.1/24</code></li>
-</ul>
-
-<h3 id="dhcp-server-setup">DHCP Server Setup</h3>
-
-<ul>
-  <li>In <strong>Services → DHCPv4 → LAN</strong>:
-    <ul>
-      <li>Enable DHCPv4 server</li>
-      <li>Range: <code class="language-plaintext highlighter-rouge">192.168.10.100 - 192.168.10.200</code></li>
-      <li>Gateway: <code class="language-plaintext highlighter-rouge">192.168.10.1</code></li>
-      <li>DNS Server: Will be assigned later (AdGuard Home)</li>
-    </ul>
-  </li>
-</ul>
-
-<h3 id="firewall-basic-rules-default-recommended-rules">Firewall Basic Rules (default recommended rules):</h3>
-
-<ul>
-  <li>LAN interface → allow LAN to Any via IPv4 (default outbound rule provided by OPNsense)</li>
-  <li>WAN interface → default deny incoming, allow responses from LAN initiated traffic (default)</li>
-</ul>
-
-<hr />
-
-<h2 id="step-3---unbound-dns-configuration-in-opnsense">STEP 3 - Unbound DNS Configuration (In OPNsense)</h2>
-
-<p>Location: <code class="language-plaintext highlighter-rouge">Services → Unbound DNS</code></p>
-
-<ul>
-  <li>Enable Unbound service (<strong>check</strong>)</li>
-  <li>DNSSEC Validation (<strong>check</strong>)</li>
-  <li>Listen interfaces (<strong>check both</strong>): LAN and Localhost only</li>
-  <li>Access Lists: Allowed networks (“192.168.10.0/24”)</li>
-  <li>Advanced settings (recommended):
-    <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>server:
-cache-max-ttl: 86400
-cache-min-ttl: 300
-num-threads: 2
-outgoing-num-tcp: 10
-incoming-num-tcp: 10
-msg-cache-size: 32m
-rrset-cache-size: 64m
-infra-cache-numhosts: 5000
-infra-host-ttl: 3600
-ratelimit: 1000
-</code></pre></div>    </div>
-  </li>
-  <li>Enable DNS rebinding protection (<strong>check</strong>) under System → Settings → Administration → DNS settings (“Enable DNS Rebinding Checks”).</li>
-</ul>
-
-<hr />
-
-<h2 id="step-4---docker-host-preparation-adguard-home-or-pi-hole">STEP 4 - Docker Host Preparation (AdGuard Home or Pi-hole)</h2>
-
-<p>Deploy on dedicated physical server or VM, e.g., Ubuntu Server 22.04 LTS:</p>
-
-<h3 id="set-static-ip-on-docker-host-example">Set static IP on Docker host (example):</h3>
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>sudo nano /etc/netplan/00-installer-config.yaml
-</code></pre></div></div>
-
-<p>Configure static IP:</p>
-<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">network</span><span class="pi">:</span>
-  <span class="na">ethernets</span><span class="pi">:</span>
-    <span class="na">ens18</span><span class="pi">:</span>
-      <span class="na">dhcp4</span><span class="pi">:</span> <span class="kc">false</span>
-      <span class="na">addresses</span><span class="pi">:</span> <span class="pi">[</span><span class="nv">192.168.10.5/24</span><span class="pi">]</span>
-      <span class="na">gateway4</span><span class="pi">:</span> <span class="s">192.168.10.1</span>
-      <span class="na">nameservers</span><span class="pi">:</span>
-        <span class="na">addresses</span><span class="pi">:</span> <span class="pi">[</span><span class="nv">192.168.10.1</span><span class="pi">]</span>
-  <span class="na">version</span><span class="pi">:</span> <span class="m">2</span>
-</code></pre></div></div>
-
-<p>Apply and reboot:</p>
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>sudo netplan apply
-sudo reboot
-</code></pre></div></div>
-
-<h3 id="installing-docker-ubuntu-example">Installing Docker (Ubuntu Example):</h3>
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>apt update
-<span class="nb">sudo </span>apt <span class="nb">install </span>ca-certificates curl gnupg apt-transport-https software-properties-common <span class="nt">-y</span>
-curl <span class="nt">-fsSL</span> https://download.docker.com/linux/ubuntu/gpg | <span class="nb">sudo </span>gpg <span class="nt">--dearmor</span> <span class="nt">-o</span> /usr/share/keyrings/docker-archive-keyring.gpg
-<span class="nb">echo</span> <span class="s2">"deb [arch=</span><span class="si">$(</span>dpkg <span class="nt">--print-architecture</span><span class="si">)</span><span class="s2"> signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu jammy stable"</span> | <span class="nb">sudo tee</span> /etc/apt/sources.list.d/docker.list
-<span class="nb">sudo </span>apt update
-<span class="nb">sudo </span>apt <span class="nb">install </span>docker-ce docker-ce-cli docker-compose-plugin <span class="nt">-y</span>
-<span class="nb">sudo </span>usermod <span class="nt">-aG</span> docker <span class="nv">$USER</span>
-<span class="nb">sudo </span>reboot
-</code></pre></div></div>
-
-<hr />
-
-<h2 id="step-5---deploy-dns-sinkhole-pick-one">STEP 5 - Deploy DNS Sinkhole (Pick One)</h2>
-
-<h3 id="option-a-adguard-home-via-docker">OPTION A) AdGuard Home via Docker</h3>
-
-<p>Create directories:</p>
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">mkdir</span> <span class="nt">-p</span> ~/docker/adguard/<span class="o">{</span>work,conf<span class="o">}</span>
-</code></pre></div></div>
-
-<p>Launch AdGuard Home via Docker Compose:</p>
-<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># ~/docker/adguard/docker-compose.yml</span>
-<span class="na">version</span><span class="pi">:</span> <span class="s1">'</span><span class="s">3'</span>
-<span class="na">services</span><span class="pi">:</span>
-  <span class="na">adguardhome</span><span class="pi">:</span>
-    <span class="na">image</span><span class="pi">:</span> <span class="s">adguard/adguardhome:latest</span>
-    <span class="na">container_name</span><span class="pi">:</span> <span class="s">adguardhome</span>
-    <span class="na">restart</span><span class="pi">:</span> <span class="s">unless-stopped</span>
-    <span class="na">network_mode</span><span class="pi">:</span> <span class="s">host</span>
-    <span class="na">volumes</span><span class="pi">:</span>
-      <span class="pi">-</span> <span class="s">./work:/opt/adguardhome/work</span>
-      <span class="pi">-</span> <span class="s">./conf:/opt/adguardhome/conf</span>
-</code></pre></div></div>
-
-<p>Deploy:</p>
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>docker compose up -d
-</code></pre></div></div>
-
-<p>Web login to AdGuard Home at:<br />
-<code class="language-plaintext highlighter-rouge">http://192.168.10.5:3000</code></p>
-
-<p>After setup, change DHCP DNS entry in OPNsense DHCP server to <code class="language-plaintext highlighter-rouge">192.168.10.5</code></p>
-
-<h3 id="option-b-pi-hole-via-docker">OPTION B) Pi-hole via Docker</h3>
-
-<p>Create directories:</p>
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">mkdir</span> <span class="nt">-p</span> ~/docker/pihole/<span class="o">{</span>etc-pihole,etc-dnsmasq.d<span class="o">}</span>
-</code></pre></div></div>
-
-<p>Docker Compose YAML (<code class="language-plaintext highlighter-rouge">~/docker/pihole/docker-compose.yml</code>):</p>
-<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">version</span><span class="pi">:</span> <span class="s2">"</span><span class="s">3"</span>
-<span class="na">services</span><span class="pi">:</span>
-  <span class="na">pihole</span><span class="pi">:</span>
-    <span class="na">image</span><span class="pi">:</span> <span class="s">pihole/pihole:latest</span>
-    <span class="na">container_name</span><span class="pi">:</span> <span class="s">pihole</span>
-    <span class="na">restart</span><span class="pi">:</span> <span class="s">unless-stopped</span>
-    <span class="na">environment</span><span class="pi">:</span>
-      <span class="na">TZ</span><span class="pi">:</span> <span class="s1">'</span><span class="s">Europe/Berlin'</span>
-      <span class="na">WEBPASSWORD</span><span class="pi">:</span> <span class="s1">'</span><span class="s">StrongPasswordHere'</span>
-    <span class="na">ports</span><span class="pi">:</span>
-      <span class="pi">-</span> <span class="s2">"</span><span class="s">53:53/tcp"</span>
-      <span class="pi">-</span> <span class="s2">"</span><span class="s">53:53/udp"</span>
-      <span class="pi">-</span> <span class="s2">"</span><span class="s">80:80/tcp"</span>
-    <span class="na">volumes</span><span class="pi">:</span>
-      <span class="pi">-</span> <span class="s">./etc-pihole:/etc/pihole</span>
-      <span class="pi">-</span> <span class="s">./etc-dnsmasq.d:/etc/dnsmasq.d</span>
-</code></pre></div></div>
-
-<p>Start Pi-hole:</p>
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>docker compose up -d
-</code></pre></div></div>
-
-<p>Access WebGUI at:<br />
-<code class="language-plaintext highlighter-rouge">http://192.168.10.5/admin</code></p>
-
-<p>Set DHCP DNS IP to <code class="language-plaintext highlighter-rouge">192.168.10.5</code> in OPNsense DHCP server.</p>
-
-<hr />
-
-<h2 id="step-6---ansible-infrastructure-as-code--backups">STEP 6 - Ansible Infrastructure-as-Code &amp; Backups</h2>
-
-<p>Install Ansible (on local PC, Linux):</p>
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>sudo apt install ansible git -y
-</code></pre></div></div>
-
-<p>Project Directory structure:</p>
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>homelab-ansible/
-├── inventory.yml
-├── roles/
-│   ├── docker_host/
-│   │   └── tasks/main.yml
-│   └── opnsense_backup/
-│       └── tasks/main.yml
-└── site.yml
-</code></pre></div></div>
-
-<p><code class="language-plaintext highlighter-rouge">inventory.yml</code>:</p>
-<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">docker_host</span><span class="pi">:</span>
-  <span class="na">hosts</span><span class="pi">:</span>
-    <span class="na">docker01</span><span class="pi">:</span>
-      <span class="na">ansible_host</span><span class="pi">:</span> <span class="s">192.168.10.5</span>
-      <span class="na">ansible_user</span><span class="pi">:</span> <span class="s">youruser</span>
-<span class="na">opnsense_host</span><span class="pi">:</span>
-  <span class="na">hosts</span><span class="pi">:</span>
-    <span class="na">firewall</span><span class="pi">:</span>
-      <span class="na">ansible_host</span><span class="pi">:</span> <span class="s">192.168.10.1</span>
-      <span class="na">ansible_user</span><span class="pi">:</span> <span class="s">root</span>
-</code></pre></div></div>
-
-<p><code class="language-plaintext highlighter-rouge">site.yml</code>:</p>
-<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="pi">-</span> <span class="na">hosts</span><span class="pi">:</span> <span class="s">docker_host</span>
-  <span class="na">roles</span><span class="pi">:</span>
-    <span class="pi">-</span> <span class="s">docker_host</span>
-<span class="pi">-</span> <span class="na">hosts</span><span class="pi">:</span> <span class="s">opnsense_host</span>
-  <span class="na">roles</span><span class="pi">:</span>
-    <span class="pi">-</span> <span class="s">opnsense_backup</span>
-</code></pre></div></div>
-
-<p><code class="language-plaintext highlighter-rouge">roles/docker_host/tasks/main.yml</code>:</p>
-<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">Copy config files and restart containers</span>
-  <span class="na">copy</span><span class="pi">:</span>
-    <span class="na">src</span><span class="pi">:</span> <span class="s">~/docker/</span>
-    <span class="na">dest</span><span class="pi">:</span> <span class="s">~/docker/</span>
-  <span class="na">notify</span><span class="pi">:</span> <span class="s">restart docker compose</span>
-</code></pre></div></div>
-
-<p><code class="language-plaintext highlighter-rouge">roles/opnsense_backup/tasks/main.yml</code> (ex. OPNsense backup):</p>
-<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">Backup OPNsense config.xml</span>
-  <span class="na">fetch</span><span class="pi">:</span>
-    <span class="na">src</span><span class="pi">:</span> <span class="s">/conf/config.xml</span>
-    <span class="na">dest</span><span class="pi">:</span> <span class="s">backups/firewall_config.xml</span>
-</code></pre></div></div>
-
-<p>Run Ansible Playbook (periodically):</p>
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>ansible-playbook -i inventory.yml site.yml
-</code></pre></div></div>
-
-<hr />
-
-<h2 id="step-7---confirm-final-integration">STEP 7 - Confirm Final Integration</h2>
-
-<p>Clients → DHCP DNS server (<code class="language-plaintext highlighter-rouge">192.168.10.5</code>) → AdGuard or Pi-hole → Unbound (OPNsense at <code class="language-plaintext highlighter-rouge">192.168.10.1</code>) → Internet DNS Root servers</p>
-
-<p><strong>Backup strategy</strong> — Fully automated via Ansible, consistently reproducible.</p>
-
-<p>Homelab complete and optimized!</p>]]></content><author><name></name></author><category term="scratchpad" /></entry></feed>
+<p>By following these steps and best practices, you can build a powerful, reliable, and maintainable personal API integration system using Fusio to automate your digital life and connect your favorite online services and offline tools. Remember to start small, iterate, and continuously improve your system as your needs evolve. Happy automating! 🚀</p>]]></content><author><name></name></author><category term="scratchpad" /></entry></feed>
