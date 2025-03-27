@@ -118,11 +118,9 @@ RequiresMountsFor=/mnt
 [Service]
 Type=oneshot
 ExecStart=/usr/local/bin/backup-opensuse.sh
-# Resource constraints
+# Resource constraints - removed problematic CPU scheduling
 IOSchedulingClass=idle
 IOSchedulingPriority=7
-CPUSchedulingPolicy=idle
-CPUSchedulingPriority=19
 Nice=19
 # Timeout after 12 hours
 TimeoutStartSec=12h
@@ -165,4 +163,16 @@ To implement this solution:
    sudo systemctl daemon-reload
    sudo systemctl enable backup-opensuse.timer
    sudo systemctl start backup-opensuse.timer
+   ```
+6. Verify the timer is active:
+   ```
+   sudo systemctl list-timers backup-opensuse.timer
+   ```
+7. Test the backup manually:
+   ```
+   sudo systemctl start backup-opensuse.service
+   ```
+8. Monitor the backup progress:
+   ```
+   sudo journalctl -fu backup-opensuse.service
    ```
