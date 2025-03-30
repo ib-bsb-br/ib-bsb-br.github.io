@@ -11,6 +11,78 @@ title: raspberry pi 4B /boot/firmware/config.txt
 comment: https://ib.bsb.br/raspberry-overclock
 ---
 
+# Raspberry Pi 4b/400 Opensuse Tumbleweed Tweaks
+
+### Add new user
+```
+useradd -m my-user
+passwd my-user
+```
+### Fix sudo + groups
+```
+groupadd wheel
+usermod -aG audio,video,wheel my-user
+
+sed -i '/Defaults targetpw/s/^/# /g' /etc/sudoers
+sed -i '/ALL   ALL=(ALL) ALL/s/^/# /g' /etc/sudoers
+sed -i '/%wheel ALL=(ALL:ALL) ALL/s/^#+\s*//g' /etc/sudoers
+```
+### Change root password
+```
+passwd root
+```
+### Fix wifi (can't believe this is broken by default)
+```
+cd /lib/firmware/brcm/
+ln -s brcmfmac43456-sdio.bin brcmfmac43456-sdio.raspberrypi,400.bin
+ln -s brcmfmac43455-sdio.bin brcmfmac43455-sdio.raspberrypi,4-model-b.bin
+```
+### Enable bluetooth by default
+```
+systemctl reenable bluetooth
+echo "[Policy]
+AutoEnable=true
+" > /etc/bluetooth/main.conf
+```
+### Uninstall yast
+```
+zypper remove --clean-deps yast2
+zypper addlock yast2
+```
+### Fix rpi4 hardware acceleration
+```
+zypper in raspberrypi-firmware-extra-pi4 arm-trusted-firmware-rpi4
+sed -i '/dtoverlay=disable-v3d/s/^/# /g' /boot/efi/config.txt
+echo "gpu_mem=256" > /boot/efi/extraconfig.txt
+```
+### Codecs (just because)
+```
+zypper install opi
+opi codecs
+```
+### Install missing gnome packages
+```
+zypper in gnome-session-wayland	#Wayland
+zypper in gnome-software	#Gnome software
+zypper in gnome-extensions gjs gnome-browser-connector gnome-shell-extension-pop-shell unzip #Extensions
+zypper in gnome-online-accounts #Online Accounts
+```
+### Disable Suspend (unsupported)
+```
+systemctl mask sleep.target suspend.target hibernate.target hybrid-sleep.target
+```
+### Enable ZRAM
+```
+zypper in systemd-zram-service
+systemctl enable zramswap.service
+```
+### Personal tweaks (terminal + flathub)
+```
+zypper in micro-editor -nano +wl-clipboard btop fish
+flatpak remote-add flathub https://flathub.org/repo/flathub.flatpakrepo --user
+```
+
+***
 
 {% codeblock %}
 # Raspberry Pi 4B Config.txt - Optimized for Dual-Monitor Video Playback
