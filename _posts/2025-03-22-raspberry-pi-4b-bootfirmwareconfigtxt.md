@@ -11,6 +11,27 @@ title: raspberry pi 4B /boot/firmware/config.txt
 comment: https://ib.bsb.br/raspberry-overclock
 ---
 
+# Raspberry Pi 4b/400 Opensuse Tumbleweed Tweaks
+
+### Fix rpi4 hardware acceleration
+```
+zypper install raspberrypi-firmware-extra-pi4 arm-trusted-firmware-rpi4
+sed -i '/dtoverlay=disable-v3d/s/^/# /g' /boot/efi/config.txt
+echo "gpu_mem=256" > /boot/efi/extraconfig.txt
+```
+### Codecs (just because)
+```
+zypper install opi
+opi codecs
+```
+
+### Enable ZRAM
+```
+zypper install systemd-zram-service
+systemctl enable zramswap.service
+```
+
+***
 
 {% codeblock %}
 # Raspberry Pi 4B Config.txt - Optimized for Dual-Monitor Video Playback
