@@ -680,7 +680,6 @@ import json
 from datetime import datetime
 import platform
 
-# Default categories configuration
 DEFAULT_CATEGORIES_CONFIG = {
     "images": [".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp"],
     "documents": [".pdf", ".docx", ".doc", ".txt", ".rtf", ".odt", ".xlsx", ".xls", ".csv", ".pptx", ".ppt"],
@@ -689,12 +688,19 @@ DEFAULT_CATEGORIES_CONFIG = {
     "archives": [".zip", ".rar", ".tar", ".gz", ".bz2", ".7z"],
     "code": [".py", ".java", ".c", ".cpp", ".h", ".html", ".css", ".js", ".xml", ".json"],
     "apps": [".exe", ".msi", ".apk", ".dmg"],
-    "other": []  # Default category for unknown extensions
+    "other": []
 }
 
 def categorize_file_by_category(filename, categories_config):
     """
     Categorizes a file based on its extension and provided categories configuration.
+    
+    Args:
+        filename (str): Name of the file to categorize
+        categories_config (dict): Dictionary mapping category names to lists of extensions
+        
+    Returns:
+        str: The category name the file belongs to, or "other" if not found
     """
     _, extension = os.path.splitext(filename)
     extension = extension.lower()
@@ -706,63 +712,88 @@ def categorize_file_by_category(filename, categories_config):
 def create_folders(directory, organize_by, categories_config=None):
     """
     Creates category or extension-based folders in the target directory.
-    Useful if you wish to pre-generate folders prior to sorting.
+    
+    Args:
+        directory (str): Target directory where folders will be created
+        organize_by (str): Organization method ('category' or 'extension')
+        categories_config (dict, optional): Dictionary of categories and their extensions
     """
     if organize_by == 'category':
         for category in categories_config.keys():
             os.makedirs(os.path.join(directory, category), exist_ok=True)
     elif organize_by == 'extension':
-        # Folders will be created dynamically in sort_files() as extensions are encountered
+        # Folders will be created dynamically as extensions are encountered
         pass
     else:
         raise ValueError("Invalid organize_by option. Choose 'category' or 'extension'.")
 
 def handle_long_path(path):
     """
-    Handles long paths on Windows by adding the \\?\ prefix if length exceeds 255 characters.
+    Handles long paths on Windows by adding the \\?\ prefix.
+    
+    Args:
+        path (str): The file or directory path
+        
+    Returns:
+        str: Modified path for Windows with prefix if needed, or original path otherwise
     """
     if platform.system() == "Windows" and len(path) > 255:
         return "\\\\?\\" + path
     return path
 
 def sort_files(source_directory, target_directory, organize_by, use_timestamp, move_files, 
-               categories_config, include_hidden, follow_links, skip_existing):
+              categories_config, include_hidden, follow_links, skip_existing):
     """
-    Sorts files from source to target directory based on the chosen organization method.
+    Sorts files from source to target directory based on organization method.
+    
+    Args:
+        source_directory (str): Directory containing files to organize
+        target_directory (str): Directory where organized files will be placed
+        organize_by (str): Method to organize files ('category' or 'extension')
+        use_timestamp (bool): Whether to add timestamps to duplicate filenames
+        move_files (bool): Whether to move files instead of copying them
+        categories_config (dict): Dictionary mapping categories to file extensions
+        include_hidden (bool): Whether to process hidden files and directories
+        follow_links (bool): Whether to follow symbolic links during directory traversal
+        skip_existing (bool): Whether to skip files that already exist in the target
     """
-    # Transform paths for Windows if necessary
+    # Handle long paths for both source and target directories
     source_directory = handle_long_path(os.path.abspath(source_directory))
     target_directory = handle_long_path(os.path.abspath(target_directory))
 
     # Validate directories
     if not os.path.isdir(source_directory):
-        print(f"Error: Source directory '{source_directory}' is not valid.")
+        print(f"Error: Source directory '{source_directory}' is not a valid directory.")
         return
     if not os.path.exists(target_directory):
         os.makedirs(target_directory)
         print(f"Target directory '{target_directory}' created.")
     elif not os.path.isdir(target_directory):
-        print(f"Error: Target directory '{target_directory}' is not valid.")
+        print(f"Error: Target directory '{target_directory}' is not a valid directory.")
         return
 
+    # Initialize file counters
     total_files = 0
     processed_files = 0
-
-    # Traverse the source directory
+    
+    # Walk through the directory structure
     for root, dirs, files in os.walk(source_directory, followlinks=follow_links):
-        # Skip hidden directories if include_hidden is false
+        # Filter out hidden directories if include_hidden is False
         if not include_hidden:
             dirs[:] = [d for d in dirs if not d.startswith('.')]
-
+        
+        # Update total files count
         total_files += len(files)
-
+        
+        # Process each file
         for filename in files:
-            # Skip hidden files if include_hidden is false
+            # Skip hidden files if include_hidden is False
             if not include_hidden and filename.startswith('.'):
                 continue
 
+            # Get the full path of the file
             filepath = os.path.join(root, filename)
-
+            
             # Determine the target folder based on organization method
             if organize_by == 'category':
                 file_category = categorize_file_by_category(filename, categories_config)
@@ -772,49 +803,59 @@ def sort_files(source_directory, target_directory, organize_by, use_timestamp, m
                 if not extension:
                     # Handle files without extension
                     target_folder = os.path.join(target_directory, "no_extension")
+                    os.makedirs(target_folder, exist_ok=True)
                 else:
+                    # Use extension as folder name
                     target_folder = os.path.join(target_directory, extension[1:].lower())
-                os.makedirs(target_folder, exist_ok=True)
+                    os.makedirs(target_folder, exist_ok=True)
             else:
                 raise ValueError("Invalid organize_by option.")
 
-            # Build the final target path
+            # Determine the target path
             target_path = os.path.join(target_folder, filename)
 
             try:
-                if os.path.exists(target_path):
-                    if skip_existing:
-                        # Skip if file already exists and skip_existing is true
-                        print(f"Skipping '{filepath}' (already exists).")
-                        processed_files += 1
-                        continue
-                    elif use_timestamp:
-                        # If file exists and skip_existing is false, timestamp the new file
-                        file_date = datetime.fromtimestamp(os.path.getmtime(filepath))
-                        sanitized_date = file_date.isoformat().replace(":", "-")
-                        _, ext = os.path.splitext(filename)
-                        name_without_ext = filename[:-len(ext)] if ext else filename
-                        new_filename = f"{sanitized_date}-{name_without_ext}{ext}"
-                        target_path = os.path.join(target_folder, new_filename)
+                # Handle existing files
+                if os.path.exists(target_path) and skip_existing:
+                    print(f"Skipping '{filepath}' (already exists in target)")
+                    processed_files += 1
+                    continue
 
-                # Move or copy the file
+                # Handle existing files by timestamping (if not skipping)
+                if os.path.exists(target_path) and use_timestamp:
+                    file_date = datetime.fromtimestamp(os.path.getmtime(filepath))
+                    sanitized_date = file_date.isoformat().replace(":", "-")
+                    _, ext = os.path.splitext(filename)
+                    name_without_ext = filename[:-len(ext)] if ext else filename
+                    new_filename = f"{sanitized_date}-{name_without_ext}{ext}"
+                    target_path = os.path.join(target_folder, new_filename)
+
+                # Perform the file operation (move or copy)
                 if move_files:
                     shutil.move(filepath, target_path)
                     print(f"Moved '{filename}' to '{target_folder}'")
                 else:
-                    shutil.copy2(filepath, target_path)
+                    shutil.copy2(filepath, target_path)  # Use copy2 to preserve metadata
                     print(f"Copied '{filename}' to '{target_folder}'")
+
             except Exception as e:
                 print(f"Error processing '{filename}': {e}")
             finally:
+                # Update progress counter and display
                 processed_files += 1
                 print(f"Progress: {processed_files}/{total_files} files processed", end='\r')
 
-    print("\nFile organization completed!")
+    print("\nFile organization completed!")  # Newline after progress
 
 def load_config_file(config_path):
     """
     Loads categories configuration from a JSON file.
+    
+    Args:
+        config_path (str): Path to the JSON configuration file
+        
+    Returns:
+        dict: Categories configuration dictionary, or default config if loading fails
     """
     try:
         with open(config_path, 'r') as f:
@@ -824,38 +865,42 @@ def load_config_file(config_path):
         print(f"Warning: Config file not found at '{config_path}'. Using default categories.")
         return DEFAULT_CATEGORIES_CONFIG
     except json.JSONDecodeError:
-        print(f"Error: Invalid JSON format in '{config_path}'. Using default categories.")
+        print(f"Error: Invalid JSON format in config file '{config_path}'. Using default categories.")
         return DEFAULT_CATEGORIES_CONFIG
 
 def main():
     """
-    Main function to parse command line arguments and begin file organization.
+    Main function that parses command line arguments and initiates file organization.
     """
+    # Set up argument parser
     parser = argparse.ArgumentParser(
-        description="Organize files by category or extension with optional timestamping and move features."
+        description="Organize files by category or extension with timestamp and move options."
     )
-
-    parser.add_argument("--source", "-s", required=True, 
-                        help="Source directory containing files to organize.")
-    parser.add_argument("--target", "-t", required=True, 
-                        help="Target directory where files will be organized.")
-    parser.add_argument("--organize-by", choices=["category", "extension"], default="category", 
-                        help="Method to organize files (category or extension). Default is 'category'.")
-    parser.add_argument("--no-timestamp", action="store_true", 
-                        help="Disable timestamps for duplicate file naming.")
-    parser.add_argument("--move", action="store_true", 
-                        help="Move files instead of copying them.")
-    parser.add_argument("--config", "-c", 
-                        help="Path to a JSON configuration file defining categories.")
+    
+    # Define command-line arguments
+    parser.add_argument('--source', '-s', required=True, 
+                      help='Source directory to organize files from.')
+    parser.add_argument('--target', '-t', required=True, 
+                      help='Target directory to organize files into.')
+    parser.add_argument('--organize-by', choices=['category', 'extension'], default='category', 
+                      help='Organize files by category or extension. Default is category.')
+    parser.add_argument('--no-timestamp', action='store_true', 
+                      help='Disable timestamping of filenames.')
+    parser.add_argument('--move', action='store_true', 
+                      help='Move files instead of copying.')
+    parser.add_argument('--config', '-c', 
+                      help='Path to a JSON configuration file for categories.')
     parser.add_argument("-i", "--include_hidden", action="store_true", 
-                        help="Include hidden files and directories.")
+                      help="Include hidden files and directories")
     parser.add_argument("-l", "--follow_links", action="store_true", 
-                        help="Follow symbolic links in the source directory.")
+                      help="Follow symbolic links")
     parser.add_argument("-sk", "--skip_existing", action="store_true", 
-                        help="Skip existing files in the target directory instead of timestamping.")
+                      help="Skip existing files instead of timestamping")
 
+    # Parse arguments
     args = parser.parse_args()
 
+    # Extract argument values
     source_directory = args.source
     target_directory = args.target
     organize_by = args.organize_by
@@ -866,18 +911,17 @@ def main():
     follow_links = args.follow_links
     skip_existing = args.skip_existing
 
+    # Load category configuration
     categories_config = DEFAULT_CATEGORIES_CONFIG
     if config_path:
         categories_config = load_config_file(config_path)
-        print(f"Using custom categories from '{config_path}'")
+        print(f"Using custom categories from '{config_path}'") 
     else:
         print("Using default categories.")
 
-    # Optionally call create_folders() if needed:
-    # create_folders(target_directory, organize_by, categories_config)
-
-    sort_files(source_directory, target_directory, organize_by, use_timestamp, move_files, 
-               categories_config, include_hidden, follow_links, skip_existing)
+    # Start the file sorting process
+    sort_files(source_directory, target_directory, organize_by, use_timestamp, 
+              move_files, categories_config, include_hidden, follow_links, skip_existing)
 
 if __name__ == "__main__":
     main()
