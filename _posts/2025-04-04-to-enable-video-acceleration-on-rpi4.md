@@ -1,14 +1,16 @@
 ---
-tags: [scratchpad]
+tags:
+- scratchpad
 info: aberto.
 date: 2025-04-04
 type: post
 layout: post
 published: true
 slug: to-enable-video-acceleration-on-rpi4
-title: 'to enable video acceleration on RPI4'
+title: to enable video acceleration on RPI4
+comment: https://www.dedoimedo.com/computers/rpi4-ubuntu-mate-hw-video-acceleration.html
 ---
-bibref https://www.dedoimedo.com/computers/rpi4-ubuntu-mate-hw-video-acceleration.html
+
 
 Markdown Content:
 RPI4 & Ubuntu MATE - How to enable video acceleration
