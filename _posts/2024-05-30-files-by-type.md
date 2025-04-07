@@ -1,1053 +1,1054 @@
 ---
 title: Organize files by type
 date: 2024-05-30
-tags: [scripts>python]
+tags: [scripts>rust]
 info: aberto.
 type: post
 layout: post
 ---
 
-# 'files by type' Documentation
+# Building and Running the File Organizer on Windows
 
-A Python utility for organizing files from source directories into categorized target folders.
+## Prerequisites
 
-## Project Overview
+Before you begin, you need to install Rust:
 
-### Purpose
-This utility solves the problem of disorganized file directories by automatically sorting files based on their types or extensions. It addresses common issues like:
+1. Visit [https://rustup.rs/](https://rustup.rs/) to download the Rust installer
+2. Run the installer to set up:
+   - `rustc` (the compiler)
+   - `cargo` (the build tool and package manager)
 
-- Mixed file types in download or document folders
-- Difficulty finding specific file types
-- Managing large collections of files
-- Batch organizing files while preserving their content and metadata
+## Creating the Project
 
-### Core Functionality
-- Sort files by predefined categories (images, documents, etc.)
-- Sort files by their extensions
-- Copy or move files from source to destination
-- Handle duplicate filenames
-- Process hidden files and follow symbolic links if requested
-- Track progress during file operations
-
-### Design Principles
-1. **Configurability:** Users can customize how files are categorized
-2. **Reliability:** Careful handling of edge cases like duplicates and long paths
-3. **Transparency:** Clear feedback on what's happening during operation
-4. **Simplicity:** Straightforward command-line interface
-
-## Installation
-
-The utility requires only Python standard library modules and no external dependencies.
-
-1. Download the script:
-```bash
-curl -O https://example.com/file_organizer.py
-# or
-wget https://example.com/file_organizer.py
-```
-
-2. Make the script executable (Linux/macOS):
-```bash
-chmod +x file_organizer.py
-```
-
-## Usage
-
-### Basic Command Structure
+Open a command prompt and run:
 
 ```bash
-python file_organizer.py --source <source_directory> --target <target_directory> [options]
+# Create a new Rust project
+cargo new file_organizer_rs
+cd file_organizer_rs
+
+# Replace default files with project files
+# Replace the contents of Cargo.toml with the provided configuration
+# Replace the contents of src/main.rs with the provided source code
 ```
 
-### Command Line Options
+## Building the Project
 
-| Option | Description |
-|--------|-------------|
-| --source, -s | Source directory to organize files from (required) |
-| --target, -t | Target directory to organize files into (required) |
-| --organize-by | Organization method: 'category' or 'extension' (default: 'category') |
-| --no-timestamp | Disable adding timestamps to duplicate filenames |
-| --move | Move files instead of copying them |
-| --config, -c | Path to a JSON configuration file for custom categories |
-| -i, --include_hidden | Include hidden files and directories |
-| -l, --follow_links | Follow symbolic links during directory traversal |
-| -sk, --skip_existing | Skip existing files instead of timestamping |
+### Debug Build (For Development)
 
-## Configuration
-
-### Default Categories
-
-The utility uses these default file categories:
-
-| Category | File Extensions |
-|----------|----------------|
-| images | .jpg, .jpeg, .png, .gif, .bmp, .webp |
-| documents | .pdf, .docx, .doc, .txt, .rtf, .odt, .xlsx, .xls, .csv, .pptx, .ppt |
-| videos | .mp4, .avi, .mkv, .mov, .wmv, .flv |
-| audio | .mp3, .wav, .flac, .aac, .ogg, .m4a |
-| archives | .zip, .rar, .tar, .gz, .bz2, .7z |
-| code | .py, .java, .c, .cpp, .h, .html, .css, .js, .xml, .json |
-| apps | .exe, .msi, .apk, .dmg |
-| other | Any file extension not listed above |
-
-### Custom Categories
-
-You can define your own categories using a JSON configuration file:
-
-```json
-{
-  "category_name1": [".ext1", ".ext2"],
-  "category_name2": [".ext3", ".ext4"],
-  "other": []
-}
+```bash
+cargo build
 ```
 
-Example custom config file:
+The executable will be created in the `target/debug/` directory.
 
-```json
-{
-  "work": [".doc", ".docx", ".pdf", ".xls", ".xlsx", ".ppt", ".pptx"],
-  "photos": [".jpg", ".jpeg", ".png", ".gif", ".webp"],
-  "code": [".py", ".js", ".html", ".css", ".java", ".c", ".cpp", ".h"],
-  "media": [".mp3", ".mp4", ".avi", ".mkv", ".mov", ".flac", ".wav"],
-  "compressed": [".zip", ".rar", ".tar", ".gz", ".7z"],
-  "other": []
-}
+### Release Build (For Distribution)
+
+For a smaller, optimized executable:
+
+```bash
+cargo build --release
 ```
 
-## Examples
+The executable will be created in the `target/release/` directory.
 
-1. **Basic organization by category:**
-   ```bash
-   python file_organizer.py --source ~/Downloads --target ~/Organized
-   ```
+## Running the Tool
 
-2. **Organize by file extension:**
-   ```bash
-   python file_organizer.py --source ~/Downloads --target ~/Organized --organize-by extension
-   ```
+### Getting Help
 
-3. **Move files instead of copying:**
-   ```bash
-   python file_organizer.py --source ~/Downloads --target ~/Organized --move
-   ```
+View all available options:
 
-4. **Skip duplicate files instead of timestamping:**
-   ```bash
-   python file_organizer.py --source ~/Downloads --target ~/Organized --skip_existing
-   ```
+```bash
+.\target\release\file_organizer_rs.exe --help
+```
 
-5. **Include hidden files and follow symbolic links:**
-   ```bash
-   python file_organizer.py --source ~/Downloads --target ~/Organized --include_hidden --follow_links
-   ```
+### Usage Examples
 
-## Troubleshooting
+#### Basic File Organization
 
-### Permission Errors
-- Ensure you have read permissions for the source directory
-- Ensure you have write permissions for the target directory
-- On Unix systems, run with sudo for system directories (use with caution)
+Copy files by category from Downloads to an organized folder:
 
-### Long Paths on Windows
-The utility automatically handles long paths (>255 characters) on Windows by prefixing with `\\?\`. If you still encounter issues:
-- Use shorter directory names
-- Move files to a less deeply nested location before organizing
+```bash
+.\target\debug\file_organizer_rs.exe --source C:\Users\YourUser\Downloads --target C:\OrganizedFiles
+```
 
-### Performance with Large Directories
-- For very large directories (thousands of files), the initial scan may take time
-- Consider organizing subdirectories separately if performance is an issue
+#### Moving Files with Duplicate Handling
 
-### Duplicate Files
-When a file with the same name exists in the target directory:
+Move files from Downloads, adding timestamps to duplicates:
 
-1. Default behavior: Add timestamp to filename
-2. With `--skip_existing`: Skip the file
-3. With `--no-timestamp`: Overwrite existing file (use with caution)
+```bash
+.\target\debug\file_organizer_rs.exe --source C:\Users\YourUser\Downloads --target C:\OrganizedFiles --move --timestamp-duplicates
+```
 
-## Development Notes
+#### Organizing by File Extension
 
-### Design Decisions
+Organize files by extension, including hidden files:
 
-1. **File Operations (Copy vs. Move)**
-   - Copy is the default to prevent accidental data loss
-   - Move functionality provided for efficiency when source files aren't needed
+```bash
+.\target\release\file_organizer_rs.exe -s "C:\Path\To\Source" -t "C:\Path\To\Target" --organize-by extension --include-hidden
+```
 
-2. **Categorization System**
-   - Default categories cover common file types
-   - Custom categories supported via JSON for flexibility
-   - Extension-based organization added for users who prefer that system
+#### Advanced Configuration
 
-3. **Handling Duplicates**
-   - Timestamp approach preserves both old and new files
-   - Skip option added for incremental organization tasks
+Use a custom configuration file and log all activity:
 
-4. **Error Handling**
-   - Individual file errors don't halt the entire process
-   - Errors are reported but the utility continues processing other files
+```bash
+.\target\release\file_organizer_rs.exe -s .\input -t .\output -c .\my_config.json --log-file activity.log --overwrite
+```
 
-### Error Handling Strategy
+## Common Options Reference
 
-The utility employs an "attempt and continue" error handling strategy:
-- Each file operation is wrapped in a try/except block
-- Errors with individual files are reported but don't stop the overall process
-- This ensures maximum files are processed even if some cause issues
+| Option | Short | Description |
+|--------|-------|-------------|
+| `--source` | `-s` | Source directory to organize files from |
+| `--target` | `-t` | Target directory to place organized files |
+| `--move` | | Move files instead of copying them |
+| `--organize-by` | | Organization method (extension or category) |
+| `--timestamp-duplicates` | | Add timestamp to duplicate files |
+| `--include-hidden` | `-i` | Include hidden files and directories |
+| `--overwrite` | | Overwrite existing files in target |
+| `--config` | `-c` | Path to custom configuration file |
+| `--log-file` | | Write logs to specified file |
 
-### Security Considerations
+## Testing Your Installation
 
-1. **File Operations**
-   - The utility doesn't attempt to open or read file contents (only metadata)
-   - No execution of files occurs during organization
-   
-2. **When Using Move Operations**
-   - Be aware that move operations permanently change your file system
-   - Always verify the target directory before using --move
-
-## Testing
-
-Refer to [TESTING.md](TESTING.md) for detailed testing procedures and scenarios.
-
-# Testing the File Organizer
-
-This document outlines procedures for testing the File Organizer utility to ensure it functions correctly.
-
-## Test Environment Setup
-
-Create a test directory structure with various file types:
+After building, verify your installation works by running a simple test:
 
 ```bash
 # Create test directories
-mkdir -p test_environment/source
-mkdir -p test_environment/target
+mkdir test_source test_target
 
-# Create test files
-touch test_environment/source/document1.pdf
-touch test_environment/source/document2.docx
-touch test_environment/source/image1.jpg
-touch test_environment/source/image2.png
-touch test_environment/source/video1.mp4
-touch test_environment/source/script.py
-touch test_environment/source/archive.zip
-touch test_environment/source/noextension
-touch test_environment/source/.hidden_file
-
-# Create subdirectory with more files
-mkdir -p test_environment/source/subdir
-touch test_environment/source/subdir/nested_doc.pdf
-touch test_environment/source/subdir/nested_image.jpg
+# Copy some test files to test_source
+# Then run the organizer
+.\target\debug\file_organizer_rs.exe -s .\test_source -t .\test_target
 ```
 
-## Test Cases
-
-### Test Case 1: Basic Category Organization
-
-**Purpose:** Verify that files are correctly organized into category folders
-
-**Command:**
-```bash
-python file_organizer.py --source test_environment/source --target test_environment/target
-```
-
-**Expected Results:**
-- Target directory should contain category folders: documents, images, videos, code, archives, other
-- Files should be placed in their correct category folders:
-  - documents: document1.pdf, document2.docx
-  - images: image1.jpg, image2.png
-  - videos: video1.mp4
-  - code: script.py
-  - archives: archive.zip
-  - other: noextension
-- Hidden files should be skipped (.hidden_file)
-- All files should be copied, not moved (source files should still exist)
-
-**Verification:**
-```bash
-ls -la test_environment/target/*/
-ls -la test_environment/source/
-```
-
-### Test Case 2: Extension-based Organization
-
-**Purpose:** Verify that files are correctly organized by their extensions
-
-**Command:**
-```bash
-python file_organizer.py --source test_environment/source --target test_environment/target --organize-by extension
-```
-
-**Expected Results:**
-- Target directory should contain extension folders: pdf, docx, jpg, png, mp4, py, zip, no_extension
-- Files should be placed in their respective extension folders
-- Files without extension should be in the no_extension folder
-- All files should be copied, not moved
-
-**Verification:**
-```bash
-ls -la test_environment/target/*/
-```
-
-### Test Case 3: Move Operation
-
-**Purpose:** Verify that files are moved instead of copied when using the --move flag
-
-**Command:**
-```bash
-python file_organizer.py --source test_environment/source --target test_environment/target --move
-```
-
-**Expected Results:**
-- Files should be moved to their category folders in the target directory
-- Source directory should no longer contain the moved files
-- Subdirectories in source should remain (unless empty on your OS)
-
-**Verification:**
-```bash
-ls -la test_environment/source/
-ls -la test_environment/target/*/
-```
-
-### Test Case 4: Duplicate File Handling with Timestamps
-
-**Purpose:** Verify that duplicate files are handled correctly with timestamps
-
-**Preparation:**
-```bash
-# Create duplicate file in target
-mkdir -p test_environment/target/documents
-cp test_environment/source/document1.pdf test_environment/target/documents/
-```
-
-**Command:**
-```bash
-python file_organizer.py --source test_environment/source --target test_environment/target
-```
-
-**Expected Results:**
-- document1.pdf should be copied with a timestamp in the name (e.g., 2023-01-01T12-30-45-document1.pdf)
-- Original document1.pdf should remain unchanged in target directory
-- Console output should indicate that a timestamp was added
-
-**Verification:**
-```bash
-ls -la test_environment/target/documents/
-```
-
-### Test Case 5: Skip Existing Files
-
-**Purpose:** Verify that existing files are skipped with the --skip_existing flag
-
-**Command:**
-```bash
-python file_organizer.py --source test_environment/source --target test_environment/target --skip_existing
-```
-
-**Expected Results:**
-- document1.pdf should be skipped (not copied again)
-- Console output should indicate that document1.pdf was skipped
-- Other files should be processed normally
-
-**Verification:**
-```bash
-# Only one document1.pdf should exist in the target
-ls -la test_environment/target/documents/
-```
-
-### Test Case 6: Include Hidden Files
-
-**Purpose:** Verify that hidden files are processed when using the --include_hidden flag
-
-**Command:**
-```bash
-python file_organizer.py --source test_environment/source --target test_environment/target --include_hidden
-```
-
-**Expected Results:**
-- .hidden_file should be processed and copied to the "other" category
-- Console output should indicate that .hidden_file was processed
-
-**Verification:**
-```bash
-ls -la test_environment/target/other/
-```
-
-### Test Case 7: Custom Categories
-
-**Purpose:** Verify that custom category configurations work correctly
-
-**Preparation:**
-```bash
-# Create a custom config file
-cat > test_environment/custom_config.json << EOF
-{
-  "text_files": [".pdf", ".docx", ".txt"],
-  "media": [".jpg", ".png", ".mp4"],
-  "code_files": [".py", ".js", ".html"],
-  "other": []
-}
-EOF
-```
-
-**Command:**
-```bash
-python file_organizer.py --source test_environment/source --target test_environment/target --config test_environment/custom_config.json
-```
-
-**Expected Results:**
-- Files should be organized according to the custom categories:
-  - text_files: document1.pdf, document2.docx
-  - media: image1.jpg, image2.png, video1.mp4
-  - code_files: script.py
-  - other: archive.zip, noextension
-- Console output should indicate custom categories are being used
-
-**Verification:**
-```bash
-ls -la test_environment/target/*/
-```
-
-## Test Result Interpretation
-
-Each test case should result in files being organized according to the expected results. If any test fails:
-
-1. Check console output for error messages
-2. Verify file permissions in source and target directories
-3. Ensure test environment was set up correctly
-4. Check if target directories were created as expected
-5. Verify file contents to ensure they weren't corrupted during copy/move
-
-## Cleanup
-
-After testing, remove the test environment:
-
-```bash
-rm -rf test_environment
-```
-
-## Example config
-
-```json
-{
-  "work": [".doc", ".docx", ".pdf", ".xls", ".xlsx", ".ppt", ".pptx"],
-  "photos": [".jpg", ".jpeg", ".png", ".gif", ".webp"],
-  "code": [".py", ".js", ".html", ".css", ".java", ".c", ".cpp", ".h"],
-  "media": [".mp3", ".mp4", ".avi", ".mkv", ".mov", ".flac", ".wav"],
-  "compressed": [".zip", ".rar", ".tar", ".gz", ".7z"],
-  "other": []
-}
-```
-
-# Maintenance Guide for File Organizer
-
-This document provides guidelines for maintaining and extending the File Organizer utility. It is designed for developers who may be unfamiliar with the original implementation but need to maintain or enhance the codebase.
-
-## Project Structure
-
-The File Organizer consists of:
-
-- `file_organizer.py`: Main script containing all functionality
-- Configuration files: JSON files that define custom category mappings
-
-## Code Architecture
-
-The utility follows a simple procedural design with these core components:
-
-1. **Argument Parsing**: Uses `argparse` to process command-line options
-2. **Configuration Management**: Loads and validates category definitions
-3. **File Processing**: Traverses directories and processes files
-4. **File Operations**: Handles copying, moving, and naming of files
-
-## Key Functions
-
-| Function | Purpose | Implementation Notes |
-|----------|---------|---------------------|
-| `categorize_file_by_category()` | Maps files to categories | Performs simple extension lookup |
-| `create_folders()` | Prepares target directory structure | Creates folders only when needed for 'category' mode |
-| `handle_long_path()` | Handles Windows path limitations | Windows-specific fix for paths >255 chars |
-| `sort_files()` | Main file processing logic | Contains the core logic and most complex function |
-| `load_config_file()` | Loads custom category definitions | Includes fallback to defaults on error |
-| `main()` | Entry point and argument processing | Sets up and initiates the process |
-
-## Causality Chain
-
-Understanding why certain implementation choices were made:
-
-1. **Why copy files by default?**
-   - To prevent accidental data loss
-   - Move operation is available but requires explicit flag
-
-2. **Why use timestamps for duplicates?**
-   - Preserves both original and new files
-   - Maintains file history
-   - Prevents unintentional overwrites
-
-3. **Why separate extension handling?**
-   - Some users prefer organization by extension
-   - Provides flexibility for different workflows
-
-4. **Why include Windows long path handling?**
-   - Windows has a 255 character path limitation
-   - Without this, deeply nested files would fail to process
-
-## Common Maintenance Tasks
-
-### Adding New File Categories
-
-To add new categories to the default configuration:
-
-1. Modify the `DEFAULT_CATEGORIES_CONFIG` dictionary:
-```python
-DEFAULT_CATEGORIES_CONFIG = {
-    # Existing categories...
-    "new_category": [".ext1", ".ext2", ".ext3"],
-    "other": []  # Always keep this as the fallback
-}
-```
-
-### Adding New Command Line Options
-
-To add a new command line option:
-
-1. Add the option to the argument parser in `main()`:
-```python
-parser.add_argument('--new-option', action='store_true', 
-                  help='Description of the new option')
-```
-
-2. Extract the option value:
-```python
-new_option = args.new_option
-```
-
-3. Pass the option to functions that need it:
-```python
-sort_files(..., new_option, ...)
-```
-
-4. Update the function signatures and implementations to use the new option
-
-### Error Handling
-
-The current error handling strategy is:
-- Individual file errors are caught and reported
-- The process continues with the next file
-- Overall process doesn't terminate on individual file errors
-
-When adding new functionality, maintain this pattern:
-
-```python
-try:
-    # Your operation here
-except Exception as e:
-    print(f"Error: {e}")
-    # Continue with next item rather than raising
-```
-
-## Testing
-
-When making changes, ensure you test:
-
-1. Basic functionality with default options
-2. Any specific options you've modified
-3. Edge cases like:
-   - Empty directories
-   - Files with unusual names or extremely long paths
-   - Very large directories
-   - Permission-restricted files
-
-Follow the testing guide in TESTING.md to verify your changes.
-
-## Performance Considerations
-
-The utility was designed for moderate-sized directories. For very large directories (thousands of files), consider:
-
-1. Adding progress indicators for lengthy operations
-2. Implementing batch processing
-3. Adding resume capabilities for interrupted operations
-
-## Security Considerations
-
-When modifying the code, maintain these security principles:
-
-1. Never execute file contents
-2. Validate all user inputs, especially paths and configuration files
-3. Be careful with move operations that permanently alter file systems
-4. Maintain appropriate error handling to prevent information leakage
-
-## Documentation Updates
-
-When changing functionality, update these documentation components:
-
-1. Function docstrings in the code
-2. README.md for user-facing changes
-3. MAINTENANCE.md for developer-facing changes
-4. TESTING.md for new test cases
-```
-
-# Decision Record and Implementation Notes
-
-## Key Design Decisions
-
-### 1. File Organization Approach
-**Decision:** Implement two organization methods (category and extension)  
-**Context:** Different users have different preferences for file organization  
-**Consequences:** More flexible tool but more complex implementation and testing required
-
-### 2. Default Copy vs. Move
-**Decision:** Make copy the default operation and move optional  
-**Context:** Moving files is destructive and could lead to data loss if not used carefully  
-**Consequences:** Safer operation but may require more disk space temporarily
-
-### 3. Duplicate File Handling
-**Decision:** Implemented three strategies: timestamp, skip, or overwrite  
-**Context:** Users need different approaches based on their specific use cases  
-**Consequences:** More complexity but greater flexibility for different scenarios
-
-### 4. Error Handling Strategy
-**Decision:** Catch and report individual file errors but continue processing  
-**Context:** A single problematic file shouldn't prevent organizing all other files  
-**Consequences:** More robust operation but may mask underlying issues
-
-### 5. Custom Configuration System
-**Decision:** Use JSON for category definitions  
-**Context:** Provides flexibility while using a standard format  
-**Consequences:** Requires error handling for invalid JSON but enables easy customization
-
-## Implementation Notes
-
-### Platform Compatibility
-- Windows long path handling was added specifically to address the 255-character path limit
-- The utility uses path handling that works across Windows, macOS, and Linux
-- File metadata preservation is implemented using `shutil.copy2()` instead of regular copy
-
-### Progress Reporting
-- Real-time progress updates were implemented to provide feedback during long operations
-- The counter system shows both files processed and total files for context
-
-### Security Considerations
-- The tool only examines file metadata, not contents
-- No execution of files occurs during the organization process
-- User input validation is performed for all paths and configuration options
-
-### Performance Optimization
-- Directory walking is optimized by filtering directories early when hidden files are excluded
-- Folders are created only as needed in extension mode to minimize filesystem operations
-
-### Maintenance Approach
-- Code is documented thoroughly for third-party maintenance
-- Functions have clear purposes and interfaces
-- Error handling is consistent across the codebase
-- Testing procedures cover both common and edge cases
-
-## Third-Party Maintenance Guidelines
-
-For developers maintaining this code:
-
-1. **Understanding the Core Logic**: 
-   - The main functionality is in the `sort_files()` function
-   - File categorization happens in `categorize_file_by_category()`
-   - Configuration loading is handled by `load_config_file()`
-
-2. **Adding New Features**:
-   - Maintain the existing error handling pattern
-   - Document all changes thoroughly
-   - Update tests to cover new functionality
-   - Consider backward compatibility
-
-3. **Fixing Issues**:
-   - Check for edge cases with unusual filenames or paths
-   - Verify platform-specific behavior (especially Windows long paths)
-   - Test with large directories and various file types
-
-4. **Refactoring Guidelines**:
-   - Maintain clear function purposes
-   - Preserve the current error handling strategy
-   - Ensure backward compatibility
-   - Update documentation to reflect changes
-
-# Python script code
-
-{% codeblock python %}
-#!/usr/bin/env python3
-import os
-import shutil
-import argparse
-import json
-import platform
-import traceback
-import logging
-from datetime import datetime
-
-# --- Default Configuration ---
-DEFAULT_CATEGORIES_CONFIG = {
-    "images": [".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp", ".tiff", ".svg", ".ico"],
-    "documents": [".pdf", ".docx", ".doc", ".txt", ".rtf", ".odt", ".xlsx", ".xls", ".csv", ".pptx", ".ppt", ".md", ".tex", ".chm", ".epub"],
-    "videos": [".mp4", ".avi", ".mkv", ".mov", ".wmv", ".flv", ".webm"],
-    "audio": [".mp3", ".wav", ".flac", ".aac", ".ogg", ".m4a"],
-    "archives": [".zip", ".rar", ".tar", ".gz", ".bz2", ".7z", ".iso"],
-    "code": [".py", ".java", ".c", ".cpp", ".h", ".cs", ".html", ".css", ".js", ".ts", ".jsx", ".tsx", ".xml", ".json", ".yaml", ".yml", ".sh", ".bat", ".ps1", ".rb", ".php", ".go", ".rs", ".swift", ".kt", ".ipynb", ".sql", ".toml"],
-    "apps": [".exe", ".msi", ".apk", ".dmg", ".deb", ".rpm", ".app"],
-    "fonts": [".ttf", ".otf", ".woff", ".woff2"],
-    "shortcuts": [".lnk", ".url"],
-    "other": []
+{% codeblock toml %}
+
+# Cargo.toml (Based on Approach 3, with updated comments)
+[package]
+name = "rust_file_organizer"
+version = "0.1.0"
+edition = "2021"
+description = "A Rust utility for organizing files by category or extension."
+authors = ["AI Assistant"] # Replace with actual author
+license = "MIT OR Apache-2.0" # Choose appropriate license
+
+[dependencies]
+# Command-line argument parsing
+clap = { version = "4.5", features = ["derive", "cargo", "env"] } # cargo/env features allow reading from Cargo.toml/env vars
+
+# Directory traversal
+walkdir = "2.5"
+
+# JSON parsing for configuration files
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Logging framework
+log = "0.4"
+# Using fern for flexible file/console logging setup
+fern = "0.6"
+
+# Date and time handling for timestamps
+chrono = "0.4"
+
+# Flexible error handling and context reporting
+anyhow = "1.0"
+
+# Optional: More robust file operations (especially cross-device move)
+# fs_extra = "1.3" # Keep commented unless needed; std lib fallback implemented
+
+# Windows-specific dependencies are NOT needed here as std lib is used for hidden check
+# [target.'cfg(windows)'.dependencies]
+# windows = { version = "0.56", features = [...] }
+
+# Release profile optimizations (optional but recommended for smaller/faster executables)
+[profile.release]
+# 'z' optimizes aggressively for size, potentially sacrificing some speed compared to 's' or '3'.
+opt-level = 'z'
+# Enable Link-Time Optimization across crates for potential performance gains and size reduction.
+lto = true
+# Maximize optimization opportunities by using a single codegen unit (can significantly increase compile times).
+codegen-units = 1
+# Remove symbols from the binary for smaller size.
+# Alternatively, use `cargo strip` (requires `cargo install cargo-strip`) or set `debuginfo = 0` (removes debug symbols only).
+strip = true
+# Abort on panic instead of unwinding the stack. Reduces binary size but prevents catching panics.
+panic = 'abort'
+
+{% endcodeblock %}
+
+***
+
+{% codeblock rust %}
+
+// src/main.rs: Rust implementation of the file organizer utility.
+// This version incorporates improvements based on self-critique:
+// - Uses fern for flexible logging (console + optional file).
+// - Uses anyhow for error handling with context.
+// - Uses std lib for platform-specific hidden file checks.
+// - Uses clap ValueEnum for argument validation.
+// - Implements explicit --overwrite flag and robust duplicate handling.
+// - Implements robust move operation with cross-device fallback.
+// - Reports list of failed files WITH error context.
+// - Includes more detailed comments.
+// - Correctly calculates execution duration.
+// - Safely excludes entries where hidden status check fails.
+// - Clarified meaning of `total_scanned` statistic.
+
+use anyhow::{bail, Context, Result}; // Use anyhow for convenient error handling
+use clap::Parser; // For command-line argument parsing
+use chrono::Local; // For generating timestamps
+use fern::colors::{Color, ColoredLevelConfig}; // For colored logging output
+use log::{debug, error, info, warn, LevelFilter}; // Logging facade
+use serde::Deserialize; // For deserializing JSON config
+use std::{
+    collections::{HashMap, HashSet},
+    env, // For CARGO_PKG_VERSION
+    fs::{self, File}, // Standard file system operations
+    io::{self, ErrorKind},
+    path::{Path, PathBuf},
+    time::Instant, // For accurate duration measurement
+};
+use walkdir::{DirEntry, WalkDir}; // For efficient directory traversal
+
+// --- Configuration Structures ---
+
+/// Represents the structure of the JSON configuration file for categories.
+/// Using a tuple struct for better type safety than just HashMap directly.
+#[derive(Deserialize, Debug, Clone)]
+struct CategoriesConfig(HashMap<String, Vec<String>>);
+
+/// Provides the default file categorization configuration.
+/// This is used if no custom config file is provided or if loading fails.
+fn default_categories() -> CategoriesConfig {
+    let mut map = HashMap::new();
+    // Helper macro to reduce boilerplate when defining default categories
+    macro_rules! add_category {
+        ($map:expr, $name:expr, [$($ext:expr),* $(,)?]) => {
+            // Inserts a category name and its associated list of lowercase extensions (including '.')
+            $map.insert($name.to_string(), vec![$($ext.to_string()),*]);
+        };
+    }
+
+    // Define standard categories and their common extensions
+    add_category!(map, "images", [".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp", ".tiff", ".svg", ".ico"]);
+    add_category!(map, "documents", [".pdf", ".docx", ".doc", ".txt", ".rtf", ".odt", ".xlsx", ".xls", ".csv", ".pptx", ".ppt", ".md", ".tex", ".chm", ".epub"]);
+    add_category!(map, "videos", [".mp4", ".avi", ".mkv", ".mov", ".wmv", ".flv", ".webm"]);
+    add_category!(map, "audio", [".mp3", ".wav", ".flac", ".aac", ".ogg", ".m4a"]);
+    add_category!(map, "archives", [".zip", ".rar", ".tar", ".gz", ".bz2", ".7z", ".iso"]);
+    add_category!(map, "code", [".py", ".java", ".c", ".cpp", ".h", ".cs", ".html", ".css", ".js", ".ts", ".jsx", ".tsx", ".xml", ".json", ".yaml", ".yml", ".sh", ".bat", ".ps1", ".rb", ".php", ".go", ".rs", ".swift", ".kt", ".ipynb", ".sql", ".toml"]);
+    add_category!(map, "apps", [".exe", ".msi", ".apk", ".dmg", ".deb", ".rpm", ".app"]);
+    add_category!(map, "fonts", [".ttf", ".otf", ".woff", ".woff2"]);
+    add_category!(map, "shortcuts", [".lnk", ".url"]);
+    // Ensure the essential "other" category exists for files that don't match any other category.
+    map.insert("other".to_string(), vec![]);
+    CategoriesConfig(map)
 }
 
-# --- Utility Functions ---
+/// Loads category configuration from a specified JSON file path.
+/// Falls back to default categories if the path is None, the file doesn't exist,
+/// or parsing fails. Ensures the 'other' category is present in the loaded config.
+fn load_config_file(config_path: Option<&PathBuf>) -> Result<CategoriesConfig> {
+    match config_path {
+        Some(path) if path.is_file() => {
+            // Attempt to load and parse the custom configuration file
+            info!("Loading category configuration from: {}", path.display());
+            let file_content = fs::read_to_string(path)
+                .with_context(|| format!("Failed to read config file: {}", path.display()))?;
+            let mut config: HashMap<String, Vec<String>> = serde_json::from_str(&file_content)
+                .with_context(|| format!("Failed to parse JSON config file: {}", path.display()))?;
 
-def setup_logging(log_file_path=None):
-    """Configures logging to console and optionally to a file."""
-    log_formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-    logger = logging.getLogger('file_organizer')
-    logger.setLevel(logging.INFO) # Set base level
+            // Ensure 'other' category exists for fallback mechanism.
+            // If the user provided a config without 'other', add it automatically.
+            config.entry("other".to_string()).or_insert_with(Vec::new);
+            info!("Successfully loaded and validated custom configuration.");
+            Ok(CategoriesConfig(config))
+        }
+        Some(path) => {
+            // Path specified but it's not a file (or doesn't exist)
+            warn!(
+                "Config path '{}' provided but is not a valid file. Using default categories.",
+                path.display()
+            );
+            Ok(default_categories())
+        }
+        None => {
+            // No config path provided, use defaults
+            info!("No config file specified. Using default category configuration.");
+            Ok(default_categories())
+        }
+    }
+}
 
-    # Console Handler (prints INFO and above)
-    console_handler = logging.StreamHandler()
-    console_handler.setFormatter(log_formatter)
-    logger.addHandler(console_handler)
+/// Determines the category name (String) for a given file based on its extension
+/// and the provided category configuration.
+fn categorize_file(filename: &Path, categories_config: &CategoriesConfig) -> String {
+    // Extract extension, prepend '.', convert to lowercase for case-insensitive matching.
+    let extension = filename
+        .extension()
+        .and_then(|s| s.to_str()) // Convert OsStr to &str, returns None if not valid UTF-8
+        .map(|s| format!(".{}", s.to_lowercase()))
+        .unwrap_or_else(|| "no_extension".to_string()); // Handle files with no extension or non-UTF8 extensions
 
-    # File Handler (prints INFO and above if path provided)
-    if log_file_path:
-        try:
-            file_handler = logging.FileHandler(log_file_path, mode='a', encoding='utf-8')
-            file_handler.setFormatter(log_formatter)
-            logger.addHandler(file_handler)
-            logger.info(f"Logging initialized. Log file: {log_file_path}")
-        except Exception as e:
-            logger.error(f"Failed to initialize log file handler at {log_file_path}: {e}")
+    // Handle files with no extension explicitly
+    if extension == "no_extension" {
+        return extension;
+    }
 
-    return logger
+    // Iterate through the configured categories and their associated extensions.
+    for (category, extensions) in &categories_config.0 {
+        // Check if the file's extension is present in the list for this category
+        if extensions.contains(&extension) {
+            return category.clone(); // Return the matching category name
+        }
+    }
 
-def handle_long_path(path):
-    """Prepends the long path prefix for Windows if necessary."""
-    path = os.path.abspath(path)
-    if platform.system() == "Windows" and len(path) > 259 and not path.startswith("\\\\?\\"):
-        path = "\\\\?\\" + path
-    return path
+    // If no specific category matched, fallback to the "other" category.
+    // load_config_file ensures the "other" key exists in the HashMap.
+    "other".to_string()
+}
 
-def load_config_file(config_path, logger):
-    """Loads category configuration from a JSON file."""
-    if config_path and os.path.isfile(config_path):
-        try:
-            with open(config_path, "r", encoding="utf-8") as f:
-                logger.info(f"Loading category configuration from: {config_path}")
-                return json.load(f)
-        except (json.JSONDecodeError, OSError) as e:
-            logger.warning(f"Could not load or parse config file '{config_path}': {e}. Using default categories.")
-    else:
-        logger.info("Using default category configuration.")
-    return DEFAULT_CATEGORIES_CONFIG
+// --- Platform Specific ---
 
-def categorize_file(filename, categories_config):
-    """Determines the category of a file based on its extension."""
-    _, ext = os.path.splitext(filename)
-    ext = ext.lower()
-    if not ext:
-        return "no_extension"
-    for category, extensions in categories_config.items():
-        if ext in extensions:
-            return category
-    return "other"
+/// Checks if a file or directory is hidden on Windows using standard library features.
+#[cfg(windows)]
+fn is_hidden(path: &Path) -> Result<bool> {
+    use std::os::windows::fs::MetadataExt;
+    // Use the standard library extension trait for a safer abstraction than raw Win32 calls
+    let metadata = fs::metadata(path)
+        .with_context(|| format!("Failed to get metadata for {}", path.display()))?;
+    // Get the raw file attributes bitfield
+    let attributes = metadata.file_attributes();
+    // Check if the FILE_ATTRIBUTE_HIDDEN bit is set
+    Ok((attributes & std::os::windows::fs::FILE_ATTRIBUTE_HIDDEN) != 0)
+}
 
-def is_hidden_windows(filepath):
-    """Checks if a file or directory is hidden on Windows."""
-    if platform.system() != "Windows":
-        return False
-    try:
-        attrs = os.stat(filepath).st_file_attributes
-        return attrs & 2 # FILE_ATTRIBUTE_HIDDEN = 2
-    except OSError:
-        return False # Assume not hidden if stat fails
+/// Checks if a file or directory is hidden on Unix-like systems (conventionally, starts with '.').
+#[cfg(not(windows))]
+fn is_hidden(path: &Path) -> Result<bool> {
+    // Standard check for hidden files/dirs on Unix-like systems.
+    Ok(path
+        .file_name()
+        .and_then(|s| s.to_str()) // Get filename as string slice
+        .map(|s| s.starts_with('.')) // Check if it starts with '.'
+        .unwrap_or(false)) // If no filename or not UTF-8, assume not hidden by this convention
+}
 
-def create_target_folders(base_dir, organize_by, categories_config, all_extensions, logger):
-    """Creates necessary target folders before processing files."""
-    base_dir = handle_long_path(base_dir)
-    logger.info(f"Ensuring target base directory exists: {base_dir}")
-    os.makedirs(base_dir, exist_ok=True) # Ensure base exists first
-
-    folders_to_create = set()
-    if organize_by == "category":
-        folders_to_create = set(categories_config.keys()) | {"other", "no_extension"}
-    elif organize_by == "extension":
-        folders_to_create = all_extensions | {"no_extension"}
-    else:
-        logger.error(f"Invalid organize_by option: {organize_by}")
-        raise ValueError("Invalid organize_by option.")
-
-    logger.info(f"Creating target subfolders ({organize_by})...")
-    created_count = 0
-    for folder_name in folders_to_create:
-        folder_path = os.path.join(base_dir, folder_name)
-        if not os.path.exists(folder_path):
-            try:
-                os.makedirs(folder_path, exist_ok=True)
-                created_count += 1
-            except OSError as e:
-                 logger.error(f"Failed to create target folder '{folder_path}': {e}")
-    logger.info(f"Created {created_count} new target subfolders.")
-
-
-def get_all_extensions(source_directory, include_hidden, follow_links, logger):
-    """Scans the source directory to find all unique file extensions."""
-    extensions = set()
-    source_directory = handle_long_path(source_directory)
-    logger.info("Scanning for all unique file extensions...")
-    count = 0
-    for root, dirs, files in os.walk(source_directory, followlinks=follow_links):
-        root_path = handle_long_path(root)
-        if not include_hidden:
-            dirs[:] = [d for d in dirs if not d.startswith('.') and not is_hidden_windows(os.path.join(root_path, d))]
-            files = [f for f in files if not f.startswith('.') and not is_hidden_windows(os.path.join(root_path, f))]
-
-        for file in files:
-            count +=1
-            _, ext = os.path.splitext(file)
-            if ext:
-                extensions.add(ext[1:].lower())
-            if count % 1000 == 0: # Log progress for large scans
-                 logger.info(f"Scanned {count} files for extensions...")
-
-    logger.info(f"Found {len(extensions)} unique extensions.")
-    return extensions
+/// Helper for walkdir filter_entry to check hidden status before descending into directories or processing files.
+/// Logs errors but doesn't stop the walk; returns `true` if entry should be kept (i.e., not hidden or check failed).
+/// **Improvement:** Defaults to excluding (`false`) if the check fails, for safety.
+fn should_keep_entry(entry: &DirEntry, include_hidden: bool) -> bool {
+    if include_hidden {
+        return true; // Keep everything if --include-hidden flag is set
+    }
+    // Otherwise, check the hidden status
+    match is_hidden(entry.path()) {
+        Ok(hidden) => !hidden, // Keep if NOT hidden
+        Err(err) => {
+            // Log the error but default to *excluding* the entry for safety if status is unknown
+            warn!(
+                "Could not determine hidden status for {}: {}. Excluding entry.",
+                entry.path().display(), err
+            );
+            false // Exclude if check fails
+        }
+    }
+}
 
 
-# --- Core Logic ---
+// --- Command Line Arguments ---
 
-def sort_files(
-    source_directory,
-    target_directory,
-    organize_by,
-    timestamp_duplicates,
-    move_files,
-    categories_config,
-    include_hidden,
-    follow_links,
-    skip_existing,
-    logger
-):
-    """Sorts files from source to target directory based on specified options."""
-    source_directory = handle_long_path(source_directory)
-    target_directory = handle_long_path(target_directory)
+/// Enum defining the organization methods, used for clap validation.
+/// This ensures only valid options are accepted via the command line.
+#[derive(clap::ValueEnum, Clone, Debug, PartialEq, Eq)]
+enum OrganizeMethod {
+    Category,
+    Extension,
+}
 
-    if not os.path.isdir(source_directory):
-        logger.error(f"Source directory '{source_directory}' is invalid or not found.")
-        return 0, 0
+/// Defines the command-line interface structure using clap derive macros.
+/// Doc comments are used to generate help messages for the user.
+#[derive(Parser, Debug)]
+#[command(author, version, about = "Organize files by category or extension (Rust version).",
+    long_about = "A Rust utility for organizing files from source directories into categorized target folders based on file types or extensions.",
+    help_template = "{before-help}{name} {version}\n{author-with-newline}{about-with-newline}\n{usage-heading} {usage}\n\n{all-args}{after-help}" // Custom help format
+)]
+struct CliArgs {
+    /// Source directory containing files to organize.
+    #[arg(short, long, value_name = "DIR")]
+    source: PathBuf,
 
-    if not os.path.exists(target_directory):
-        try:
-            os.makedirs(target_directory)
-            logger.info(f"Created target directory: {target_directory}")
-        except OSError as e:
-            logger.error(f"Could not create target directory '{target_directory}': {e}")
-            return 0, 0
-    elif not os.path.isdir(target_directory):
-        logger.error(f"Target path '{target_directory}' exists but is not a directory.")
-        return 0, 0
+    /// Target directory where organized files will be placed.
+    #[arg(short, long, value_name = "DIR")]
+    target: PathBuf,
 
-    # --- Pre-scan and Folder Creation ---
-    total_files = 0
-    files_to_process = []
-    logger.info("Scanning source directory to count files...")
-    for root, dirs, files in os.walk(source_directory, topdown=True, followlinks=follow_links):
-        root_path = handle_long_path(root)
-        original_dirs = list(dirs) # Keep original list for iteration if needed
-        if not include_hidden:
-            dirs[:] = [d for d in dirs if not d.startswith('.') and not is_hidden_windows(os.path.join(root_path, d))]
-            files = [f for f in files if not f.startswith('.') and not is_hidden_windows(os.path.join(root_path, f))]
+    /// Path to JSON config file for custom file categories and extensions.
+    #[arg(short, long, value_name = "FILE")]
+    config: Option<PathBuf>,
 
-        for file in files:
-            filepath = os.path.join(root_path, file)
-            # Basic check if it's actually a file before adding
-            try:
-                 if os.path.isfile(filepath):
-                      files_to_process.append(filepath)
-                      total_files += 1
-                 else:
-                      logger.warning(f"Item listed as file is not a file (skipping count): {filepath}")
-            except OSError as e:
-                 logger.warning(f"Could not access item during scan (skipping count): {filepath} - Error: {e}")
+    /// Method for organizing files (category or extension).
+    #[arg(long, value_enum, default_value_t = OrganizeMethod::Category)]
+    organize_by: OrganizeMethod,
+
+    /// Move files instead of copying them (default is copy).
+    #[arg(long)]
+    move_files: bool,
+
+    /// Append timestamp+counter to duplicate filenames. Conflicts with --skip-existing and --overwrite.
+    #[arg(long, conflicts_with_all = ["skip_existing", "overwrite"])]
+    timestamp_duplicates: bool,
+
+    /// Skip processing if a file with the same name exists in the target. Conflicts with --timestamp-duplicates and --overwrite.
+    #[arg(long, short = 'k', conflicts_with_all = ["timestamp_duplicates", "overwrite"])]
+    skip_existing: bool,
+
+    /// Overwrite existing files in the target directory. Conflicts with --timestamp-duplicates and --skip-existing.
+    #[arg(long, conflicts_with_all = ["timestamp_duplicates", "skip_existing"])]
+    overwrite: bool, // Explicit overwrite flag
+
+    /// Include hidden files/folders (e.g., starting with '.') in processing.
+    #[arg(long, short = 'i')]
+    include_hidden: bool,
+
+    /// Follow symbolic links (process target, not link). Use with caution (potential loops).
+    #[arg(long, short = 'l')]
+    follow_links: bool,
+
+    /// After moving (--move must be enabled), attempt to remove empty source directories.
+    #[arg(long, requires = "move_files")]
+    remove_empty_source_dirs: bool,
+
+    /// Optional path to a file for logging progress and errors.
+    #[arg(long, value_name = "FILE")]
+    log_file: Option<PathBuf>,
+
+    /// Set the log level (e.g., error, warn, info, debug, trace).
+    #[arg(long, value_parser = clap::value_parser!(LevelFilter), default_value = "info")]
+    log_level: LevelFilter,
+}
+
+// --- Core Logic ---
+
+/// Holds statistics about the file processing operation, including failed file paths and errors.
+#[derive(Debug, Default)]
+struct ProcessStats {
+    /// Count of directory entries successfully yielded by the filtered WalkDir iterator (includes files, dirs, etc.).
+    /// **Clarification:** This counts entries *before* filtering for files-only in the processing loop.
+    total_scanned: u64,
+    processed: u64,          // Count of files successfully copied/moved
+    skipped: u64,            // Count of files skipped (e.g., duplicates, hidden, non-file)
+    errors: u64,             // Count of files that failed during processing (copy/move/timestamp) or critical scan errors
+    failed_files: Vec<(PathBuf, String)>, // Stores paths and error context of failed files
+}
+
+/// Scans the source directory to find all unique file extensions (lowercase, without dot).
+/// This is primarily used when `organize_by` is `Extension` to pre-create necessary folders efficiently.
+fn get_all_extensions(
+    source_directory: &Path,
+    include_hidden: bool,
+    follow_links: bool,
+) -> Result<HashSet<String>> {
+    let mut extensions = HashSet::new();
+    info!("Scanning source directory for all unique file extensions...");
+    let walker = WalkDir::new(source_directory)
+        .follow_links(follow_links) // Control whether to follow symlinks
+        .into_iter();
+
+    let mut count = 0;
+    // Use filter_entry for more efficient hidden filtering during the scan
+    for entry_result in walker.filter_entry(|e| should_keep_entry(e, include_hidden)) {
+        match entry_result {
+            Ok(entry) => {
+                let path = entry.path();
+                // Process only files
+                if path.is_file() {
+                    // No need to re-check is_hidden here, filter_entry handles it based on should_keep_entry logic.
+                    count += 1;
+                    // Extract extension if the file has one and it's valid UTF-8
+                    if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
+                        extensions.insert(ext.to_lowercase()); // Store lowercase extension
+                    }
+                    // Log progress periodically for very large directories
+                    if count % 1000 == 0 {
+                        debug!("Scanned {} files for extensions...", count);
+                    }
+                }
+            }
+            Err(e) => warn!("Error accessing entry during extension scan: {}", e), // Log errors encountered during directory walk
+        }
+    }
+    info!("Found {} unique extensions.", extensions.len());
+    Ok(extensions)
+}
+
+/// Creates necessary target subfolders based on the organization method.
+/// Ensures the base target directory exists first.
+fn create_target_folders(
+    base_dir: &Path,
+    organize_by: &OrganizeMethod,
+    categories_config: Option<&CategoriesConfig>,
+    all_extensions: Option<&HashSet<String>>,
+) -> Result<()> {
+    info!("Ensuring target base directory exists: {}", base_dir.display());
+    // Create the base target directory and any necessary parent directories
+    fs::create_dir_all(base_dir)
+        .with_context(|| format!("Failed to create base target directory: {}", base_dir.display()))?;
+
+    // Determine the set of folders needed based on the organization strategy.
+    let folders_to_create: HashSet<String> = match organize_by {
+        OrganizeMethod::Category => {
+            // Collect all category names from the config
+            let mut folders = categories_config
+                .map(|cfg| cfg.0.keys().cloned().collect::<HashSet<String>>())
+                .unwrap_or_default();
+            // Ensure essential fallback folders exist for files without extensions or unmatched types
+            folders.insert("other".to_string());
+            folders.insert("no_extension".to_string());
+            folders
+        }
+        OrganizeMethod::Extension => {
+            // Collect all unique extensions found during scan
+            let mut folders = all_extensions.cloned().unwrap_or_default();
+            // Ensure essential fallback folder exists for files without extensions
+            folders.insert("no_extension".to_string());
+            folders
+        }
+    };
+
+    info!(
+        "Creating target subfolders (mode: {:?}). Total potential folders: {}",
+        organize_by,
+        folders_to_create.len()
+    );
+    let mut created_count = 0;
+    for folder_name in &folders_to_create {
+        // Avoid creating folders with potentially invalid names (e.g., empty string if an extension was just ".")
+        if folder_name.is_empty() {
+            warn!("Skipping creation of folder with empty name.");
+            continue;
+        }
+        let folder_path = base_dir.join(folder_name);
+        // Check if folder already exists before trying to create
+        if !folder_path.exists() {
+            // Create the folder and any necessary parents
+            fs::create_dir_all(&folder_path).with_context(|| {
+                format!("Failed to create target folder '{}'", folder_path.display())
+            })?;
+            debug!("Created target folder: {}", folder_path.display());
+            created_count += 1;
+        }
+    }
+    info!("Created {} new target subfolders.", created_count);
+    Ok(())
+}
+
+/// Attempts to move a file using `fs::rename`, falling back to copy-then-delete
+/// if `fs::rename` fails (e.g., due to being on different filesystems/devices).
+fn move_file_with_fallback(source: &Path, target: &Path) -> io::Result<()> {
+    // Attempt the efficient rename first, which is atomic on the same filesystem
+    match fs::rename(source, target) {
+        Ok(_) => Ok(()), // Rename succeeded
+        Err(rename_error) => {
+            // Check if the error is likely due to moving across different filesystems/devices.
+            // This requires checking platform-specific OS error codes.
+            // Note: Relies on platform-specific OS error codes (Windows: 17, Unix: 18/libc::EXDEV). Might be brittle.
+            let is_cross_device = || -> bool {
+                #[cfg(windows)] { rename_error.raw_os_error() == Some(17) } // ERROR_NOT_SAME_DEVICE
+                #[cfg(unix)] { rename_error.raw_os_error() == Some(18) } // libc::EXDEV
+                #[cfg(not(any(windows, unix)))] { false } // Default for other platforms
+            };
+
+            if is_cross_device() {
+                // If it's a cross-device error, attempt copy-then-delete fallback
+                warn!("Rename failed (cross-device error detected), attempting copy+delete fallback for move: {} -> {}", source.display(), target.display());
+                // Note: std::fs::copy preserves permissions but not other metadata like modification time (unlike Python's shutil.copy2).
+                // For full metadata preservation, consider crates like `fs_extra` or platform-specific APIs.
+                fs::copy(source, target)?; // Attempt copy
+                fs::remove_file(source)?; // Attempt delete original
+                Ok(()) // Fallback succeeded
+            } else {
+                // If it was a different rename error (e.g., permissions), re-throw it.
+                Err(rename_error)
+            }
+        }
+    }
+}
 
 
-    logger.info(f"Found {total_files} files to process.")
-    if total_files == 0:
-        logger.info("No files found to process.")
-        return 0, 0
+/// Main function to perform the file organization based on parsed arguments.
+/// Iterates through source files, determines target paths, handles duplicates,
+/// performs copy/move operations, and collects statistics.
+fn organize_files(args: &CliArgs, categories_config: &CategoriesConfig) -> Result<ProcessStats> {
+    // --- Initial Validation & Setup ---
+    if !args.source.is_dir() {
+        bail!("Source directory '{}' is invalid or not found.", args.source.display());
+    }
+    // Ensure target directory exists or create it
+    if !args.target.exists() {
+        info!("Creating target directory: {}", args.target.display());
+        fs::create_dir_all(&args.target).with_context(|| {
+            format!("Could not create target directory '{}'", args.target.display())
+        })?;
+    } else if !args.target.is_dir() {
+        bail!("Target path '{}' exists but is not a directory.", args.target.display());
+    }
 
-    if organize_by == "category":
-        create_target_folders(target_directory, "category", categories_config, None, logger)
-    elif organize_by == "extension":
-        all_exts = get_all_extensions(source_directory, include_hidden, follow_links, logger)
-        create_target_folders(target_directory, "extension", None, all_exts, logger)
+    // --- Pre-scan for Extensions (if needed) and Pre-create Folders ---
+    // This ensures target folders exist before we start moving/copying files into them.
+    info!("Preparing target folders...");
+    let extensions_for_folders = if args.organize_by == OrganizeMethod::Extension {
+        Some(get_all_extensions(&args.source, args.include_hidden, args.follow_links)?)
+    } else {
+        None
+    };
+    create_target_folders(
+        &args.target,
+        &args.organize_by,
+        Some(categories_config), // Pass config needed for category mode
+        extensions_for_folders.as_ref(), // Pass extensions needed for extension mode
+    )?;
 
-    # --- Process Files ---
-    processed_files = 0
-    skipped_files = 0
-    error_files = 0
-    logger.info("Starting file processing...")
+    // --- Process Files ---
+    info!("Starting file processing...");
+    let mut stats = ProcessStats::default(); // Initialize statistics
+    let mut file_counter = 0u64; // Counter for progress reporting
 
-    for i, filepath in enumerate(files_to_process):
-        filepath = handle_long_path(filepath)
-        file = os.path.basename(filepath)
-        progress_prefix = f"[{i+1}/{total_files}]"
+    // Use WalkDir again for the main processing loop, applying filters efficiently
+    let walker = WalkDir::new(&args.source)
+        .follow_links(args.follow_links) // Control symlink following
+        .into_iter();
 
-        try:
-            if not os.path.exists(filepath): # Re-check existence before processing
-                logger.warning(f"{progress_prefix} Skipping non-existent source file: {filepath}")
-                skipped_files += 1
-                continue
-            if not os.path.isfile(filepath): # Ensure it's still a file
-                logger.warning(f"{progress_prefix} Skipping item that is not a file: {filepath}")
-                skipped_files += 1
-                continue
+    // filter_entry is used to efficiently skip hidden directories/files if requested
+    for entry_result in walker.filter_entry(|e| should_keep_entry(e, args.include_hidden)) {
+        // Increment scan counter for every entry successfully yielded by the filtered iterator
+        stats.total_scanned += 1;
 
-            # Determine target folder
-            if organize_by == "category":
-                category = categorize_file(file, categories_config)
-                target_folder = os.path.join(target_directory, category)
-            elif organize_by == "extension":
-                _, ext = os.path.splitext(file)
-                ext_folder = ext[1:].lower() if ext else "no_extension"
-                target_folder = os.path.join(target_directory, ext_folder)
-            else: # Should not happen
-                 logger.error(f"{progress_prefix} Invalid organization option for file {file}. Skipping.")
-                 error_files += 1
-                 continue
+        let entry = match entry_result {
+            Ok(e) => e,
+            Err(e) => {
+                // Log errors encountered during directory traversal itself
+                error!("Error scanning path {}: {}", e.path().unwrap_or(Path::new("?")).display(), e);
+                stats.errors += 1; // Count scan errors towards total errors
+                // Record scan error details
+                stats.failed_files.push((
+                    e.path().unwrap_or_default().to_path_buf(),
+                    format!("Scan error: {:?}", e),
+                ));
+                continue; // Skip this problematic entry
+            }
+        };
 
-            target_fullpath = os.path.join(target_folder, file)
-            target_fullpath = handle_long_path(target_fullpath)
+        // We are only interested in processing files in this loop
+        if !entry.file_type().is_file() {
+            stats.skipped += 1; // Count skipped directories/symlinks etc.
+            continue;
+        }
 
-            # Handle existing target files
-            if os.path.exists(target_fullpath):
-                if skip_existing:
-                    logger.info(f"{progress_prefix} Skipping existing target: {target_fullpath}")
-                    skipped_files += 1
-                    continue
-                elif timestamp_duplicates:
-                    counter = 1
-                    base, ext = os.path.splitext(file)
-                    original_target_fullpath = target_fullpath # Store for logging
-                    while os.path.exists(target_fullpath):
-                        stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                        new_name = f"{base}_{stamp}_{counter}{ext}"
-                        target_fullpath = os.path.join(target_folder, new_name)
-                        target_fullpath = handle_long_path(target_fullpath)
-                        counter += 1
-                    logger.info(f"{progress_prefix} Target exists '{original_target_fullpath}'. Renaming duplicate to: {target_fullpath}")
-                else:
-                    logger.warning(f"{progress_prefix} Overwriting existing target file: {target_fullpath}")
-                    # Overwrite happens implicitly
+        // If we reached here, it's a file we intend to process
+        file_counter += 1;
+        let source_path = entry.path();
+        let progress_prefix = format!("[{}]", file_counter); // Simple counter for progress logging
 
-            # Perform file operation
-            try:
-                if move_files:
-                    shutil.move(filepath, target_fullpath)
-                    # logger.info(f"{progress_prefix} Moved: {file} -> {target_folder}") # Verbose
-                else:
-                    shutil.copy2(filepath, target_fullpath) # copy2 preserves metadata
-                    # logger.info(f"{progress_prefix} Copied: {file} -> {target_folder}") # Verbose
-                processed_files += 1
-            except (OSError, shutil.Error) as e: # Catch specific shutil errors too
-                logger.error(f"{progress_prefix} Failed to {'move' if move_files else 'copy'} '{filepath}' to '{target_fullpath}': {e}")
-                error_files += 1
-            except Exception as e: # Catch any other unexpected error during file op
-                 logger.error(f"{progress_prefix} Unexpected error processing '{filepath}' -> '{target_fullpath}': {e}", exc_info=True) # Log traceback
-                 error_files += 1
+        // --- Inner processing block to handle errors per file using anyhow ---
+        // This allows logging an error for a single file and continuing with the next.
+        let file_result: Result<()> = (|| {
+            // No need to re-check is_hidden, filter_entry handles it.
 
-        except Exception as e: # Catch errors during path manipulation, categorization etc.
-            logger.error(f"{progress_prefix} Unexpected error processing path '{filepath}': {e}", exc_info=True)
-            error_files += 1
+            // Extract filename, handling potential errors (e.g., invalid path)
+            let file_name = source_path.file_name()
+                .with_context(|| format!("Could not get filename for path: {}", source_path.display()))?;
 
-        # Optional: Print live progress to console (can be noisy)
-        # print(f"Progress: {i+1}/{total_files} (P: {processed_files}, S: {skipped_files}, E: {error_files})", end="\r")
+            // Determine target subfolder name based on organization strategy
+            let target_subfolder_name = match args.organize_by {
+                OrganizeMethod::Category => categorize_file(source_path, categories_config),
+                OrganizeMethod::Extension => source_path
+                    .extension()
+                    .and_then(|s| s.to_str()) // Get extension as string
+                    .map(|s| s.to_lowercase()) // Convert to lowercase
+                    .unwrap_or_else(|| "no_extension".to_string()), // Handle no extension
+            };
+            let target_folder_path = args.target.join(&target_subfolder_name);
+            let mut target_file_path = target_folder_path.join(file_name);
+
+            // --- Handle potential duplicate files in the target directory ---
+            if target_file_path.exists() {
+                if args.skip_existing {
+                    // User requested skipping duplicates
+                    info!(
+                        "{} Skipping (target exists): {}",
+                        progress_prefix,
+                        target_file_path.display()
+                    );
+                    stats.skipped += 1;
+                    return Ok(()); // Successfully skipped this file
+                } else if args.timestamp_duplicates {
+                    // User requested adding timestamps to duplicates
+                    let original_target_path_display = target_file_path.display().to_string();
+                    let mut counter = 1;
+                    // Safely get stem and extension, providing defaults if they don't exist
+                    let stem = source_path.file_stem().unwrap_or(file_name.as_os_str()); // Use original filename if no stem
+                    let ext = source_path.extension().unwrap_or_default(); // Empty OsStr if no extension
+                    const MAX_TIMESTAMP_ATTEMPTS: u32 = 1000; // Safety break for the loop
+
+                    loop {
+                        let timestamp = Local::now().format("%Y%m%d_%H%M%S");
+                        // Construct new filename using OsString to handle non-UTF8 filenames safely
+                        let mut new_name_os = std::ffi::OsString::new();
+                        new_name_os.push(stem);
+                        new_name_os.push(format!("_{}_{}", timestamp, counter)); // Add timestamp and counter
+                        if !ext.is_empty() {
+                            new_name_os.push("."); // Add dot only if there was an extension
+                            new_name_os.push(ext);
+                        }
+                        target_file_path = target_folder_path.join(&new_name_os); // Update the target path
+
+                        if !target_file_path.exists() {
+                            break; // Found a unique name, exit the loop
+                        }
+                        counter += 1;
+                        // Safety break to prevent potential infinite loops if unique names are hard to find
+                        if counter > MAX_TIMESTAMP_ATTEMPTS {
+                            // Use bail! from anyhow to return an error directly from this inner block
+                            bail!(
+                                "Could not find unique timestamped name for {} after {} attempts. Skipping.",
+                                original_target_path_display, MAX_TIMESTAMP_ATTEMPTS
+                            );
+                        }
+                    }
+                    // Log the renaming action
+                    info!(
+                        "{} Target exists '{}'. Renaming duplicate to: {}",
+                        progress_prefix,
+                        original_target_path_display,
+                        target_file_path.display()
+                    );
+                } else if args.overwrite {
+                     // Explicit overwrite flag is set
+                     warn!(
+                        "{} Overwriting existing target file: {}",
+                        progress_prefix,
+                        target_file_path.display()
+                    );
+                     // Overwrite happens implicitly below by copy/move
+                } else {
+                    // Default behavior if no specific duplicate handling flag is set: Overwrite
+                     warn!(
+                        "{} Overwriting existing target file (default): {}",
+                        progress_prefix,
+                        target_file_path.display()
+                    );
+                     // Overwrite happens implicitly below by copy/move
+                }
+            } // End duplicate check block
+
+            // Ensure target directory exists *just before* the operation (belt-and-suspenders approach)
+            // This handles rare cases where the folder might have been deleted after the initial check.
+            fs::create_dir_all(&target_folder_path).with_context(|| format!("Failed to ensure target directory '{}' exists", target_folder_path.display()))?;
+
+            // --- Perform the file operation (Copy or Move) ---
+            let operation_desc = if args.move_files { "move" } else { "copy" };
+            debug!(
+                "{} Attempting to {} '{}' to '{}'",
+                progress_prefix,
+                operation_desc,
+                source_path.display(),
+                target_file_path.display()
+            );
+
+            if args.move_files {
+                // Use the robust move function with fallback for cross-device errors
+                move_file_with_fallback(source_path, &target_file_path)
+                    .with_context(|| format!("Failed to move '{}' to '{}'", source_path.display(), target_file_path.display()))?;
+            } else {
+                // Standard copy.
+                // Note: std::fs::copy preserves permissions but not other metadata like modification time (unlike Python's shutil.copy2).
+                // For full metadata preservation, consider crates like `fs_extra` or platform-specific APIs.
+                fs::copy(source_path, &target_file_path)
+                    .map(|_| ()) // Discard the number of bytes copied (u64) result, returning () on success
+                    .with_context(|| format!("Failed to copy '{}' to '{}'", source_path.display(), target_file_path.display()))?;
+            }
+            stats.processed += 1; // Increment processed count only on success
+            Ok(()) // Indicate success for this file's processing
+        })(); // End of inner result block for per-file error handling
+
+        // --- Handle result for this specific file ---
+        if let Err(e) = file_result {
+            // Log the detailed error using anyhow's Debug format
+            error!("{} Failed to process '{}': {:?}", progress_prefix, source_path.display(), e);
+            stats.errors += 1;
+            // Store error context along with the path
+            stats.failed_files.push((source_path.to_path_buf(), format!("{:?}", e)));
+        }
+    } // End of main file processing loop
+
+    Ok(stats) // Return the final statistics
+}
+
+/// Recursively removes empty folders starting from the bottom up within a given directory.
+/// This is typically used after a move operation to clean up the source directory.
+/// Uses a collect-then-sort approach for simplicity and to avoid potential
+/// issues with modifying the directory structure while iterating.
+fn remove_empty_folders(directory: &Path) -> Result<u32> {
+    let mut removed_count = 0u32;
+    info!("Attempting to remove empty directories within: {}", directory.display());
+
+    // Collect directory paths first. This avoids borrow checker issues with WalkDir
+    // if we were to modify the directory structure while iterating (e.g., removing a dir).
+    let mut dirs_to_check = Vec::new();
+    // Start scan from depth 1 to avoid trying to remove the root directory itself.
+    for entry_result in WalkDir::new(directory).min_depth(1) {
+        match entry_result {
+            Ok(entry) if entry.file_type().is_dir() => {
+                dirs_to_check.push(entry.into_path()); // Collect path if it's a directory
+            }
+            Ok(_) => {} // Ignore files
+            Err(e) => warn!("Error accessing entry during empty dir scan: {}", e), // Log errors during scan
+        }
+    }
+
+    // Sort paths by depth (longest paths first) to ensure bottom-up processing.
+    // This is crucial so we attempt to remove child directories before their parents.
+    dirs_to_check.sort_by(|a, b| b.components().count().cmp(&a.components().count()));
+
+    for dir_path in dirs_to_check {
+        // Check if directory still exists before trying to read/remove (it might have been removed in a previous step)
+        if !dir_path.is_dir() {
+            continue;
+        }
+
+        match fs::read_dir(&dir_path) {
+            Ok(mut read_dir) => {
+                // Check if the directory is truly empty by trying to get the first entry.
+                // read_dir.next().is_none() is true if the directory is empty.
+                if read_dir.next().is_none() {
+                    // Directory is empty, attempt to remove it.
+                    match fs::remove_dir(&dir_path) {
+                        Ok(_) => {
+                            info!("Removed empty directory: {}", dir_path.display());
+                            removed_count += 1;
+                        }
+                        Err(e) => {
+                            // Log warnings for common non-critical errors like permissions
+                            // or race conditions where the dir became non-empty between read_dir and remove_dir.
+                            // Don't treat NotFound as a warning if it was just removed by another process or race condition.
+                            if e.kind() != ErrorKind::NotFound {
+                                warn!(
+                                    "Could not remove presumably empty directory '{}': {}",
+                                    dir_path.display(), e
+                                );
+                            }
+                        }
+                    }
+                }
+                // else: Directory is not empty, do nothing.
+            }
+            Err(e) => {
+                // Don't warn if the directory was removed between listing and checking emptiness.
+                if e.kind() != ErrorKind::NotFound {
+                    warn!(
+                        "Could not read directory '{}' to check emptiness: {}",
+                        dir_path.display(), e
+                    );
+                }
+            }
+        }
+    }
+
+    info!("Finished removing empty directories. Removed: {}", removed_count);
+    Ok(removed_count) // Return the count of removed directories
+}
+
+// --- Logging Setup ---
+
+/// Sets up logging using the fern crate to log to stderr and optionally a file.
+/// Configures formatting, level filtering, and color output for the console.
+fn setup_logging(log_level: LevelFilter, log_file: Option<&PathBuf>) -> Result<()> {
+    // Configure colors for terminal output levels for better readability
+    let colors = ColoredLevelConfig::new()
+        .error(Color::Red)
+        .warn(Color::Yellow)
+        .info(Color::Green)
+        .debug(Color::Blue)
+        .trace(Color::BrightBlack);
+
+    // Base dispatch configuration common to all loggers
+    let base_config = fern::Dispatch::new()
+        // Format messages including timestamp (with milliseconds), colored level, target module, and message
+        .format(move |out, message, record| {
+            out.finish(format_args!(
+                "[{} {} {}] {}",
+                chrono::Local::now().format("%Y-%m-%d %H:%M:%S%.3f"), // Time format with ms
+                colors.color(record.level()), // Apply color to level text
+                record.target(), // Module path where log occurred (e.g., `rust_file_organizer::main`)
+                message
+            ))
+        })
+        // Apply the global log level filter passed from arguments (e.g., Info, Debug)
+        .level(log_level)
+        // Filter out overly verbose logs from common libraries unless explicitly requested at a higher level
+        // This keeps the default output cleaner when running at Info level.
+        .level_for("hyper", LevelFilter::Warn)
+        .level_for("mio", LevelFilter::Warn)
+        .level_for("want", LevelFilter::Warn)
+        .level_for("reqwest", LevelFilter::Warn)
+        .level_for("rustls", LevelFilter::Warn);
 
 
-    # Final Summary
-    summary = f"File organization completed. Processed: {processed_files}, Skipped: {skipped_files}, Errors: {error_files}"
-    logger.info(summary)
-    print(f"\n{summary}") # Also print final summary to console
-    return processed_files, skipped_files + error_files
+    // Chain the stderr logger. By default, only show messages from our crate unless Debug/Trace is enabled.
+    let stderr_logger = fern::Dispatch::new()
+        .filter(move |metadata| {
+             // Show logs from our crate OR if the global level is Debug or Trace
+             log_level <= LevelFilter::Debug || metadata.target().starts_with(env!("CARGO_PKG_NAME"))
+        })
+        .chain(std::io::stderr()); // Chain to standard error output
 
-def remove_empty_folders(directory, logger):
-    """Recursively removes empty folders starting from the bottom up."""
-    directory = handle_long_path(directory)
-    removed_count = 0
-    logger.info(f"Attempting to remove empty directories from: {directory}")
-    # Walk from bottom up
-    for root, dirs, files in os.walk(directory, topdown=False):
-        root_path = handle_long_path(root)
-        # Consider hidden status if needed, but generally just check emptiness
-        if not files and not dirs: # Directory is empty
-            try:
-                os.rmdir(root_path)
-                logger.info(f"Removed empty directory: {root_path}")
-                removed_count += 1
-            except OSError as e:
-                # Common errors: permission denied, directory not empty (race condition?)
-                logger.warning(f"Could not remove directory '{root_path}': {e}")
-            except Exception as e:
-                 logger.error(f"Unexpected error removing directory '{root_path}': {e}", exc_info=True)
+    // Start building the final dispatch configuration, always including stderr
+    let mut final_dispatch = base_config.chain(stderr_logger);
 
-    logger.info(f"Finished removing empty directories. Removed: {removed_count}")
+    // Chain the file logger conditionally if a path is provided
+    let mut file_logger_ok = false; // Track if file logger setup succeeds
+    if let Some(log_path) = log_file {
+        match fern::log_file(log_path) {
+            Ok(file_output) => {
+                // If file opened successfully, chain it to the dispatch
+                final_dispatch = final_dispatch.chain(file_output);
+                file_logger_ok = true;
+            }
+            Err(e) => {
+                // If file creation fails, log error directly to stderr (logger not ready yet)
+                // and proceed without file logging.
+                eprintln!(
+                    "Error: Failed to create log file '{}': {}. Logging to console only.",
+                    log_path.display(), e
+                );
+            }
+        }
+    }
+
+    // Apply the final combined logging configuration
+    final_dispatch.apply().context("Failed to set up logging")?;
+
+    // Log confirmation *after* apply() succeeds
+    if file_logger_ok {
+        if let Some(path) = log_file {
+            info!("File logging enabled to: {}", path.display());
+        }
+    }
+
+    Ok(())
+}
 
 
-# --- Main Execution ---
+// --- Main Application Entry Point ---
 
-def main():
-    parser = argparse.ArgumentParser(
-        description="Organize files by category or extension.",
-        formatter_class=argparse.RawTextHelpFormatter
-        )
-    parser.add_argument("--source", "-s", required=True, help="Source directory containing files to organize.")
-    parser.add_argument("--target", "-t", required=True, help="Target directory where organized files will be placed.")
-    parser.add_argument("--config", "-c", help="Path to JSON config file for custom file categories and extensions.")
-    parser.add_argument(
-        "--organize-by", choices=["category", "extension"], default="category",
-        help="Method for organizing files:\n"
-             "  category: Group into folders based on categories (default).\n"
-             "  extension: Group into folders named after file extensions."
-        )
-    parser.add_argument("--move", action="store_true", help="Move files instead of copying them.")
-    parser.add_argument("--timestamp-duplicates", action="store_true", help="Append timestamp+counter to duplicate filenames instead of overwriting/skipping.")
-    parser.add_argument("--skip-existing", action="store_true", help="Skip processing if a file with the same name exists in the target.")
-    parser.add_argument("--include-hidden", action="store_true", help="Include hidden files/folders (e.g., starting with '.') in processing.")
-    parser.add_argument("--follow-links", action="store_true", help="Follow symbolic links (process target, not link). Use with caution (potential loops).")
-    parser.add_argument("--remove-empty-source-dirs", action="store_true", help="After moving (--move must be enabled), attempt to remove empty source directories.")
-    parser.add_argument("--log-file", help="Optional path to a file for logging progress and errors.")
+fn main() -> Result<()> {
+    // Record start time for overall duration calculation
+    let overall_start_time = Instant::now();
 
-    args = parser.parse_args()
+    // Parse command-line arguments using clap
+    let args = CliArgs::parse();
 
-    # --- Argument Validation ---
-    if args.timestamp_duplicates and args.skip_existing:
-        parser.error("--timestamp-duplicates and --skip-existing cannot be used together.")
-    if args.remove_empty_source_dirs and not args.move:
-        parser.error("--remove-empty-source-dirs requires --move to be enabled.")
+    // --- Setup Logging ---
+    // Initialize logging early based on args.log_level and optional args.log_file
+    // This allows logging during argument validation or config loading if needed.
+    setup_logging(args.log_level, args.log_file.as_ref())?;
 
-    # --- Setup ---
-    logger = setup_logging(args.log_file)
-    logger.info("Script starting...")
-    logger.info(f"Arguments: {vars(args)}") # Log arguments used
+    // --- Log Startup Information ---
+    info!("Rust File Organizer (v{}) starting...", env!("CARGO_PKG_VERSION"));
+    // Log full arguments only if debug level is enabled
+    debug!("Arguments received: {:?}", args);
+    // Log key operational parameters at info level for traceability
+    info!("Source directory: {}", args.source.display());
+    info!("Target directory: {}", args.target.display());
+    info!("Organization mode: {:?}", args.organize_by); // Use Debug format for enum
+    info!("Operation: {}", if args.move_files { "Move" } else { "Copy" });
+    info!("Include hidden: {}", args.include_hidden);
+    info!("Follow links: {}", args.follow_links);
+    // Log duplicate handling strategy clearly based on flags
+    if args.skip_existing { info!("Duplicate handling: Skip existing"); }
+    else if args.timestamp_duplicates { info!("Duplicate handling: Timestamp duplicates"); }
+    else if args.overwrite { info!("Duplicate handling: Overwrite existing (explicitly)"); }
+    else { info!("Duplicate handling: Overwrite existing (default)"); } // Log default
 
-    categories = load_config_file(args.config, logger)
 
-    # --- Execute Sorting ---
-    processed, failed_or_skipped = sort_files(
-        source_directory=args.source,
-        target_directory=args.target,
-        organize_by=args.organize_by,
-        timestamp_duplicates=args.timestamp_duplicates,
-        move_files=args.move,
-        categories_config=categories,
-        include_hidden=args.include_hidden,
-        follow_links=args.follow_links,
-        skip_existing=args.skip_existing,
-        logger=logger
-    )
+    // --- Load Configuration ---
+    // Load categories from JSON file or use defaults; ensures 'other' category exists.
+    let categories = load_config_file(args.config.as_ref())?;
+    // Optionally log loaded categories at debug level if needed for troubleshooting
+    // debug!("Using categories: {:?}", categories.0.keys());
 
-    # --- Optional Cleanup ---
-    if args.move and args.remove_empty_source_dirs and processed > 0:
-        remove_empty_folders(args.source, logger)
+    // --- Execute Core Logic ---
+    // Call the main organization function and handle its result
+    let result = organize_files(&args, &categories);
 
-    logger.info("Script finished.")
-    print("\nScript finished. Check console and log file (if specified) for details.")
+    // --- Handle Results and Optional Cleanup ---
+    match result {
+        Ok(stats) => {
+            // --- Optional Cleanup: Remove empty source directories after successful move ---
+            if args.move_files && args.remove_empty_source_dirs && stats.processed > 0 {
+                // Attempt cleanup but log errors non-fatally, as the main task succeeded
+                if let Err(e) = remove_empty_folders(&args.source) {
+                    error!("Error during empty source directory removal: {:?}", e);
+                    // Note: Cleanup errors are logged but do not cause a non-zero exit code by default.
+                }
+            }
 
-if __name__ == "__main__":
-    main()
+            // --- Final Summary ---
+            let overall_duration = overall_start_time.elapsed(); // Calculate total duration correctly
+            let summary = format!(
+                "Operation completed in {:.2?}. Scanned Entries: {}, Processed Files: {}, Skipped: {}, Errors: {}",
+                overall_duration, stats.total_scanned, stats.processed, stats.skipped, stats.errors
+            );
+            info!("{}", summary); // Log summary
+            println!("\n{}", summary); // Print final summary to console (stdout)
+
+            // If errors occurred during file processing, print the list of failed files and their errors to stderr
+            if stats.errors > 0 {
+                eprintln!("\n--- Errors occurred during processing: ---"); // Print errors to stderr
+                for (path, error_msg) in &stats.failed_files {
+                    eprintln!(" - File: {}", path.display());
+                    eprintln!("   Error: {}", error_msg); // Show the captured error context
+                }
+                eprintln!("-----------------------------------------");
+                eprintln!(
+                    "Warning: {} errors occurred. Please check logs (stderr/file) for full details.",
+                    stats.errors
+                );
+                // Consider exiting with a non-zero status code for scripting purposes if any errors occurred
+                // std::process::exit(1);
+            }
+        }
+        Err(e) => {
+            // Log the critical error that stopped the organization process entirely
+            error!("Critical error during file organization: {:?}", e); // Use Debug format for anyhow::Error chain
+            eprintln!("\nError: File organization failed critically. Check logs (stderr/file) for details.");
+            std::process::exit(1); // Exit with a non-zero code on critical failure
+        }
+    }
+
+    info!("Rust File Organizer finished.");
+    Ok(()) // Indicate successful completion (even if non-critical file errors occurred)
+}
+
+// --- Testing Notes ---
+// To properly test this application, consider using crates like:
+// - `assert_fs`: For creating temporary file/directory structures for tests.
+// - `predicates`: For making assertions about file system state (e.g., file exists, content matches).
+// - `assert_cmd`: For testing the command-line interface behavior, arguments, exit codes, and output.
+//
+// Example Test Scenarios (Conceptual):
+// - Test basic copy/move by category and extension.
+// - Test duplicate handling flags (skip, timestamp, overwrite) work correctly.
+// - Test hidden file handling with and without the --include-hidden flag.
+// - Test symbolic link handling with and without the --follow-links flag.
+// - Test behavior with empty source or target directories.
+// - Test custom configuration loading and verify correct categorization (including missing 'other').
+// - Test empty directory removal after a successful move operation.
+// - Test error handling for scenarios like insufficient permissions (harder to automate reliably).
+// - Test long path handling specifically on Windows (requires careful test setup).
+// - Test cross-device move fallback behavior.
+// - Test handling of filenames with non-UTF8 characters (requires OsStr handling).
+
 {% endcodeblock %}
