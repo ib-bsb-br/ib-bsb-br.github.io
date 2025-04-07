@@ -31,62 +31,7 @@ cd file_organizer_rs
 # Replace the contents of Cargo.toml with the provided configuration
 # Replace the contents of src/main.rs with the provided source code
 ```
-***
-{% codeblock toml %}
 
-# Cargo.toml (Based on Approach 3, with updated comments)
-[package]
-name = "rust_file_organizer"
-version = "0.1.0"
-edition = "2021"
-description = "A Rust utility for organizing files by category or extension."
-authors = ["AI Assistant"] # Replace with actual author
-license = "MIT OR Apache-2.0" # Choose appropriate license
-
-[dependencies]
-# Command-line argument parsing
-clap = { version = "4.5", features = ["derive", "cargo", "env"] } # cargo/env features allow reading from Cargo.toml/env vars
-
-# Directory traversal
-walkdir = "2.5"
-
-# JSON parsing for configuration files
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-
-# Logging framework
-log = "0.4"
-# Using fern for flexible file/console logging setup
-fern = "0.6"
-
-# Date and time handling for timestamps
-chrono = "0.4"
-
-# Flexible error handling and context reporting
-anyhow = "1.0"
-
-# Optional: More robust file operations (especially cross-device move)
-# fs_extra = "1.3" # Keep commented unless needed; std lib fallback implemented
-
-# Windows-specific dependencies are NOT needed here as std lib is used for hidden check
-# [target.'cfg(windows)'.dependencies]
-# windows = { version = "0.56", features = [...] }
-
-# Release profile optimizations (optional but recommended for smaller/faster executables)
-[profile.release]
-# 'z' optimizes aggressively for size, potentially sacrificing some speed compared to 's' or '3'.
-opt-level = 'z'
-# Enable Link-Time Optimization across crates for potential performance gains and size reduction.
-lto = true
-# Maximize optimization opportunities by using a single codegen unit (can significantly increase compile times).
-codegen-units = 1
-# Remove symbols from the binary for smaller size.
-# Alternatively, use `cargo strip` (requires `cargo install cargo-strip`) or set `debuginfo = 0` (removes debug symbols only).
-strip = true
-# Abort on panic instead of unwinding the stack. Reduces binary size but prevents catching panics.
-panic = 'abort'
-
-{% endcodeblock %}
 ## Building the Project
 
 ### Debug Build (For Development)
@@ -178,6 +123,66 @@ mkdir test_source test_target
 .\target\debug\file_organizer_rs.exe -s .\test_source -t .\test_target
 ```
 
+{% raw %}
+{% codeblock toml %}
+
+# Cargo.toml (Based on Approach 3, with updated comments)
+[package]
+name = "rust_file_organizer"
+version = "0.1.0"
+edition = "2021"
+description = "A Rust utility for organizing files by category or extension."
+authors = ["AI Assistant"] # Replace with actual author
+license = "MIT OR Apache-2.0" # Choose appropriate license
+
+[dependencies]
+# Command-line argument parsing
+clap = { version = "4.5", features = ["derive", "cargo", "env"] } # cargo/env features allow reading from Cargo.toml/env vars
+
+# Directory traversal
+walkdir = "2.5"
+
+# JSON parsing for configuration files
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Logging framework
+log = "0.4"
+# Using fern for flexible file/console logging setup
+fern = "0.6"
+
+# Date and time handling for timestamps
+chrono = "0.4"
+
+# Flexible error handling and context reporting
+anyhow = "1.0"
+
+# Optional: More robust file operations (especially cross-device move)
+# fs_extra = "1.3" # Keep commented unless needed; std lib fallback implemented
+
+# Windows-specific dependencies are NOT needed here as std lib is used for hidden check
+# [target.'cfg(windows)'.dependencies]
+# windows = { version = "0.56", features = [...] }
+
+# Release profile optimizations (optional but recommended for smaller/faster executables)
+[profile.release]
+# 'z' optimizes aggressively for size, potentially sacrificing some speed compared to 's' or '3'.
+opt-level = 'z'
+# Enable Link-Time Optimization across crates for potential performance gains and size reduction.
+lto = true
+# Maximize optimization opportunities by using a single codegen unit (can significantly increase compile times).
+codegen-units = 1
+# Remove symbols from the binary for smaller size.
+# Alternatively, use `cargo strip` (requires `cargo install cargo-strip`) or set `debuginfo = 0` (removes debug symbols only).
+strip = true
+# Abort on panic instead of unwinding the stack. Reduces binary size but prevents catching panics.
+panic = 'abort'
+
+{% endcodeblock %}
+
+{% endraw %}
+
+{% raw %}
 {% codeblock rust %}
 
 // src/main.rs: Rust implementation of the file organizer utility.
@@ -1049,3 +1054,4 @@ fn main() -> Result<()> {
 // - Test handling of filenames with non-UTF8 characters (requires OsStr handling).
 
 {% endcodeblock %}
+{% endraw %}
