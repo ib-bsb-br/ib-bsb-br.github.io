@@ -123,10 +123,8 @@ mkdir test_source test_target
 .\target\debug\file_organizer_rs.exe -s .\test_source -t .\test_target
 ```
 
-{% raw %}
-{% codeblock toml %}
-
-# Cargo.toml (Based on Approach 3, with updated comments)
+```toml
+# Cargo.toml (Fixed fern feature)
 [package]
 name = "rust_file_organizer"
 version = "0.1.0"
@@ -149,7 +147,8 @@ serde_json = "1.0"
 # Logging framework
 log = "0.4"
 # Using fern for flexible file/console logging setup
-fern = "0.6"
+# **Fix:** Enable the 'colored' feature for fern
+fern = { version = "0.6", features = ["colored"] }
 
 # Date and time handling for timestamps
 chrono = "0.4"
@@ -177,27 +176,12 @@ codegen-units = 1
 strip = true
 # Abort on panic instead of unwinding the stack. Reduces binary size but prevents catching panics.
 panic = 'abort'
+```
 
-{% endcodeblock %}
-
-{% endraw %}
-
-{% raw %}
 {% codeblock rust %}
 
 // src/main.rs: Rust implementation of the file organizer utility.
-// This version incorporates improvements based on self-critique:
-// - Uses fern for flexible logging (console + optional file).
-// - Uses anyhow for error handling with context.
-// - Uses std lib for platform-specific hidden file checks.
-// - Uses clap ValueEnum for argument validation.
-// - Implements explicit --overwrite flag and robust duplicate handling.
-// - Implements robust move operation with cross-device fallback.
-// - Reports list of failed files WITH error context.
-// - Includes more detailed comments.
-// - Correctly calculates execution duration.
-// - Safely excludes entries where hidden status check fails.
-// - Clarified meaning of `total_scanned` statistic.
+// This version fixes compilation errors and ensures completeness.
 
 use anyhow::{bail, Context, Result}; // Use anyhow for convenient error handling
 use clap::Parser; // For command-line argument parsing
@@ -208,7 +192,8 @@ use serde::Deserialize; // For deserializing JSON config
 use std::{
     collections::{HashMap, HashSet},
     env, // For CARGO_PKG_VERSION
-    fs::{self, File}, // Standard file system operations
+    // Removed unused 'File' import
+    fs::{self}, // Standard file system operations
     io::{self, ErrorKind},
     path::{Path, PathBuf},
     time::Instant, // For accurate duration measurement
@@ -218,23 +203,17 @@ use walkdir::{DirEntry, WalkDir}; // For efficient directory traversal
 // --- Configuration Structures ---
 
 /// Represents the structure of the JSON configuration file for categories.
-/// Using a tuple struct for better type safety than just HashMap directly.
 #[derive(Deserialize, Debug, Clone)]
 struct CategoriesConfig(HashMap<String, Vec<String>>);
 
 /// Provides the default file categorization configuration.
-/// This is used if no custom config file is provided or if loading fails.
 fn default_categories() -> CategoriesConfig {
     let mut map = HashMap::new();
-    // Helper macro to reduce boilerplate when defining default categories
     macro_rules! add_category {
         ($map:expr, $name:expr, [$($ext:expr),* $(,)?]) => {
-            // Inserts a category name and its associated list of lowercase extensions (including '.')
             $map.insert($name.to_string(), vec![$($ext.to_string()),*]);
         };
     }
-
-    // Define standard categories and their common extensions
     add_category!(map, "images", [".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp", ".tiff", ".svg", ".ico"]);
     add_category!(map, "documents", [".pdf", ".docx", ".doc", ".txt", ".rtf", ".odt", ".xlsx", ".xls", ".csv", ".pptx", ".ppt", ".md", ".tex", ".chm", ".epub"]);
     add_category!(map, "videos", [".mp4", ".avi", ".mkv", ".mov", ".wmv", ".flv", ".webm"]);
@@ -244,32 +223,24 @@ fn default_categories() -> CategoriesConfig {
     add_category!(map, "apps", [".exe", ".msi", ".apk", ".dmg", ".deb", ".rpm", ".app"]);
     add_category!(map, "fonts", [".ttf", ".otf", ".woff", ".woff2"]);
     add_category!(map, "shortcuts", [".lnk", ".url"]);
-    // Ensure the essential "other" category exists for files that don't match any other category.
     map.insert("other".to_string(), vec![]);
     CategoriesConfig(map)
 }
 
 /// Loads category configuration from a specified JSON file path.
-/// Falls back to default categories if the path is None, the file doesn't exist,
-/// or parsing fails. Ensures the 'other' category is present in the loaded config.
 fn load_config_file(config_path: Option<&PathBuf>) -> Result<CategoriesConfig> {
     match config_path {
         Some(path) if path.is_file() => {
-            // Attempt to load and parse the custom configuration file
             info!("Loading category configuration from: {}", path.display());
             let file_content = fs::read_to_string(path)
                 .with_context(|| format!("Failed to read config file: {}", path.display()))?;
             let mut config: HashMap<String, Vec<String>> = serde_json::from_str(&file_content)
                 .with_context(|| format!("Failed to parse JSON config file: {}", path.display()))?;
-
-            // Ensure 'other' category exists for fallback mechanism.
-            // If the user provided a config without 'other', add it automatically.
             config.entry("other".to_string()).or_insert_with(Vec::new);
             info!("Successfully loaded and validated custom configuration.");
             Ok(CategoriesConfig(config))
         }
         Some(path) => {
-            // Path specified but it's not a file (or doesn't exist)
             warn!(
                 "Config path '{}' provided but is not a valid file. Using default categories.",
                 path.display()
@@ -277,38 +248,23 @@ fn load_config_file(config_path: Option<&PathBuf>) -> Result<CategoriesConfig> {
             Ok(default_categories())
         }
         None => {
-            // No config path provided, use defaults
             info!("No config file specified. Using default category configuration.");
             Ok(default_categories())
         }
     }
 }
 
-/// Determines the category name (String) for a given file based on its extension
-/// and the provided category configuration.
+/// Determines the category name (String) for a given file based on its extension.
 fn categorize_file(filename: &Path, categories_config: &CategoriesConfig) -> String {
-    // Extract extension, prepend '.', convert to lowercase for case-insensitive matching.
     let extension = filename
         .extension()
-        .and_then(|s| s.to_str()) // Convert OsStr to &str, returns None if not valid UTF-8
+        .and_then(|s| s.to_str())
         .map(|s| format!(".{}", s.to_lowercase()))
-        .unwrap_or_else(|| "no_extension".to_string()); // Handle files with no extension or non-UTF8 extensions
-
-    // Handle files with no extension explicitly
-    if extension == "no_extension" {
-        return extension;
-    }
-
-    // Iterate through the configured categories and their associated extensions.
+        .unwrap_or_else(|| "no_extension".to_string());
+    if extension == "no_extension" { return extension; }
     for (category, extensions) in &categories_config.0 {
-        // Check if the file's extension is present in the list for this category
-        if extensions.contains(&extension) {
-            return category.clone(); // Return the matching category name
-        }
+        if extensions.contains(&extension) { return category.clone(); }
     }
-
-    // If no specific category matched, fallback to the "other" category.
-    // load_config_file ensures the "other" key exists in the HashMap.
     "other".to_string()
 }
 
@@ -318,135 +274,79 @@ fn categorize_file(filename: &Path, categories_config: &CategoriesConfig) -> Str
 #[cfg(windows)]
 fn is_hidden(path: &Path) -> Result<bool> {
     use std::os::windows::fs::MetadataExt;
-    // Use the standard library extension trait for a safer abstraction than raw Win32 calls
     let metadata = fs::metadata(path)
         .with_context(|| format!("Failed to get metadata for {}", path.display()))?;
-    // Get the raw file attributes bitfield
     let attributes = metadata.file_attributes();
-    // Check if the FILE_ATTRIBUTE_HIDDEN bit is set
-    Ok((attributes & std::os::windows::fs::FILE_ATTRIBUTE_HIDDEN) != 0)
+    // Use the raw value 0x2 for FILE_ATTRIBUTE_HIDDEN when using std::os::windows::fs
+    const FILE_ATTRIBUTE_HIDDEN_VALUE: u32 = 0x2;
+    Ok((attributes & FILE_ATTRIBUTE_HIDDEN_VALUE) != 0)
 }
 
 /// Checks if a file or directory is hidden on Unix-like systems (conventionally, starts with '.').
 #[cfg(not(windows))]
 fn is_hidden(path: &Path) -> Result<bool> {
-    // Standard check for hidden files/dirs on Unix-like systems.
     Ok(path
         .file_name()
-        .and_then(|s| s.to_str()) // Get filename as string slice
-        .map(|s| s.starts_with('.')) // Check if it starts with '.'
-        .unwrap_or(false)) // If no filename or not UTF-8, assume not hidden by this convention
+        .and_then(|s| s.to_str())
+        .map(|s| s.starts_with('.'))
+        .unwrap_or(false))
 }
 
-/// Helper for walkdir filter_entry to check hidden status before descending into directories or processing files.
-/// Logs errors but doesn't stop the walk; returns `true` if entry should be kept (i.e., not hidden or check failed).
-/// **Improvement:** Defaults to excluding (`false`) if the check fails, for safety.
+/// Helper for walkdir filter_entry to check hidden status.
 fn should_keep_entry(entry: &DirEntry, include_hidden: bool) -> bool {
-    if include_hidden {
-        return true; // Keep everything if --include-hidden flag is set
-    }
-    // Otherwise, check the hidden status
+    if include_hidden { return true; }
     match is_hidden(entry.path()) {
-        Ok(hidden) => !hidden, // Keep if NOT hidden
+        Ok(hidden) => !hidden,
         Err(err) => {
-            // Log the error but default to *excluding* the entry for safety if status is unknown
             warn!(
                 "Could not determine hidden status for {}: {}. Excluding entry.",
                 entry.path().display(), err
             );
-            false // Exclude if check fails
+            false // Exclude if check fails (safer default)
         }
     }
 }
 
-
 // --- Command Line Arguments ---
 
-/// Enum defining the organization methods, used for clap validation.
-/// This ensures only valid options are accepted via the command line.
 #[derive(clap::ValueEnum, Clone, Debug, PartialEq, Eq)]
-enum OrganizeMethod {
-    Category,
-    Extension,
-}
+enum OrganizeMethod { Category, Extension, }
 
-/// Defines the command-line interface structure using clap derive macros.
-/// Doc comments are used to generate help messages for the user.
 #[derive(Parser, Debug)]
 #[command(author, version, about = "Organize files by category or extension (Rust version).",
     long_about = "A Rust utility for organizing files from source directories into categorized target folders based on file types or extensions.",
-    help_template = "{before-help}{name} {version}\n{author-with-newline}{about-with-newline}\n{usage-heading} {usage}\n\n{all-args}{after-help}" // Custom help format
+    help_template = "{before-help}{name} {version}\n{author-with-newline}{about-with-newline}\n{usage-heading} {usage}\n\n{all-args}{after-help}"
 )]
 struct CliArgs {
-    /// Source directory containing files to organize.
-    #[arg(short, long, value_name = "DIR")]
-    source: PathBuf,
-
-    /// Target directory where organized files will be placed.
-    #[arg(short, long, value_name = "DIR")]
-    target: PathBuf,
-
-    /// Path to JSON config file for custom file categories and extensions.
-    #[arg(short, long, value_name = "FILE")]
-    config: Option<PathBuf>,
-
-    /// Method for organizing files (category or extension).
-    #[arg(long, value_enum, default_value_t = OrganizeMethod::Category)]
-    organize_by: OrganizeMethod,
-
-    /// Move files instead of copying them (default is copy).
-    #[arg(long)]
-    move_files: bool,
-
-    /// Append timestamp+counter to duplicate filenames. Conflicts with --skip-existing and --overwrite.
-    #[arg(long, conflicts_with_all = ["skip_existing", "overwrite"])]
-    timestamp_duplicates: bool,
-
-    /// Skip processing if a file with the same name exists in the target. Conflicts with --timestamp-duplicates and --overwrite.
-    #[arg(long, short = 'k', conflicts_with_all = ["timestamp_duplicates", "overwrite"])]
-    skip_existing: bool,
-
-    /// Overwrite existing files in the target directory. Conflicts with --timestamp-duplicates and --skip-existing.
-    #[arg(long, conflicts_with_all = ["timestamp_duplicates", "skip_existing"])]
-    overwrite: bool, // Explicit overwrite flag
-
-    /// Include hidden files/folders (e.g., starting with '.') in processing.
-    #[arg(long, short = 'i')]
-    include_hidden: bool,
-
-    /// Follow symbolic links (process target, not link). Use with caution (potential loops).
-    #[arg(long, short = 'l')]
-    follow_links: bool,
-
-    /// After moving (--move must be enabled), attempt to remove empty source directories.
-    #[arg(long, requires = "move_files")]
-    remove_empty_source_dirs: bool,
-
-    /// Optional path to a file for logging progress and errors.
-    #[arg(long, value_name = "FILE")]
-    log_file: Option<PathBuf>,
-
-    /// Set the log level (e.g., error, warn, info, debug, trace).
-    #[arg(long, value_parser = clap::value_parser!(LevelFilter), default_value = "info")]
-    log_level: LevelFilter,
+    #[arg(short, long, value_name = "DIR")] source: PathBuf,
+    #[arg(short, long, value_name = "DIR")] target: PathBuf,
+    #[arg(short, long, value_name = "FILE")] config: Option<PathBuf>,
+    #[arg(long, value_enum, default_value_t = OrganizeMethod::Category)] organize_by: OrganizeMethod,
+    #[arg(long)] move_files: bool,
+    #[arg(long, conflicts_with_all = ["skip_existing", "overwrite"])] timestamp_duplicates: bool,
+    #[arg(long, short = 'k', conflicts_with_all = ["timestamp_duplicates", "overwrite"])] skip_existing: bool,
+    #[arg(long, conflicts_with_all = ["timestamp_duplicates", "skip_existing"])] overwrite: bool,
+    #[arg(long, short = 'i')] include_hidden: bool,
+    #[arg(long, short = 'l')] follow_links: bool,
+    #[arg(long, requires = "move_files")] remove_empty_source_dirs: bool,
+    #[arg(long, value_name = "FILE")] log_file: Option<PathBuf>,
+    #[arg(long, value_parser = clap::value_parser!(LevelFilter), default_value = "info")] log_level: LevelFilter,
 }
 
 // --- Core Logic ---
 
-/// Holds statistics about the file processing operation, including failed file paths and errors.
+/// Holds statistics about the file processing operation.
 #[derive(Debug, Default)]
 struct ProcessStats {
-    /// Count of directory entries successfully yielded by the filtered WalkDir iterator (includes files, dirs, etc.).
-    /// **Clarification:** This counts entries *before* filtering for files-only in the processing loop.
+    /// Count of directory entries successfully yielded by the filtered WalkDir iterator.
     total_scanned: u64,
-    processed: u64,          // Count of files successfully copied/moved
-    skipped: u64,            // Count of files skipped (e.g., duplicates, hidden, non-file)
-    errors: u64,             // Count of files that failed during processing (copy/move/timestamp) or critical scan errors
-    failed_files: Vec<(PathBuf, String)>, // Stores paths and error context of failed files
+    processed: u64,
+    skipped: u64,
+    errors: u64,
+    failed_files: Vec<(PathBuf, String)>, // Stores paths and error context
 }
 
-/// Scans the source directory to find all unique file extensions (lowercase, without dot).
-/// This is primarily used when `organize_by` is `Extension` to pre-create necessary folders efficiently.
+/// Scans the source directory for unique file extensions.
 fn get_all_extensions(
     source_directory: &Path,
     include_hidden: bool,
@@ -455,38 +355,29 @@ fn get_all_extensions(
     let mut extensions = HashSet::new();
     info!("Scanning source directory for all unique file extensions...");
     let walker = WalkDir::new(source_directory)
-        .follow_links(follow_links) // Control whether to follow symlinks
+        .follow_links(follow_links)
         .into_iter();
-
     let mut count = 0;
-    // Use filter_entry for more efficient hidden filtering during the scan
     for entry_result in walker.filter_entry(|e| should_keep_entry(e, include_hidden)) {
         match entry_result {
             Ok(entry) => {
                 let path = entry.path();
-                // Process only files
                 if path.is_file() {
-                    // No need to re-check is_hidden here, filter_entry handles it based on should_keep_entry logic.
                     count += 1;
-                    // Extract extension if the file has one and it's valid UTF-8
                     if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
-                        extensions.insert(ext.to_lowercase()); // Store lowercase extension
+                        extensions.insert(ext.to_lowercase());
                     }
-                    // Log progress periodically for very large directories
-                    if count % 1000 == 0 {
-                        debug!("Scanned {} files for extensions...", count);
-                    }
+                    if count % 1000 == 0 { debug!("Scanned {} files for extensions...", count); }
                 }
             }
-            Err(e) => warn!("Error accessing entry during extension scan: {}", e), // Log errors encountered during directory walk
+            Err(e) => warn!("Error accessing entry during extension scan: {}", e),
         }
     }
     info!("Found {} unique extensions.", extensions.len());
     Ok(extensions)
 }
 
-/// Creates necessary target subfolders based on the organization method.
-/// Ensures the base target directory exists first.
+/// Creates necessary target subfolders.
 fn create_target_folders(
     base_dir: &Path,
     organize_by: &OrganizeMethod,
@@ -494,31 +385,23 @@ fn create_target_folders(
     all_extensions: Option<&HashSet<String>>,
 ) -> Result<()> {
     info!("Ensuring target base directory exists: {}", base_dir.display());
-    // Create the base target directory and any necessary parent directories
     fs::create_dir_all(base_dir)
         .with_context(|| format!("Failed to create base target directory: {}", base_dir.display()))?;
-
-    // Determine the set of folders needed based on the organization strategy.
     let folders_to_create: HashSet<String> = match organize_by {
         OrganizeMethod::Category => {
-            // Collect all category names from the config
             let mut folders = categories_config
                 .map(|cfg| cfg.0.keys().cloned().collect::<HashSet<String>>())
                 .unwrap_or_default();
-            // Ensure essential fallback folders exist for files without extensions or unmatched types
             folders.insert("other".to_string());
             folders.insert("no_extension".to_string());
             folders
         }
         OrganizeMethod::Extension => {
-            // Collect all unique extensions found during scan
             let mut folders = all_extensions.cloned().unwrap_or_default();
-            // Ensure essential fallback folder exists for files without extensions
             folders.insert("no_extension".to_string());
             folders
         }
     };
-
     info!(
         "Creating target subfolders (mode: {:?}). Total potential folders: {}",
         organize_by,
@@ -526,15 +409,9 @@ fn create_target_folders(
     );
     let mut created_count = 0;
     for folder_name in &folders_to_create {
-        // Avoid creating folders with potentially invalid names (e.g., empty string if an extension was just ".")
-        if folder_name.is_empty() {
-            warn!("Skipping creation of folder with empty name.");
-            continue;
-        }
+        if folder_name.is_empty() { warn!("Skipping creation of folder with empty name."); continue; }
         let folder_path = base_dir.join(folder_name);
-        // Check if folder already exists before trying to create
         if !folder_path.exists() {
-            // Create the folder and any necessary parents
             fs::create_dir_all(&folder_path).with_context(|| {
                 format!("Failed to create target folder '{}'", folder_path.display())
             })?;
@@ -546,512 +423,249 @@ fn create_target_folders(
     Ok(())
 }
 
-/// Attempts to move a file using `fs::rename`, falling back to copy-then-delete
-/// if `fs::rename` fails (e.g., due to being on different filesystems/devices).
+/// Attempts to move a file, falling back to copy-then-delete on cross-device errors.
 fn move_file_with_fallback(source: &Path, target: &Path) -> io::Result<()> {
-    // Attempt the efficient rename first, which is atomic on the same filesystem
     match fs::rename(source, target) {
-        Ok(_) => Ok(()), // Rename succeeded
+        Ok(_) => Ok(()),
         Err(rename_error) => {
-            // Check if the error is likely due to moving across different filesystems/devices.
-            // This requires checking platform-specific OS error codes.
             // Note: Relies on platform-specific OS error codes (Windows: 17, Unix: 18/libc::EXDEV). Might be brittle.
             let is_cross_device = || -> bool {
-                #[cfg(windows)] { rename_error.raw_os_error() == Some(17) } // ERROR_NOT_SAME_DEVICE
-                #[cfg(unix)] { rename_error.raw_os_error() == Some(18) } // libc::EXDEV
-                #[cfg(not(any(windows, unix)))] { false } // Default for other platforms
+                #[cfg(windows)] { rename_error.raw_os_error() == Some(17) }
+                #[cfg(unix)] { rename_error.raw_os_error() == Some(18) }
+                #[cfg(not(any(windows, unix)))] { false }
             };
-
             if is_cross_device() {
-                // If it's a cross-device error, attempt copy-then-delete fallback
                 warn!("Rename failed (cross-device error detected), attempting copy+delete fallback for move: {} -> {}", source.display(), target.display());
                 // Note: std::fs::copy preserves permissions but not other metadata like modification time (unlike Python's shutil.copy2).
-                // For full metadata preservation, consider crates like `fs_extra` or platform-specific APIs.
-                fs::copy(source, target)?; // Attempt copy
-                fs::remove_file(source)?; // Attempt delete original
-                Ok(()) // Fallback succeeded
-            } else {
-                // If it was a different rename error (e.g., permissions), re-throw it.
-                Err(rename_error)
-            }
+                fs::copy(source, target)?;
+                fs::remove_file(source)?;
+                Ok(())
+            } else { Err(rename_error) }
         }
     }
 }
 
 
-/// Main function to perform the file organization based on parsed arguments.
-/// Iterates through source files, determines target paths, handles duplicates,
-/// performs copy/move operations, and collects statistics.
+/// Main function to perform the file organization.
 fn organize_files(args: &CliArgs, categories_config: &CategoriesConfig) -> Result<ProcessStats> {
-    // --- Initial Validation & Setup ---
-    if !args.source.is_dir() {
-        bail!("Source directory '{}' is invalid or not found.", args.source.display());
-    }
-    // Ensure target directory exists or create it
+    if !args.source.is_dir() { bail!("Source directory '{}' is invalid or not found.", args.source.display()); }
     if !args.target.exists() {
         info!("Creating target directory: {}", args.target.display());
-        fs::create_dir_all(&args.target).with_context(|| {
-            format!("Could not create target directory '{}'", args.target.display())
-        })?;
-    } else if !args.target.is_dir() {
-        bail!("Target path '{}' exists but is not a directory.", args.target.display());
-    }
+        fs::create_dir_all(&args.target).with_context(|| format!("Could not create target directory '{}'", args.target.display()))?;
+    } else if !args.target.is_dir() { bail!("Target path '{}' exists but is not a directory.", args.target.display()); }
 
-    // --- Pre-scan for Extensions (if needed) and Pre-create Folders ---
-    // This ensures target folders exist before we start moving/copying files into them.
     info!("Preparing target folders...");
     let extensions_for_folders = if args.organize_by == OrganizeMethod::Extension {
         Some(get_all_extensions(&args.source, args.include_hidden, args.follow_links)?)
-    } else {
-        None
-    };
-    create_target_folders(
-        &args.target,
-        &args.organize_by,
-        Some(categories_config), // Pass config needed for category mode
-        extensions_for_folders.as_ref(), // Pass extensions needed for extension mode
-    )?;
+    } else { None };
+    create_target_folders(&args.target, &args.organize_by, Some(categories_config), extensions_for_folders.as_ref())?;
 
-    // --- Process Files ---
     info!("Starting file processing...");
-    let mut stats = ProcessStats::default(); // Initialize statistics
-    let mut file_counter = 0u64; // Counter for progress reporting
+    let mut stats = ProcessStats::default();
+    let mut file_counter = 0u64;
+    let walker = WalkDir::new(&args.source).follow_links(args.follow_links).into_iter();
 
-    // Use WalkDir again for the main processing loop, applying filters efficiently
-    let walker = WalkDir::new(&args.source)
-        .follow_links(args.follow_links) // Control symlink following
-        .into_iter();
-
-    // filter_entry is used to efficiently skip hidden directories/files if requested
     for entry_result in walker.filter_entry(|e| should_keep_entry(e, args.include_hidden)) {
-        // Increment scan counter for every entry successfully yielded by the filtered iterator
-        stats.total_scanned += 1;
-
+        stats.total_scanned += 1; // Count filtered entries
         let entry = match entry_result {
             Ok(e) => e,
             Err(e) => {
-                // Log errors encountered during directory traversal itself
-                error!("Error scanning path {}: {}", e.path().unwrap_or(Path::new("?")).display(), e);
-                stats.errors += 1; // Count scan errors towards total errors
-                // Record scan error details
+                let path_display = e.path().unwrap_or_else(|| Path::new("?")).display();
+                error!("Error scanning path {}: {}", path_display, e);
+                stats.errors += 1;
+                // Provide default PathBuf if e.path() is None
                 stats.failed_files.push((
-                    e.path().unwrap_or_default().to_path_buf(),
+                    e.path().map_or_else(|| PathBuf::from("?"), |p| p.to_path_buf()),
                     format!("Scan error: {:?}", e),
                 ));
-                continue; // Skip this problematic entry
+                continue;
             }
         };
 
-        // We are only interested in processing files in this loop
-        if !entry.file_type().is_file() {
-            stats.skipped += 1; // Count skipped directories/symlinks etc.
-            continue;
-        }
+        if !entry.file_type().is_file() { stats.skipped += 1; continue; }
 
-        // If we reached here, it's a file we intend to process
         file_counter += 1;
         let source_path = entry.path();
-        let progress_prefix = format!("[{}]", file_counter); // Simple counter for progress logging
+        let progress_prefix = format!("[{}]", file_counter);
 
-        // --- Inner processing block to handle errors per file using anyhow ---
-        // This allows logging an error for a single file and continuing with the next.
         let file_result: Result<()> = (|| {
-            // No need to re-check is_hidden, filter_entry handles it.
-
-            // Extract filename, handling potential errors (e.g., invalid path)
-            let file_name = source_path.file_name()
-                .with_context(|| format!("Could not get filename for path: {}", source_path.display()))?;
-
-            // Determine target subfolder name based on organization strategy
+            let file_name = source_path.file_name().with_context(|| format!("Could not get filename for path: {}", source_path.display()))?;
             let target_subfolder_name = match args.organize_by {
                 OrganizeMethod::Category => categorize_file(source_path, categories_config),
-                OrganizeMethod::Extension => source_path
-                    .extension()
-                    .and_then(|s| s.to_str()) // Get extension as string
-                    .map(|s| s.to_lowercase()) // Convert to lowercase
-                    .unwrap_or_else(|| "no_extension".to_string()), // Handle no extension
+                OrganizeMethod::Extension => source_path.extension().and_then(|s| s.to_str()).map(|s| s.to_lowercase()).unwrap_or_else(|| "no_extension".to_string()),
             };
             let target_folder_path = args.target.join(&target_subfolder_name);
             let mut target_file_path = target_folder_path.join(file_name);
 
-            // --- Handle potential duplicate files in the target directory ---
             if target_file_path.exists() {
                 if args.skip_existing {
-                    // User requested skipping duplicates
-                    info!(
-                        "{} Skipping (target exists): {}",
-                        progress_prefix,
-                        target_file_path.display()
-                    );
-                    stats.skipped += 1;
-                    return Ok(()); // Successfully skipped this file
+                    info!("{} Skipping (target exists): {}", progress_prefix, target_file_path.display());
+                    stats.skipped += 1; return Ok(());
                 } else if args.timestamp_duplicates {
-                    // User requested adding timestamps to duplicates
                     let original_target_path_display = target_file_path.display().to_string();
                     let mut counter = 1;
-                    // Safely get stem and extension, providing defaults if they don't exist
-                    let stem = source_path.file_stem().unwrap_or(file_name.as_os_str()); // Use original filename if no stem
-                    let ext = source_path.extension().unwrap_or_default(); // Empty OsStr if no extension
-                    const MAX_TIMESTAMP_ATTEMPTS: u32 = 1000; // Safety break for the loop
-
+                    // Use file_name directly, it's already &OsStr
+                    let stem = source_path.file_stem().unwrap_or(file_name);
+                    let ext = source_path.extension().unwrap_or_default();
+                    const MAX_TIMESTAMP_ATTEMPTS: u32 = 1000;
                     loop {
                         let timestamp = Local::now().format("%Y%m%d_%H%M%S");
-                        // Construct new filename using OsString to handle non-UTF8 filenames safely
                         let mut new_name_os = std::ffi::OsString::new();
                         new_name_os.push(stem);
-                        new_name_os.push(format!("_{}_{}", timestamp, counter)); // Add timestamp and counter
-                        if !ext.is_empty() {
-                            new_name_os.push("."); // Add dot only if there was an extension
-                            new_name_os.push(ext);
-                        }
-                        target_file_path = target_folder_path.join(&new_name_os); // Update the target path
-
-                        if !target_file_path.exists() {
-                            break; // Found a unique name, exit the loop
-                        }
+                        new_name_os.push(format!("_{}_{}", timestamp, counter));
+                        if !ext.is_empty() { new_name_os.push("."); new_name_os.push(ext); }
+                        target_file_path = target_folder_path.join(&new_name_os);
+                        if !target_file_path.exists() { break; }
                         counter += 1;
-                        // Safety break to prevent potential infinite loops if unique names are hard to find
-                        if counter > MAX_TIMESTAMP_ATTEMPTS {
-                            // Use bail! from anyhow to return an error directly from this inner block
-                            bail!(
-                                "Could not find unique timestamped name for {} after {} attempts. Skipping.",
-                                original_target_path_display, MAX_TIMESTAMP_ATTEMPTS
-                            );
-                        }
+                        if counter > MAX_TIMESTAMP_ATTEMPTS { bail!("Could not find unique timestamped name for {} after {} attempts. Skipping.", original_target_path_display, MAX_TIMESTAMP_ATTEMPTS); }
                     }
-                    // Log the renaming action
-                    info!(
-                        "{} Target exists '{}'. Renaming duplicate to: {}",
-                        progress_prefix,
-                        original_target_path_display,
-                        target_file_path.display()
-                    );
-                } else if args.overwrite {
-                     // Explicit overwrite flag is set
-                     warn!(
-                        "{} Overwriting existing target file: {}",
-                        progress_prefix,
-                        target_file_path.display()
-                    );
-                     // Overwrite happens implicitly below by copy/move
-                } else {
-                    // Default behavior if no specific duplicate handling flag is set: Overwrite
-                     warn!(
-                        "{} Overwriting existing target file (default): {}",
-                        progress_prefix,
-                        target_file_path.display()
-                    );
-                     // Overwrite happens implicitly below by copy/move
-                }
-            } // End duplicate check block
+                    info!("{} Target exists '{}'. Renaming duplicate to: {}", progress_prefix, original_target_path_display, target_file_path.display());
+                } else if args.overwrite { warn!("{} Overwriting existing target file: {}", progress_prefix, target_file_path.display()); }
+                else { warn!("{} Overwriting existing target file (default): {}", progress_prefix, target_file_path.display()); }
+            }
 
-            // Ensure target directory exists *just before* the operation (belt-and-suspenders approach)
-            // This handles rare cases where the folder might have been deleted after the initial check.
             fs::create_dir_all(&target_folder_path).with_context(|| format!("Failed to ensure target directory '{}' exists", target_folder_path.display()))?;
-
-            // --- Perform the file operation (Copy or Move) ---
             let operation_desc = if args.move_files { "move" } else { "copy" };
-            debug!(
-                "{} Attempting to {} '{}' to '{}'",
-                progress_prefix,
-                operation_desc,
-                source_path.display(),
-                target_file_path.display()
-            );
+            debug!("{} Attempting to {} '{}' to '{}'", progress_prefix, operation_desc, source_path.display(), target_file_path.display());
 
             if args.move_files {
-                // Use the robust move function with fallback for cross-device errors
-                move_file_with_fallback(source_path, &target_file_path)
-                    .with_context(|| format!("Failed to move '{}' to '{}'", source_path.display(), target_file_path.display()))?;
+                move_file_with_fallback(source_path, &target_file_path).with_context(|| format!("Failed to move '{}' to '{}'", source_path.display(), target_file_path.display()))?;
             } else {
-                // Standard copy.
                 // Note: std::fs::copy preserves permissions but not other metadata like modification time (unlike Python's shutil.copy2).
                 // For full metadata preservation, consider crates like `fs_extra` or platform-specific APIs.
-                fs::copy(source_path, &target_file_path)
-                    .map(|_| ()) // Discard the number of bytes copied (u64) result, returning () on success
-                    .with_context(|| format!("Failed to copy '{}' to '{}'", source_path.display(), target_file_path.display()))?;
+                fs::copy(source_path, &target_file_path).map(|_| ()).with_context(|| format!("Failed to copy '{}' to '{}'", source_path.display(), target_file_path.display()))?;
             }
-            stats.processed += 1; // Increment processed count only on success
-            Ok(()) // Indicate success for this file's processing
-        })(); // End of inner result block for per-file error handling
+            stats.processed += 1;
+            Ok(())
+        })(); // End inner closure
 
-        // --- Handle result for this specific file ---
         if let Err(e) = file_result {
-            // Log the detailed error using anyhow's Debug format
             error!("{} Failed to process '{}': {:?}", progress_prefix, source_path.display(), e);
             stats.errors += 1;
-            // Store error context along with the path
             stats.failed_files.push((source_path.to_path_buf(), format!("{:?}", e)));
         }
-    } // End of main file processing loop
+    } // End main loop
 
-    Ok(stats) // Return the final statistics
+    Ok(stats)
 }
 
-/// Recursively removes empty folders starting from the bottom up within a given directory.
-/// This is typically used after a move operation to clean up the source directory.
-/// Uses a collect-then-sort approach for simplicity and to avoid potential
-/// issues with modifying the directory structure while iterating.
+/// Recursively removes empty folders starting from the bottom up.
 fn remove_empty_folders(directory: &Path) -> Result<u32> {
     let mut removed_count = 0u32;
     info!("Attempting to remove empty directories within: {}", directory.display());
-
-    // Collect directory paths first. This avoids borrow checker issues with WalkDir
-    // if we were to modify the directory structure while iterating (e.g., removing a dir).
     let mut dirs_to_check = Vec::new();
-    // Start scan from depth 1 to avoid trying to remove the root directory itself.
     for entry_result in WalkDir::new(directory).min_depth(1) {
         match entry_result {
-            Ok(entry) if entry.file_type().is_dir() => {
-                dirs_to_check.push(entry.into_path()); // Collect path if it's a directory
-            }
-            Ok(_) => {} // Ignore files
-            Err(e) => warn!("Error accessing entry during empty dir scan: {}", e), // Log errors during scan
+            Ok(entry) if entry.file_type().is_dir() => { dirs_to_check.push(entry.into_path()); }
+            Ok(_) => {}
+            Err(e) => warn!("Error accessing entry during empty dir scan: {}", e),
         }
     }
-
-    // Sort paths by depth (longest paths first) to ensure bottom-up processing.
-    // This is crucial so we attempt to remove child directories before their parents.
     dirs_to_check.sort_by(|a, b| b.components().count().cmp(&a.components().count()));
-
     for dir_path in dirs_to_check {
-        // Check if directory still exists before trying to read/remove (it might have been removed in a previous step)
-        if !dir_path.is_dir() {
-            continue;
-        }
-
+        if !dir_path.is_dir() { continue; }
         match fs::read_dir(&dir_path) {
             Ok(mut read_dir) => {
-                // Check if the directory is truly empty by trying to get the first entry.
-                // read_dir.next().is_none() is true if the directory is empty.
-                if read_dir.next().is_none() {
-                    // Directory is empty, attempt to remove it.
+                if read_dir.next().is_none() { // Directory is empty
                     match fs::remove_dir(&dir_path) {
-                        Ok(_) => {
-                            info!("Removed empty directory: {}", dir_path.display());
-                            removed_count += 1;
-                        }
-                        Err(e) => {
-                            // Log warnings for common non-critical errors like permissions
-                            // or race conditions where the dir became non-empty between read_dir and remove_dir.
-                            // Don't treat NotFound as a warning if it was just removed by another process or race condition.
-                            if e.kind() != ErrorKind::NotFound {
-                                warn!(
-                                    "Could not remove presumably empty directory '{}': {}",
-                                    dir_path.display(), e
-                                );
-                            }
-                        }
+                        Ok(_) => { info!("Removed empty directory: {}", dir_path.display()); removed_count += 1; }
+                        Err(e) => { if e.kind() != ErrorKind::NotFound { warn!("Could not remove presumably empty directory '{}': {}", dir_path.display(), e); } }
                     }
                 }
-                // else: Directory is not empty, do nothing.
             }
-            Err(e) => {
-                // Don't warn if the directory was removed between listing and checking emptiness.
-                if e.kind() != ErrorKind::NotFound {
-                    warn!(
-                        "Could not read directory '{}' to check emptiness: {}",
-                        dir_path.display(), e
-                    );
-                }
-            }
+            Err(e) => { if e.kind() != ErrorKind::NotFound { warn!("Could not read directory '{}' to check emptiness: {}", dir_path.display(), e); } }
         }
     }
-
     info!("Finished removing empty directories. Removed: {}", removed_count);
-    Ok(removed_count) // Return the count of removed directories
+    Ok(removed_count)
 }
 
 // --- Logging Setup ---
-
-/// Sets up logging using the fern crate to log to stderr and optionally a file.
-/// Configures formatting, level filtering, and color output for the console.
+/// Sets up logging using the fern crate.
 fn setup_logging(log_level: LevelFilter, log_file: Option<&PathBuf>) -> Result<()> {
-    // Configure colors for terminal output levels for better readability
-    let colors = ColoredLevelConfig::new()
-        .error(Color::Red)
-        .warn(Color::Yellow)
-        .info(Color::Green)
-        .debug(Color::Blue)
-        .trace(Color::BrightBlack);
-
-    // Base dispatch configuration common to all loggers
+    let colors = ColoredLevelConfig::new().error(Color::Red).warn(Color::Yellow).info(Color::Green).debug(Color::Blue).trace(Color::BrightBlack);
     let base_config = fern::Dispatch::new()
-        // Format messages including timestamp (with milliseconds), colored level, target module, and message
         .format(move |out, message, record| {
             out.finish(format_args!(
                 "[{} {} {}] {}",
-                chrono::Local::now().format("%Y-%m-%d %H:%M:%S%.3f"), // Time format with ms
-                colors.color(record.level()), // Apply color to level text
-                record.target(), // Module path where log occurred (e.g., `rust_file_organizer::main`)
-                message
+                chrono::Local::now().format("%Y-%m-%d %H:%M:%S%.3f"), colors.color(record.level()), record.target(), message
             ))
         })
-        // Apply the global log level filter passed from arguments (e.g., Info, Debug)
         .level(log_level)
-        // Filter out overly verbose logs from common libraries unless explicitly requested at a higher level
-        // This keeps the default output cleaner when running at Info level.
-        .level_for("hyper", LevelFilter::Warn)
-        .level_for("mio", LevelFilter::Warn)
-        .level_for("want", LevelFilter::Warn)
-        .level_for("reqwest", LevelFilter::Warn)
-        .level_for("rustls", LevelFilter::Warn);
-
-
-    // Chain the stderr logger. By default, only show messages from our crate unless Debug/Trace is enabled.
-    let stderr_logger = fern::Dispatch::new()
-        .filter(move |metadata| {
-             // Show logs from our crate OR if the global level is Debug or Trace
-             log_level <= LevelFilter::Debug || metadata.target().starts_with(env!("CARGO_PKG_NAME"))
-        })
-        .chain(std::io::stderr()); // Chain to standard error output
-
-    // Start building the final dispatch configuration, always including stderr
+        .level_for("hyper", LevelFilter::Warn).level_for("mio", LevelFilter::Warn).level_for("want", LevelFilter::Warn).level_for("reqwest", LevelFilter::Warn).level_for("rustls", LevelFilter::Warn);
+    let stderr_logger = fern::Dispatch::new().filter(move |metadata| { log_level <= LevelFilter::Debug || metadata.target().starts_with(env!("CARGO_PKG_NAME")) }).chain(std::io::stderr());
     let mut final_dispatch = base_config.chain(stderr_logger);
-
-    // Chain the file logger conditionally if a path is provided
-    let mut file_logger_ok = false; // Track if file logger setup succeeds
+    let mut file_logger_ok = false;
     if let Some(log_path) = log_file {
         match fern::log_file(log_path) {
-            Ok(file_output) => {
-                // If file opened successfully, chain it to the dispatch
-                final_dispatch = final_dispatch.chain(file_output);
-                file_logger_ok = true;
-            }
-            Err(e) => {
-                // If file creation fails, log error directly to stderr (logger not ready yet)
-                // and proceed without file logging.
-                eprintln!(
-                    "Error: Failed to create log file '{}': {}. Logging to console only.",
-                    log_path.display(), e
-                );
-            }
+            Ok(file_output) => { final_dispatch = final_dispatch.chain(file_output); file_logger_ok = true; }
+            Err(e) => { eprintln!("Error: Failed to create log file '{}': {}. Logging to console only.", log_path.display(), e); }
         }
     }
-
-    // Apply the final combined logging configuration
     final_dispatch.apply().context("Failed to set up logging")?;
-
-    // Log confirmation *after* apply() succeeds
-    if file_logger_ok {
-        if let Some(path) = log_file {
-            info!("File logging enabled to: {}", path.display());
-        }
-    }
-
+    if file_logger_ok { if let Some(path) = log_file { info!("File logging enabled to: {}", path.display()); } }
     Ok(())
 }
 
-
 // --- Main Application Entry Point ---
-
 fn main() -> Result<()> {
-    // Record start time for overall duration calculation
-    let overall_start_time = Instant::now();
-
-    // Parse command-line arguments using clap
+    let overall_start_time = Instant::now(); // Start timing
     let args = CliArgs::parse();
-
-    // --- Setup Logging ---
-    // Initialize logging early based on args.log_level and optional args.log_file
-    // This allows logging during argument validation or config loading if needed.
     setup_logging(args.log_level, args.log_file.as_ref())?;
 
-    // --- Log Startup Information ---
     info!("Rust File Organizer (v{}) starting...", env!("CARGO_PKG_VERSION"));
-    // Log full arguments only if debug level is enabled
     debug!("Arguments received: {:?}", args);
-    // Log key operational parameters at info level for traceability
     info!("Source directory: {}", args.source.display());
     info!("Target directory: {}", args.target.display());
-    info!("Organization mode: {:?}", args.organize_by); // Use Debug format for enum
+    info!("Organization mode: {:?}", args.organize_by);
     info!("Operation: {}", if args.move_files { "Move" } else { "Copy" });
     info!("Include hidden: {}", args.include_hidden);
     info!("Follow links: {}", args.follow_links);
-    // Log duplicate handling strategy clearly based on flags
     if args.skip_existing { info!("Duplicate handling: Skip existing"); }
     else if args.timestamp_duplicates { info!("Duplicate handling: Timestamp duplicates"); }
     else if args.overwrite { info!("Duplicate handling: Overwrite existing (explicitly)"); }
-    else { info!("Duplicate handling: Overwrite existing (default)"); } // Log default
+    else { info!("Duplicate handling: Overwrite existing (default)"); }
 
-
-    // --- Load Configuration ---
-    // Load categories from JSON file or use defaults; ensures 'other' category exists.
     let categories = load_config_file(args.config.as_ref())?;
-    // Optionally log loaded categories at debug level if needed for troubleshooting
-    // debug!("Using categories: {:?}", categories.0.keys());
-
-    // --- Execute Core Logic ---
-    // Call the main organization function and handle its result
     let result = organize_files(&args, &categories);
 
-    // --- Handle Results and Optional Cleanup ---
     match result {
         Ok(stats) => {
-            // --- Optional Cleanup: Remove empty source directories after successful move ---
             if args.move_files && args.remove_empty_source_dirs && stats.processed > 0 {
-                // Attempt cleanup but log errors non-fatally, as the main task succeeded
-                if let Err(e) = remove_empty_folders(&args.source) {
-                    error!("Error during empty source directory removal: {:?}", e);
-                    // Note: Cleanup errors are logged but do not cause a non-zero exit code by default.
-                }
+                if let Err(e) = remove_empty_folders(&args.source) { error!("Error during empty source directory removal: {:?}", e); }
             }
-
-            // --- Final Summary ---
-            let overall_duration = overall_start_time.elapsed(); // Calculate total duration correctly
+            let overall_duration = overall_start_time.elapsed();
             let summary = format!(
                 "Operation completed in {:.2?}. Scanned Entries: {}, Processed Files: {}, Skipped: {}, Errors: {}",
                 overall_duration, stats.total_scanned, stats.processed, stats.skipped, stats.errors
             );
-            info!("{}", summary); // Log summary
-            println!("\n{}", summary); // Print final summary to console (stdout)
-
-            // If errors occurred during file processing, print the list of failed files and their errors to stderr
+            info!("{}", summary);
+            println!("\n{}", summary);
             if stats.errors > 0 {
-                eprintln!("\n--- Errors occurred during processing: ---"); // Print errors to stderr
+                eprintln!("\n--- Errors occurred during processing: ---");
                 for (path, error_msg) in &stats.failed_files {
                     eprintln!(" - File: {}", path.display());
-                    eprintln!("   Error: {}", error_msg); // Show the captured error context
+                    eprintln!("   Error: {}", error_msg);
                 }
                 eprintln!("-----------------------------------------");
-                eprintln!(
-                    "Warning: {} errors occurred. Please check logs (stderr/file) for full details.",
-                    stats.errors
-                );
-                // Consider exiting with a non-zero status code for scripting purposes if any errors occurred
+                eprintln!("Warning: {} errors occurred. Please check logs (stderr/file) for full details.", stats.errors);
+                // Potentially exit with non-zero status
                 // std::process::exit(1);
             }
         }
         Err(e) => {
-            // Log the critical error that stopped the organization process entirely
-            error!("Critical error during file organization: {:?}", e); // Use Debug format for anyhow::Error chain
+            error!("Critical error during file organization: {:?}", e);
             eprintln!("\nError: File organization failed critically. Check logs (stderr/file) for details.");
-            std::process::exit(1); // Exit with a non-zero code on critical failure
+            std::process::exit(1);
         }
     }
-
     info!("Rust File Organizer finished.");
-    Ok(()) // Indicate successful completion (even if non-critical file errors occurred)
+    Ok(())
 }
 
 // --- Testing Notes ---
-// To properly test this application, consider using crates like:
-// - `assert_fs`: For creating temporary file/directory structures for tests.
-// - `predicates`: For making assertions about file system state (e.g., file exists, content matches).
-// - `assert_cmd`: For testing the command-line interface behavior, arguments, exit codes, and output.
-//
-// Example Test Scenarios (Conceptual):
-// - Test basic copy/move by category and extension.
-// - Test duplicate handling flags (skip, timestamp, overwrite) work correctly.
-// - Test hidden file handling with and without the --include-hidden flag.
-// - Test symbolic link handling with and without the --follow-links flag.
-// - Test behavior with empty source or target directories.
-// - Test custom configuration loading and verify correct categorization (including missing 'other').
-// - Test empty directory removal after a successful move operation.
-// - Test error handling for scenarios like insufficient permissions (harder to automate reliably).
-// - Test long path handling specifically on Windows (requires careful test setup).
-// - Test cross-device move fallback behavior.
-// - Test handling of filenames with non-UTF8 characters (requires OsStr handling).
+// Consider using crates like `assert_fs`, `predicates`, `assert_cmd` for testing.
+// Test scenarios: basic copy/move (category/extension), duplicate handling (skip/timestamp/overwrite),
+// hidden files, symlinks, empty dirs, custom config, empty dir removal, errors (permissions), long paths.
 
 {% endcodeblock %}
-{% endraw %}
