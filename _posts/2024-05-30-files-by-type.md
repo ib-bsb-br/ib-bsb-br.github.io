@@ -1,5 +1,5 @@
 ---
-title: Organize files by their extensions
+title: Organize files by type
 date: 2024-05-30
 tags: [scripts>python]
 info: aberto.
@@ -7,7 +7,7 @@ type: post
 layout: post
 ---
 
-# File Organizer Documentation
+# 'files by type' Documentation
 
 A Python utility for organizing files from source directories into categorized target folders.
 
