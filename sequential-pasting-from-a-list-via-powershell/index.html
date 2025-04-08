@@ -90,7 +90,7 @@
         <div class="page-stats mt-3" role="status" aria-label="Page statistics">
       
       <span class="badge bg-primary">
-        14231 characters
+        15918 characters
       </span>
         <span class="separator mx-2" aria-hidden="true">•</span>
         <span class="badge bg-primary">
@@ -443,264 +443,337 @@
   </h3>
       
 
-<section data-filename="powershell_code-block.txt" data-code="# Sequential Paster.ps1 - Corrected Version with Proper Variable Scoping
+<section class="code-block-container" role="group" aria-label="Powershell Code Block" data-filename="powershell_code_block.txt" data-code="# Sequential Paster.ps1 - Corrected Version with Proper Variable Scoping
+
 # Load necessary assemblies
+
 Add-Type -AssemblyName System.Windows.Forms
+
 # Configuration
-$Config = @{ ListFilePath = &quot;$HOME\\Documents\\list.txt&quot; Hotkeys = @{ Paste = 'Control+F11'
-# Pause = 'Control+Shift+F11' # Updated hotkey to avoid conflicts
+
+$Config = @{ ListFilePath = &quot;$HOME\\Documents\\list.txt&quot; Hotkeys = @{ Paste = &#39;Control+F11&#39;
+
+# Pause = &#39;Control+Shift+F11&#39; # Updated hotkey to avoid conflicts
+
 ```
-Quit  = 'Control+F12'
+    Quit  = &#39;Control+F12&#39;
 }
 AutoTab = $false
 ```
+
 }
+
 # Function to display messages
+
 function Show-Message { param( \[string\]$Message, \[string\]$Title = &quot;Sequential Paster&quot;, \[string\]$IconType = &quot;Information&quot; ) $icon = switch ($IconType.ToLower()) { &quot;information&quot; { \[System.Windows.Forms.MessageBoxIcon\]::Information } &quot;error&quot; { \[System.Windows.Forms.MessageBoxIcon\]::Error } &quot;warning&quot; { \[System.Windows.Forms.MessageBoxIcon\]::Warning } default { \[System.Windows.Forms.MessageBoxIcon\]::Information } } \[System.Windows.Forms.MessageBox\]::Show($Message, $Title, \[System.Windows.Forms.MessageBoxButtons\]::OK, $icon) | Out-Null }
+
 # Validate and load items from the list file
+
 function Load-ListItems { try { if (-not (Test-Path -Path $Config.ListFilePath)) { Show-Message &quot;List file not found at:`n$($Config.ListFilePath)`nPlease create it and add items.&quot; &quot;Error&quot; &quot;Error&quot; exit } $ListItems = Get-Content -Path $Config.ListFilePath -Encoding UTF8 | Where-Object { $*.Trim() } if ($ListItems.Count -eq 0) { Show-Message &quot;The list file is empty.&quot; &quot;Error&quot; &quot;Error&quot; exit } return $ListItems } catch { Show-Message &quot;Error reading list file: $*&quot; &quot;Error&quot; &quot;Error&quot; exit } }
+
 # Parse hotkey strings into modifier keys and virtual key codes
-function Parse-Hotkeys { param(\[hashtable\]$HotkeyConfig) $hotkeyMappings = @{} foreach ($key in $HotkeyConfig.Keys) { try { $hotkeyString = $HotkeyConfig\[$key\] $modifiers = 0 $keyCode = 0 $parts = $hotkeyString -split '+' foreach ($part in $parts) { switch ($part.ToLower()) { 'control' { $modifiers += 2 } 'shift' { $modifiers += 4 } 'alt' { $modifiers += 1 } default { $keyCode = \[int\]\[System.Windows.Forms.Keys\]::$part } } } $hotkeyMappings\[$key\] = @{ Modifiers = $modifiers KeyCode = $keyCode ID = \[System.Guid\]::NewGuid().GetHashCode() } } catch { Show-Message &quot;Invalid hotkey configuration for '$key': $hotkeyString&quot; &quot;Error&quot; &quot;Error&quot; exit } } return $hotkeyMappings }
+
+function Parse-Hotkeys { param(\[hashtable\]$HotkeyConfig) $hotkeyMappings = @{} foreach ($key in $HotkeyConfig.Keys) { try { $hotkeyString = $HotkeyConfig\[$key\] $modifiers = 0 $keyCode = 0 $parts = $hotkeyString -split &#39;+&#39; foreach ($part in $parts) { switch ($part.ToLower()) { &#39;control&#39; { $modifiers += 2 } &#39;shift&#39; { $modifiers += 4 } &#39;alt&#39; { $modifiers += 1 } default { $keyCode = \[int\]\[System.Windows.Forms.Keys\]::$part } } } $hotkeyMappings\[$key\] = @{ Modifiers = $modifiers KeyCode = $keyCode ID = \[System.Guid\]::NewGuid().GetHashCode() } } catch { Show-Message &quot;Invalid hotkey configuration for &#39;$key&#39;: $hotkeyString&quot; &quot;Error&quot; &quot;Error&quot; exit } } return $hotkeyMappings }
+
 # Implement the IMessageFilter interface for handling messages
+
 Add-Type -ReferencedAssemblies &quot;System.Windows.Forms&quot; -TypeDefinition @&quot; using System; using System.Windows.Forms;
+
 public class HotkeyMessageFilter : IMessageFilter { public delegate void HotkeyPressedHandler(int hotkeyId); public event HotkeyPressedHandler HotkeyPressed;
+
 ```
 public bool PreFilterMessage(ref Message m)
 {
-const int WM_HOTKEY = 0x0312;
-if (m.Msg == WM_HOTKEY)
-{
-int hotkeyId = m.WParam.ToInt32();
-if (HotkeyPressed != null)
-{
-HotkeyPressed.Invoke(hotkeyId);
-}
-return true;
-}
-return false;
+    const int WM_HOTKEY = 0x0312;
+    if (m.Msg == WM_HOTKEY)
+    {
+        int hotkeyId = m.WParam.ToInt32();
+        if (HotkeyPressed != null)
+        {
+            HotkeyPressed.Invoke(hotkeyId);
+        }
+        return true;
+    }
+    return false;
 }
 ```
+
 } &quot;@
+
 # Main logic encapsulated in a function
+
 function Start-Paster { $script:ListItems = Load-ListItems $script:CurrentIndex = 0 $script:IsPaused = $false
+
 ```
 $Hotkeys = Parse-Hotkeys -HotkeyConfig $Config.Hotkeys
+
 Add-Type -MemberDefinition @&quot;
-[DllImport(&quot;user32.dll&quot;, SetLastError = true)]
-public static extern bool RegisterHotKey(IntPtr hWnd, int id, int fsModifiers, int vk);
-[DllImport(&quot;user32.dll&quot;, SetLastError = true)]
-public static extern bool UnregisterHotKey(IntPtr hWnd, int id);
+    [DllImport(&quot;user32.dll&quot;, SetLastError = true)]
+    public static extern bool RegisterHotKey(IntPtr hWnd, int id, int fsModifiers, int vk);
+
+    [DllImport(&quot;user32.dll&quot;, SetLastError = true)]
+    public static extern bool UnregisterHotKey(IntPtr hWnd, int id);
 ```
+
 &quot;@ -Name &quot;NativeMethods&quot; -Namespace &quot;WinAPI&quot;
+
 ```
 $form = New-Object System.Windows.Forms.Form
-$form.WindowState = 'Minimized'
+$form.WindowState = &#39;Minimized&#39;
 $form.ShowInTaskbar = $false
+
 # Register hotkeys
 foreach ($hotkeyName in $Hotkeys.Keys) {
-$hotkey = $Hotkeys[$hotkeyName]
-$registered = [WinAPI.NativeMethods]::RegisterHotKey($form.Handle, $hotkey.ID, $hotkey.Modifiers, $hotkey.KeyCode)
-if (-not $registered) {
-$errorCode = [Runtime.InteropServices.Marshal]::GetLastWin32Error()
-Show-Message &quot;Failed to register hotkey '$hotkeyName'. Error code: $errorCode&quot; &quot;Error&quot; &quot;Error&quot;
-exit
+    $hotkey = $Hotkeys[$hotkeyName]
+    $registered = [WinAPI.NativeMethods]::RegisterHotKey($form.Handle, $hotkey.ID, $hotkey.Modifiers, $hotkey.KeyCode)
+    if (-not $registered) {
+        $errorCode = [Runtime.InteropServices.Marshal]::GetLastWin32Error()
+        Show-Message &quot;Failed to register hotkey &#39;$hotkeyName&#39;. Error code: $errorCode&quot; &quot;Error&quot; &quot;Error&quot;
+        exit
+    }
 }
-}
+
 # Create an instance of the message filter
 $filter = New-Object HotkeyMessageFilter
+
 # Add the message filter to the application
 [System.Windows.Forms.Application]::AddMessageFilter($filter)
+
 # Define the action when a hotkey is pressed
 $filter.add_HotkeyPressed({
-param($hotkeyId)
-foreach ($hotkeyName in $Hotkeys.Keys) {
-if ($Hotkeys[$hotkeyName].ID -eq $hotkeyId) {
-switch ($hotkeyName) {
-'Paste' {
-if (-not $script:IsPaused) {
-if ($script:CurrentIndex -lt $script:ListItems.Count) {
-$item = $script:ListItems[$script:CurrentIndex]
-try {
-[System.Windows.Forms.Clipboard]::SetText($item)
-[System.Windows.Forms.SendKeys]::SendWait('^v')
-if ($Config.AutoTab) {
-Start-Sleep -Milliseconds 50
-[System.Windows.Forms.SendKeys]::SendWait('{TAB}')
-}
-$script:CurrentIndex++
-} catch {
-Show-Message &quot;Error during paste: $_&quot; &quot;Error&quot; &quot;Error&quot;
-}
-if ($script:CurrentIndex -ge $script:ListItems.Count) {
-Show-Message &quot;All items pasted.&quot; &quot;Info&quot; &quot;Information&quot;
-$form.Close()
-}
-}
-} else {
-Show-Message &quot;Pasting is paused.&quot; &quot;Info&quot; &quot;Information&quot;
-}
-}
-'Pause' {
-$script:IsPaused = -not $script:IsPaused
-$status = if ($script:IsPaused) { 'Paused' } else { 'Resumed' }
-Show-Message &quot;Pasting $status.&quot; &quot;Info&quot; &quot;Information&quot;
-}
-'Quit' {
-Show-Message &quot;Quitting.&quot; &quot;Info&quot; &quot;Information&quot;
-$form.Close()
-}
-}
-break
-}
-}
+    param($hotkeyId)
+
+    foreach ($hotkeyName in $Hotkeys.Keys) {
+        if ($Hotkeys[$hotkeyName].ID -eq $hotkeyId) {
+            switch ($hotkeyName) {
+                &#39;Paste&#39; {
+                    if (-not $script:IsPaused) {
+                        if ($script:CurrentIndex -lt $script:ListItems.Count) {
+                            $item = $script:ListItems[$script:CurrentIndex]
+                            try {
+                                [System.Windows.Forms.Clipboard]::SetText($item)
+                                [System.Windows.Forms.SendKeys]::SendWait(&#39;^v&#39;)
+                                if ($Config.AutoTab) {
+                                    Start-Sleep -Milliseconds 50
+                                    [System.Windows.Forms.SendKeys]::SendWait(&#39;{TAB}&#39;)
+                                }
+                                $script:CurrentIndex++
+                            } catch {
+                                Show-Message &quot;Error during paste: $_&quot; &quot;Error&quot; &quot;Error&quot;
+                            }
+                            if ($script:CurrentIndex -ge $script:ListItems.Count) {
+                                Show-Message &quot;All items pasted.&quot; &quot;Info&quot; &quot;Information&quot;
+                                $form.Close()
+                            }
+                        }
+                    } else {
+                        Show-Message &quot;Pasting is paused.&quot; &quot;Info&quot; &quot;Information&quot;
+                    }
+                }
+                &#39;Pause&#39; {
+                    $script:IsPaused = -not $script:IsPaused
+                    $status = if ($script:IsPaused) { &#39;Paused&#39; } else { &#39;Resumed&#39; }
+                    Show-Message &quot;Pasting $status.&quot; &quot;Info&quot; &quot;Information&quot;
+                }
+                &#39;Quit&#39; {
+                    Show-Message &quot;Quitting.&quot; &quot;Info&quot; &quot;Information&quot;
+                    $form.Close()
+                }
+            }
+            break
+        }
+    }
 })
+
 # Form Closed event handler
 $form.add_FormClosed({
-# Unregister hotkeys
-foreach ($hotkey in $Hotkeys.Values) {
-[WinAPI.NativeMethods]::UnregisterHotKey($form.Handle, $hotkey.ID) | Out-Null
-}
-# Remove the message filter
-[System.Windows.Forms.Application]::RemoveMessageFilter($filter)
-[System.Windows.Forms.Application]::Exit()
+    # Unregister hotkeys
+    foreach ($hotkey in $Hotkeys.Values) {
+        [WinAPI.NativeMethods]::UnregisterHotKey($form.Handle, $hotkey.ID) | Out-Null
+    }
+    # Remove the message filter
+    [System.Windows.Forms.Application]::RemoveMessageFilter($filter)
+    [System.Windows.Forms.Application]::Exit()
 })
+
 # Show startup message
 Show-Message &quot;Sequential Paster is running.`nUse the configured hotkeys to control it.&quot; &quot;Info&quot; &quot;Information&quot;
+
 # Start the application loop
 [System.Windows.Forms.Application]::Run($form)
 ```
+
 }
+
 # Start the paster
-Start-Paster" data-download-link="" data-download-link-label="Download Powershell"><code class="language-powershell"># Sequential Paster.ps1 - Corrected Version with Proper Variable Scoping
+
+Start-Paster" data-download-link="" data-download-label="Download Powershell">
+  <code class="language-powershell"># Sequential Paster.ps1 - Corrected Version with Proper Variable Scoping
+
 # Load necessary assemblies
+
 Add-Type -AssemblyName System.Windows.Forms
+
 # Configuration
-$Config = @{ ListFilePath = "$HOME\\Documents\\list.txt" Hotkeys = @{ Paste = 'Control+F11'
-# Pause = 'Control+Shift+F11' # Updated hotkey to avoid conflicts
+
+$Config = @{ ListFilePath = &quot;$HOME\\Documents\\list.txt&quot; Hotkeys = @{ Paste = &#39;Control+F11&#39;
+
+# Pause = &#39;Control+Shift+F11&#39; # Updated hotkey to avoid conflicts
+
 ```
-Quit  = 'Control+F12'
+    Quit  = &#39;Control+F12&#39;
 }
 AutoTab = $false
 ```
+
 }
+
 # Function to display messages
-function Show-Message { param( \[string\]$Message, \[string\]$Title = "Sequential Paster", \[string\]$IconType = "Information" ) $icon = switch ($IconType.ToLower()) { "information" { \[System.Windows.Forms.MessageBoxIcon\]::Information } "error" { \[System.Windows.Forms.MessageBoxIcon\]::Error } "warning" { \[System.Windows.Forms.MessageBoxIcon\]::Warning } default { \[System.Windows.Forms.MessageBoxIcon\]::Information } } \[System.Windows.Forms.MessageBox\]::Show($Message, $Title, \[System.Windows.Forms.MessageBoxButtons\]::OK, $icon) | Out-Null }
+
+function Show-Message { param( \[string\]$Message, \[string\]$Title = &quot;Sequential Paster&quot;, \[string\]$IconType = &quot;Information&quot; ) $icon = switch ($IconType.ToLower()) { &quot;information&quot; { \[System.Windows.Forms.MessageBoxIcon\]::Information } &quot;error&quot; { \[System.Windows.Forms.MessageBoxIcon\]::Error } &quot;warning&quot; { \[System.Windows.Forms.MessageBoxIcon\]::Warning } default { \[System.Windows.Forms.MessageBoxIcon\]::Information } } \[System.Windows.Forms.MessageBox\]::Show($Message, $Title, \[System.Windows.Forms.MessageBoxButtons\]::OK, $icon) | Out-Null }
+
 # Validate and load items from the list file
-function Load-ListItems { try { if (-not (Test-Path -Path $Config.ListFilePath)) { Show-Message "List file not found at:`n$($Config.ListFilePath)`nPlease create it and add items." "Error" "Error" exit } $ListItems = Get-Content -Path $Config.ListFilePath -Encoding UTF8 | Where-Object { $*.Trim() } if ($ListItems.Count -eq 0) { Show-Message "The list file is empty." "Error" "Error" exit } return $ListItems } catch { Show-Message "Error reading list file: $*" "Error" "Error" exit } }
+
+function Load-ListItems { try { if (-not (Test-Path -Path $Config.ListFilePath)) { Show-Message &quot;List file not found at:`n$($Config.ListFilePath)`nPlease create it and add items.&quot; &quot;Error&quot; &quot;Error&quot; exit } $ListItems = Get-Content -Path $Config.ListFilePath -Encoding UTF8 | Where-Object { $*.Trim() } if ($ListItems.Count -eq 0) { Show-Message &quot;The list file is empty.&quot; &quot;Error&quot; &quot;Error&quot; exit } return $ListItems } catch { Show-Message &quot;Error reading list file: $*&quot; &quot;Error&quot; &quot;Error&quot; exit } }
+
 # Parse hotkey strings into modifier keys and virtual key codes
-function Parse-Hotkeys { param(\[hashtable\]$HotkeyConfig) $hotkeyMappings = @{} foreach ($key in $HotkeyConfig.Keys) { try { $hotkeyString = $HotkeyConfig\[$key\] $modifiers = 0 $keyCode = 0 $parts = $hotkeyString -split '+' foreach ($part in $parts) { switch ($part.ToLower()) { 'control' { $modifiers += 2 } 'shift' { $modifiers += 4 } 'alt' { $modifiers += 1 } default { $keyCode = \[int\]\[System.Windows.Forms.Keys\]::$part } } } $hotkeyMappings\[$key\] = @{ Modifiers = $modifiers KeyCode = $keyCode ID = \[System.Guid\]::NewGuid().GetHashCode() } } catch { Show-Message "Invalid hotkey configuration for '$key': $hotkeyString" "Error" "Error" exit } } return $hotkeyMappings }
+
+function Parse-Hotkeys { param(\[hashtable\]$HotkeyConfig) $hotkeyMappings = @{} foreach ($key in $HotkeyConfig.Keys) { try { $hotkeyString = $HotkeyConfig\[$key\] $modifiers = 0 $keyCode = 0 $parts = $hotkeyString -split &#39;+&#39; foreach ($part in $parts) { switch ($part.ToLower()) { &#39;control&#39; { $modifiers += 2 } &#39;shift&#39; { $modifiers += 4 } &#39;alt&#39; { $modifiers += 1 } default { $keyCode = \[int\]\[System.Windows.Forms.Keys\]::$part } } } $hotkeyMappings\[$key\] = @{ Modifiers = $modifiers KeyCode = $keyCode ID = \[System.Guid\]::NewGuid().GetHashCode() } } catch { Show-Message &quot;Invalid hotkey configuration for &#39;$key&#39;: $hotkeyString&quot; &quot;Error&quot; &quot;Error&quot; exit } } return $hotkeyMappings }
+
 # Implement the IMessageFilter interface for handling messages
-Add-Type -ReferencedAssemblies "System.Windows.Forms" -TypeDefinition @" using System; using System.Windows.Forms;
+
+Add-Type -ReferencedAssemblies &quot;System.Windows.Forms&quot; -TypeDefinition @&quot; using System; using System.Windows.Forms;
+
 public class HotkeyMessageFilter : IMessageFilter { public delegate void HotkeyPressedHandler(int hotkeyId); public event HotkeyPressedHandler HotkeyPressed;
+
 ```
 public bool PreFilterMessage(ref Message m)
 {
-const int WM_HOTKEY = 0x0312;
-if (m.Msg == WM_HOTKEY)
-{
-int hotkeyId = m.WParam.ToInt32();
-if (HotkeyPressed != null)
-{
-HotkeyPressed.Invoke(hotkeyId);
-}
-return true;
-}
-return false;
+    const int WM_HOTKEY = 0x0312;
+    if (m.Msg == WM_HOTKEY)
+    {
+        int hotkeyId = m.WParam.ToInt32();
+        if (HotkeyPressed != null)
+        {
+            HotkeyPressed.Invoke(hotkeyId);
+        }
+        return true;
+    }
+    return false;
 }
 ```
-} "@
+
+} &quot;@
+
 # Main logic encapsulated in a function
+
 function Start-Paster { $script:ListItems = Load-ListItems $script:CurrentIndex = 0 $script:IsPaused = $false
+
 ```
 $Hotkeys = Parse-Hotkeys -HotkeyConfig $Config.Hotkeys
-Add-Type -MemberDefinition @"
-[DllImport("user32.dll", SetLastError = true)]
-public static extern bool RegisterHotKey(IntPtr hWnd, int id, int fsModifiers, int vk);
-[DllImport("user32.dll", SetLastError = true)]
-public static extern bool UnregisterHotKey(IntPtr hWnd, int id);
+
+Add-Type -MemberDefinition @&quot;
+    [DllImport(&quot;user32.dll&quot;, SetLastError = true)]
+    public static extern bool RegisterHotKey(IntPtr hWnd, int id, int fsModifiers, int vk);
+
+    [DllImport(&quot;user32.dll&quot;, SetLastError = true)]
+    public static extern bool UnregisterHotKey(IntPtr hWnd, int id);
 ```
-"@ -Name "NativeMethods" -Namespace "WinAPI"
+
+&quot;@ -Name &quot;NativeMethods&quot; -Namespace &quot;WinAPI&quot;
+
 ```
 $form = New-Object System.Windows.Forms.Form
-$form.WindowState = 'Minimized'
+$form.WindowState = &#39;Minimized&#39;
 $form.ShowInTaskbar = $false
+
 # Register hotkeys
 foreach ($hotkeyName in $Hotkeys.Keys) {
-$hotkey = $Hotkeys[$hotkeyName]
-$registered = [WinAPI.NativeMethods]::RegisterHotKey($form.Handle, $hotkey.ID, $hotkey.Modifiers, $hotkey.KeyCode)
-if (-not $registered) {
-$errorCode = [Runtime.InteropServices.Marshal]::GetLastWin32Error()
-Show-Message "Failed to register hotkey '$hotkeyName'. Error code: $errorCode" "Error" "Error"
-exit
+    $hotkey = $Hotkeys[$hotkeyName]
+    $registered = [WinAPI.NativeMethods]::RegisterHotKey($form.Handle, $hotkey.ID, $hotkey.Modifiers, $hotkey.KeyCode)
+    if (-not $registered) {
+        $errorCode = [Runtime.InteropServices.Marshal]::GetLastWin32Error()
+        Show-Message &quot;Failed to register hotkey &#39;$hotkeyName&#39;. Error code: $errorCode&quot; &quot;Error&quot; &quot;Error&quot;
+        exit
+    }
 }
-}
+
 # Create an instance of the message filter
 $filter = New-Object HotkeyMessageFilter
+
 # Add the message filter to the application
 [System.Windows.Forms.Application]::AddMessageFilter($filter)
+
 # Define the action when a hotkey is pressed
 $filter.add_HotkeyPressed({
-param($hotkeyId)
-foreach ($hotkeyName in $Hotkeys.Keys) {
-if ($Hotkeys[$hotkeyName].ID -eq $hotkeyId) {
-switch ($hotkeyName) {
-'Paste' {
-if (-not $script:IsPaused) {
-if ($script:CurrentIndex -lt $script:ListItems.Count) {
-$item = $script:ListItems[$script:CurrentIndex]
-try {
-[System.Windows.Forms.Clipboard]::SetText($item)
-[System.Windows.Forms.SendKeys]::SendWait('^v')
-if ($Config.AutoTab) {
-Start-Sleep -Milliseconds 50
-[System.Windows.Forms.SendKeys]::SendWait('{TAB}')
-}
-$script:CurrentIndex++
-} catch {
-Show-Message "Error during paste: $_" "Error" "Error"
-}
-if ($script:CurrentIndex -ge $script:ListItems.Count) {
-Show-Message "All items pasted." "Info" "Information"
-$form.Close()
-}
-}
-} else {
-Show-Message "Pasting is paused." "Info" "Information"
-}
-}
-'Pause' {
-$script:IsPaused = -not $script:IsPaused
-$status = if ($script:IsPaused) { 'Paused' } else { 'Resumed' }
-Show-Message "Pasting $status." "Info" "Information"
-}
-'Quit' {
-Show-Message "Quitting." "Info" "Information"
-$form.Close()
-}
-}
-break
-}
-}
+    param($hotkeyId)
+
+    foreach ($hotkeyName in $Hotkeys.Keys) {
+        if ($Hotkeys[$hotkeyName].ID -eq $hotkeyId) {
+            switch ($hotkeyName) {
+                &#39;Paste&#39; {
+                    if (-not $script:IsPaused) {
+                        if ($script:CurrentIndex -lt $script:ListItems.Count) {
+                            $item = $script:ListItems[$script:CurrentIndex]
+                            try {
+                                [System.Windows.Forms.Clipboard]::SetText($item)
+                                [System.Windows.Forms.SendKeys]::SendWait(&#39;^v&#39;)
+                                if ($Config.AutoTab) {
+                                    Start-Sleep -Milliseconds 50
+                                    [System.Windows.Forms.SendKeys]::SendWait(&#39;{TAB}&#39;)
+                                }
+                                $script:CurrentIndex++
+                            } catch {
+                                Show-Message &quot;Error during paste: $_&quot; &quot;Error&quot; &quot;Error&quot;
+                            }
+                            if ($script:CurrentIndex -ge $script:ListItems.Count) {
+                                Show-Message &quot;All items pasted.&quot; &quot;Info&quot; &quot;Information&quot;
+                                $form.Close()
+                            }
+                        }
+                    } else {
+                        Show-Message &quot;Pasting is paused.&quot; &quot;Info&quot; &quot;Information&quot;
+                    }
+                }
+                &#39;Pause&#39; {
+                    $script:IsPaused = -not $script:IsPaused
+                    $status = if ($script:IsPaused) { &#39;Paused&#39; } else { &#39;Resumed&#39; }
+                    Show-Message &quot;Pasting $status.&quot; &quot;Info&quot; &quot;Information&quot;
+                }
+                &#39;Quit&#39; {
+                    Show-Message &quot;Quitting.&quot; &quot;Info&quot; &quot;Information&quot;
+                    $form.Close()
+                }
+            }
+            break
+        }
+    }
 })
+
 # Form Closed event handler
 $form.add_FormClosed({
-# Unregister hotkeys
-foreach ($hotkey in $Hotkeys.Values) {
-[WinAPI.NativeMethods]::UnregisterHotKey($form.Handle, $hotkey.ID) | Out-Null
-}
-# Remove the message filter
-[System.Windows.Forms.Application]::RemoveMessageFilter($filter)
-[System.Windows.Forms.Application]::Exit()
+    # Unregister hotkeys
+    foreach ($hotkey in $Hotkeys.Values) {
+        [WinAPI.NativeMethods]::UnregisterHotKey($form.Handle, $hotkey.ID) | Out-Null
+    }
+    # Remove the message filter
+    [System.Windows.Forms.Application]::RemoveMessageFilter($filter)
+    [System.Windows.Forms.Application]::Exit()
 })
+
 # Show startup message
-Show-Message "Sequential Paster is running.`nUse the configured hotkeys to control it." "Info" "Information"
+Show-Message &quot;Sequential Paster is running.`nUse the configured hotkeys to control it.&quot; &quot;Info&quot; &quot;Information&quot;
+
 # Start the application loop
 [System.Windows.Forms.Application]::Run($form)
 ```
+
 }
+
 # Start the paster
-Start-Paster
-</code></section>
+
+Start-Paster</code>
+</section>
 
         </div>
         
@@ -798,7 +871,7 @@ Start-Paster
         
         
         <a href="https://ib.bsb.br/404" aria-label="404">
-          2025-04-08 09:05:11
+          2025-04-08 16:00:38
         </a>
         &#x23;
     

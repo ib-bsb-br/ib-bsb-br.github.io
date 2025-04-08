@@ -94,11 +94,11 @@
         <div class="page-stats mt-3" role="status" aria-label="Page statistics">
       
       <span class="badge bg-primary">
-        44854 characters
+        48346 characters
       </span>
         <span class="separator mx-2" aria-hidden="true">•</span>
         <span class="badge bg-primary">
-        4614 words
+        4611 words
       </span>
       </div>
         <div class="action-buttons d-flex flex-wrap gap-2">
@@ -132,7 +132,7 @@
       <article class="post-wrapper">
         <div class="post-content-body">
           
-<ul><li><a href="#building-and-running-the-file-organizer-on-windows">Building and Running the File Organizer on Windows</a><ul><li><a href="#prerequisites">Prerequisites</a></li><li><a href="#creating-the-project">Creating the Project</a></li><li><a href="#building-the-project">Building the Project</a><ul><li><a href="#debug-build-for-development">Debug Build (For Development)</a></li><li><a href="#release-build-for-distribution">Release Build (For Distribution)</a></li></ul></li><li><a href="#running-the-tool">Running the Tool</a><ul><li><a href="#getting-help">Getting Help</a></li><li><a href="#usage-examples">Usage Examples</a><ul><li><a href="#basic-file-organization">Basic File Organization</a></li><li><a href="#moving-files-with-duplicate-handling">Moving Files with Duplicate Handling</a></li><li><a href="#organizing-by-file-extension">Organizing by File Extension</a></li><li><a href="#advanced-configuration">Advanced Configuration</a></li></ul></li></ul></li><li><a href="#common-options-reference">Common Options Reference</a></li><li><a href="#testing-your-installation">Testing Your Installation</a></li><li><a href="#cargotoml">Cargo.toml</a></li><li><a href="#mainrs">main.rs</a></li></ul></li></ul>
+<ul><li><a href="#building-and-running-the-file-organizer-on-windows">Building and Running the File Organizer on Windows</a><ul><li><a href="#prerequisites">Prerequisites</a></li><li><a href="#creating-the-project">Creating the Project</a></li><li><a href="#building-the-project">Building the Project</a><ul><li><a href="#debug-build-for-development">Debug Build (For Development)</a></li><li><a href="#release-build-for-distribution">Release Build (For Distribution)</a></li></ul></li><li><a href="#running-the-tool">Running the Tool</a><ul><li><a href="#getting-help">Getting Help</a></li><li><a href="#usage-examples">Usage Examples</a><ul><li><a href="#basic-file-organization">Basic File Organization</a></li><li><a href="#moving-files-with-duplicate-handling">Moving Files with Duplicate Handling</a></li><li><a href="#organizing-by-file-extension">Organizing by File Extension</a></li><li><a href="#advanced-configuration">Advanced Configuration</a></li></ul></li></ul></li><li><a href="#common-options-reference">Common Options Reference</a></li><li><a href="#testing-your-installation">Testing Your Installation</a></li><li><a href="#cargotoml">Cargo.toml</a></li><li><a href="#mainrs">main.rs</a></li><li><a href="#python-approach">python approach</a></li></ul></li></ul>
           <h1 id="building-and-running-the-file-organizer-on-windows">
     
     
@@ -451,8 +451,9 @@ cargo new file_organizer_rs
   </h2>
       
 
-<section data-filename="rust_code-block.txt" data-code="// src/main.rs: Rust implementation of the file organizer utility.
+<section class="code-block-container" role="group" aria-label="Rust Code Block" data-filename="rust_code_block.rs" data-code="// src/main.rs: Rust implementation of the file organizer utility.
 // This version fixes compilation errors and ensures completeness.
+
 use anyhow::{bail, Context, Result}; // Use anyhow for convenient error handling
 use clap::Parser; // For command-line argument parsing
 use chrono::Local; // For generating timestamps
@@ -460,300 +461,326 @@ use fern::colors::{Color, ColoredLevelConfig}; // For colored logging output
 use log::{debug, error, info, warn, LevelFilter}; // Logging facade
 use serde::Deserialize; // For deserializing JSON config
 use std::{
-collections::{HashMap, HashSet},
-env, // For CARGO_PKG_VERSION
-// Removed unused 'File' import
-fs::{self}, // Standard file system operations
-io::{self, ErrorKind},
-path::{Path, PathBuf},
-time::Instant, // For accurate duration measurement
+    collections::{HashMap, HashSet},
+    env, // For CARGO_PKG_VERSION
+    // Removed unused &#39;File&#39; import
+    fs::{self}, // Standard file system operations
+    io::{self, ErrorKind},
+    path::{Path, PathBuf},
+    time::Instant, // For accurate duration measurement
 };
 use walkdir::{DirEntry, WalkDir}; // For efficient directory traversal
+
 // --- Configuration Structures ---
+
 /// Represents the structure of the JSON configuration file for categories.
 #[derive(Deserialize, Debug, Clone)]
 struct CategoriesConfig(HashMap&lt;String, Vec&lt;String&gt;&gt;);
+
 /// Provides the default file categorization configuration.
 fn default_categories() -&gt; CategoriesConfig {
-let mut map = HashMap::new();
-macro_rules! add_category {
+    let mut map = HashMap::new();
+    macro_rules! add_category {
 ($map:expr, $name:expr, [$($ext:expr),* $(,)?]) =&gt; {
-$map.insert($name.to_string(), vec![$($ext.to_string()),*]);
+    $map.insert($name.to_string(), vec![$($ext.to_string()),*]);
 };
+    }
+    add_category!(map, &quot;images&quot;, [&quot;.jpg&quot;, &quot;.jpeg&quot;, &quot;.png&quot;, &quot;.gif&quot;, &quot;.bmp&quot;, &quot;.webp&quot;, &quot;.tiff&quot;, &quot;.svg&quot;, &quot;.ico&quot;]);
+    add_category!(map, &quot;documents&quot;, [&quot;.pdf&quot;, &quot;.docx&quot;, &quot;.doc&quot;, &quot;.txt&quot;, &quot;.rtf&quot;, &quot;.odt&quot;, &quot;.xlsx&quot;, &quot;.xls&quot;, &quot;.csv&quot;, &quot;.pptx&quot;, &quot;.ppt&quot;, &quot;.md&quot;, &quot;.tex&quot;, &quot;.chm&quot;, &quot;.epub&quot;]);
+    add_category!(map, &quot;videos&quot;, [&quot;.mp4&quot;, &quot;.avi&quot;, &quot;.mkv&quot;, &quot;.mov&quot;, &quot;.wmv&quot;, &quot;.flv&quot;, &quot;.webm&quot;]);
+    add_category!(map, &quot;audio&quot;, [&quot;.mp3&quot;, &quot;.wav&quot;, &quot;.flac&quot;, &quot;.aac&quot;, &quot;.ogg&quot;, &quot;.m4a&quot;]);
+    add_category!(map, &quot;archives&quot;, [&quot;.zip&quot;, &quot;.rar&quot;, &quot;.tar&quot;, &quot;.gz&quot;, &quot;.bz2&quot;, &quot;.7z&quot;, &quot;.iso&quot;]);
+    add_category!(map, &quot;code&quot;, [&quot;.py&quot;, &quot;.java&quot;, &quot;.c&quot;, &quot;.cpp&quot;, &quot;.h&quot;, &quot;.cs&quot;, &quot;.html&quot;, &quot;.css&quot;, &quot;.js&quot;, &quot;.ts&quot;, &quot;.jsx&quot;, &quot;.tsx&quot;, &quot;.xml&quot;, &quot;.json&quot;, &quot;.yaml&quot;, &quot;.yml&quot;, &quot;.sh&quot;, &quot;.bat&quot;, &quot;.ps1&quot;, &quot;.rb&quot;, &quot;.php&quot;, &quot;.go&quot;, &quot;.rs&quot;, &quot;.swift&quot;, &quot;.kt&quot;, &quot;.ipynb&quot;, &quot;.sql&quot;, &quot;.toml&quot;]);
+    add_category!(map, &quot;apps&quot;, [&quot;.exe&quot;, &quot;.msi&quot;, &quot;.apk&quot;, &quot;.dmg&quot;, &quot;.deb&quot;, &quot;.rpm&quot;, &quot;.app&quot;]);
+    add_category!(map, &quot;fonts&quot;, [&quot;.ttf&quot;, &quot;.otf&quot;, &quot;.woff&quot;, &quot;.woff2&quot;]);
+    add_category!(map, &quot;shortcuts&quot;, [&quot;.lnk&quot;, &quot;.url&quot;]);
+    map.insert(&quot;other&quot;.to_string(), vec![]);
+    CategoriesConfig(map)
 }
-add_category!(map, &quot;images&quot;, [&quot;.jpg&quot;, &quot;.jpeg&quot;, &quot;.png&quot;, &quot;.gif&quot;, &quot;.bmp&quot;, &quot;.webp&quot;, &quot;.tiff&quot;, &quot;.svg&quot;, &quot;.ico&quot;]);
-add_category!(map, &quot;documents&quot;, [&quot;.pdf&quot;, &quot;.docx&quot;, &quot;.doc&quot;, &quot;.txt&quot;, &quot;.rtf&quot;, &quot;.odt&quot;, &quot;.xlsx&quot;, &quot;.xls&quot;, &quot;.csv&quot;, &quot;.pptx&quot;, &quot;.ppt&quot;, &quot;.md&quot;, &quot;.tex&quot;, &quot;.chm&quot;, &quot;.epub&quot;]);
-add_category!(map, &quot;videos&quot;, [&quot;.mp4&quot;, &quot;.avi&quot;, &quot;.mkv&quot;, &quot;.mov&quot;, &quot;.wmv&quot;, &quot;.flv&quot;, &quot;.webm&quot;]);
-add_category!(map, &quot;audio&quot;, [&quot;.mp3&quot;, &quot;.wav&quot;, &quot;.flac&quot;, &quot;.aac&quot;, &quot;.ogg&quot;, &quot;.m4a&quot;]);
-add_category!(map, &quot;archives&quot;, [&quot;.zip&quot;, &quot;.rar&quot;, &quot;.tar&quot;, &quot;.gz&quot;, &quot;.bz2&quot;, &quot;.7z&quot;, &quot;.iso&quot;]);
-add_category!(map, &quot;code&quot;, [&quot;.py&quot;, &quot;.java&quot;, &quot;.c&quot;, &quot;.cpp&quot;, &quot;.h&quot;, &quot;.cs&quot;, &quot;.html&quot;, &quot;.css&quot;, &quot;.js&quot;, &quot;.ts&quot;, &quot;.jsx&quot;, &quot;.tsx&quot;, &quot;.xml&quot;, &quot;.json&quot;, &quot;.yaml&quot;, &quot;.yml&quot;, &quot;.sh&quot;, &quot;.bat&quot;, &quot;.ps1&quot;, &quot;.rb&quot;, &quot;.php&quot;, &quot;.go&quot;, &quot;.rs&quot;, &quot;.swift&quot;, &quot;.kt&quot;, &quot;.ipynb&quot;, &quot;.sql&quot;, &quot;.toml&quot;]);
-add_category!(map, &quot;apps&quot;, [&quot;.exe&quot;, &quot;.msi&quot;, &quot;.apk&quot;, &quot;.dmg&quot;, &quot;.deb&quot;, &quot;.rpm&quot;, &quot;.app&quot;]);
-add_category!(map, &quot;fonts&quot;, [&quot;.ttf&quot;, &quot;.otf&quot;, &quot;.woff&quot;, &quot;.woff2&quot;]);
-add_category!(map, &quot;shortcuts&quot;, [&quot;.lnk&quot;, &quot;.url&quot;]);
-map.insert(&quot;other&quot;.to_string(), vec![]);
-CategoriesConfig(map)
-}
+
 /// Loads category configuration from a specified JSON file path.
 fn load_config_file(config_path: Option&lt;&amp;PathBuf&gt;) -&gt; Result&lt;CategoriesConfig&gt; {
-match config_path {
+    match config_path {
 Some(path) if path.is_file() =&gt; {
-info!(&quot;Loading category configuration from: {}&quot;, path.display());
-let file_content = fs::read_to_string(path)
+    info!(&quot;Loading category configuration from: {}&quot;, path.display());
+    let file_content = fs::read_to_string(path)
 .with_context(|| format!(&quot;Failed to read config file: {}&quot;, path.display()))?;
-let mut config: HashMap&lt;String, Vec&lt;String&gt;&gt; = serde_json::from_str(&amp;file_content)
+    let mut config: HashMap&lt;String, Vec&lt;String&gt;&gt; = serde_json::from_str(&amp;file_content)
 .with_context(|| format!(&quot;Failed to parse JSON config file: {}&quot;, path.display()))?;
-config.entry(&quot;other&quot;.to_string()).or_insert_with(Vec::new);
-info!(&quot;Successfully loaded and validated custom configuration.&quot;);
-Ok(CategoriesConfig(config))
+    config.entry(&quot;other&quot;.to_string()).or_insert_with(Vec::new);
+    info!(&quot;Successfully loaded and validated custom configuration.&quot;);
+    Ok(CategoriesConfig(config))
 }
 Some(path) =&gt; {
-warn!(
-&quot;Config path '{}' provided but is not a valid file. Using default categories.&quot;,
+    warn!(
+&quot;Config path &#39;{}&#39; provided but is not a valid file. Using default categories.&quot;,
 path.display()
-);
-Ok(default_categories())
+    );
+    Ok(default_categories())
 }
 None =&gt; {
-info!(&quot;No config file specified. Using default category configuration.&quot;);
-Ok(default_categories())
+    info!(&quot;No config file specified. Using default category configuration.&quot;);
+    Ok(default_categories())
 }
+    }
 }
-}
+
 /// Determines the category name (String) for a given file based on its extension.
 fn categorize_file(filename: &amp;Path, categories_config: &amp;CategoriesConfig) -&gt; String {
-let extension = filename
+    let extension = filename
 .extension()
 .and_then(|s| s.to_str())
 .map(|s| format!(&quot;.{}&quot;, s.to_lowercase()))
 .unwrap_or_else(|| &quot;no_extension&quot;.to_string());
-if extension == &quot;no_extension&quot; { return extension; }
-for (category, extensions) in &amp;categories_config.0 {
+    if extension == &quot;no_extension&quot; { return extension; }
+    for (category, extensions) in &amp;categories_config.0 {
 if extensions.contains(&amp;extension) { return category.clone(); }
+    }
+    &quot;other&quot;.to_string()
 }
-&quot;other&quot;.to_string()
-}
+
 // --- Platform Specific ---
+
 /// Checks if a file or directory is hidden on Windows using standard library features.
 #[cfg(windows)]
 fn is_hidden(path: &amp;Path) -&gt; Result&lt;bool&gt; {
-use std::os::windows::fs::MetadataExt;
-let metadata = fs::metadata(path)
+    use std::os::windows::fs::MetadataExt;
+    let metadata = fs::metadata(path)
 .with_context(|| format!(&quot;Failed to get metadata for {}&quot;, path.display()))?;
-let attributes = metadata.file_attributes();
-// Use the raw value 0x2 for FILE_ATTRIBUTE_HIDDEN when using std::os::windows::fs
-const FILE_ATTRIBUTE_HIDDEN_VALUE: u32 = 0x2;
-Ok((attributes &amp; FILE_ATTRIBUTE_HIDDEN_VALUE) != 0)
+    let attributes = metadata.file_attributes();
+    // Use the raw value 0x2 for FILE_ATTRIBUTE_HIDDEN when using std::os::windows::fs
+    const FILE_ATTRIBUTE_HIDDEN_VALUE: u32 = 0x2;
+    Ok((attributes &amp; FILE_ATTRIBUTE_HIDDEN_VALUE) != 0)
 }
-/// Checks if a file or directory is hidden on Unix-like systems (conventionally, starts with '.').
+
+/// Checks if a file or directory is hidden on Unix-like systems (conventionally, starts with &#39;.&#39;).
 #[cfg(not(windows))]
 fn is_hidden(path: &amp;Path) -&gt; Result&lt;bool&gt; {
-Ok(path
+    Ok(path
 .file_name()
 .and_then(|s| s.to_str())
-.map(|s| s.starts_with('.'))
+.map(|s| s.starts_with(&#39;.&#39;))
 .unwrap_or(false))
 }
+
 /// Helper for walkdir filter_entry to check hidden status.
 fn should_keep_entry(entry: &amp;DirEntry, include_hidden: bool) -&gt; bool {
-if include_hidden { return true; }
-match is_hidden(entry.path()) {
+    if include_hidden { return true; }
+    match is_hidden(entry.path()) {
 Ok(hidden) =&gt; !hidden,
 Err(err) =&gt; {
-warn!(
+    warn!(
 &quot;Could not determine hidden status for {}: {}. Excluding entry.&quot;,
 entry.path().display(), err
-);
-false // Exclude if check fails (safer default)
+    );
+    false // Exclude if check fails (safer default)
 }
+    }
 }
-}
+
 // --- Command Line Arguments ---
+
 #[derive(clap::ValueEnum, Clone, Debug, PartialEq, Eq)]
 enum OrganizeMethod { Category, Extension, }
+
 #[derive(Parser, Debug)]
 #[command(author, version, about = &quot;Organize files by category or extension (Rust version).&quot;,
-long_about = &quot;A Rust utility for organizing files from source directories into categorized target folders based on file types or extensions.&quot;,
-help_template = &quot;{before-help}{name} {version}\n{author-with-newline}{about-with-newline}\n{usage-heading} {usage}\n\n{all-args}{after-help}&quot;
+    long_about = &quot;A Rust utility for organizing files from source directories into categorized target folders based on file types or extensions.&quot;,
+    help_template = &quot;{before-help}{name} {version}\n{author-with-newline}{about-with-newline}\n{usage-heading} {usage}\n\n{all-args}{after-help}&quot;
 )]
 struct CliArgs {
-#[arg(short, long, value_name = &quot;DIR&quot;)] source: PathBuf,
-#[arg(short, long, value_name = &quot;DIR&quot;)] target: PathBuf,
-#[arg(short, long, value_name = &quot;FILE&quot;)] config: Option&lt;PathBuf&gt;,
-#[arg(long, value_enum, default_value_t = OrganizeMethod::Category)] organize_by: OrganizeMethod,
-#[arg(long)] move_files: bool,
-#[arg(long, conflicts_with_all = [&quot;skip_existing&quot;, &quot;overwrite&quot;])] timestamp_duplicates: bool,
-#[arg(long, short = 'k', conflicts_with_all = [&quot;timestamp_duplicates&quot;, &quot;overwrite&quot;])] skip_existing: bool,
-#[arg(long, conflicts_with_all = [&quot;timestamp_duplicates&quot;, &quot;skip_existing&quot;])] overwrite: bool,
-#[arg(long, short = 'i')] include_hidden: bool,
-#[arg(long, short = 'l')] follow_links: bool,
-#[arg(long, requires = &quot;move_files&quot;)] remove_empty_source_dirs: bool,
-#[arg(long, value_name = &quot;FILE&quot;)] log_file: Option&lt;PathBuf&gt;,
-#[arg(long, value_parser = clap::value_parser!(LevelFilter), default_value = &quot;info&quot;)] log_level: LevelFilter,
+    #[arg(short, long, value_name = &quot;DIR&quot;)] source: PathBuf,
+    #[arg(short, long, value_name = &quot;DIR&quot;)] target: PathBuf,
+    #[arg(short, long, value_name = &quot;FILE&quot;)] config: Option&lt;PathBuf&gt;,
+    #[arg(long, value_enum, default_value_t = OrganizeMethod::Category)] organize_by: OrganizeMethod,
+    #[arg(long)] move_files: bool,
+    #[arg(long, conflicts_with_all = [&quot;skip_existing&quot;, &quot;overwrite&quot;])] timestamp_duplicates: bool,
+    #[arg(long, short = &#39;k&#39;, conflicts_with_all = [&quot;timestamp_duplicates&quot;, &quot;overwrite&quot;])] skip_existing: bool,
+    #[arg(long, conflicts_with_all = [&quot;timestamp_duplicates&quot;, &quot;skip_existing&quot;])] overwrite: bool,
+    #[arg(long, short = &#39;i&#39;)] include_hidden: bool,
+    #[arg(long, short = &#39;l&#39;)] follow_links: bool,
+    #[arg(long, requires = &quot;move_files&quot;)] remove_empty_source_dirs: bool,
+    #[arg(long, value_name = &quot;FILE&quot;)] log_file: Option&lt;PathBuf&gt;,
+    #[arg(long, value_parser = clap::value_parser!(LevelFilter), default_value = &quot;info&quot;)] log_level: LevelFilter,
 }
+
 // --- Core Logic ---
+
 /// Holds statistics about the file processing operation.
 #[derive(Debug, Default)]
 struct ProcessStats {
-/// Count of directory entries successfully yielded by the filtered WalkDir iterator.
-total_scanned: u64,
-processed: u64,
-skipped: u64,
-errors: u64,
-failed_files: Vec&lt;(PathBuf, String)&gt;, // Stores paths and error context
+    /// Count of directory entries successfully yielded by the filtered WalkDir iterator.
+    total_scanned: u64,
+    processed: u64,
+    skipped: u64,
+    errors: u64,
+    failed_files: Vec&lt;(PathBuf, String)&gt;, // Stores paths and error context
 }
+
 /// Scans the source directory for unique file extensions.
 fn get_all_extensions(
-source_directory: &amp;Path,
-include_hidden: bool,
-follow_links: bool,
+    source_directory: &amp;Path,
+    include_hidden: bool,
+    follow_links: bool,
 ) -&gt; Result&lt;HashSet&lt;String&gt;&gt; {
-let mut extensions = HashSet::new();
-info!(&quot;Scanning source directory for all unique file extensions...&quot;);
-let walker = WalkDir::new(source_directory)
+    let mut extensions = HashSet::new();
+    info!(&quot;Scanning source directory for all unique file extensions...&quot;);
+    let walker = WalkDir::new(source_directory)
 .follow_links(follow_links)
 .into_iter();
-let mut count = 0;
-for entry_result in walker.filter_entry(|e| should_keep_entry(e, include_hidden)) {
+    let mut count = 0;
+    for entry_result in walker.filter_entry(|e| should_keep_entry(e, include_hidden)) {
 match entry_result {
-Ok(entry) =&gt; {
+    Ok(entry) =&gt; {
 let path = entry.path();
 if path.is_file() {
-count += 1;
-if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
+    count += 1;
+    if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
 extensions.insert(ext.to_lowercase());
+    }
+    if count % 1000 == 0 { debug!(&quot;Scanned {} files for extensions...&quot;, count); }
 }
-if count % 1000 == 0 { debug!(&quot;Scanned {} files for extensions...&quot;, count); }
+    }
+    Err(e) =&gt; warn!(&quot;Error accessing entry during extension scan: {}&quot;, e),
 }
+    }
+    info!(&quot;Found {} unique extensions.&quot;, extensions.len());
+    Ok(extensions)
 }
-Err(e) =&gt; warn!(&quot;Error accessing entry during extension scan: {}&quot;, e),
-}
-}
-info!(&quot;Found {} unique extensions.&quot;, extensions.len());
-Ok(extensions)
-}
+
 /// Creates necessary target subfolders.
 fn create_target_folders(
-base_dir: &amp;Path,
-organize_by: &amp;OrganizeMethod,
-categories_config: Option&lt;&amp;CategoriesConfig&gt;,
-all_extensions: Option&lt;&amp;HashSet&lt;String&gt;&gt;,
+    base_dir: &amp;Path,
+    organize_by: &amp;OrganizeMethod,
+    categories_config: Option&lt;&amp;CategoriesConfig&gt;,
+    all_extensions: Option&lt;&amp;HashSet&lt;String&gt;&gt;,
 ) -&gt; Result&lt;()&gt; {
-info!(&quot;Ensuring target base directory exists: {}&quot;, base_dir.display());
-fs::create_dir_all(base_dir)
+    info!(&quot;Ensuring target base directory exists: {}&quot;, base_dir.display());
+    fs::create_dir_all(base_dir)
 .with_context(|| format!(&quot;Failed to create base target directory: {}&quot;, base_dir.display()))?;
-let folders_to_create: HashSet&lt;String&gt; = match organize_by {
+    let folders_to_create: HashSet&lt;String&gt; = match organize_by {
 OrganizeMethod::Category =&gt; {
-let mut folders = categories_config
+    let mut folders = categories_config
 .map(|cfg| cfg.0.keys().cloned().collect::&lt;HashSet&lt;String&gt;&gt;())
 .unwrap_or_default();
-folders.insert(&quot;other&quot;.to_string());
-folders.insert(&quot;no_extension&quot;.to_string());
-folders
+    folders.insert(&quot;other&quot;.to_string());
+    folders.insert(&quot;no_extension&quot;.to_string());
+    folders
 }
 OrganizeMethod::Extension =&gt; {
-let mut folders = all_extensions.cloned().unwrap_or_default();
-folders.insert(&quot;no_extension&quot;.to_string());
-folders
+    let mut folders = all_extensions.cloned().unwrap_or_default();
+    folders.insert(&quot;no_extension&quot;.to_string());
+    folders
 }
-};
-info!(
+    };
+    info!(
 &quot;Creating target subfolders (mode: {:?}). Total potential folders: {}&quot;,
 organize_by,
 folders_to_create.len()
-);
-let mut created_count = 0;
-for folder_name in &amp;folders_to_create {
+    );
+    let mut created_count = 0;
+    for folder_name in &amp;folders_to_create {
 if folder_name.is_empty() { warn!(&quot;Skipping creation of folder with empty name.&quot;); continue; }
 let folder_path = base_dir.join(folder_name);
 if !folder_path.exists() {
-fs::create_dir_all(&amp;folder_path).with_context(|| {
-format!(&quot;Failed to create target folder '{}'&quot;, folder_path.display())
-})?;
-debug!(&quot;Created target folder: {}&quot;, folder_path.display());
-created_count += 1;
+    fs::create_dir_all(&amp;folder_path).with_context(|| {
+format!(&quot;Failed to create target folder &#39;{}&#39;&quot;, folder_path.display())
+    })?;
+    debug!(&quot;Created target folder: {}&quot;, folder_path.display());
+    created_count += 1;
 }
+    }
+    info!(&quot;Created {} new target subfolders.&quot;, created_count);
+    Ok(())
 }
-info!(&quot;Created {} new target subfolders.&quot;, created_count);
-Ok(())
-}
+
 /// Attempts to move a file, falling back to copy-then-delete on cross-device errors.
 fn move_file_with_fallback(source: &amp;Path, target: &amp;Path) -&gt; io::Result&lt;()&gt; {
-match fs::rename(source, target) {
+    match fs::rename(source, target) {
 Ok(_) =&gt; Ok(()),
 Err(rename_error) =&gt; {
-// Note: Relies on platform-specific OS error codes (Windows: 17, Unix: 18/libc::EXDEV). Might be brittle.
-let is_cross_device = || -&gt; bool {
+    // Note: Relies on platform-specific OS error codes (Windows: 17, Unix: 18/libc::EXDEV). Might be brittle.
+    let is_cross_device = || -&gt; bool {
 #[cfg(windows)] { rename_error.raw_os_error() == Some(17) }
 #[cfg(unix)] { rename_error.raw_os_error() == Some(18) }
 #[cfg(not(any(windows, unix)))] { false }
-};
-if is_cross_device() {
+    };
+    if is_cross_device() {
 warn!(&quot;Rename failed (cross-device error detected), attempting copy+delete fallback for move: {} -&gt; {}&quot;, source.display(), target.display());
-// Note: std::fs::copy preserves permissions but not other metadata like modification time (unlike Python's shutil.copy2).
+// Note: std::fs::copy preserves permissions but not other metadata like modification time (unlike Python&#39;s shutil.copy2).
 // For full metadata preservation, consider crates like `fs_extra` or platform-specific APIs.
 fs::copy(source, target)?;
 fs::remove_file(source)?;
 Ok(())
-} else { Err(rename_error) }
+    } else { Err(rename_error) }
 }
+    }
 }
-}
+
+
 /// Main function to perform the file organization.
 fn organize_files(args: &amp;CliArgs, categories_config: &amp;CategoriesConfig) -&gt; Result&lt;ProcessStats&gt; {
-if !args.source.is_dir() { bail!(&quot;Source directory '{}' is invalid or not found.&quot;, args.source.display()); }
-if !args.target.exists() {
+    if !args.source.is_dir() { bail!(&quot;Source directory &#39;{}&#39; is invalid or not found.&quot;, args.source.display()); }
+    if !args.target.exists() {
 info!(&quot;Creating target directory: {}&quot;, args.target.display());
-fs::create_dir_all(&amp;args.target).with_context(|| format!(&quot;Could not create target directory '{}'&quot;, args.target.display()))?;
-} else if !args.target.is_dir() { bail!(&quot;Target path '{}' exists but is not a directory.&quot;, args.target.display()); }
-info!(&quot;Preparing target folders...&quot;);
-let extensions_for_folders = if args.organize_by == OrganizeMethod::Extension {
+fs::create_dir_all(&amp;args.target).with_context(|| format!(&quot;Could not create target directory &#39;{}&#39;&quot;, args.target.display()))?;
+    } else if !args.target.is_dir() { bail!(&quot;Target path &#39;{}&#39; exists but is not a directory.&quot;, args.target.display()); }
+
+    info!(&quot;Preparing target folders...&quot;);
+    let extensions_for_folders = if args.organize_by == OrganizeMethod::Extension {
 Some(get_all_extensions(&amp;args.source, args.include_hidden, args.follow_links)?)
-} else { None };
-create_target_folders(&amp;args.target, &amp;args.organize_by, Some(categories_config), extensions_for_folders.as_ref())?;
-info!(&quot;Starting file processing...&quot;);
-let mut stats = ProcessStats::default();
-let mut file_counter = 0u64;
-let walker = WalkDir::new(&amp;args.source).follow_links(args.follow_links).into_iter();
-for entry_result in walker.filter_entry(|e| should_keep_entry(e, args.include_hidden)) {
+    } else { None };
+    create_target_folders(&amp;args.target, &amp;args.organize_by, Some(categories_config), extensions_for_folders.as_ref())?;
+
+    info!(&quot;Starting file processing...&quot;);
+    let mut stats = ProcessStats::default();
+    let mut file_counter = 0u64;
+    let walker = WalkDir::new(&amp;args.source).follow_links(args.follow_links).into_iter();
+
+    for entry_result in walker.filter_entry(|e| should_keep_entry(e, args.include_hidden)) {
 stats.total_scanned += 1; // Count filtered entries
 let entry = match entry_result {
-Ok(e) =&gt; e,
-Err(e) =&gt; {
+    Ok(e) =&gt; e,
+    Err(e) =&gt; {
 let path_display = e.path().unwrap_or_else(|| Path::new(&quot;?&quot;)).display();
 error!(&quot;Error scanning path {}: {}&quot;, path_display, e);
 stats.errors += 1;
 // Provide default PathBuf if e.path() is None
 stats.failed_files.push((
-e.path().map_or_else(|| PathBuf::from(&quot;?&quot;), |p| p.to_path_buf()),
-format!(&quot;Scan error: {:?}&quot;, e),
+    e.path().map_or_else(|| PathBuf::from(&quot;?&quot;), |p| p.to_path_buf()),
+    format!(&quot;Scan error: {:?}&quot;, e),
 ));
 continue;
-}
+    }
 };
+
 if !entry.file_type().is_file() { stats.skipped += 1; continue; }
+
 file_counter += 1;
 let source_path = entry.path();
 let progress_prefix = format!(&quot;[{}]&quot;, file_counter);
+
 let file_result: Result&lt;()&gt; = (|| {
-let file_name = source_path.file_name().with_context(|| format!(&quot;Could not get filename for path: {}&quot;, source_path.display()))?;
-let target_subfolder_name = match args.organize_by {
+    let file_name = source_path.file_name().with_context(|| format!(&quot;Could not get filename for path: {}&quot;, source_path.display()))?;
+    let target_subfolder_name = match args.organize_by {
 OrganizeMethod::Category =&gt; categorize_file(source_path, categories_config),
 OrganizeMethod::Extension =&gt; source_path.extension().and_then(|s| s.to_str()).map(|s| s.to_lowercase()).unwrap_or_else(|| &quot;no_extension&quot;.to_string()),
-};
-let target_folder_path = args.target.join(&amp;target_subfolder_name);
-let mut target_file_path = target_folder_path.join(file_name);
-if target_file_path.exists() {
+    };
+    let target_folder_path = args.target.join(&amp;target_subfolder_name);
+    let mut target_file_path = target_folder_path.join(file_name);
+
+    if target_file_path.exists() {
 if args.skip_existing {
-info!(&quot;{} Skipping (target exists): {}&quot;, progress_prefix, target_file_path.display());
-stats.skipped += 1; return Ok(());
+    info!(&quot;{} Skipping (target exists): {}&quot;, progress_prefix, target_file_path.display());
+    stats.skipped += 1; return Ok(());
 } else if args.timestamp_duplicates {
-let original_target_path_display = target_file_path.display().to_string();
-let mut counter = 1;
-// Use file_name directly, it's already &amp;OsStr
-let stem = source_path.file_stem().unwrap_or(file_name);
-let ext = source_path.extension().unwrap_or_default();
-const MAX_TIMESTAMP_ATTEMPTS: u32 = 1000;
-loop {
+    let original_target_path_display = target_file_path.display().to_string();
+    let mut counter = 1;
+    // Use file_name directly, it&#39;s already &amp;OsStr
+    let stem = source_path.file_stem().unwrap_or(file_name);
+    let ext = source_path.extension().unwrap_or_default();
+    const MAX_TIMESTAMP_ATTEMPTS: u32 = 1000;
+    loop {
 let timestamp = Local::now().format(&quot;%Y%m%d_%H%M%S&quot;);
 let mut new_name_os = std::ffi::OsString::new();
 new_name_os.push(stem);
@@ -763,141 +790,153 @@ target_file_path = target_folder_path.join(&amp;new_name_os);
 if !target_file_path.exists() { break; }
 counter += 1;
 if counter &gt; MAX_TIMESTAMP_ATTEMPTS { bail!(&quot;Could not find unique timestamped name for {} after {} attempts. Skipping.&quot;, original_target_path_display, MAX_TIMESTAMP_ATTEMPTS); }
-}
-info!(&quot;{} Target exists '{}'. Renaming duplicate to: {}&quot;, progress_prefix, original_target_path_display, target_file_path.display());
+    }
+    info!(&quot;{} Target exists &#39;{}&#39;. Renaming duplicate to: {}&quot;, progress_prefix, original_target_path_display, target_file_path.display());
 } else if args.overwrite { warn!(&quot;{} Overwriting existing target file: {}&quot;, progress_prefix, target_file_path.display()); }
 else { warn!(&quot;{} Overwriting existing target file (default): {}&quot;, progress_prefix, target_file_path.display()); }
-}
-fs::create_dir_all(&amp;target_folder_path).with_context(|| format!(&quot;Failed to ensure target directory '{}' exists&quot;, target_folder_path.display()))?;
-let operation_desc = if args.move_files { &quot;move&quot; } else { &quot;copy&quot; };
-debug!(&quot;{} Attempting to {} '{}' to '{}'&quot;, progress_prefix, operation_desc, source_path.display(), target_file_path.display());
-if args.move_files {
-move_file_with_fallback(source_path, &amp;target_file_path).with_context(|| format!(&quot;Failed to move '{}' to '{}'&quot;, source_path.display(), target_file_path.display()))?;
-} else {
-// Note: std::fs::copy preserves permissions but not other metadata like modification time (unlike Python's shutil.copy2).
+    }
+
+    fs::create_dir_all(&amp;target_folder_path).with_context(|| format!(&quot;Failed to ensure target directory &#39;{}&#39; exists&quot;, target_folder_path.display()))?;
+    let operation_desc = if args.move_files { &quot;move&quot; } else { &quot;copy&quot; };
+    debug!(&quot;{} Attempting to {} &#39;{}&#39; to &#39;{}&#39;&quot;, progress_prefix, operation_desc, source_path.display(), target_file_path.display());
+
+    if args.move_files {
+move_file_with_fallback(source_path, &amp;target_file_path).with_context(|| format!(&quot;Failed to move &#39;{}&#39; to &#39;{}&#39;&quot;, source_path.display(), target_file_path.display()))?;
+    } else {
+// Note: std::fs::copy preserves permissions but not other metadata like modification time (unlike Python&#39;s shutil.copy2).
 // For full metadata preservation, consider crates like `fs_extra` or platform-specific APIs.
-fs::copy(source_path, &amp;target_file_path).map(|_| ()).with_context(|| format!(&quot;Failed to copy '{}' to '{}'&quot;, source_path.display(), target_file_path.display()))?;
-}
-stats.processed += 1;
-Ok(())
+fs::copy(source_path, &amp;target_file_path).map(|_| ()).with_context(|| format!(&quot;Failed to copy &#39;{}&#39; to &#39;{}&#39;&quot;, source_path.display(), target_file_path.display()))?;
+    }
+    stats.processed += 1;
+    Ok(())
 })(); // End inner closure
+
 if let Err(e) = file_result {
-error!(&quot;{} Failed to process '{}': {:?}&quot;, progress_prefix, source_path.display(), e);
-stats.errors += 1;
-stats.failed_files.push((source_path.to_path_buf(), format!(&quot;{:?}&quot;, e)));
+    error!(&quot;{} Failed to process &#39;{}&#39;: {:?}&quot;, progress_prefix, source_path.display(), e);
+    stats.errors += 1;
+    stats.failed_files.push((source_path.to_path_buf(), format!(&quot;{:?}&quot;, e)));
 }
-} // End main loop
-Ok(stats)
+    } // End main loop
+
+    Ok(stats)
 }
+
 /// Recursively removes empty folders starting from the bottom up.
 fn remove_empty_folders(directory: &amp;Path) -&gt; Result&lt;u32&gt; {
-let mut removed_count = 0u32;
-info!(&quot;Attempting to remove empty directories within: {}&quot;, directory.display());
-let mut dirs_to_check = Vec::new();
-for entry_result in WalkDir::new(directory).min_depth(1) {
+    let mut removed_count = 0u32;
+    info!(&quot;Attempting to remove empty directories within: {}&quot;, directory.display());
+    let mut dirs_to_check = Vec::new();
+    for entry_result in WalkDir::new(directory).min_depth(1) {
 match entry_result {
-Ok(entry) if entry.file_type().is_dir() =&gt; { dirs_to_check.push(entry.into_path()); }
-Ok(_) =&gt; {}
-Err(e) =&gt; warn!(&quot;Error accessing entry during empty dir scan: {}&quot;, e),
+    Ok(entry) if entry.file_type().is_dir() =&gt; { dirs_to_check.push(entry.into_path()); }
+    Ok(_) =&gt; {}
+    Err(e) =&gt; warn!(&quot;Error accessing entry during empty dir scan: {}&quot;, e),
 }
-}
-dirs_to_check.sort_by(|a, b| b.components().count().cmp(&amp;a.components().count()));
-for dir_path in dirs_to_check {
+    }
+    dirs_to_check.sort_by(|a, b| b.components().count().cmp(&amp;a.components().count()));
+    for dir_path in dirs_to_check {
 if !dir_path.is_dir() { continue; }
 match fs::read_dir(&amp;dir_path) {
-Ok(mut read_dir) =&gt; {
+    Ok(mut read_dir) =&gt; {
 if read_dir.next().is_none() { // Directory is empty
-match fs::remove_dir(&amp;dir_path) {
+    match fs::remove_dir(&amp;dir_path) {
 Ok(_) =&gt; { info!(&quot;Removed empty directory: {}&quot;, dir_path.display()); removed_count += 1; }
-Err(e) =&gt; { if e.kind() != ErrorKind::NotFound { warn!(&quot;Could not remove presumably empty directory '{}': {}&quot;, dir_path.display(), e); } }
+Err(e) =&gt; { if e.kind() != ErrorKind::NotFound { warn!(&quot;Could not remove presumably empty directory &#39;{}&#39;: {}&quot;, dir_path.display(), e); } }
+    }
 }
+    }
+    Err(e) =&gt; { if e.kind() != ErrorKind::NotFound { warn!(&quot;Could not read directory &#39;{}&#39; to check emptiness: {}&quot;, dir_path.display(), e); } }
 }
+    }
+    info!(&quot;Finished removing empty directories. Removed: {}&quot;, removed_count);
+    Ok(removed_count)
 }
-Err(e) =&gt; { if e.kind() != ErrorKind::NotFound { warn!(&quot;Could not read directory '{}' to check emptiness: {}&quot;, dir_path.display(), e); } }
-}
-}
-info!(&quot;Finished removing empty directories. Removed: {}&quot;, removed_count);
-Ok(removed_count)
-}
+
 // --- Logging Setup ---
 /// Sets up logging using the fern crate.
 fn setup_logging(log_level: LevelFilter, log_file: Option&lt;&amp;PathBuf&gt;) -&gt; Result&lt;()&gt; {
-let colors = ColoredLevelConfig::new().error(Color::Red).warn(Color::Yellow).info(Color::Green).debug(Color::Blue).trace(Color::BrightBlack);
-let base_config = fern::Dispatch::new()
+    let colors = ColoredLevelConfig::new().error(Color::Red).warn(Color::Yellow).info(Color::Green).debug(Color::Blue).trace(Color::BrightBlack);
+    let base_config = fern::Dispatch::new()
 .format(move |out, message, record| {
-out.finish(format_args!(
+    out.finish(format_args!(
 &quot;[{} {} {}] {}&quot;,
 chrono::Local::now().format(&quot;%Y-%m-%d %H:%M:%S%.3f&quot;), colors.color(record.level()), record.target(), message
-))
+    ))
 })
 .level(log_level)
 .level_for(&quot;hyper&quot;, LevelFilter::Warn).level_for(&quot;mio&quot;, LevelFilter::Warn).level_for(&quot;want&quot;, LevelFilter::Warn).level_for(&quot;reqwest&quot;, LevelFilter::Warn).level_for(&quot;rustls&quot;, LevelFilter::Warn);
-let stderr_logger = fern::Dispatch::new().filter(move |metadata| { log_level &lt;= LevelFilter::Debug || metadata.target().starts_with(env!(&quot;CARGO_PKG_NAME&quot;)) }).chain(std::io::stderr());
-let mut final_dispatch = base_config.chain(stderr_logger);
-let mut file_logger_ok = false;
-if let Some(log_path) = log_file {
+    let stderr_logger = fern::Dispatch::new().filter(move |metadata| { log_level &lt;= LevelFilter::Debug || metadata.target().starts_with(env!(&quot;CARGO_PKG_NAME&quot;)) }).chain(std::io::stderr());
+    let mut final_dispatch = base_config.chain(stderr_logger);
+    let mut file_logger_ok = false;
+    if let Some(log_path) = log_file {
 match fern::log_file(log_path) {
-Ok(file_output) =&gt; { final_dispatch = final_dispatch.chain(file_output); file_logger_ok = true; }
-Err(e) =&gt; { eprintln!(&quot;Error: Failed to create log file '{}': {}. Logging to console only.&quot;, log_path.display(), e); }
+    Ok(file_output) =&gt; { final_dispatch = final_dispatch.chain(file_output); file_logger_ok = true; }
+    Err(e) =&gt; { eprintln!(&quot;Error: Failed to create log file &#39;{}&#39;: {}. Logging to console only.&quot;, log_path.display(), e); }
 }
+    }
+    final_dispatch.apply().context(&quot;Failed to set up logging&quot;)?;
+    if file_logger_ok { if let Some(path) = log_file { info!(&quot;File logging enabled to: {}&quot;, path.display()); } }
+    Ok(())
 }
-final_dispatch.apply().context(&quot;Failed to set up logging&quot;)?;
-if file_logger_ok { if let Some(path) = log_file { info!(&quot;File logging enabled to: {}&quot;, path.display()); } }
-Ok(())
-}
+
+
 // --- Main Application Entry Point ---
 fn main() -&gt; Result&lt;()&gt; {
-let overall_start_time = Instant::now(); // Start timing
-let args = CliArgs::parse();
-setup_logging(args.log_level, args.log_file.as_ref())?;
-info!(&quot;Rust File Organizer (v{}) starting...&quot;, env!(&quot;CARGO_PKG_VERSION&quot;));
-debug!(&quot;Arguments received: {:?}&quot;, args);
-info!(&quot;Source directory: {}&quot;, args.source.display());
-info!(&quot;Target directory: {}&quot;, args.target.display());
-info!(&quot;Organization mode: {:?}&quot;, args.organize_by);
-info!(&quot;Operation: {}&quot;, if args.move_files { &quot;Move&quot; } else { &quot;Copy&quot; });
-info!(&quot;Include hidden: {}&quot;, args.include_hidden);
-info!(&quot;Follow links: {}&quot;, args.follow_links);
-if args.skip_existing { info!(&quot;Duplicate handling: Skip existing&quot;); }
-else if args.timestamp_duplicates { info!(&quot;Duplicate handling: Timestamp duplicates&quot;); }
-else if args.overwrite { info!(&quot;Duplicate handling: Overwrite existing (explicitly)&quot;); }
-else { info!(&quot;Duplicate handling: Overwrite existing (default)&quot;); }
-let categories = load_config_file(args.config.as_ref())?;
-let result = organize_files(&amp;args, &amp;categories);
-match result {
+    let overall_start_time = Instant::now(); // Start timing
+    let args = CliArgs::parse();
+    setup_logging(args.log_level, args.log_file.as_ref())?;
+
+    info!(&quot;Rust File Organizer (v{}) starting...&quot;, env!(&quot;CARGO_PKG_VERSION&quot;));
+    debug!(&quot;Arguments received: {:?}&quot;, args);
+    info!(&quot;Source directory: {}&quot;, args.source.display());
+    info!(&quot;Target directory: {}&quot;, args.target.display());
+    info!(&quot;Organization mode: {:?}&quot;, args.organize_by);
+    info!(&quot;Operation: {}&quot;, if args.move_files { &quot;Move&quot; } else { &quot;Copy&quot; });
+    info!(&quot;Include hidden: {}&quot;, args.include_hidden);
+    info!(&quot;Follow links: {}&quot;, args.follow_links);
+    if args.skip_existing { info!(&quot;Duplicate handling: Skip existing&quot;); }
+    else if args.timestamp_duplicates { info!(&quot;Duplicate handling: Timestamp duplicates&quot;); }
+    else if args.overwrite { info!(&quot;Duplicate handling: Overwrite existing (explicitly)&quot;); }
+    else { info!(&quot;Duplicate handling: Overwrite existing (default)&quot;); }
+
+    let categories = load_config_file(args.config.as_ref())?;
+    let result = organize_files(&amp;args, &amp;categories);
+
+    match result {
 Ok(stats) =&gt; {
-if args.move_files &amp;&amp; args.remove_empty_source_dirs &amp;&amp; stats.processed &gt; 0 {
+    if args.move_files &amp;&amp; args.remove_empty_source_dirs &amp;&amp; stats.processed &gt; 0 {
 // Note: Cleanup errors are logged but do not cause a non-zero exit code.
 if let Err(e) = remove_empty_folders(&amp;args.source) { error!(&quot;Error during empty source directory removal: {:?}&quot;, e); }
-}
-let overall_duration = overall_start_time.elapsed();
-let summary = format!(
+    }
+    let overall_duration = overall_start_time.elapsed();
+    let summary = format!(
 &quot;Operation completed in {:.2?}. Scanned Entries: {}, Processed Files: {}, Skipped: {}, Errors: {}&quot;,
 overall_duration, stats.total_scanned, stats.processed, stats.skipped, stats.errors
-);
-info!(&quot;{}&quot;, summary);
-println!(&quot;\n{}&quot;, summary);
-if stats.errors &gt; 0 {
+    );
+    info!(&quot;{}&quot;, summary);
+    println!(&quot;\n{}&quot;, summary);
+    if stats.errors &gt; 0 {
 eprintln!(&quot;\n--- Errors occurred during processing: ---&quot;);
 for (path, error_msg) in &amp;stats.failed_files {
-eprintln!(&quot; - File: {}&quot;, path.display());
-eprintln!(&quot;   Error: {}&quot;, error_msg);
+    eprintln!(&quot; - File: {}&quot;, path.display());
+    eprintln!(&quot;   Error: {}&quot;, error_msg);
 }
 eprintln!(&quot;-----------------------------------------&quot;);
 eprintln!(&quot;Warning: {} errors occurred. Please check logs (stderr/file) for full details.&quot;, stats.errors);
 // Consider exiting with non-zero status for scripting if errors occurred
 // std::process::exit(1);
-}
+    }
 }
 Err(e) =&gt; {
-error!(&quot;Critical error during file organization: {:?}&quot;, e);
-eprintln!(&quot;\nError: File organization failed critically. Check logs (stderr/file) for details.&quot;);
-std::process::exit(1);
+    error!(&quot;Critical error during file organization: {:?}&quot;, e);
+    eprintln!(&quot;\nError: File organization failed critically. Check logs (stderr/file) for details.&quot;);
+    std::process::exit(1);
 }
+    }
+    info!(&quot;Rust File Organizer finished.&quot;);
+    Ok(())
 }
-info!(&quot;Rust File Organizer finished.&quot;);
-Ok(())
-}
+
 // --- Testing Notes ---
 // To properly test this application, consider using crates like:
 // - `assert_fs`: For creating temporary file/directory structures for tests.
@@ -910,13 +949,15 @@ Ok(())
 // - Test hidden file handling with and without the --include-hidden flag.
 // - Test symbolic link handling with and without the --follow-links flag.
 // - Test behavior with empty source or target directories.
-// - Test custom configuration loading and verify correct categorization (including missing 'other').
+// - Test custom configuration loading and verify correct categorization (including missing &#39;other&#39;).
 // - Test empty directory removal after a successful move operation.
 // - Test error handling for scenarios like insufficient permissions (harder to automate reliably).
 // - Test long path handling specifically on Windows (requires careful test setup).
 // - Test cross-device move fallback behavior.
-// - Test handling of filenames with non-UTF8 characters (requires OsStr handling)." data-download-link="" data-download-link-label="Download Rust"><code class="language-rust">// src/main.rs: Rust implementation of the file organizer utility.
+// - Test handling of filenames with non-UTF8 characters (requires OsStr handling)." data-download-link="" data-download-label="Download Rust">
+  <code class="language-rust">// src/main.rs: Rust implementation of the file organizer utility.
 // This version fixes compilation errors and ensures completeness.
+
 use anyhow::{bail, Context, Result}; // Use anyhow for convenient error handling
 use clap::Parser; // For command-line argument parsing
 use chrono::Local; // For generating timestamps
@@ -924,444 +965,482 @@ use fern::colors::{Color, ColoredLevelConfig}; // For colored logging output
 use log::{debug, error, info, warn, LevelFilter}; // Logging facade
 use serde::Deserialize; // For deserializing JSON config
 use std::{
-collections::{HashMap, HashSet},
-env, // For CARGO_PKG_VERSION
-// Removed unused 'File' import
-fs::{self}, // Standard file system operations
-io::{self, ErrorKind},
-path::{Path, PathBuf},
-time::Instant, // For accurate duration measurement
+    collections::{HashMap, HashSet},
+    env, // For CARGO_PKG_VERSION
+    // Removed unused &#39;File&#39; import
+    fs::{self}, // Standard file system operations
+    io::{self, ErrorKind},
+    path::{Path, PathBuf},
+    time::Instant, // For accurate duration measurement
 };
 use walkdir::{DirEntry, WalkDir}; // For efficient directory traversal
+
 // --- Configuration Structures ---
+
 /// Represents the structure of the JSON configuration file for categories.
 #[derive(Deserialize, Debug, Clone)]
-struct CategoriesConfig(HashMap&lt;String, Vec<String>&gt;);
+struct CategoriesConfig(HashMap&lt;String, Vec&lt;String&gt;&gt;);
+
 /// Provides the default file categorization configuration.
 fn default_categories() -&gt; CategoriesConfig {
-let mut map = HashMap::new();
-macro_rules! add_category {
+    let mut map = HashMap::new();
+    macro_rules! add_category {
 ($map:expr, $name:expr, [$($ext:expr),* $(,)?]) =&gt; {
-$map.insert($name.to_string(), vec![$($ext.to_string()),*]);
+    $map.insert($name.to_string(), vec![$($ext.to_string()),*]);
 };
+    }
+    add_category!(map, &quot;images&quot;, [&quot;.jpg&quot;, &quot;.jpeg&quot;, &quot;.png&quot;, &quot;.gif&quot;, &quot;.bmp&quot;, &quot;.webp&quot;, &quot;.tiff&quot;, &quot;.svg&quot;, &quot;.ico&quot;]);
+    add_category!(map, &quot;documents&quot;, [&quot;.pdf&quot;, &quot;.docx&quot;, &quot;.doc&quot;, &quot;.txt&quot;, &quot;.rtf&quot;, &quot;.odt&quot;, &quot;.xlsx&quot;, &quot;.xls&quot;, &quot;.csv&quot;, &quot;.pptx&quot;, &quot;.ppt&quot;, &quot;.md&quot;, &quot;.tex&quot;, &quot;.chm&quot;, &quot;.epub&quot;]);
+    add_category!(map, &quot;videos&quot;, [&quot;.mp4&quot;, &quot;.avi&quot;, &quot;.mkv&quot;, &quot;.mov&quot;, &quot;.wmv&quot;, &quot;.flv&quot;, &quot;.webm&quot;]);
+    add_category!(map, &quot;audio&quot;, [&quot;.mp3&quot;, &quot;.wav&quot;, &quot;.flac&quot;, &quot;.aac&quot;, &quot;.ogg&quot;, &quot;.m4a&quot;]);
+    add_category!(map, &quot;archives&quot;, [&quot;.zip&quot;, &quot;.rar&quot;, &quot;.tar&quot;, &quot;.gz&quot;, &quot;.bz2&quot;, &quot;.7z&quot;, &quot;.iso&quot;]);
+    add_category!(map, &quot;code&quot;, [&quot;.py&quot;, &quot;.java&quot;, &quot;.c&quot;, &quot;.cpp&quot;, &quot;.h&quot;, &quot;.cs&quot;, &quot;.html&quot;, &quot;.css&quot;, &quot;.js&quot;, &quot;.ts&quot;, &quot;.jsx&quot;, &quot;.tsx&quot;, &quot;.xml&quot;, &quot;.json&quot;, &quot;.yaml&quot;, &quot;.yml&quot;, &quot;.sh&quot;, &quot;.bat&quot;, &quot;.ps1&quot;, &quot;.rb&quot;, &quot;.php&quot;, &quot;.go&quot;, &quot;.rs&quot;, &quot;.swift&quot;, &quot;.kt&quot;, &quot;.ipynb&quot;, &quot;.sql&quot;, &quot;.toml&quot;]);
+    add_category!(map, &quot;apps&quot;, [&quot;.exe&quot;, &quot;.msi&quot;, &quot;.apk&quot;, &quot;.dmg&quot;, &quot;.deb&quot;, &quot;.rpm&quot;, &quot;.app&quot;]);
+    add_category!(map, &quot;fonts&quot;, [&quot;.ttf&quot;, &quot;.otf&quot;, &quot;.woff&quot;, &quot;.woff2&quot;]);
+    add_category!(map, &quot;shortcuts&quot;, [&quot;.lnk&quot;, &quot;.url&quot;]);
+    map.insert(&quot;other&quot;.to_string(), vec![]);
+    CategoriesConfig(map)
 }
-add_category!(map, "images", [".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp", ".tiff", ".svg", ".ico"]);
-add_category!(map, "documents", [".pdf", ".docx", ".doc", ".txt", ".rtf", ".odt", ".xlsx", ".xls", ".csv", ".pptx", ".ppt", ".md", ".tex", ".chm", ".epub"]);
-add_category!(map, "videos", [".mp4", ".avi", ".mkv", ".mov", ".wmv", ".flv", ".webm"]);
-add_category!(map, "audio", [".mp3", ".wav", ".flac", ".aac", ".ogg", ".m4a"]);
-add_category!(map, "archives", [".zip", ".rar", ".tar", ".gz", ".bz2", ".7z", ".iso"]);
-add_category!(map, "code", [".py", ".java", ".c", ".cpp", ".h", ".cs", ".html", ".css", ".js", ".ts", ".jsx", ".tsx", ".xml", ".json", ".yaml", ".yml", ".sh", ".bat", ".ps1", ".rb", ".php", ".go", ".rs", ".swift", ".kt", ".ipynb", ".sql", ".toml"]);
-add_category!(map, "apps", [".exe", ".msi", ".apk", ".dmg", ".deb", ".rpm", ".app"]);
-add_category!(map, "fonts", [".ttf", ".otf", ".woff", ".woff2"]);
-add_category!(map, "shortcuts", [".lnk", ".url"]);
-map.insert("other".to_string(), vec![]);
-CategoriesConfig(map)
-}
+
 /// Loads category configuration from a specified JSON file path.
-fn load_config_file(config_path: Option&lt;&amp;PathBuf&gt;) -&gt; Result<CategoriesConfig> {
-match config_path {
+fn load_config_file(config_path: Option&lt;&amp;PathBuf&gt;) -&gt; Result&lt;CategoriesConfig&gt; {
+    match config_path {
 Some(path) if path.is_file() =&gt; {
-info!("Loading category configuration from: {}", path.display());
-let file_content = fs::read_to_string(path)
-.with_context(|| format!("Failed to read config file: {}", path.display()))?;
-let mut config: HashMap&lt;String, Vec<String>&gt; = serde_json::from_str(&amp;file_content)
-.with_context(|| format!("Failed to parse JSON config file: {}", path.display()))?;
-config.entry("other".to_string()).or_insert_with(Vec::new);
-info!("Successfully loaded and validated custom configuration.");
-Ok(CategoriesConfig(config))
+    info!(&quot;Loading category configuration from: {}&quot;, path.display());
+    let file_content = fs::read_to_string(path)
+.with_context(|| format!(&quot;Failed to read config file: {}&quot;, path.display()))?;
+    let mut config: HashMap&lt;String, Vec&lt;String&gt;&gt; = serde_json::from_str(&amp;file_content)
+.with_context(|| format!(&quot;Failed to parse JSON config file: {}&quot;, path.display()))?;
+    config.entry(&quot;other&quot;.to_string()).or_insert_with(Vec::new);
+    info!(&quot;Successfully loaded and validated custom configuration.&quot;);
+    Ok(CategoriesConfig(config))
 }
 Some(path) =&gt; {
-warn!(
-"Config path '{}' provided but is not a valid file. Using default categories.",
+    warn!(
+&quot;Config path &#39;{}&#39; provided but is not a valid file. Using default categories.&quot;,
 path.display()
-);
-Ok(default_categories())
+    );
+    Ok(default_categories())
 }
 None =&gt; {
-info!("No config file specified. Using default category configuration.");
-Ok(default_categories())
+    info!(&quot;No config file specified. Using default category configuration.&quot;);
+    Ok(default_categories())
 }
+    }
 }
-}
+
 /// Determines the category name (String) for a given file based on its extension.
 fn categorize_file(filename: &amp;Path, categories_config: &amp;CategoriesConfig) -&gt; String {
-let extension = filename
+    let extension = filename
 .extension()
 .and_then(|s| s.to_str())
-.map(|s| format!(".{}", s.to_lowercase()))
-.unwrap_or_else(|| "no_extension".to_string());
-if extension == "no_extension" { return extension; }
-for (category, extensions) in &amp;categories_config.0 {
+.map(|s| format!(&quot;.{}&quot;, s.to_lowercase()))
+.unwrap_or_else(|| &quot;no_extension&quot;.to_string());
+    if extension == &quot;no_extension&quot; { return extension; }
+    for (category, extensions) in &amp;categories_config.0 {
 if extensions.contains(&amp;extension) { return category.clone(); }
+    }
+    &quot;other&quot;.to_string()
 }
-"other".to_string()
-}
+
 // --- Platform Specific ---
+
 /// Checks if a file or directory is hidden on Windows using standard library features.
 #[cfg(windows)]
-fn is_hidden(path: &amp;Path) -&gt; Result<bool> {
-use std::os::windows::fs::MetadataExt;
-let metadata = fs::metadata(path)
-.with_context(|| format!("Failed to get metadata for {}", path.display()))?;
-let attributes = metadata.file_attributes();
-// Use the raw value 0x2 for FILE_ATTRIBUTE_HIDDEN when using std::os::windows::fs
-const FILE_ATTRIBUTE_HIDDEN_VALUE: u32 = 0x2;
-Ok((attributes &amp; FILE_ATTRIBUTE_HIDDEN_VALUE) != 0)
+fn is_hidden(path: &amp;Path) -&gt; Result&lt;bool&gt; {
+    use std::os::windows::fs::MetadataExt;
+    let metadata = fs::metadata(path)
+.with_context(|| format!(&quot;Failed to get metadata for {}&quot;, path.display()))?;
+    let attributes = metadata.file_attributes();
+    // Use the raw value 0x2 for FILE_ATTRIBUTE_HIDDEN when using std::os::windows::fs
+    const FILE_ATTRIBUTE_HIDDEN_VALUE: u32 = 0x2;
+    Ok((attributes &amp; FILE_ATTRIBUTE_HIDDEN_VALUE) != 0)
 }
-/// Checks if a file or directory is hidden on Unix-like systems (conventionally, starts with '.').
+
+/// Checks if a file or directory is hidden on Unix-like systems (conventionally, starts with &#39;.&#39;).
 #[cfg(not(windows))]
-fn is_hidden(path: &amp;Path) -&gt; Result<bool> {
-Ok(path
+fn is_hidden(path: &amp;Path) -&gt; Result&lt;bool&gt; {
+    Ok(path
 .file_name()
 .and_then(|s| s.to_str())
-.map(|s| s.starts_with('.'))
+.map(|s| s.starts_with(&#39;.&#39;))
 .unwrap_or(false))
 }
+
 /// Helper for walkdir filter_entry to check hidden status.
 fn should_keep_entry(entry: &amp;DirEntry, include_hidden: bool) -&gt; bool {
-if include_hidden { return true; }
-match is_hidden(entry.path()) {
+    if include_hidden { return true; }
+    match is_hidden(entry.path()) {
 Ok(hidden) =&gt; !hidden,
 Err(err) =&gt; {
-warn!(
-"Could not determine hidden status for {}: {}. Excluding entry.",
+    warn!(
+&quot;Could not determine hidden status for {}: {}. Excluding entry.&quot;,
 entry.path().display(), err
-);
-false // Exclude if check fails (safer default)
+    );
+    false // Exclude if check fails (safer default)
 }
+    }
 }
-}
+
 // --- Command Line Arguments ---
+
 #[derive(clap::ValueEnum, Clone, Debug, PartialEq, Eq)]
 enum OrganizeMethod { Category, Extension, }
+
 #[derive(Parser, Debug)]
-#[command(author, version, about = "Organize files by category or extension (Rust version).",
-long_about = "A Rust utility for organizing files from source directories into categorized target folders based on file types or extensions.",
-help_template = "{before-help}{name} {version}\n{author-with-newline}{about-with-newline}\n{usage-heading} {usage}\n\n{all-args}{after-help}"
+#[command(author, version, about = &quot;Organize files by category or extension (Rust version).&quot;,
+    long_about = &quot;A Rust utility for organizing files from source directories into categorized target folders based on file types or extensions.&quot;,
+    help_template = &quot;{before-help}{name} {version}\n{author-with-newline}{about-with-newline}\n{usage-heading} {usage}\n\n{all-args}{after-help}&quot;
 )]
 struct CliArgs {
-#[arg(short, long, value_name = "DIR")] source: PathBuf,
-#[arg(short, long, value_name = "DIR")] target: PathBuf,
-#[arg(short, long, value_name = "FILE")] config: Option<PathBuf>,
-#[arg(long, value_enum, default_value_t = OrganizeMethod::Category)] organize_by: OrganizeMethod,
-#[arg(long)] move_files: bool,
-#[arg(long, conflicts_with_all = ["skip_existing", "overwrite"])] timestamp_duplicates: bool,
-#[arg(long, short = 'k', conflicts_with_all = ["timestamp_duplicates", "overwrite"])] skip_existing: bool,
-#[arg(long, conflicts_with_all = ["timestamp_duplicates", "skip_existing"])] overwrite: bool,
-#[arg(long, short = 'i')] include_hidden: bool,
-#[arg(long, short = 'l')] follow_links: bool,
-#[arg(long, requires = "move_files")] remove_empty_source_dirs: bool,
-#[arg(long, value_name = "FILE")] log_file: Option<PathBuf>,
-#[arg(long, value_parser = clap::value_parser!(LevelFilter), default_value = "info")] log_level: LevelFilter,
+    #[arg(short, long, value_name = &quot;DIR&quot;)] source: PathBuf,
+    #[arg(short, long, value_name = &quot;DIR&quot;)] target: PathBuf,
+    #[arg(short, long, value_name = &quot;FILE&quot;)] config: Option&lt;PathBuf&gt;,
+    #[arg(long, value_enum, default_value_t = OrganizeMethod::Category)] organize_by: OrganizeMethod,
+    #[arg(long)] move_files: bool,
+    #[arg(long, conflicts_with_all = [&quot;skip_existing&quot;, &quot;overwrite&quot;])] timestamp_duplicates: bool,
+    #[arg(long, short = &#39;k&#39;, conflicts_with_all = [&quot;timestamp_duplicates&quot;, &quot;overwrite&quot;])] skip_existing: bool,
+    #[arg(long, conflicts_with_all = [&quot;timestamp_duplicates&quot;, &quot;skip_existing&quot;])] overwrite: bool,
+    #[arg(long, short = &#39;i&#39;)] include_hidden: bool,
+    #[arg(long, short = &#39;l&#39;)] follow_links: bool,
+    #[arg(long, requires = &quot;move_files&quot;)] remove_empty_source_dirs: bool,
+    #[arg(long, value_name = &quot;FILE&quot;)] log_file: Option&lt;PathBuf&gt;,
+    #[arg(long, value_parser = clap::value_parser!(LevelFilter), default_value = &quot;info&quot;)] log_level: LevelFilter,
 }
+
 // --- Core Logic ---
+
 /// Holds statistics about the file processing operation.
 #[derive(Debug, Default)]
 struct ProcessStats {
-/// Count of directory entries successfully yielded by the filtered WalkDir iterator.
-total_scanned: u64,
-processed: u64,
-skipped: u64,
-errors: u64,
-failed_files: Vec&lt;(PathBuf, String)&gt;, // Stores paths and error context
+    /// Count of directory entries successfully yielded by the filtered WalkDir iterator.
+    total_scanned: u64,
+    processed: u64,
+    skipped: u64,
+    errors: u64,
+    failed_files: Vec&lt;(PathBuf, String)&gt;, // Stores paths and error context
 }
+
 /// Scans the source directory for unique file extensions.
 fn get_all_extensions(
-source_directory: &amp;Path,
-include_hidden: bool,
-follow_links: bool,
-) -&gt; Result&lt;HashSet<String>&gt; {
-let mut extensions = HashSet::new();
-info!("Scanning source directory for all unique file extensions...");
-let walker = WalkDir::new(source_directory)
+    source_directory: &amp;Path,
+    include_hidden: bool,
+    follow_links: bool,
+) -&gt; Result&lt;HashSet&lt;String&gt;&gt; {
+    let mut extensions = HashSet::new();
+    info!(&quot;Scanning source directory for all unique file extensions...&quot;);
+    let walker = WalkDir::new(source_directory)
 .follow_links(follow_links)
 .into_iter();
-let mut count = 0;
-for entry_result in walker.filter_entry(|e| should_keep_entry(e, include_hidden)) {
+    let mut count = 0;
+    for entry_result in walker.filter_entry(|e| should_keep_entry(e, include_hidden)) {
 match entry_result {
-Ok(entry) =&gt; {
+    Ok(entry) =&gt; {
 let path = entry.path();
 if path.is_file() {
-count += 1;
-if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
+    count += 1;
+    if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
 extensions.insert(ext.to_lowercase());
+    }
+    if count % 1000 == 0 { debug!(&quot;Scanned {} files for extensions...&quot;, count); }
 }
-if count % 1000 == 0 { debug!("Scanned {} files for extensions...", count); }
+    }
+    Err(e) =&gt; warn!(&quot;Error accessing entry during extension scan: {}&quot;, e),
 }
+    }
+    info!(&quot;Found {} unique extensions.&quot;, extensions.len());
+    Ok(extensions)
 }
-Err(e) =&gt; warn!("Error accessing entry during extension scan: {}", e),
-}
-}
-info!("Found {} unique extensions.", extensions.len());
-Ok(extensions)
-}
+
 /// Creates necessary target subfolders.
 fn create_target_folders(
-base_dir: &amp;Path,
-organize_by: &amp;OrganizeMethod,
-categories_config: Option&lt;&amp;CategoriesConfig&gt;,
-all_extensions: Option&lt;&amp;HashSet<String>&gt;,
+    base_dir: &amp;Path,
+    organize_by: &amp;OrganizeMethod,
+    categories_config: Option&lt;&amp;CategoriesConfig&gt;,
+    all_extensions: Option&lt;&amp;HashSet&lt;String&gt;&gt;,
 ) -&gt; Result&lt;()&gt; {
-info!("Ensuring target base directory exists: {}", base_dir.display());
-fs::create_dir_all(base_dir)
-.with_context(|| format!("Failed to create base target directory: {}", base_dir.display()))?;
-let folders_to_create: HashSet<String> = match organize_by {
+    info!(&quot;Ensuring target base directory exists: {}&quot;, base_dir.display());
+    fs::create_dir_all(base_dir)
+.with_context(|| format!(&quot;Failed to create base target directory: {}&quot;, base_dir.display()))?;
+    let folders_to_create: HashSet&lt;String&gt; = match organize_by {
 OrganizeMethod::Category =&gt; {
-let mut folders = categories_config
-.map(|cfg| cfg.0.keys().cloned().collect::&lt;HashSet<String>&gt;())
+    let mut folders = categories_config
+.map(|cfg| cfg.0.keys().cloned().collect::&lt;HashSet&lt;String&gt;&gt;())
 .unwrap_or_default();
-folders.insert("other".to_string());
-folders.insert("no_extension".to_string());
-folders
+    folders.insert(&quot;other&quot;.to_string());
+    folders.insert(&quot;no_extension&quot;.to_string());
+    folders
 }
 OrganizeMethod::Extension =&gt; {
-let mut folders = all_extensions.cloned().unwrap_or_default();
-folders.insert("no_extension".to_string());
-folders
+    let mut folders = all_extensions.cloned().unwrap_or_default();
+    folders.insert(&quot;no_extension&quot;.to_string());
+    folders
 }
-};
-info!(
-"Creating target subfolders (mode: {:?}). Total potential folders: {}",
+    };
+    info!(
+&quot;Creating target subfolders (mode: {:?}). Total potential folders: {}&quot;,
 organize_by,
 folders_to_create.len()
-);
-let mut created_count = 0;
-for folder_name in &amp;folders_to_create {
-if folder_name.is_empty() { warn!("Skipping creation of folder with empty name."); continue; }
+    );
+    let mut created_count = 0;
+    for folder_name in &amp;folders_to_create {
+if folder_name.is_empty() { warn!(&quot;Skipping creation of folder with empty name.&quot;); continue; }
 let folder_path = base_dir.join(folder_name);
 if !folder_path.exists() {
-fs::create_dir_all(&amp;folder_path).with_context(|| {
-format!("Failed to create target folder '{}'", folder_path.display())
-})?;
-debug!("Created target folder: {}", folder_path.display());
-created_count += 1;
+    fs::create_dir_all(&amp;folder_path).with_context(|| {
+format!(&quot;Failed to create target folder &#39;{}&#39;&quot;, folder_path.display())
+    })?;
+    debug!(&quot;Created target folder: {}&quot;, folder_path.display());
+    created_count += 1;
 }
+    }
+    info!(&quot;Created {} new target subfolders.&quot;, created_count);
+    Ok(())
 }
-info!("Created {} new target subfolders.", created_count);
-Ok(())
-}
+
 /// Attempts to move a file, falling back to copy-then-delete on cross-device errors.
 fn move_file_with_fallback(source: &amp;Path, target: &amp;Path) -&gt; io::Result&lt;()&gt; {
-match fs::rename(source, target) {
+    match fs::rename(source, target) {
 Ok(_) =&gt; Ok(()),
 Err(rename_error) =&gt; {
-// Note: Relies on platform-specific OS error codes (Windows: 17, Unix: 18/libc::EXDEV). Might be brittle.
-let is_cross_device = || -&gt; bool {
+    // Note: Relies on platform-specific OS error codes (Windows: 17, Unix: 18/libc::EXDEV). Might be brittle.
+    let is_cross_device = || -&gt; bool {
 #[cfg(windows)] { rename_error.raw_os_error() == Some(17) }
 #[cfg(unix)] { rename_error.raw_os_error() == Some(18) }
 #[cfg(not(any(windows, unix)))] { false }
-};
-if is_cross_device() {
-warn!("Rename failed (cross-device error detected), attempting copy+delete fallback for move: {} -&gt; {}", source.display(), target.display());
-// Note: std::fs::copy preserves permissions but not other metadata like modification time (unlike Python's shutil.copy2).
+    };
+    if is_cross_device() {
+warn!(&quot;Rename failed (cross-device error detected), attempting copy+delete fallback for move: {} -&gt; {}&quot;, source.display(), target.display());
+// Note: std::fs::copy preserves permissions but not other metadata like modification time (unlike Python&#39;s shutil.copy2).
 // For full metadata preservation, consider crates like `fs_extra` or platform-specific APIs.
 fs::copy(source, target)?;
 fs::remove_file(source)?;
 Ok(())
-} else { Err(rename_error) }
+    } else { Err(rename_error) }
 }
+    }
 }
-}
+
+
 /// Main function to perform the file organization.
-fn organize_files(args: &amp;CliArgs, categories_config: &amp;CategoriesConfig) -&gt; Result<ProcessStats> {
-if !args.source.is_dir() { bail!("Source directory '{}' is invalid or not found.", args.source.display()); }
-if !args.target.exists() {
-info!("Creating target directory: {}", args.target.display());
-fs::create_dir_all(&amp;args.target).with_context(|| format!("Could not create target directory '{}'", args.target.display()))?;
-} else if !args.target.is_dir() { bail!("Target path '{}' exists but is not a directory.", args.target.display()); }
-info!("Preparing target folders...");
-let extensions_for_folders = if args.organize_by == OrganizeMethod::Extension {
+fn organize_files(args: &amp;CliArgs, categories_config: &amp;CategoriesConfig) -&gt; Result&lt;ProcessStats&gt; {
+    if !args.source.is_dir() { bail!(&quot;Source directory &#39;{}&#39; is invalid or not found.&quot;, args.source.display()); }
+    if !args.target.exists() {
+info!(&quot;Creating target directory: {}&quot;, args.target.display());
+fs::create_dir_all(&amp;args.target).with_context(|| format!(&quot;Could not create target directory &#39;{}&#39;&quot;, args.target.display()))?;
+    } else if !args.target.is_dir() { bail!(&quot;Target path &#39;{}&#39; exists but is not a directory.&quot;, args.target.display()); }
+
+    info!(&quot;Preparing target folders...&quot;);
+    let extensions_for_folders = if args.organize_by == OrganizeMethod::Extension {
 Some(get_all_extensions(&amp;args.source, args.include_hidden, args.follow_links)?)
-} else { None };
-create_target_folders(&amp;args.target, &amp;args.organize_by, Some(categories_config), extensions_for_folders.as_ref())?;
-info!("Starting file processing...");
-let mut stats = ProcessStats::default();
-let mut file_counter = 0u64;
-let walker = WalkDir::new(&amp;args.source).follow_links(args.follow_links).into_iter();
-for entry_result in walker.filter_entry(|e| should_keep_entry(e, args.include_hidden)) {
+    } else { None };
+    create_target_folders(&amp;args.target, &amp;args.organize_by, Some(categories_config), extensions_for_folders.as_ref())?;
+
+    info!(&quot;Starting file processing...&quot;);
+    let mut stats = ProcessStats::default();
+    let mut file_counter = 0u64;
+    let walker = WalkDir::new(&amp;args.source).follow_links(args.follow_links).into_iter();
+
+    for entry_result in walker.filter_entry(|e| should_keep_entry(e, args.include_hidden)) {
 stats.total_scanned += 1; // Count filtered entries
 let entry = match entry_result {
-Ok(e) =&gt; e,
-Err(e) =&gt; {
-let path_display = e.path().unwrap_or_else(|| Path::new("?")).display();
-error!("Error scanning path {}: {}", path_display, e);
+    Ok(e) =&gt; e,
+    Err(e) =&gt; {
+let path_display = e.path().unwrap_or_else(|| Path::new(&quot;?&quot;)).display();
+error!(&quot;Error scanning path {}: {}&quot;, path_display, e);
 stats.errors += 1;
 // Provide default PathBuf if e.path() is None
 stats.failed_files.push((
-e.path().map_or_else(|| PathBuf::from("?"), |p| p.to_path_buf()),
-format!("Scan error: {:?}", e),
+    e.path().map_or_else(|| PathBuf::from(&quot;?&quot;), |p| p.to_path_buf()),
+    format!(&quot;Scan error: {:?}&quot;, e),
 ));
 continue;
-}
+    }
 };
+
 if !entry.file_type().is_file() { stats.skipped += 1; continue; }
+
 file_counter += 1;
 let source_path = entry.path();
-let progress_prefix = format!("[{}]", file_counter);
+let progress_prefix = format!(&quot;[{}]&quot;, file_counter);
+
 let file_result: Result&lt;()&gt; = (|| {
-let file_name = source_path.file_name().with_context(|| format!("Could not get filename for path: {}", source_path.display()))?;
-let target_subfolder_name = match args.organize_by {
+    let file_name = source_path.file_name().with_context(|| format!(&quot;Could not get filename for path: {}&quot;, source_path.display()))?;
+    let target_subfolder_name = match args.organize_by {
 OrganizeMethod::Category =&gt; categorize_file(source_path, categories_config),
-OrganizeMethod::Extension =&gt; source_path.extension().and_then(|s| s.to_str()).map(|s| s.to_lowercase()).unwrap_or_else(|| "no_extension".to_string()),
-};
-let target_folder_path = args.target.join(&amp;target_subfolder_name);
-let mut target_file_path = target_folder_path.join(file_name);
-if target_file_path.exists() {
+OrganizeMethod::Extension =&gt; source_path.extension().and_then(|s| s.to_str()).map(|s| s.to_lowercase()).unwrap_or_else(|| &quot;no_extension&quot;.to_string()),
+    };
+    let target_folder_path = args.target.join(&amp;target_subfolder_name);
+    let mut target_file_path = target_folder_path.join(file_name);
+
+    if target_file_path.exists() {
 if args.skip_existing {
-info!("{} Skipping (target exists): {}", progress_prefix, target_file_path.display());
-stats.skipped += 1; return Ok(());
+    info!(&quot;{} Skipping (target exists): {}&quot;, progress_prefix, target_file_path.display());
+    stats.skipped += 1; return Ok(());
 } else if args.timestamp_duplicates {
-let original_target_path_display = target_file_path.display().to_string();
-let mut counter = 1;
-// Use file_name directly, it's already &amp;OsStr
-let stem = source_path.file_stem().unwrap_or(file_name);
-let ext = source_path.extension().unwrap_or_default();
-const MAX_TIMESTAMP_ATTEMPTS: u32 = 1000;
-loop {
-let timestamp = Local::now().format("%Y%m%d_%H%M%S");
+    let original_target_path_display = target_file_path.display().to_string();
+    let mut counter = 1;
+    // Use file_name directly, it&#39;s already &amp;OsStr
+    let stem = source_path.file_stem().unwrap_or(file_name);
+    let ext = source_path.extension().unwrap_or_default();
+    const MAX_TIMESTAMP_ATTEMPTS: u32 = 1000;
+    loop {
+let timestamp = Local::now().format(&quot;%Y%m%d_%H%M%S&quot;);
 let mut new_name_os = std::ffi::OsString::new();
 new_name_os.push(stem);
-new_name_os.push(format!("_{}_{}", timestamp, counter));
-if !ext.is_empty() { new_name_os.push("."); new_name_os.push(ext); }
+new_name_os.push(format!(&quot;_{}_{}&quot;, timestamp, counter));
+if !ext.is_empty() { new_name_os.push(&quot;.&quot;); new_name_os.push(ext); }
 target_file_path = target_folder_path.join(&amp;new_name_os);
 if !target_file_path.exists() { break; }
 counter += 1;
-if counter &gt; MAX_TIMESTAMP_ATTEMPTS { bail!("Could not find unique timestamped name for {} after {} attempts. Skipping.", original_target_path_display, MAX_TIMESTAMP_ATTEMPTS); }
-}
-info!("{} Target exists '{}'. Renaming duplicate to: {}", progress_prefix, original_target_path_display, target_file_path.display());
-} else if args.overwrite { warn!("{} Overwriting existing target file: {}", progress_prefix, target_file_path.display()); }
-else { warn!("{} Overwriting existing target file (default): {}", progress_prefix, target_file_path.display()); }
-}
-fs::create_dir_all(&amp;target_folder_path).with_context(|| format!("Failed to ensure target directory '{}' exists", target_folder_path.display()))?;
-let operation_desc = if args.move_files { "move" } else { "copy" };
-debug!("{} Attempting to {} '{}' to '{}'", progress_prefix, operation_desc, source_path.display(), target_file_path.display());
-if args.move_files {
-move_file_with_fallback(source_path, &amp;target_file_path).with_context(|| format!("Failed to move '{}' to '{}'", source_path.display(), target_file_path.display()))?;
-} else {
-// Note: std::fs::copy preserves permissions but not other metadata like modification time (unlike Python's shutil.copy2).
+if counter &gt; MAX_TIMESTAMP_ATTEMPTS { bail!(&quot;Could not find unique timestamped name for {} after {} attempts. Skipping.&quot;, original_target_path_display, MAX_TIMESTAMP_ATTEMPTS); }
+    }
+    info!(&quot;{} Target exists &#39;{}&#39;. Renaming duplicate to: {}&quot;, progress_prefix, original_target_path_display, target_file_path.display());
+} else if args.overwrite { warn!(&quot;{} Overwriting existing target file: {}&quot;, progress_prefix, target_file_path.display()); }
+else { warn!(&quot;{} Overwriting existing target file (default): {}&quot;, progress_prefix, target_file_path.display()); }
+    }
+
+    fs::create_dir_all(&amp;target_folder_path).with_context(|| format!(&quot;Failed to ensure target directory &#39;{}&#39; exists&quot;, target_folder_path.display()))?;
+    let operation_desc = if args.move_files { &quot;move&quot; } else { &quot;copy&quot; };
+    debug!(&quot;{} Attempting to {} &#39;{}&#39; to &#39;{}&#39;&quot;, progress_prefix, operation_desc, source_path.display(), target_file_path.display());
+
+    if args.move_files {
+move_file_with_fallback(source_path, &amp;target_file_path).with_context(|| format!(&quot;Failed to move &#39;{}&#39; to &#39;{}&#39;&quot;, source_path.display(), target_file_path.display()))?;
+    } else {
+// Note: std::fs::copy preserves permissions but not other metadata like modification time (unlike Python&#39;s shutil.copy2).
 // For full metadata preservation, consider crates like `fs_extra` or platform-specific APIs.
-fs::copy(source_path, &amp;target_file_path).map(|_| ()).with_context(|| format!("Failed to copy '{}' to '{}'", source_path.display(), target_file_path.display()))?;
-}
-stats.processed += 1;
-Ok(())
+fs::copy(source_path, &amp;target_file_path).map(|_| ()).with_context(|| format!(&quot;Failed to copy &#39;{}&#39; to &#39;{}&#39;&quot;, source_path.display(), target_file_path.display()))?;
+    }
+    stats.processed += 1;
+    Ok(())
 })(); // End inner closure
+
 if let Err(e) = file_result {
-error!("{} Failed to process '{}': {:?}", progress_prefix, source_path.display(), e);
-stats.errors += 1;
-stats.failed_files.push((source_path.to_path_buf(), format!("{:?}", e)));
+    error!(&quot;{} Failed to process &#39;{}&#39;: {:?}&quot;, progress_prefix, source_path.display(), e);
+    stats.errors += 1;
+    stats.failed_files.push((source_path.to_path_buf(), format!(&quot;{:?}&quot;, e)));
 }
-} // End main loop
-Ok(stats)
+    } // End main loop
+
+    Ok(stats)
 }
+
 /// Recursively removes empty folders starting from the bottom up.
-fn remove_empty_folders(directory: &amp;Path) -&gt; Result<u32> {
-let mut removed_count = 0u32;
-info!("Attempting to remove empty directories within: {}", directory.display());
-let mut dirs_to_check = Vec::new();
-for entry_result in WalkDir::new(directory).min_depth(1) {
+fn remove_empty_folders(directory: &amp;Path) -&gt; Result&lt;u32&gt; {
+    let mut removed_count = 0u32;
+    info!(&quot;Attempting to remove empty directories within: {}&quot;, directory.display());
+    let mut dirs_to_check = Vec::new();
+    for entry_result in WalkDir::new(directory).min_depth(1) {
 match entry_result {
-Ok(entry) if entry.file_type().is_dir() =&gt; { dirs_to_check.push(entry.into_path()); }
-Ok(_) =&gt; {}
-Err(e) =&gt; warn!("Error accessing entry during empty dir scan: {}", e),
+    Ok(entry) if entry.file_type().is_dir() =&gt; { dirs_to_check.push(entry.into_path()); }
+    Ok(_) =&gt; {}
+    Err(e) =&gt; warn!(&quot;Error accessing entry during empty dir scan: {}&quot;, e),
 }
-}
-dirs_to_check.sort_by(|a, b| b.components().count().cmp(&amp;a.components().count()));
-for dir_path in dirs_to_check {
+    }
+    dirs_to_check.sort_by(|a, b| b.components().count().cmp(&amp;a.components().count()));
+    for dir_path in dirs_to_check {
 if !dir_path.is_dir() { continue; }
 match fs::read_dir(&amp;dir_path) {
-Ok(mut read_dir) =&gt; {
+    Ok(mut read_dir) =&gt; {
 if read_dir.next().is_none() { // Directory is empty
-match fs::remove_dir(&amp;dir_path) {
-Ok(_) =&gt; { info!("Removed empty directory: {}", dir_path.display()); removed_count += 1; }
-Err(e) =&gt; { if e.kind() != ErrorKind::NotFound { warn!("Could not remove presumably empty directory '{}': {}", dir_path.display(), e); } }
+    match fs::remove_dir(&amp;dir_path) {
+Ok(_) =&gt; { info!(&quot;Removed empty directory: {}&quot;, dir_path.display()); removed_count += 1; }
+Err(e) =&gt; { if e.kind() != ErrorKind::NotFound { warn!(&quot;Could not remove presumably empty directory &#39;{}&#39;: {}&quot;, dir_path.display(), e); } }
+    }
 }
+    }
+    Err(e) =&gt; { if e.kind() != ErrorKind::NotFound { warn!(&quot;Could not read directory &#39;{}&#39; to check emptiness: {}&quot;, dir_path.display(), e); } }
 }
+    }
+    info!(&quot;Finished removing empty directories. Removed: {}&quot;, removed_count);
+    Ok(removed_count)
 }
-Err(e) =&gt; { if e.kind() != ErrorKind::NotFound { warn!("Could not read directory '{}' to check emptiness: {}", dir_path.display(), e); } }
-}
-}
-info!("Finished removing empty directories. Removed: {}", removed_count);
-Ok(removed_count)
-}
+
 // --- Logging Setup ---
 /// Sets up logging using the fern crate.
 fn setup_logging(log_level: LevelFilter, log_file: Option&lt;&amp;PathBuf&gt;) -&gt; Result&lt;()&gt; {
-let colors = ColoredLevelConfig::new().error(Color::Red).warn(Color::Yellow).info(Color::Green).debug(Color::Blue).trace(Color::BrightBlack);
-let base_config = fern::Dispatch::new()
+    let colors = ColoredLevelConfig::new().error(Color::Red).warn(Color::Yellow).info(Color::Green).debug(Color::Blue).trace(Color::BrightBlack);
+    let base_config = fern::Dispatch::new()
 .format(move |out, message, record| {
-out.finish(format_args!(
-"[{} {} {}] {}",
-chrono::Local::now().format("%Y-%m-%d %H:%M:%S%.3f"), colors.color(record.level()), record.target(), message
-))
+    out.finish(format_args!(
+&quot;[{} {} {}] {}&quot;,
+chrono::Local::now().format(&quot;%Y-%m-%d %H:%M:%S%.3f&quot;), colors.color(record.level()), record.target(), message
+    ))
 })
 .level(log_level)
-.level_for("hyper", LevelFilter::Warn).level_for("mio", LevelFilter::Warn).level_for("want", LevelFilter::Warn).level_for("reqwest", LevelFilter::Warn).level_for("rustls", LevelFilter::Warn);
-let stderr_logger = fern::Dispatch::new().filter(move |metadata| { log_level &lt;= LevelFilter::Debug || metadata.target().starts_with(env!("CARGO_PKG_NAME")) }).chain(std::io::stderr());
-let mut final_dispatch = base_config.chain(stderr_logger);
-let mut file_logger_ok = false;
-if let Some(log_path) = log_file {
+.level_for(&quot;hyper&quot;, LevelFilter::Warn).level_for(&quot;mio&quot;, LevelFilter::Warn).level_for(&quot;want&quot;, LevelFilter::Warn).level_for(&quot;reqwest&quot;, LevelFilter::Warn).level_for(&quot;rustls&quot;, LevelFilter::Warn);
+    let stderr_logger = fern::Dispatch::new().filter(move |metadata| { log_level &lt;= LevelFilter::Debug || metadata.target().starts_with(env!(&quot;CARGO_PKG_NAME&quot;)) }).chain(std::io::stderr());
+    let mut final_dispatch = base_config.chain(stderr_logger);
+    let mut file_logger_ok = false;
+    if let Some(log_path) = log_file {
 match fern::log_file(log_path) {
-Ok(file_output) =&gt; { final_dispatch = final_dispatch.chain(file_output); file_logger_ok = true; }
-Err(e) =&gt; { eprintln!("Error: Failed to create log file '{}': {}. Logging to console only.", log_path.display(), e); }
+    Ok(file_output) =&gt; { final_dispatch = final_dispatch.chain(file_output); file_logger_ok = true; }
+    Err(e) =&gt; { eprintln!(&quot;Error: Failed to create log file &#39;{}&#39;: {}. Logging to console only.&quot;, log_path.display(), e); }
 }
+    }
+    final_dispatch.apply().context(&quot;Failed to set up logging&quot;)?;
+    if file_logger_ok { if let Some(path) = log_file { info!(&quot;File logging enabled to: {}&quot;, path.display()); } }
+    Ok(())
 }
-final_dispatch.apply().context("Failed to set up logging")?;
-if file_logger_ok { if let Some(path) = log_file { info!("File logging enabled to: {}", path.display()); } }
-Ok(())
-}
+
+
 // --- Main Application Entry Point ---
 fn main() -&gt; Result&lt;()&gt; {
-let overall_start_time = Instant::now(); // Start timing
-let args = CliArgs::parse();
-setup_logging(args.log_level, args.log_file.as_ref())?;
-info!("Rust File Organizer (v{}) starting...", env!("CARGO_PKG_VERSION"));
-debug!("Arguments received: {:?}", args);
-info!("Source directory: {}", args.source.display());
-info!("Target directory: {}", args.target.display());
-info!("Organization mode: {:?}", args.organize_by);
-info!("Operation: {}", if args.move_files { "Move" } else { "Copy" });
-info!("Include hidden: {}", args.include_hidden);
-info!("Follow links: {}", args.follow_links);
-if args.skip_existing { info!("Duplicate handling: Skip existing"); }
-else if args.timestamp_duplicates { info!("Duplicate handling: Timestamp duplicates"); }
-else if args.overwrite { info!("Duplicate handling: Overwrite existing (explicitly)"); }
-else { info!("Duplicate handling: Overwrite existing (default)"); }
-let categories = load_config_file(args.config.as_ref())?;
-let result = organize_files(&amp;args, &amp;categories);
-match result {
+    let overall_start_time = Instant::now(); // Start timing
+    let args = CliArgs::parse();
+    setup_logging(args.log_level, args.log_file.as_ref())?;
+
+    info!(&quot;Rust File Organizer (v{}) starting...&quot;, env!(&quot;CARGO_PKG_VERSION&quot;));
+    debug!(&quot;Arguments received: {:?}&quot;, args);
+    info!(&quot;Source directory: {}&quot;, args.source.display());
+    info!(&quot;Target directory: {}&quot;, args.target.display());
+    info!(&quot;Organization mode: {:?}&quot;, args.organize_by);
+    info!(&quot;Operation: {}&quot;, if args.move_files { &quot;Move&quot; } else { &quot;Copy&quot; });
+    info!(&quot;Include hidden: {}&quot;, args.include_hidden);
+    info!(&quot;Follow links: {}&quot;, args.follow_links);
+    if args.skip_existing { info!(&quot;Duplicate handling: Skip existing&quot;); }
+    else if args.timestamp_duplicates { info!(&quot;Duplicate handling: Timestamp duplicates&quot;); }
+    else if args.overwrite { info!(&quot;Duplicate handling: Overwrite existing (explicitly)&quot;); }
+    else { info!(&quot;Duplicate handling: Overwrite existing (default)&quot;); }
+
+    let categories = load_config_file(args.config.as_ref())?;
+    let result = organize_files(&amp;args, &amp;categories);
+
+    match result {
 Ok(stats) =&gt; {
-if args.move_files &amp;&amp; args.remove_empty_source_dirs &amp;&amp; stats.processed &gt; 0 {
+    if args.move_files &amp;&amp; args.remove_empty_source_dirs &amp;&amp; stats.processed &gt; 0 {
 // Note: Cleanup errors are logged but do not cause a non-zero exit code.
-if let Err(e) = remove_empty_folders(&amp;args.source) { error!("Error during empty source directory removal: {:?}", e); }
-}
-let overall_duration = overall_start_time.elapsed();
-let summary = format!(
-"Operation completed in {:.2?}. Scanned Entries: {}, Processed Files: {}, Skipped: {}, Errors: {}",
+if let Err(e) = remove_empty_folders(&amp;args.source) { error!(&quot;Error during empty source directory removal: {:?}&quot;, e); }
+    }
+    let overall_duration = overall_start_time.elapsed();
+    let summary = format!(
+&quot;Operation completed in {:.2?}. Scanned Entries: {}, Processed Files: {}, Skipped: {}, Errors: {}&quot;,
 overall_duration, stats.total_scanned, stats.processed, stats.skipped, stats.errors
-);
-info!("{}", summary);
-println!("\n{}", summary);
-if stats.errors &gt; 0 {
-eprintln!("\n--- Errors occurred during processing: ---");
+    );
+    info!(&quot;{}&quot;, summary);
+    println!(&quot;\n{}&quot;, summary);
+    if stats.errors &gt; 0 {
+eprintln!(&quot;\n--- Errors occurred during processing: ---&quot;);
 for (path, error_msg) in &amp;stats.failed_files {
-eprintln!(" - File: {}", path.display());
-eprintln!("   Error: {}", error_msg);
+    eprintln!(&quot; - File: {}&quot;, path.display());
+    eprintln!(&quot;   Error: {}&quot;, error_msg);
 }
-eprintln!("-----------------------------------------");
-eprintln!("Warning: {} errors occurred. Please check logs (stderr/file) for full details.", stats.errors);
+eprintln!(&quot;-----------------------------------------&quot;);
+eprintln!(&quot;Warning: {} errors occurred. Please check logs (stderr/file) for full details.&quot;, stats.errors);
 // Consider exiting with non-zero status for scripting if errors occurred
 // std::process::exit(1);
-}
+    }
 }
 Err(e) =&gt; {
-error!("Critical error during file organization: {:?}", e);
-eprintln!("\nError: File organization failed critically. Check logs (stderr/file) for details.");
-std::process::exit(1);
+    error!(&quot;Critical error during file organization: {:?}&quot;, e);
+    eprintln!(&quot;\nError: File organization failed critically. Check logs (stderr/file) for details.&quot;);
+    std::process::exit(1);
 }
+    }
+    info!(&quot;Rust File Organizer finished.&quot;);
+    Ok(())
 }
-info!("Rust File Organizer finished.");
-Ok(())
-}
+
 // --- Testing Notes ---
 // To properly test this application, consider using crates like:
 // - `assert_fs`: For creating temporary file/directory structures for tests.
@@ -1374,402 +1453,406 @@ Ok(())
 // - Test hidden file handling with and without the --include-hidden flag.
 // - Test symbolic link handling with and without the --follow-links flag.
 // - Test behavior with empty source or target directories.
-// - Test custom configuration loading and verify correct categorization (including missing 'other').
+// - Test custom configuration loading and verify correct categorization (including missing &#39;other&#39;).
 // - Test empty directory removal after a successful move operation.
 // - Test error handling for scenarios like insufficient permissions (harder to automate reliably).
 // - Test long path handling specifically on Windows (requires careful test setup).
 // - Test cross-device move fallback behavior.
-// - Test handling of filenames with non-UTF8 characters (requires OsStr handling).
+// - Test handling of filenames with non-UTF8 characters (requires OsStr handling).</code>
+</section>
+  <h2 id="python-approach">
+    
+    
+     <a href="#python-approach">#</a><a href="#" aria-label="Back to top">python approach</a>
+        
+    
+  </h2>
+      
+
+<div class="language-python highlighter-rouge"><div class="highlight"><section><code><span class="c1">#!/usr/bin/env python3
+</span><span class="kn">import</span> <span class="n">os</span>
+<span class="kn">import</span> <span class="n">shutil</span>
+<span class="kn">import</span> <span class="n">argparse</span>
+<span class="kn">import</span> <span class="n">json</span>
+<span class="kn">import</span> <span class="n">platform</span>
+<span class="kn">import</span> <span class="n">traceback</span>
+<span class="kn">import</span> <span class="n">logging</span>
+<span class="kn">from</span> <span class="n">datetime</span> <span class="kn">import</span> <span class="n">datetime</span>
+
+<span class="c1"># --- Default Configuration ---
+</span><span class="n">DEFAULT_CATEGORIES_CONFIG</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="sh">"</span><span class="s">images</span><span class="sh">"</span><span class="p">:</span> <span class="p">[</span><span class="sh">"</span><span class="s">.jpg</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">.jpeg</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">.png</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">.gif</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">.bmp</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">.webp</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">.tiff</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">.svg</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">.ico</span><span class="sh">"</span><span class="p">],</span>
+    <span class="sh">"</span><span class="s">documents</span><span class="sh">"</span><span class="p">:</span> <span class="p">[</span><span class="sh">"</span><span class="s">.pdf</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">.docx</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">.doc</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">.txt</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">.rtf</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">.odt</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">.xlsx</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">.xls</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">.csv</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">.pptx</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">.ppt</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">.md</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">.tex</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">.chm</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">.epub</span><span class="sh">"</span><span class="p">],</span>
+    <span class="sh">"</span><span class="s">videos</span><span class="sh">"</span><span class="p">:</span> <span class="p">[</span><span class="sh">"</span><span class="s">.mp4</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">.avi</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">.mkv</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">.mov</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">.wmv</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">.flv</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">.webm</span><span class="sh">"</span><span class="p">],</span>
+    <span class="sh">"</span><span class="s">audio</span><span class="sh">"</span><span class="p">:</span> <span class="p">[</span><span class="sh">"</span><span class="s">.mp3</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">.wav</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">.flac</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">.aac</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">.ogg</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">.m4a</span><span class="sh">"</span><span class="p">],</span>
+    <span class="sh">"</span><span class="s">archives</span><span class="sh">"</span><span class="p">:</span> <span class="p">[</span><span class="sh">"</span><span class="s">.zip</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">.rar</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">.tar</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">.gz</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">.bz2</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">.7z</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">.iso</span><span class="sh">"</span><span class="p">],</span>
+    <span class="sh">"</span><span class="s">code</span><span class="sh">"</span><span class="p">:</span> <span class="p">[</span><span class="sh">"</span><span class="s">.py</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">.java</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">.c</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">.cpp</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">.h</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">.cs</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">.html</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">.css</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">.js</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">.ts</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">.jsx</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">.tsx</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">.xml</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">.json</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">.yaml</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">.yml</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">.sh</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">.bat</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">.ps1</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">.rb</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">.php</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">.go</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">.rs</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">.swift</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">.kt</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">.ipynb</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">.sql</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">.toml</span><span class="sh">"</span><span class="p">],</span>
+    <span class="sh">"</span><span class="s">apps</span><span class="sh">"</span><span class="p">:</span> <span class="p">[</span><span class="sh">"</span><span class="s">.exe</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">.msi</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">.apk</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">.dmg</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">.deb</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">.rpm</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">.app</span><span class="sh">"</span><span class="p">],</span>
+    <span class="sh">"</span><span class="s">fonts</span><span class="sh">"</span><span class="p">:</span> <span class="p">[</span><span class="sh">"</span><span class="s">.ttf</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">.otf</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">.woff</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">.woff2</span><span class="sh">"</span><span class="p">],</span>
+    <span class="sh">"</span><span class="s">shortcuts</span><span class="sh">"</span><span class="p">:</span> <span class="p">[</span><span class="sh">"</span><span class="s">.lnk</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">.url</span><span class="sh">"</span><span class="p">],</span>
+    <span class="sh">"</span><span class="s">other</span><span class="sh">"</span><span class="p">:</span> <span class="p">[]</span>
+<span class="p">}</span>
+
+<span class="c1"># --- Utility Functions ---
+</span>
+<span class="k">def</span> <span class="nf">setup_logging</span><span class="p">(</span><span class="n">log_file_path</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="sh">"""</span><span class="s">Configures logging to console and optionally to a file.</span><span class="sh">"""</span>
+    <span class="n">log_formatter</span> <span class="o">=</span> <span class="n">logging</span><span class="p">.</span><span class="nc">Formatter</span><span class="p">(</span><span class="sh">'</span><span class="s">%(asctime)s - %(levelname)s - %(message)s</span><span class="sh">'</span><span class="p">)</span>
+    <span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="p">.</span><span class="nf">getLogger</span><span class="p">(</span><span class="sh">'</span><span class="s">file_organizer</span><span class="sh">'</span><span class="p">)</span>
+    <span class="n">logger</span><span class="p">.</span><span class="nf">setLevel</span><span class="p">(</span><span class="n">logging</span><span class="p">.</span><span class="n">INFO</span><span class="p">)</span> <span class="c1"># Set base level
+</span>
+    <span class="c1"># Console Handler (prints INFO and above)
+</span>    <span class="n">console_handler</span> <span class="o">=</span> <span class="n">logging</span><span class="p">.</span><span class="nc">StreamHandler</span><span class="p">()</span>
+    <span class="n">console_handler</span><span class="p">.</span><span class="nf">setFormatter</span><span class="p">(</span><span class="n">log_formatter</span><span class="p">)</span>
+    <span class="n">logger</span><span class="p">.</span><span class="nf">addHandler</span><span class="p">(</span><span class="n">console_handler</span><span class="p">)</span>
+
+    <span class="c1"># File Handler (prints INFO and above if path provided)
+</span>    <span class="k">if</span> <span class="n">log_file_path</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">file_handler</span> <span class="o">=</span> <span class="n">logging</span><span class="p">.</span><span class="nc">FileHandler</span><span class="p">(</span><span class="n">log_file_path</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="sh">'</span><span class="s">a</span><span class="sh">'</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="sh">'</span><span class="s">utf-8</span><span class="sh">'</span><span class="p">)</span>
+            <span class="n">file_handler</span><span class="p">.</span><span class="nf">setFormatter</span><span class="p">(</span><span class="n">log_formatter</span><span class="p">)</span>
+            <span class="n">logger</span><span class="p">.</span><span class="nf">addHandler</span><span class="p">(</span><span class="n">file_handler</span><span class="p">)</span>
+            <span class="n">logger</span><span class="p">.</span><span class="nf">info</span><span class="p">(</span><span class="sa">f</span><span class="sh">"</span><span class="s">Logging initialized. Log file: </span><span class="si">{</span><span class="n">log_file_path</span><span class="si">}</span><span class="sh">"</span><span class="p">)</span>
+        <span class="k">except</span> <span class="nb">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">logger</span><span class="p">.</span><span class="nf">error</span><span class="p">(</span><span class="sa">f</span><span class="sh">"</span><span class="s">Failed to initialize log file handler at </span><span class="si">{</span><span class="n">log_file_path</span><span class="si">}</span><span class="s">: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="sh">"</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">logger</span>
+
+<span class="k">def</span> <span class="nf">handle_long_path</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+    <span class="sh">"""</span><span class="s">Prepends the long path prefix for Windows if necessary.</span><span class="sh">"""</span>
+    <span class="n">path</span> <span class="o">=</span> <span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="nf">abspath</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">platform</span><span class="p">.</span><span class="nf">system</span><span class="p">()</span> <span class="o">==</span> <span class="sh">"</span><span class="s">Windows</span><span class="sh">"</span> <span class="ow">and</span> <span class="nf">len</span><span class="p">(</span><span class="n">path</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">259</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">path</span><span class="p">.</span><span class="nf">startswith</span><span class="p">(</span><span class="sh">"</span><span class="se">\\\\</span><span class="s">?</span><span class="se">\\</span><span class="sh">"</span><span class="p">):</span>
+        <span class="n">path</span> <span class="o">=</span> <span class="sh">"</span><span class="se">\\\\</span><span class="s">?</span><span class="se">\\</span><span class="sh">"</span> <span class="o">+</span> <span class="n">path</span>
+    <span class="k">return</span> <span class="n">path</span>
+
+<span class="k">def</span> <span class="nf">load_config_file</span><span class="p">(</span><span class="n">config_path</span><span class="p">,</span> <span class="n">logger</span><span class="p">):</span>
+    <span class="sh">"""</span><span class="s">Loads category configuration from a JSON file.</span><span class="sh">"""</span>
+    <span class="k">if</span> <span class="n">config_path</span> <span class="ow">and</span> <span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="nf">isfile</span><span class="p">(</span><span class="n">config_path</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">with</span> <span class="nf">open</span><span class="p">(</span><span class="n">config_path</span><span class="p">,</span> <span class="sh">"</span><span class="s">r</span><span class="sh">"</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="sh">"</span><span class="s">utf-8</span><span class="sh">"</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                <span class="n">logger</span><span class="p">.</span><span class="nf">info</span><span class="p">(</span><span class="sa">f</span><span class="sh">"</span><span class="s">Loading category configuration from: </span><span class="si">{</span><span class="n">config_path</span><span class="si">}</span><span class="sh">"</span><span class="p">)</span>
+                <span class="k">return</span> <span class="n">json</span><span class="p">.</span><span class="nf">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+        <span class="nf">except </span><span class="p">(</span><span class="n">json</span><span class="p">.</span><span class="n">JSONDecodeError</span><span class="p">,</span> <span class="nb">OSError</span><span class="p">)</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">logger</span><span class="p">.</span><span class="nf">warning</span><span class="p">(</span><span class="sa">f</span><span class="sh">"</span><span class="s">Could not load or parse config file </span><span class="sh">'</span><span class="si">{</span><span class="n">config_path</span><span class="si">}</span><span class="sh">'</span><span class="s">: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s">. Using default categories.</span><span class="sh">"</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">logger</span><span class="p">.</span><span class="nf">info</span><span class="p">(</span><span class="sh">"</span><span class="s">Using default category configuration.</span><span class="sh">"</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">DEFAULT_CATEGORIES_CONFIG</span>
+
+<span class="k">def</span> <span class="nf">categorize_file</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">categories_config</span><span class="p">):</span>
+    <span class="sh">"""</span><span class="s">Determines the category of a file based on its extension.</span><span class="sh">"""</span>
+    <span class="n">_</span><span class="p">,</span> <span class="n">ext</span> <span class="o">=</span> <span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="nf">splitext</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
+    <span class="n">ext</span> <span class="o">=</span> <span class="n">ext</span><span class="p">.</span><span class="nf">lower</span><span class="p">()</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">ext</span><span class="p">:</span>
+        <span class="k">return</span> <span class="sh">"</span><span class="s">no_extension</span><span class="sh">"</span>
+    <span class="k">for</span> <span class="n">category</span><span class="p">,</span> <span class="n">extensions</span> <span class="ow">in</span> <span class="n">categories_config</span><span class="p">.</span><span class="nf">items</span><span class="p">():</span>
+        <span class="k">if</span> <span class="n">ext</span> <span class="ow">in</span> <span class="n">extensions</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">category</span>
+    <span class="k">return</span> <span class="sh">"</span><span class="s">other</span><span class="sh">"</span>
+
+<span class="k">def</span> <span class="nf">is_hidden_windows</span><span class="p">(</span><span class="n">filepath</span><span class="p">):</span>
+    <span class="sh">"""</span><span class="s">Checks if a file or directory is hidden on Windows.</span><span class="sh">"""</span>
+    <span class="k">if</span> <span class="n">platform</span><span class="p">.</span><span class="nf">system</span><span class="p">()</span> <span class="o">!=</span> <span class="sh">"</span><span class="s">Windows</span><span class="sh">"</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">False</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">attrs</span> <span class="o">=</span> <span class="n">os</span><span class="p">.</span><span class="nf">stat</span><span class="p">(</span><span class="n">filepath</span><span class="p">).</span><span class="n">st_file_attributes</span>
+        <span class="k">return</span> <span class="n">attrs</span> <span class="o">&amp;</span> <span class="mi">2</span> <span class="c1"># FILE_ATTRIBUTE_HIDDEN = 2
+</span>    <span class="k">except</span> <span class="nb">OSError</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">False</span> <span class="c1"># Assume not hidden if stat fails
+</span>
+<span class="k">def</span> <span class="nf">create_target_folders</span><span class="p">(</span><span class="n">base_dir</span><span class="p">,</span> <span class="n">organize_by</span><span class="p">,</span> <span class="n">categories_config</span><span class="p">,</span> <span class="n">all_extensions</span><span class="p">,</span> <span class="n">logger</span><span class="p">):</span>
+    <span class="sh">"""</span><span class="s">Creates necessary target folders before processing files.</span><span class="sh">"""</span>
+    <span class="n">base_dir</span> <span class="o">=</span> <span class="nf">handle_long_path</span><span class="p">(</span><span class="n">base_dir</span><span class="p">)</span>
+    <span class="n">logger</span><span class="p">.</span><span class="nf">info</span><span class="p">(</span><span class="sa">f</span><span class="sh">"</span><span class="s">Ensuring target base directory exists: </span><span class="si">{</span><span class="n">base_dir</span><span class="si">}</span><span class="sh">"</span><span class="p">)</span>
+    <span class="n">os</span><span class="p">.</span><span class="nf">makedirs</span><span class="p">(</span><span class="n">base_dir</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span> <span class="c1"># Ensure base exists first
+</span>
+    <span class="n">folders_to_create</span> <span class="o">=</span> <span class="nf">set</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">organize_by</span> <span class="o">==</span> <span class="sh">"</span><span class="s">category</span><span class="sh">"</span><span class="p">:</span>
+        <span class="n">folders_to_create</span> <span class="o">=</span> <span class="nf">set</span><span class="p">(</span><span class="n">categories_config</span><span class="p">.</span><span class="nf">keys</span><span class="p">())</span> <span class="o">|</span> <span class="p">{</span><span class="sh">"</span><span class="s">other</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">no_extension</span><span class="sh">"</span><span class="p">}</span>
+    <span class="k">elif</span> <span class="n">organize_by</span> <span class="o">==</span> <span class="sh">"</span><span class="s">extension</span><span class="sh">"</span><span class="p">:</span>
+        <span class="n">folders_to_create</span> <span class="o">=</span> <span class="n">all_extensions</span> <span class="o">|</span> <span class="p">{</span><span class="sh">"</span><span class="s">no_extension</span><span class="sh">"</span><span class="p">}</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">logger</span><span class="p">.</span><span class="nf">error</span><span class="p">(</span><span class="sa">f</span><span class="sh">"</span><span class="s">Invalid organize_by option: </span><span class="si">{</span><span class="n">organize_by</span><span class="si">}</span><span class="sh">"</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="nc">ValueError</span><span class="p">(</span><span class="sh">"</span><span class="s">Invalid organize_by option.</span><span class="sh">"</span><span class="p">)</span>
+
+    <span class="n">logger</span><span class="p">.</span><span class="nf">info</span><span class="p">(</span><span class="sa">f</span><span class="sh">"</span><span class="s">Creating target subfolders (</span><span class="si">{</span><span class="n">organize_by</span><span class="si">}</span><span class="s">)...</span><span class="sh">"</span><span class="p">)</span>
+    <span class="n">created_count</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">for</span> <span class="n">folder_name</span> <span class="ow">in</span> <span class="n">folders_to_create</span><span class="p">:</span>
+        <span class="n">folder_path</span> <span class="o">=</span> <span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span><span class="n">base_dir</span><span class="p">,</span> <span class="n">folder_name</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="nf">exists</span><span class="p">(</span><span class="n">folder_path</span><span class="p">):</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">os</span><span class="p">.</span><span class="nf">makedirs</span><span class="p">(</span><span class="n">folder_path</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+                <span class="n">created_count</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">except</span> <span class="nb">OSError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                 <span class="n">logger</span><span class="p">.</span><span class="nf">error</span><span class="p">(</span><span class="sa">f</span><span class="sh">"</span><span class="s">Failed to create target folder </span><span class="sh">'</span><span class="si">{</span><span class="n">folder_path</span><span class="si">}</span><span class="sh">'</span><span class="s">: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="sh">"</span><span class="p">)</span>
+    <span class="n">logger</span><span class="p">.</span><span class="nf">info</span><span class="p">(</span><span class="sa">f</span><span class="sh">"</span><span class="s">Created </span><span class="si">{</span><span class="n">created_count</span><span class="si">}</span><span class="s"> new target subfolders.</span><span class="sh">"</span><span class="p">)</span>
 
 
-## python approach
+<span class="k">def</span> <span class="nf">get_all_extensions</span><span class="p">(</span><span class="n">source_directory</span><span class="p">,</span> <span class="n">include_hidden</span><span class="p">,</span> <span class="n">follow_links</span><span class="p">,</span> <span class="n">logger</span><span class="p">):</span>
+    <span class="sh">"""</span><span class="s">Scans the source directory to find all unique file extensions.</span><span class="sh">"""</span>
+    <span class="n">extensions</span> <span class="o">=</span> <span class="nf">set</span><span class="p">()</span>
+    <span class="n">source_directory</span> <span class="o">=</span> <span class="nf">handle_long_path</span><span class="p">(</span><span class="n">source_directory</span><span class="p">)</span>
+    <span class="n">logger</span><span class="p">.</span><span class="nf">info</span><span class="p">(</span><span class="sh">"</span><span class="s">Scanning for all unique file extensions...</span><span class="sh">"</span><span class="p">)</span>
+    <span class="n">count</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">for</span> <span class="n">root</span><span class="p">,</span> <span class="n">dirs</span><span class="p">,</span> <span class="n">files</span> <span class="ow">in</span> <span class="n">os</span><span class="p">.</span><span class="nf">walk</span><span class="p">(</span><span class="n">source_directory</span><span class="p">,</span> <span class="n">followlinks</span><span class="o">=</span><span class="n">follow_links</span><span class="p">):</span>
+        <span class="n">root_path</span> <span class="o">=</span> <span class="nf">handle_long_path</span><span class="p">(</span><span class="n">root</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">include_hidden</span><span class="p">:</span>
+            <span class="n">dirs</span><span class="p">[:]</span> <span class="o">=</span> <span class="p">[</span><span class="n">d</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">dirs</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">d</span><span class="p">.</span><span class="nf">startswith</span><span class="p">(</span><span class="sh">'</span><span class="s">.</span><span class="sh">'</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nf">is_hidden_windows</span><span class="p">(</span><span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span><span class="n">root_path</span><span class="p">,</span> <span class="n">d</span><span class="p">))]</span>
+            <span class="n">files</span> <span class="o">=</span> <span class="p">[</span><span class="n">f</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">files</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">f</span><span class="p">.</span><span class="nf">startswith</span><span class="p">(</span><span class="sh">'</span><span class="s">.</span><span class="sh">'</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nf">is_hidden_windows</span><span class="p">(</span><span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span><span class="n">root_path</span><span class="p">,</span> <span class="n">f</span><span class="p">))]</span>
 
-```python
-#!/usr/bin/env python3
-import os
-import shutil
-import argparse
-import json
-import platform
-import traceback
-import logging
-from datetime import datetime
+        <span class="k">for</span> <span class="nb">file</span> <span class="ow">in</span> <span class="n">files</span><span class="p">:</span>
+            <span class="n">count</span> <span class="o">+=</span><span class="mi">1</span>
+            <span class="n">_</span><span class="p">,</span> <span class="n">ext</span> <span class="o">=</span> <span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="nf">splitext</span><span class="p">(</span><span class="nb">file</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">ext</span><span class="p">:</span>
+                <span class="n">extensions</span><span class="p">.</span><span class="nf">add</span><span class="p">(</span><span class="n">ext</span><span class="p">[</span><span class="mi">1</span><span class="p">:].</span><span class="nf">lower</span><span class="p">())</span>
+            <span class="k">if</span> <span class="n">count</span> <span class="o">%</span> <span class="mi">1000</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span> <span class="c1"># Log progress for large scans
+</span>                 <span class="n">logger</span><span class="p">.</span><span class="nf">info</span><span class="p">(</span><span class="sa">f</span><span class="sh">"</span><span class="s">Scanned </span><span class="si">{</span><span class="n">count</span><span class="si">}</span><span class="s"> files for extensions...</span><span class="sh">"</span><span class="p">)</span>
 
-# --- Default Configuration ---
-DEFAULT_CATEGORIES_CONFIG = {
-    "images": [".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp", ".tiff", ".svg", ".ico"],
-    "documents": [".pdf", ".docx", ".doc", ".txt", ".rtf", ".odt", ".xlsx", ".xls", ".csv", ".pptx", ".ppt", ".md", ".tex", ".chm", ".epub"],
-    "videos": [".mp4", ".avi", ".mkv", ".mov", ".wmv", ".flv", ".webm"],
-    "audio": [".mp3", ".wav", ".flac", ".aac", ".ogg", ".m4a"],
-    "archives": [".zip", ".rar", ".tar", ".gz", ".bz2", ".7z", ".iso"],
-    "code": [".py", ".java", ".c", ".cpp", ".h", ".cs", ".html", ".css", ".js", ".ts", ".jsx", ".tsx", ".xml", ".json", ".yaml", ".yml", ".sh", ".bat", ".ps1", ".rb", ".php", ".go", ".rs", ".swift", ".kt", ".ipynb", ".sql", ".toml"],
-    "apps": [".exe", ".msi", ".apk", ".dmg", ".deb", ".rpm", ".app"],
-    "fonts": [".ttf", ".otf", ".woff", ".woff2"],
-    "shortcuts": [".lnk", ".url"],
-    "other": []
-}
-
-# --- Utility Functions ---
-
-def setup_logging(log_file_path=None):
-    """Configures logging to console and optionally to a file."""
-    log_formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-    logger = logging.getLogger('file_organizer')
-    logger.setLevel(logging.INFO) # Set base level
-
-    # Console Handler (prints INFO and above)
-    console_handler = logging.StreamHandler()
-    console_handler.setFormatter(log_formatter)
-    logger.addHandler(console_handler)
-
-    # File Handler (prints INFO and above if path provided)
-    if log_file_path:
-        try:
-            file_handler = logging.FileHandler(log_file_path, mode='a', encoding='utf-8')
-            file_handler.setFormatter(log_formatter)
-            logger.addHandler(file_handler)
-            logger.info(f"Logging initialized. Log file: {log_file_path}")
-        except Exception as e:
-            logger.error(f"Failed to initialize log file handler at {log_file_path}: {e}")
-
-    return logger
-
-def handle_long_path(path):
-    """Prepends the long path prefix for Windows if necessary."""
-    path = os.path.abspath(path)
-    if platform.system() == "Windows" and len(path) &gt; 259 and not path.startswith("\\\\?\\"):
-        path = "\\\\?\\" + path
-    return path
-
-def load_config_file(config_path, logger):
-    """Loads category configuration from a JSON file."""
-    if config_path and os.path.isfile(config_path):
-        try:
-            with open(config_path, "r", encoding="utf-8") as f:
-                logger.info(f"Loading category configuration from: {config_path}")
-                return json.load(f)
-        except (json.JSONDecodeError, OSError) as e:
-            logger.warning(f"Could not load or parse config file '{config_path}': {e}. Using default categories.")
-    else:
-        logger.info("Using default category configuration.")
-    return DEFAULT_CATEGORIES_CONFIG
-
-def categorize_file(filename, categories_config):
-    """Determines the category of a file based on its extension."""
-    _, ext = os.path.splitext(filename)
-    ext = ext.lower()
-    if not ext:
-        return "no_extension"
-    for category, extensions in categories_config.items():
-        if ext in extensions:
-            return category
-    return "other"
-
-def is_hidden_windows(filepath):
-    """Checks if a file or directory is hidden on Windows."""
-    if platform.system() != "Windows":
-        return False
-    try:
-        attrs = os.stat(filepath).st_file_attributes
-        return attrs &amp; 2 # FILE_ATTRIBUTE_HIDDEN = 2
-    except OSError:
-        return False # Assume not hidden if stat fails
-
-def create_target_folders(base_dir, organize_by, categories_config, all_extensions, logger):
-    """Creates necessary target folders before processing files."""
-    base_dir = handle_long_path(base_dir)
-    logger.info(f"Ensuring target base directory exists: {base_dir}")
-    os.makedirs(base_dir, exist_ok=True) # Ensure base exists first
-
-    folders_to_create = set()
-    if organize_by == "category":
-        folders_to_create = set(categories_config.keys()) | {"other", "no_extension"}
-    elif organize_by == "extension":
-        folders_to_create = all_extensions | {"no_extension"}
-    else:
-        logger.error(f"Invalid organize_by option: {organize_by}")
-        raise ValueError("Invalid organize_by option.")
-
-    logger.info(f"Creating target subfolders ({organize_by})...")
-    created_count = 0
-    for folder_name in folders_to_create:
-        folder_path = os.path.join(base_dir, folder_name)
-        if not os.path.exists(folder_path):
-            try:
-                os.makedirs(folder_path, exist_ok=True)
-                created_count += 1
-            except OSError as e:
-                 logger.error(f"Failed to create target folder '{folder_path}': {e}")
-    logger.info(f"Created {created_count} new target subfolders.")
+    <span class="n">logger</span><span class="p">.</span><span class="nf">info</span><span class="p">(</span><span class="sa">f</span><span class="sh">"</span><span class="s">Found </span><span class="si">{</span><span class="nf">len</span><span class="p">(</span><span class="n">extensions</span><span class="p">)</span><span class="si">}</span><span class="s"> unique extensions.</span><span class="sh">"</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">extensions</span>
 
 
-def get_all_extensions(source_directory, include_hidden, follow_links, logger):
-    """Scans the source directory to find all unique file extensions."""
-    extensions = set()
-    source_directory = handle_long_path(source_directory)
-    logger.info("Scanning for all unique file extensions...")
-    count = 0
-    for root, dirs, files in os.walk(source_directory, followlinks=follow_links):
-        root_path = handle_long_path(root)
-        if not include_hidden:
-            dirs[:] = [d for d in dirs if not d.startswith('.') and not is_hidden_windows(os.path.join(root_path, d))]
-            files = [f for f in files if not f.startswith('.') and not is_hidden_windows(os.path.join(root_path, f))]
+<span class="c1"># --- Core Logic ---
+</span>
+<span class="k">def</span> <span class="nf">sort_files</span><span class="p">(</span>
+    <span class="n">source_directory</span><span class="p">,</span>
+    <span class="n">target_directory</span><span class="p">,</span>
+    <span class="n">organize_by</span><span class="p">,</span>
+    <span class="n">timestamp_duplicates</span><span class="p">,</span>
+    <span class="n">move_files</span><span class="p">,</span>
+    <span class="n">categories_config</span><span class="p">,</span>
+    <span class="n">include_hidden</span><span class="p">,</span>
+    <span class="n">follow_links</span><span class="p">,</span>
+    <span class="n">skip_existing</span><span class="p">,</span>
+    <span class="n">logger</span>
+<span class="p">):</span>
+    <span class="sh">"""</span><span class="s">Sorts files from source to target directory based on specified options.</span><span class="sh">"""</span>
+    <span class="n">source_directory</span> <span class="o">=</span> <span class="nf">handle_long_path</span><span class="p">(</span><span class="n">source_directory</span><span class="p">)</span>
+    <span class="n">target_directory</span> <span class="o">=</span> <span class="nf">handle_long_path</span><span class="p">(</span><span class="n">target_directory</span><span class="p">)</span>
 
-        for file in files:
-            count +=1
-            _, ext = os.path.splitext(file)
-            if ext:
-                extensions.add(ext[1:].lower())
-            if count % 1000 == 0: # Log progress for large scans
-                 logger.info(f"Scanned {count} files for extensions...")
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="nf">isdir</span><span class="p">(</span><span class="n">source_directory</span><span class="p">):</span>
+        <span class="n">logger</span><span class="p">.</span><span class="nf">error</span><span class="p">(</span><span class="sa">f</span><span class="sh">"</span><span class="s">Source directory </span><span class="sh">'</span><span class="si">{</span><span class="n">source_directory</span><span class="si">}</span><span class="sh">'</span><span class="s"> is invalid or not found.</span><span class="sh">"</span><span class="p">)</span>
+        <span class="k">return</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span>
 
-    logger.info(f"Found {len(extensions)} unique extensions.")
-    return extensions
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="nf">exists</span><span class="p">(</span><span class="n">target_directory</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">os</span><span class="p">.</span><span class="nf">makedirs</span><span class="p">(</span><span class="n">target_directory</span><span class="p">)</span>
+            <span class="n">logger</span><span class="p">.</span><span class="nf">info</span><span class="p">(</span><span class="sa">f</span><span class="sh">"</span><span class="s">Created target directory: </span><span class="si">{</span><span class="n">target_directory</span><span class="si">}</span><span class="sh">"</span><span class="p">)</span>
+        <span class="k">except</span> <span class="nb">OSError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">logger</span><span class="p">.</span><span class="nf">error</span><span class="p">(</span><span class="sa">f</span><span class="sh">"</span><span class="s">Could not create target directory </span><span class="sh">'</span><span class="si">{</span><span class="n">target_directory</span><span class="si">}</span><span class="sh">'</span><span class="s">: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="sh">"</span><span class="p">)</span>
+            <span class="k">return</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span>
+    <span class="k">elif</span> <span class="ow">not</span> <span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="nf">isdir</span><span class="p">(</span><span class="n">target_directory</span><span class="p">):</span>
+        <span class="n">logger</span><span class="p">.</span><span class="nf">error</span><span class="p">(</span><span class="sa">f</span><span class="sh">"</span><span class="s">Target path </span><span class="sh">'</span><span class="si">{</span><span class="n">target_directory</span><span class="si">}</span><span class="sh">'</span><span class="s"> exists but is not a directory.</span><span class="sh">"</span><span class="p">)</span>
+        <span class="k">return</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span>
 
+    <span class="c1"># --- Pre-scan and Folder Creation ---
+</span>    <span class="n">total_files</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">files_to_process</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">logger</span><span class="p">.</span><span class="nf">info</span><span class="p">(</span><span class="sh">"</span><span class="s">Scanning source directory to count files...</span><span class="sh">"</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">root</span><span class="p">,</span> <span class="n">dirs</span><span class="p">,</span> <span class="n">files</span> <span class="ow">in</span> <span class="n">os</span><span class="p">.</span><span class="nf">walk</span><span class="p">(</span><span class="n">source_directory</span><span class="p">,</span> <span class="n">topdown</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">followlinks</span><span class="o">=</span><span class="n">follow_links</span><span class="p">):</span>
+        <span class="n">root_path</span> <span class="o">=</span> <span class="nf">handle_long_path</span><span class="p">(</span><span class="n">root</span><span class="p">)</span>
+        <span class="n">original_dirs</span> <span class="o">=</span> <span class="nf">list</span><span class="p">(</span><span class="n">dirs</span><span class="p">)</span> <span class="c1"># Keep original list for iteration if needed
+</span>        <span class="k">if</span> <span class="ow">not</span> <span class="n">include_hidden</span><span class="p">:</span>
+            <span class="n">dirs</span><span class="p">[:]</span> <span class="o">=</span> <span class="p">[</span><span class="n">d</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">dirs</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">d</span><span class="p">.</span><span class="nf">startswith</span><span class="p">(</span><span class="sh">'</span><span class="s">.</span><span class="sh">'</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nf">is_hidden_windows</span><span class="p">(</span><span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span><span class="n">root_path</span><span class="p">,</span> <span class="n">d</span><span class="p">))]</span>
+            <span class="n">files</span> <span class="o">=</span> <span class="p">[</span><span class="n">f</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">files</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">f</span><span class="p">.</span><span class="nf">startswith</span><span class="p">(</span><span class="sh">'</span><span class="s">.</span><span class="sh">'</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nf">is_hidden_windows</span><span class="p">(</span><span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span><span class="n">root_path</span><span class="p">,</span> <span class="n">f</span><span class="p">))]</span>
 
-# --- Core Logic ---
-
-def sort_files(
-    source_directory,
-    target_directory,
-    organize_by,
-    timestamp_duplicates,
-    move_files,
-    categories_config,
-    include_hidden,
-    follow_links,
-    skip_existing,
-    logger
-):
-    """Sorts files from source to target directory based on specified options."""
-    source_directory = handle_long_path(source_directory)
-    target_directory = handle_long_path(target_directory)
-
-    if not os.path.isdir(source_directory):
-        logger.error(f"Source directory '{source_directory}' is invalid or not found.")
-        return 0, 0
-
-    if not os.path.exists(target_directory):
-        try:
-            os.makedirs(target_directory)
-            logger.info(f"Created target directory: {target_directory}")
-        except OSError as e:
-            logger.error(f"Could not create target directory '{target_directory}': {e}")
-            return 0, 0
-    elif not os.path.isdir(target_directory):
-        logger.error(f"Target path '{target_directory}' exists but is not a directory.")
-        return 0, 0
-
-    # --- Pre-scan and Folder Creation ---
-    total_files = 0
-    files_to_process = []
-    logger.info("Scanning source directory to count files...")
-    for root, dirs, files in os.walk(source_directory, topdown=True, followlinks=follow_links):
-        root_path = handle_long_path(root)
-        original_dirs = list(dirs) # Keep original list for iteration if needed
-        if not include_hidden:
-            dirs[:] = [d for d in dirs if not d.startswith('.') and not is_hidden_windows(os.path.join(root_path, d))]
-            files = [f for f in files if not f.startswith('.') and not is_hidden_windows(os.path.join(root_path, f))]
-
-        for file in files:
-            filepath = os.path.join(root_path, file)
-            # Basic check if it's actually a file before adding
-            try:
-                 if os.path.isfile(filepath):
-                      files_to_process.append(filepath)
-                      total_files += 1
-                 else:
-                      logger.warning(f"Item listed as file is not a file (skipping count): {filepath}")
-            except OSError as e:
-                 logger.warning(f"Could not access item during scan (skipping count): {filepath} - Error: {e}")
+        <span class="k">for</span> <span class="nb">file</span> <span class="ow">in</span> <span class="n">files</span><span class="p">:</span>
+            <span class="n">filepath</span> <span class="o">=</span> <span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span><span class="n">root_path</span><span class="p">,</span> <span class="nb">file</span><span class="p">)</span>
+            <span class="c1"># Basic check if it's actually a file before adding
+</span>            <span class="k">try</span><span class="p">:</span>
+                 <span class="k">if</span> <span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="nf">isfile</span><span class="p">(</span><span class="n">filepath</span><span class="p">):</span>
+                      <span class="n">files_to_process</span><span class="p">.</span><span class="nf">append</span><span class="p">(</span><span class="n">filepath</span><span class="p">)</span>
+                      <span class="n">total_files</span> <span class="o">+=</span> <span class="mi">1</span>
+                 <span class="k">else</span><span class="p">:</span>
+                      <span class="n">logger</span><span class="p">.</span><span class="nf">warning</span><span class="p">(</span><span class="sa">f</span><span class="sh">"</span><span class="s">Item listed as file is not a file (skipping count): </span><span class="si">{</span><span class="n">filepath</span><span class="si">}</span><span class="sh">"</span><span class="p">)</span>
+            <span class="k">except</span> <span class="nb">OSError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                 <span class="n">logger</span><span class="p">.</span><span class="nf">warning</span><span class="p">(</span><span class="sa">f</span><span class="sh">"</span><span class="s">Could not access item during scan (skipping count): </span><span class="si">{</span><span class="n">filepath</span><span class="si">}</span><span class="s"> - Error: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="sh">"</span><span class="p">)</span>
 
 
-    logger.info(f"Found {total_files} files to process.")
-    if total_files == 0:
-        logger.info("No files found to process.")
-        return 0, 0
+    <span class="n">logger</span><span class="p">.</span><span class="nf">info</span><span class="p">(</span><span class="sa">f</span><span class="sh">"</span><span class="s">Found </span><span class="si">{</span><span class="n">total_files</span><span class="si">}</span><span class="s"> files to process.</span><span class="sh">"</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">total_files</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">logger</span><span class="p">.</span><span class="nf">info</span><span class="p">(</span><span class="sh">"</span><span class="s">No files found to process.</span><span class="sh">"</span><span class="p">)</span>
+        <span class="k">return</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span>
 
-    if organize_by == "category":
-        create_target_folders(target_directory, "category", categories_config, None, logger)
-    elif organize_by == "extension":
-        all_exts = get_all_extensions(source_directory, include_hidden, follow_links, logger)
-        create_target_folders(target_directory, "extension", None, all_exts, logger)
+    <span class="k">if</span> <span class="n">organize_by</span> <span class="o">==</span> <span class="sh">"</span><span class="s">category</span><span class="sh">"</span><span class="p">:</span>
+        <span class="nf">create_target_folders</span><span class="p">(</span><span class="n">target_directory</span><span class="p">,</span> <span class="sh">"</span><span class="s">category</span><span class="sh">"</span><span class="p">,</span> <span class="n">categories_config</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="n">logger</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">organize_by</span> <span class="o">==</span> <span class="sh">"</span><span class="s">extension</span><span class="sh">"</span><span class="p">:</span>
+        <span class="n">all_exts</span> <span class="o">=</span> <span class="nf">get_all_extensions</span><span class="p">(</span><span class="n">source_directory</span><span class="p">,</span> <span class="n">include_hidden</span><span class="p">,</span> <span class="n">follow_links</span><span class="p">,</span> <span class="n">logger</span><span class="p">)</span>
+        <span class="nf">create_target_folders</span><span class="p">(</span><span class="n">target_directory</span><span class="p">,</span> <span class="sh">"</span><span class="s">extension</span><span class="sh">"</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="n">all_exts</span><span class="p">,</span> <span class="n">logger</span><span class="p">)</span>
 
-    # --- Process Files ---
-    processed_files = 0
-    skipped_files = 0
-    error_files = 0
-    logger.info("Starting file processing...")
+    <span class="c1"># --- Process Files ---
+</span>    <span class="n">processed_files</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">skipped_files</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">error_files</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">logger</span><span class="p">.</span><span class="nf">info</span><span class="p">(</span><span class="sh">"</span><span class="s">Starting file processing...</span><span class="sh">"</span><span class="p">)</span>
 
-    for i, filepath in enumerate(files_to_process):
-        filepath = handle_long_path(filepath)
-        file = os.path.basename(filepath)
-        progress_prefix = f"[{i+1}/{total_files}]"
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">filepath</span> <span class="ow">in</span> <span class="nf">enumerate</span><span class="p">(</span><span class="n">files_to_process</span><span class="p">):</span>
+        <span class="n">filepath</span> <span class="o">=</span> <span class="nf">handle_long_path</span><span class="p">(</span><span class="n">filepath</span><span class="p">)</span>
+        <span class="nb">file</span> <span class="o">=</span> <span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="nf">basename</span><span class="p">(</span><span class="n">filepath</span><span class="p">)</span>
+        <span class="n">progress_prefix</span> <span class="o">=</span> <span class="sa">f</span><span class="sh">"</span><span class="s">[</span><span class="si">{</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="si">}</span><span class="s">/</span><span class="si">{</span><span class="n">total_files</span><span class="si">}</span><span class="s">]</span><span class="sh">"</span>
 
-        try:
-            if not os.path.exists(filepath): # Re-check existence before processing
-                logger.warning(f"{progress_prefix} Skipping non-existent source file: {filepath}")
-                skipped_files += 1
-                continue
-            if not os.path.isfile(filepath): # Ensure it's still a file
-                logger.warning(f"{progress_prefix} Skipping item that is not a file: {filepath}")
-                skipped_files += 1
-                continue
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="nf">exists</span><span class="p">(</span><span class="n">filepath</span><span class="p">):</span> <span class="c1"># Re-check existence before processing
+</span>                <span class="n">logger</span><span class="p">.</span><span class="nf">warning</span><span class="p">(</span><span class="sa">f</span><span class="sh">"</span><span class="si">{</span><span class="n">progress_prefix</span><span class="si">}</span><span class="s"> Skipping non-existent source file: </span><span class="si">{</span><span class="n">filepath</span><span class="si">}</span><span class="sh">"</span><span class="p">)</span>
+                <span class="n">skipped_files</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="k">continue</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="nf">isfile</span><span class="p">(</span><span class="n">filepath</span><span class="p">):</span> <span class="c1"># Ensure it's still a file
+</span>                <span class="n">logger</span><span class="p">.</span><span class="nf">warning</span><span class="p">(</span><span class="sa">f</span><span class="sh">"</span><span class="si">{</span><span class="n">progress_prefix</span><span class="si">}</span><span class="s"> Skipping item that is not a file: </span><span class="si">{</span><span class="n">filepath</span><span class="si">}</span><span class="sh">"</span><span class="p">)</span>
+                <span class="n">skipped_files</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="k">continue</span>
 
-            # Determine target folder
-            if organize_by == "category":
-                category = categorize_file(file, categories_config)
-                target_folder = os.path.join(target_directory, category)
-            elif organize_by == "extension":
-                _, ext = os.path.splitext(file)
-                ext_folder = ext[1:].lower() if ext else "no_extension"
-                target_folder = os.path.join(target_directory, ext_folder)
-            else: # Should not happen
-                 logger.error(f"{progress_prefix} Invalid organization option for file {file}. Skipping.")
-                 error_files += 1
-                 continue
+            <span class="c1"># Determine target folder
+</span>            <span class="k">if</span> <span class="n">organize_by</span> <span class="o">==</span> <span class="sh">"</span><span class="s">category</span><span class="sh">"</span><span class="p">:</span>
+                <span class="n">category</span> <span class="o">=</span> <span class="nf">categorize_file</span><span class="p">(</span><span class="nb">file</span><span class="p">,</span> <span class="n">categories_config</span><span class="p">)</span>
+                <span class="n">target_folder</span> <span class="o">=</span> <span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span><span class="n">target_directory</span><span class="p">,</span> <span class="n">category</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">organize_by</span> <span class="o">==</span> <span class="sh">"</span><span class="s">extension</span><span class="sh">"</span><span class="p">:</span>
+                <span class="n">_</span><span class="p">,</span> <span class="n">ext</span> <span class="o">=</span> <span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="nf">splitext</span><span class="p">(</span><span class="nb">file</span><span class="p">)</span>
+                <span class="n">ext_folder</span> <span class="o">=</span> <span class="n">ext</span><span class="p">[</span><span class="mi">1</span><span class="p">:].</span><span class="nf">lower</span><span class="p">()</span> <span class="k">if</span> <span class="n">ext</span> <span class="k">else</span> <span class="sh">"</span><span class="s">no_extension</span><span class="sh">"</span>
+                <span class="n">target_folder</span> <span class="o">=</span> <span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span><span class="n">target_directory</span><span class="p">,</span> <span class="n">ext_folder</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span> <span class="c1"># Should not happen
+</span>                 <span class="n">logger</span><span class="p">.</span><span class="nf">error</span><span class="p">(</span><span class="sa">f</span><span class="sh">"</span><span class="si">{</span><span class="n">progress_prefix</span><span class="si">}</span><span class="s"> Invalid organization option for file </span><span class="si">{</span><span class="nb">file</span><span class="si">}</span><span class="s">. Skipping.</span><span class="sh">"</span><span class="p">)</span>
+                 <span class="n">error_files</span> <span class="o">+=</span> <span class="mi">1</span>
+                 <span class="k">continue</span>
 
-            target_fullpath = os.path.join(target_folder, file)
-            target_fullpath = handle_long_path(target_fullpath)
+            <span class="n">target_fullpath</span> <span class="o">=</span> <span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span><span class="n">target_folder</span><span class="p">,</span> <span class="nb">file</span><span class="p">)</span>
+            <span class="n">target_fullpath</span> <span class="o">=</span> <span class="nf">handle_long_path</span><span class="p">(</span><span class="n">target_fullpath</span><span class="p">)</span>
 
-            # Handle existing target files
-            if os.path.exists(target_fullpath):
-                if skip_existing:
-                    logger.info(f"{progress_prefix} Skipping existing target: {target_fullpath}")
-                    skipped_files += 1
-                    continue
-                elif timestamp_duplicates:
-                    counter = 1
-                    base, ext = os.path.splitext(file)
-                    original_target_fullpath = target_fullpath # Store for logging
-                    while os.path.exists(target_fullpath):
-                        stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                        new_name = f"{base}_{stamp}_{counter}{ext}"
-                        target_fullpath = os.path.join(target_folder, new_name)
-                        target_fullpath = handle_long_path(target_fullpath)
-                        counter += 1
-                    logger.info(f"{progress_prefix} Target exists '{original_target_fullpath}'. Renaming duplicate to: {target_fullpath}")
-                else:
-                    logger.warning(f"{progress_prefix} Overwriting existing target file: {target_fullpath}")
-                    # Overwrite happens implicitly
+            <span class="c1"># Handle existing target files
+</span>            <span class="k">if</span> <span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="nf">exists</span><span class="p">(</span><span class="n">target_fullpath</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">skip_existing</span><span class="p">:</span>
+                    <span class="n">logger</span><span class="p">.</span><span class="nf">info</span><span class="p">(</span><span class="sa">f</span><span class="sh">"</span><span class="si">{</span><span class="n">progress_prefix</span><span class="si">}</span><span class="s"> Skipping existing target: </span><span class="si">{</span><span class="n">target_fullpath</span><span class="si">}</span><span class="sh">"</span><span class="p">)</span>
+                    <span class="n">skipped_files</span> <span class="o">+=</span> <span class="mi">1</span>
+                    <span class="k">continue</span>
+                <span class="k">elif</span> <span class="n">timestamp_duplicates</span><span class="p">:</span>
+                    <span class="n">counter</span> <span class="o">=</span> <span class="mi">1</span>
+                    <span class="n">base</span><span class="p">,</span> <span class="n">ext</span> <span class="o">=</span> <span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="nf">splitext</span><span class="p">(</span><span class="nb">file</span><span class="p">)</span>
+                    <span class="n">original_target_fullpath</span> <span class="o">=</span> <span class="n">target_fullpath</span> <span class="c1"># Store for logging
+</span>                    <span class="k">while</span> <span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="nf">exists</span><span class="p">(</span><span class="n">target_fullpath</span><span class="p">):</span>
+                        <span class="n">stamp</span> <span class="o">=</span> <span class="n">datetime</span><span class="p">.</span><span class="nf">now</span><span class="p">().</span><span class="nf">strftime</span><span class="p">(</span><span class="sh">"</span><span class="s">%Y%m%d_%H%M%S</span><span class="sh">"</span><span class="p">)</span>
+                        <span class="n">new_name</span> <span class="o">=</span> <span class="sa">f</span><span class="sh">"</span><span class="si">{</span><span class="n">base</span><span class="si">}</span><span class="s">_</span><span class="si">{</span><span class="n">stamp</span><span class="si">}</span><span class="s">_</span><span class="si">{</span><span class="n">counter</span><span class="si">}{</span><span class="n">ext</span><span class="si">}</span><span class="sh">"</span>
+                        <span class="n">target_fullpath</span> <span class="o">=</span> <span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span><span class="n">target_folder</span><span class="p">,</span> <span class="n">new_name</span><span class="p">)</span>
+                        <span class="n">target_fullpath</span> <span class="o">=</span> <span class="nf">handle_long_path</span><span class="p">(</span><span class="n">target_fullpath</span><span class="p">)</span>
+                        <span class="n">counter</span> <span class="o">+=</span> <span class="mi">1</span>
+                    <span class="n">logger</span><span class="p">.</span><span class="nf">info</span><span class="p">(</span><span class="sa">f</span><span class="sh">"</span><span class="si">{</span><span class="n">progress_prefix</span><span class="si">}</span><span class="s"> Target exists </span><span class="sh">'</span><span class="si">{</span><span class="n">original_target_fullpath</span><span class="si">}</span><span class="sh">'</span><span class="s">. Renaming duplicate to: </span><span class="si">{</span><span class="n">target_fullpath</span><span class="si">}</span><span class="sh">"</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">logger</span><span class="p">.</span><span class="nf">warning</span><span class="p">(</span><span class="sa">f</span><span class="sh">"</span><span class="si">{</span><span class="n">progress_prefix</span><span class="si">}</span><span class="s"> Overwriting existing target file: </span><span class="si">{</span><span class="n">target_fullpath</span><span class="si">}</span><span class="sh">"</span><span class="p">)</span>
+                    <span class="c1"># Overwrite happens implicitly
+</span>
+            <span class="c1"># Perform file operation
+</span>            <span class="k">try</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">move_files</span><span class="p">:</span>
+                    <span class="n">shutil</span><span class="p">.</span><span class="nf">move</span><span class="p">(</span><span class="n">filepath</span><span class="p">,</span> <span class="n">target_fullpath</span><span class="p">)</span>
+                    <span class="c1"># logger.info(f"{progress_prefix} Moved: {file} -&gt; {target_folder}") # Verbose
+</span>                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">shutil</span><span class="p">.</span><span class="nf">copy2</span><span class="p">(</span><span class="n">filepath</span><span class="p">,</span> <span class="n">target_fullpath</span><span class="p">)</span> <span class="c1"># copy2 preserves metadata
+</span>                    <span class="c1"># logger.info(f"{progress_prefix} Copied: {file} -&gt; {target_folder}") # Verbose
+</span>                <span class="n">processed_files</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="nf">except </span><span class="p">(</span><span class="nb">OSError</span><span class="p">,</span> <span class="n">shutil</span><span class="p">.</span><span class="n">Error</span><span class="p">)</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span> <span class="c1"># Catch specific shutil errors too
+</span>                <span class="n">logger</span><span class="p">.</span><span class="nf">error</span><span class="p">(</span><span class="sa">f</span><span class="sh">"</span><span class="si">{</span><span class="n">progress_prefix</span><span class="si">}</span><span class="s"> Failed to </span><span class="si">{</span><span class="sh">'</span><span class="s">move</span><span class="sh">'</span> <span class="k">if</span> <span class="n">move_files</span> <span class="k">else</span> <span class="sh">'</span><span class="s">copy</span><span class="sh">'</span><span class="si">}</span><span class="s"> </span><span class="sh">'</span><span class="si">{</span><span class="n">filepath</span><span class="si">}</span><span class="sh">'</span><span class="s"> to </span><span class="sh">'</span><span class="si">{</span><span class="n">target_fullpath</span><span class="si">}</span><span class="sh">'</span><span class="s">: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="sh">"</span><span class="p">)</span>
+                <span class="n">error_files</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">except</span> <span class="nb">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span> <span class="c1"># Catch any other unexpected error during file op
+</span>                 <span class="n">logger</span><span class="p">.</span><span class="nf">error</span><span class="p">(</span><span class="sa">f</span><span class="sh">"</span><span class="si">{</span><span class="n">progress_prefix</span><span class="si">}</span><span class="s"> Unexpected error processing </span><span class="sh">'</span><span class="si">{</span><span class="n">filepath</span><span class="si">}</span><span class="sh">'</span><span class="s"> -&gt; </span><span class="sh">'</span><span class="si">{</span><span class="n">target_fullpath</span><span class="si">}</span><span class="sh">'</span><span class="s">: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="sh">"</span><span class="p">,</span> <span class="n">exc_info</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span> <span class="c1"># Log traceback
+</span>                 <span class="n">error_files</span> <span class="o">+=</span> <span class="mi">1</span>
 
-            # Perform file operation
-            try:
-                if move_files:
-                    shutil.move(filepath, target_fullpath)
-                    # logger.info(f"{progress_prefix} Moved: {file} -&gt; {target_folder}") # Verbose
-                else:
-                    shutil.copy2(filepath, target_fullpath) # copy2 preserves metadata
-                    # logger.info(f"{progress_prefix} Copied: {file} -&gt; {target_folder}") # Verbose
-                processed_files += 1
-            except (OSError, shutil.Error) as e: # Catch specific shutil errors too
-                logger.error(f"{progress_prefix} Failed to {'move' if move_files else 'copy'} '{filepath}' to '{target_fullpath}': {e}")
-                error_files += 1
-            except Exception as e: # Catch any other unexpected error during file op
-                 logger.error(f"{progress_prefix} Unexpected error processing '{filepath}' -&gt; '{target_fullpath}': {e}", exc_info=True) # Log traceback
-                 error_files += 1
+        <span class="k">except</span> <span class="nb">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span> <span class="c1"># Catch errors during path manipulation, categorization etc.
+</span>            <span class="n">logger</span><span class="p">.</span><span class="nf">error</span><span class="p">(</span><span class="sa">f</span><span class="sh">"</span><span class="si">{</span><span class="n">progress_prefix</span><span class="si">}</span><span class="s"> Unexpected error processing path </span><span class="sh">'</span><span class="si">{</span><span class="n">filepath</span><span class="si">}</span><span class="sh">'</span><span class="s">: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="sh">"</span><span class="p">,</span> <span class="n">exc_info</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+            <span class="n">error_files</span> <span class="o">+=</span> <span class="mi">1</span>
 
-        except Exception as e: # Catch errors during path manipulation, categorization etc.
-            logger.error(f"{progress_prefix} Unexpected error processing path '{filepath}': {e}", exc_info=True)
-            error_files += 1
+        <span class="c1"># Optional: Print live progress to console (can be noisy)
+</span>        <span class="c1"># print(f"Progress: {i+1}/{total_files} (P: {processed_files}, S: {skipped_files}, E: {error_files})", end="\r")
+</span>
 
-        # Optional: Print live progress to console (can be noisy)
-        # print(f"Progress: {i+1}/{total_files} (P: {processed_files}, S: {skipped_files}, E: {error_files})", end="\r")
+    <span class="c1"># Final Summary
+</span>    <span class="n">summary</span> <span class="o">=</span> <span class="sa">f</span><span class="sh">"</span><span class="s">File organization completed. Processed: </span><span class="si">{</span><span class="n">processed_files</span><span class="si">}</span><span class="s">, Skipped: </span><span class="si">{</span><span class="n">skipped_files</span><span class="si">}</span><span class="s">, Errors: </span><span class="si">{</span><span class="n">error_files</span><span class="si">}</span><span class="sh">"</span>
+    <span class="n">logger</span><span class="p">.</span><span class="nf">info</span><span class="p">(</span><span class="n">summary</span><span class="p">)</span>
+    <span class="nf">print</span><span class="p">(</span><span class="sa">f</span><span class="sh">"</span><span class="se">\n</span><span class="si">{</span><span class="n">summary</span><span class="si">}</span><span class="sh">"</span><span class="p">)</span> <span class="c1"># Also print final summary to console
+</span>    <span class="k">return</span> <span class="n">processed_files</span><span class="p">,</span> <span class="n">skipped_files</span> <span class="o">+</span> <span class="n">error_files</span>
 
+<span class="k">def</span> <span class="nf">remove_empty_folders</span><span class="p">(</span><span class="n">directory</span><span class="p">,</span> <span class="n">logger</span><span class="p">):</span>
+    <span class="sh">"""</span><span class="s">Recursively removes empty folders starting from the bottom up.</span><span class="sh">"""</span>
+    <span class="n">directory</span> <span class="o">=</span> <span class="nf">handle_long_path</span><span class="p">(</span><span class="n">directory</span><span class="p">)</span>
+    <span class="n">removed_count</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">logger</span><span class="p">.</span><span class="nf">info</span><span class="p">(</span><span class="sa">f</span><span class="sh">"</span><span class="s">Attempting to remove empty directories from: </span><span class="si">{</span><span class="n">directory</span><span class="si">}</span><span class="sh">"</span><span class="p">)</span>
+    <span class="c1"># Walk from bottom up
+</span>    <span class="k">for</span> <span class="n">root</span><span class="p">,</span> <span class="n">dirs</span><span class="p">,</span> <span class="n">files</span> <span class="ow">in</span> <span class="n">os</span><span class="p">.</span><span class="nf">walk</span><span class="p">(</span><span class="n">directory</span><span class="p">,</span> <span class="n">topdown</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+        <span class="n">root_path</span> <span class="o">=</span> <span class="nf">handle_long_path</span><span class="p">(</span><span class="n">root</span><span class="p">)</span>
+        <span class="c1"># Consider hidden status if needed, but generally just check emptiness
+</span>        <span class="k">if</span> <span class="ow">not</span> <span class="n">files</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">dirs</span><span class="p">:</span> <span class="c1"># Directory is empty
+</span>            <span class="k">try</span><span class="p">:</span>
+                <span class="n">os</span><span class="p">.</span><span class="nf">rmdir</span><span class="p">(</span><span class="n">root_path</span><span class="p">)</span>
+                <span class="n">logger</span><span class="p">.</span><span class="nf">info</span><span class="p">(</span><span class="sa">f</span><span class="sh">"</span><span class="s">Removed empty directory: </span><span class="si">{</span><span class="n">root_path</span><span class="si">}</span><span class="sh">"</span><span class="p">)</span>
+                <span class="n">removed_count</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">except</span> <span class="nb">OSError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="c1"># Common errors: permission denied, directory not empty (race condition?)
+</span>                <span class="n">logger</span><span class="p">.</span><span class="nf">warning</span><span class="p">(</span><span class="sa">f</span><span class="sh">"</span><span class="s">Could not remove directory </span><span class="sh">'</span><span class="si">{</span><span class="n">root_path</span><span class="si">}</span><span class="sh">'</span><span class="s">: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="sh">"</span><span class="p">)</span>
+            <span class="k">except</span> <span class="nb">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                 <span class="n">logger</span><span class="p">.</span><span class="nf">error</span><span class="p">(</span><span class="sa">f</span><span class="sh">"</span><span class="s">Unexpected error removing directory </span><span class="sh">'</span><span class="si">{</span><span class="n">root_path</span><span class="si">}</span><span class="sh">'</span><span class="s">: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="sh">"</span><span class="p">,</span> <span class="n">exc_info</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
 
-    # Final Summary
-    summary = f"File organization completed. Processed: {processed_files}, Skipped: {skipped_files}, Errors: {error_files}"
-    logger.info(summary)
-    print(f"\n{summary}") # Also print final summary to console
-    return processed_files, skipped_files + error_files
-
-def remove_empty_folders(directory, logger):
-    """Recursively removes empty folders starting from the bottom up."""
-    directory = handle_long_path(directory)
-    removed_count = 0
-    logger.info(f"Attempting to remove empty directories from: {directory}")
-    # Walk from bottom up
-    for root, dirs, files in os.walk(directory, topdown=False):
-        root_path = handle_long_path(root)
-        # Consider hidden status if needed, but generally just check emptiness
-        if not files and not dirs: # Directory is empty
-            try:
-                os.rmdir(root_path)
-                logger.info(f"Removed empty directory: {root_path}")
-                removed_count += 1
-            except OSError as e:
-                # Common errors: permission denied, directory not empty (race condition?)
-                logger.warning(f"Could not remove directory '{root_path}': {e}")
-            except Exception as e:
-                 logger.error(f"Unexpected error removing directory '{root_path}': {e}", exc_info=True)
-
-    logger.info(f"Finished removing empty directories. Removed: {removed_count}")
+    <span class="n">logger</span><span class="p">.</span><span class="nf">info</span><span class="p">(</span><span class="sa">f</span><span class="sh">"</span><span class="s">Finished removing empty directories. Removed: </span><span class="si">{</span><span class="n">removed_count</span><span class="si">}</span><span class="sh">"</span><span class="p">)</span>
 
 
-# --- Main Execution ---
+<span class="c1"># --- Main Execution ---
+</span>
+<span class="k">def</span> <span class="nf">main</span><span class="p">():</span>
+    <span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="p">.</span><span class="nc">ArgumentParser</span><span class="p">(</span>
+        <span class="n">description</span><span class="o">=</span><span class="sh">"</span><span class="s">Organize files by category or extension.</span><span class="sh">"</span><span class="p">,</span>
+        <span class="n">formatter_class</span><span class="o">=</span><span class="n">argparse</span><span class="p">.</span><span class="n">RawTextHelpFormatter</span>
+        <span class="p">)</span>
+    <span class="n">parser</span><span class="p">.</span><span class="nf">add_argument</span><span class="p">(</span><span class="sh">"</span><span class="s">--source</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">-s</span><span class="sh">"</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="sh">"</span><span class="s">Source directory containing files to organize.</span><span class="sh">"</span><span class="p">)</span>
+    <span class="n">parser</span><span class="p">.</span><span class="nf">add_argument</span><span class="p">(</span><span class="sh">"</span><span class="s">--target</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">-t</span><span class="sh">"</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="sh">"</span><span class="s">Target directory where organized files will be placed.</span><span class="sh">"</span><span class="p">)</span>
+    <span class="n">parser</span><span class="p">.</span><span class="nf">add_argument</span><span class="p">(</span><span class="sh">"</span><span class="s">--config</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">-c</span><span class="sh">"</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="sh">"</span><span class="s">Path to JSON config file for custom file categories and extensions.</span><span class="sh">"</span><span class="p">)</span>
+    <span class="n">parser</span><span class="p">.</span><span class="nf">add_argument</span><span class="p">(</span>
+        <span class="sh">"</span><span class="s">--organize-by</span><span class="sh">"</span><span class="p">,</span> <span class="n">choices</span><span class="o">=</span><span class="p">[</span><span class="sh">"</span><span class="s">category</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">extension</span><span class="sh">"</span><span class="p">],</span> <span class="n">default</span><span class="o">=</span><span class="sh">"</span><span class="s">category</span><span class="sh">"</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="sh">"</span><span class="s">Method for organizing files:</span><span class="se">\n</span><span class="sh">"</span>
+             <span class="sh">"</span><span class="s">  category: Group into folders based on categories (default).</span><span class="se">\n</span><span class="sh">"</span>
+             <span class="sh">"</span><span class="s">  extension: Group into folders named after file extensions.</span><span class="sh">"</span>
+        <span class="p">)</span>
+    <span class="n">parser</span><span class="p">.</span><span class="nf">add_argument</span><span class="p">(</span><span class="sh">"</span><span class="s">--move</span><span class="sh">"</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="sh">"</span><span class="s">store_true</span><span class="sh">"</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="sh">"</span><span class="s">Move files instead of copying them.</span><span class="sh">"</span><span class="p">)</span>
+    <span class="n">parser</span><span class="p">.</span><span class="nf">add_argument</span><span class="p">(</span><span class="sh">"</span><span class="s">--timestamp-duplicates</span><span class="sh">"</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="sh">"</span><span class="s">store_true</span><span class="sh">"</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="sh">"</span><span class="s">Append timestamp+counter to duplicate filenames instead of overwriting/skipping.</span><span class="sh">"</span><span class="p">)</span>
+    <span class="n">parser</span><span class="p">.</span><span class="nf">add_argument</span><span class="p">(</span><span class="sh">"</span><span class="s">--skip-existing</span><span class="sh">"</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="sh">"</span><span class="s">store_true</span><span class="sh">"</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="sh">"</span><span class="s">Skip processing if a file with the same name exists in the target.</span><span class="sh">"</span><span class="p">)</span>
+    <span class="n">parser</span><span class="p">.</span><span class="nf">add_argument</span><span class="p">(</span><span class="sh">"</span><span class="s">--include-hidden</span><span class="sh">"</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="sh">"</span><span class="s">store_true</span><span class="sh">"</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="sh">"</span><span class="s">Include hidden files/folders (e.g., starting with </span><span class="sh">'</span><span class="s">.</span><span class="sh">'</span><span class="s">) in processing.</span><span class="sh">"</span><span class="p">)</span>
+    <span class="n">parser</span><span class="p">.</span><span class="nf">add_argument</span><span class="p">(</span><span class="sh">"</span><span class="s">--follow-links</span><span class="sh">"</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="sh">"</span><span class="s">store_true</span><span class="sh">"</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="sh">"</span><span class="s">Follow symbolic links (process target, not link). Use with caution (potential loops).</span><span class="sh">"</span><span class="p">)</span>
+    <span class="n">parser</span><span class="p">.</span><span class="nf">add_argument</span><span class="p">(</span><span class="sh">"</span><span class="s">--remove-empty-source-dirs</span><span class="sh">"</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="sh">"</span><span class="s">store_true</span><span class="sh">"</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="sh">"</span><span class="s">After moving (--move must be enabled), attempt to remove empty source directories.</span><span class="sh">"</span><span class="p">)</span>
+    <span class="n">parser</span><span class="p">.</span><span class="nf">add_argument</span><span class="p">(</span><span class="sh">"</span><span class="s">--log-file</span><span class="sh">"</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="sh">"</span><span class="s">Optional path to a file for logging progress and errors.</span><span class="sh">"</span><span class="p">)</span>
 
-def main():
-    parser = argparse.ArgumentParser(
-        description="Organize files by category or extension.",
-        formatter_class=argparse.RawTextHelpFormatter
-        )
-    parser.add_argument("--source", "-s", required=True, help="Source directory containing files to organize.")
-    parser.add_argument("--target", "-t", required=True, help="Target directory where organized files will be placed.")
-    parser.add_argument("--config", "-c", help="Path to JSON config file for custom file categories and extensions.")
-    parser.add_argument(
-        "--organize-by", choices=["category", "extension"], default="category",
-        help="Method for organizing files:\n"
-             "  category: Group into folders based on categories (default).\n"
-             "  extension: Group into folders named after file extensions."
-        )
-    parser.add_argument("--move", action="store_true", help="Move files instead of copying them.")
-    parser.add_argument("--timestamp-duplicates", action="store_true", help="Append timestamp+counter to duplicate filenames instead of overwriting/skipping.")
-    parser.add_argument("--skip-existing", action="store_true", help="Skip processing if a file with the same name exists in the target.")
-    parser.add_argument("--include-hidden", action="store_true", help="Include hidden files/folders (e.g., starting with '.') in processing.")
-    parser.add_argument("--follow-links", action="store_true", help="Follow symbolic links (process target, not link). Use with caution (potential loops).")
-    parser.add_argument("--remove-empty-source-dirs", action="store_true", help="After moving (--move must be enabled), attempt to remove empty source directories.")
-    parser.add_argument("--log-file", help="Optional path to a file for logging progress and errors.")
+    <span class="n">args</span> <span class="o">=</span> <span class="n">parser</span><span class="p">.</span><span class="nf">parse_args</span><span class="p">()</span>
 
-    args = parser.parse_args()
+    <span class="c1"># --- Argument Validation ---
+</span>    <span class="k">if</span> <span class="n">args</span><span class="p">.</span><span class="n">timestamp_duplicates</span> <span class="ow">and</span> <span class="n">args</span><span class="p">.</span><span class="n">skip_existing</span><span class="p">:</span>
+        <span class="n">parser</span><span class="p">.</span><span class="nf">error</span><span class="p">(</span><span class="sh">"</span><span class="s">--timestamp-duplicates and --skip-existing cannot be used together.</span><span class="sh">"</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">args</span><span class="p">.</span><span class="n">remove_empty_source_dirs</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">args</span><span class="p">.</span><span class="n">move</span><span class="p">:</span>
+        <span class="n">parser</span><span class="p">.</span><span class="nf">error</span><span class="p">(</span><span class="sh">"</span><span class="s">--remove-empty-source-dirs requires --move to be enabled.</span><span class="sh">"</span><span class="p">)</span>
 
-    # --- Argument Validation ---
-    if args.timestamp_duplicates and args.skip_existing:
-        parser.error("--timestamp-duplicates and --skip-existing cannot be used together.")
-    if args.remove_empty_source_dirs and not args.move:
-        parser.error("--remove-empty-source-dirs requires --move to be enabled.")
+    <span class="c1"># --- Setup ---
+</span>    <span class="n">logger</span> <span class="o">=</span> <span class="nf">setup_logging</span><span class="p">(</span><span class="n">args</span><span class="p">.</span><span class="n">log_file</span><span class="p">)</span>
+    <span class="n">logger</span><span class="p">.</span><span class="nf">info</span><span class="p">(</span><span class="sh">"</span><span class="s">Script starting...</span><span class="sh">"</span><span class="p">)</span>
+    <span class="n">logger</span><span class="p">.</span><span class="nf">info</span><span class="p">(</span><span class="sa">f</span><span class="sh">"</span><span class="s">Arguments: </span><span class="si">{</span><span class="nf">vars</span><span class="p">(</span><span class="n">args</span><span class="p">)</span><span class="si">}</span><span class="sh">"</span><span class="p">)</span> <span class="c1"># Log arguments used
+</span>
+    <span class="n">categories</span> <span class="o">=</span> <span class="nf">load_config_file</span><span class="p">(</span><span class="n">args</span><span class="p">.</span><span class="n">config</span><span class="p">,</span> <span class="n">logger</span><span class="p">)</span>
 
-    # --- Setup ---
-    logger = setup_logging(args.log_file)
-    logger.info("Script starting...")
-    logger.info(f"Arguments: {vars(args)}") # Log arguments used
+    <span class="c1"># --- Execute Sorting ---
+</span>    <span class="n">processed</span><span class="p">,</span> <span class="n">failed_or_skipped</span> <span class="o">=</span> <span class="nf">sort_files</span><span class="p">(</span>
+        <span class="n">source_directory</span><span class="o">=</span><span class="n">args</span><span class="p">.</span><span class="n">source</span><span class="p">,</span>
+        <span class="n">target_directory</span><span class="o">=</span><span class="n">args</span><span class="p">.</span><span class="n">target</span><span class="p">,</span>
+        <span class="n">organize_by</span><span class="o">=</span><span class="n">args</span><span class="p">.</span><span class="n">organize_by</span><span class="p">,</span>
+        <span class="n">timestamp_duplicates</span><span class="o">=</span><span class="n">args</span><span class="p">.</span><span class="n">timestamp_duplicates</span><span class="p">,</span>
+        <span class="n">move_files</span><span class="o">=</span><span class="n">args</span><span class="p">.</span><span class="n">move</span><span class="p">,</span>
+        <span class="n">categories_config</span><span class="o">=</span><span class="n">categories</span><span class="p">,</span>
+        <span class="n">include_hidden</span><span class="o">=</span><span class="n">args</span><span class="p">.</span><span class="n">include_hidden</span><span class="p">,</span>
+        <span class="n">follow_links</span><span class="o">=</span><span class="n">args</span><span class="p">.</span><span class="n">follow_links</span><span class="p">,</span>
+        <span class="n">skip_existing</span><span class="o">=</span><span class="n">args</span><span class="p">.</span><span class="n">skip_existing</span><span class="p">,</span>
+        <span class="n">logger</span><span class="o">=</span><span class="n">logger</span>
+    <span class="p">)</span>
 
-    categories = load_config_file(args.config, logger)
+    <span class="c1"># --- Optional Cleanup ---
+</span>    <span class="k">if</span> <span class="n">args</span><span class="p">.</span><span class="n">move</span> <span class="ow">and</span> <span class="n">args</span><span class="p">.</span><span class="n">remove_empty_source_dirs</span> <span class="ow">and</span> <span class="n">processed</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="nf">remove_empty_folders</span><span class="p">(</span><span class="n">args</span><span class="p">.</span><span class="n">source</span><span class="p">,</span> <span class="n">logger</span><span class="p">)</span>
 
-    # --- Execute Sorting ---
-    processed, failed_or_skipped = sort_files(
-        source_directory=args.source,
-        target_directory=args.target,
-        organize_by=args.organize_by,
-        timestamp_duplicates=args.timestamp_duplicates,
-        move_files=args.move,
-        categories_config=categories,
-        include_hidden=args.include_hidden,
-        follow_links=args.follow_links,
-        skip_existing=args.skip_existing,
-        logger=logger
-    )
+    <span class="n">logger</span><span class="p">.</span><span class="nf">info</span><span class="p">(</span><span class="sh">"</span><span class="s">Script finished.</span><span class="sh">"</span><span class="p">)</span>
+    <span class="nf">print</span><span class="p">(</span><span class="sh">"</span><span class="se">\n</span><span class="s">Script finished. Check console and log file (if specified) for details.</span><span class="sh">"</span><span class="p">)</span>
 
-    # --- Optional Cleanup ---
-    if args.move and args.remove_empty_source_dirs and processed &gt; 0:
-        remove_empty_folders(args.source, logger)
-
-    logger.info("Script finished.")
-    print("\nScript finished. Check console and log file (if specified) for details.")
-
-if __name__ == "__main__":
-    main()
-```
-</u32></ProcessStats></String></String></String></String></PathBuf></PathBuf></bool></bool></String></CategoriesConfig></String></code></section>
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="sh">"</span><span class="s">__main__</span><span class="sh">"</span><span class="p">:</span>
+    <span class="nf">main</span><span class="p">()</span>
+</code></section></div></div>
 
         </div>
         
@@ -1890,7 +1973,7 @@ if __name__ == "__main__":
         
         
         <a href="https://ib.bsb.br/404" aria-label="404">
-          2025-04-08 09:05:11
+          2025-04-08 16:00:38
         </a>
         &#x23;
     

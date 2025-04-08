@@ -98,11 +98,11 @@
         <div class="page-stats mt-3" role="status" aria-label="Page statistics">
       
       <span class="badge bg-primary">
-        7546 characters
+        9308 characters
       </span>
         <span class="separator mx-2" aria-hidden="true">•</span>
         <span class="badge bg-primary">
-        937 words
+        912 words
       </span>
       </div>
         <div class="action-buttons d-flex flex-wrap gap-2">
@@ -136,7 +136,7 @@
       <article class="post-wrapper">
         <div class="post-content-body">
           
-<ul><li><a href="#python">python</a></li></ul>
+<ul><li><a href="#python">python</a></li><li><a href="#powershell">powershell</a></li></ul>
           <ol>
   <li><strong>Access Gmail’s Search Functionality</strong>:
     <ul>
@@ -173,7 +173,7 @@
   </h3>
       
 
-<section data-filename="python_code-block.py" data-code="from typing import Set, Optional, Generator
+<section class="code-block-container" role="group" aria-label="Python Code Block" data-filename="python_code_block.py" data-code="from typing import Set, Optional, Generator
 import mailbox
 import email.utils
 import re
@@ -182,132 +182,169 @@ import logging
 from pathlib import Path
 import chardet
 from email.errors import HeaderParseError
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
 def decode_text(text: bytes, suggested_encoding: Optional[str] = None) -&gt; str:
-&quot;&quot;&quot;
-Decode bytes to string, attempting multiple encodings.
-Args:
-text: Bytes to decode
-suggested_encoding: Optional encoding to try first
-Returns:
-Decoded string
-&quot;&quot;&quot;
-encodings = [suggested_encoding] if suggested_encoding else []
-encodings.extend(['utf-8', 'iso-8859-1', 'ascii'])
-for encoding in encodings:
-try:
-if encoding:
-return text.decode(encoding)
-except (UnicodeDecodeError, LookupError):
-continue
-# Last resort: detect encoding
-detected = chardet.detect(text)
-try:
-return text.decode(detected['encoding'] or 'ascii', errors='replace')
-except (UnicodeDecodeError, LookupError):
-return text.decode('ascii', errors='replace')
+    &quot;&quot;&quot;
+    Decode bytes to string, attempting multiple encodings.
+    
+    Args:
+        text: Bytes to decode
+        suggested_encoding: Optional encoding to try first
+        
+    Returns:
+        Decoded string
+    &quot;&quot;&quot;
+    encodings = [suggested_encoding] if suggested_encoding else []
+    encodings.extend([&#39;utf-8&#39;, &#39;iso-8859-1&#39;, &#39;ascii&#39;])
+    
+    for encoding in encodings:
+        try:
+            if encoding:
+                return text.decode(encoding)
+        except (UnicodeDecodeError, LookupError):
+            continue
+            
+    # Last resort: detect encoding
+    detected = chardet.detect(text)
+    try:
+        return text.decode(detected[&#39;encoding&#39;] or &#39;ascii&#39;, errors=&#39;replace&#39;)
+    except (UnicodeDecodeError, LookupError):
+        return text.decode(&#39;ascii&#39;, errors=&#39;replace&#39;)
+
 def validate_email(email: str) -&gt; bool:
-&quot;&quot;&quot;
-Validate email address format.
-Args:
-email: Email address to validate
-Returns:
-True if valid, False otherwise
-&quot;&quot;&quot;
-pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
-return bool(re.match(pattern, email))
+    &quot;&quot;&quot;
+    Validate email address format.
+    
+    Args:
+        email: Email address to validate
+        
+    Returns:
+        True if valid, False otherwise
+    &quot;&quot;&quot;
+    pattern = r&#39;^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$&#39;
+    return bool(re.match(pattern, email))
+
 def extract_email_streaming(mbox_path: Path) -&gt; Generator[str, None, None]:
-&quot;&quot;&quot;
-Memory-efficient streaming extraction of sender emails.
-Args:
-mbox_path: Path to MBOX file
-Yields:
-Extracted email addresses
-&quot;&quot;&quot;
-try:
-mbox = mailbox.mbox(str(mbox_path))
-for message in mbox:
-try:
-from_header = message.get('From')
-if not from_header:
-continue
-# Decode header
-decoded_parts = decode_header(from_header)
-sender_str = ''
-for part, encoding in decoded_parts:
-if isinstance(part, bytes):
-sender_str += decode_text(part, encoding)
-else:
-sender_str += str(part)
-# Extract email
-match = re.search(r'&lt;([^&gt;]+)&gt;', sender_str)
-email = match.group(1) if match else re.search(r'[\w\.-]+@[\w\.-]+', sender_str).group(0)
-if email and validate_email(email):
-yield email.lower()
-except (HeaderParseError, AttributeError) as e:
-logger.warning(f&quot;Error processing message: {e}&quot;)
-continue
-except Exception as e:
-logger.error(f&quot;Error processing MBOX file: {e}&quot;)
-raise
+    &quot;&quot;&quot;
+    Memory-efficient streaming extraction of sender emails.
+    
+    Args:
+        mbox_path: Path to MBOX file
+        
+    Yields:
+        Extracted email addresses
+    &quot;&quot;&quot;
+    try:
+        mbox = mailbox.mbox(str(mbox_path))
+        for message in mbox:
+            try:
+                from_header = message.get(&#39;From&#39;)
+                if not from_header:
+                    continue
+                    
+                # Decode header
+                decoded_parts = decode_header(from_header)
+                sender_str = &#39;&#39;
+                for part, encoding in decoded_parts:
+                    if isinstance(part, bytes):
+                        sender_str += decode_text(part, encoding)
+                    else:
+                        sender_str += str(part)
+                
+                # Extract email
+                match = re.search(r&#39;&lt;([^&gt;]+)&gt;&#39;, sender_str)
+                email = match.group(1) if match else re.search(r&#39;[\w\.-]+@[\w\.-]+&#39;, sender_str).group(0)
+                
+                if email and validate_email(email):
+                    yield email.lower()
+                    
+            except (HeaderParseError, AttributeError) as e:
+                logger.warning(f&quot;Error processing message: {e}&quot;)
+                continue
+                
+    except Exception as e:
+        logger.error(f&quot;Error processing MBOX file: {e}&quot;)
+        raise
+
 def extract_sender_emails_batch(
-mbox_path: Path,
-batch_size: int = 1000
+    mbox_path: Path,
+    batch_size: int = 1000
 ) -&gt; Generator[Set[str], None, None]:
-&quot;&quot;&quot;
-Extract sender emails in batches to manage memory usage.
-Args:
-mbox_path: Path to MBOX file
-batch_size: Number of messages to process per batch
-Yields:
-Sets of unique email addresses
-&quot;&quot;&quot;
-current_batch: Set[str] = set()
-processed = 0
-for email in extract_email_streaming(mbox_path):
-current_batch.add(email)
-processed += 1
-if processed % batch_size == 0:
-yield current_batch
-current_batch = set()
-if current_batch:
-yield current_batch
+    &quot;&quot;&quot;
+    Extract sender emails in batches to manage memory usage.
+    
+    Args:
+        mbox_path: Path to MBOX file
+        batch_size: Number of messages to process per batch
+        
+    Yields:
+        Sets of unique email addresses
+    &quot;&quot;&quot;
+    current_batch: Set[str] = set()
+    processed = 0
+    
+    for email in extract_email_streaming(mbox_path):
+        current_batch.add(email)
+        processed += 1
+        
+        if processed % batch_size == 0:
+            yield current_batch
+            current_batch = set()
+            
+    if current_batch:
+        yield current_batch
+
 # Usage example with error handling and progress tracking
 def process_mbox_file(mbox_path: str, output_path: str) -&gt; None:
-&quot;&quot;&quot;
-Process MBOX file and save unique sender emails.
-Args:
-mbox_path: Path to input MBOX file
-output_path: Path to output file
-&quot;&quot;&quot;
-mbox_path = Path(mbox_path)
-output_path = Path(output_path)
-if not mbox_path.exists():
-raise FileNotFoundError(f&quot;MBOX file not found: {mbox_path}&quot;)
-try:
-unique_emails: Set[str] = set()
-total_processed = 0
-logger.info(&quot;Starting MBOX processing...&quot;)
-for batch in extract_sender_emails_batch(mbox_path):
-unique_emails.update(batch)
-total_processed += len(batch)
-logger.info(f&quot;Processed {total_processed} messages...&quot;)
-logger.info(f&quot;Writing {len(unique_emails)} unique emails to {output_path}&quot;)
-with output_path.open('w', encoding='utf-8') as f:
-for email in sorted(unique_emails):
-f.write(f&quot;{email}\n&quot;)
-logger.info(&quot;Processing completed successfully&quot;)
-except Exception as e:
-logger.error(f&quot;Error processing MBOX file: {e}&quot;)
-raise
+    &quot;&quot;&quot;
+    Process MBOX file and save unique sender emails.
+    
+    Args:
+        mbox_path: Path to input MBOX file
+        output_path: Path to output file
+    &quot;&quot;&quot;
+    mbox_path = Path(mbox_path)
+    output_path = Path(output_path)
+    
+    if not mbox_path.exists():
+        raise FileNotFoundError(f&quot;MBOX file not found: {mbox_path}&quot;)
+        
+    try:
+        unique_emails: Set[str] = set()
+        total_processed = 0
+        
+        logger.info(&quot;Starting MBOX processing...&quot;)
+        
+        for batch in extract_sender_emails_batch(mbox_path):
+            unique_emails.update(batch)
+            total_processed += len(batch)
+            logger.info(f&quot;Processed {total_processed} messages...&quot;)
+            
+        logger.info(f&quot;Writing {len(unique_emails)} unique emails to {output_path}&quot;)
+        
+        with output_path.open(&#39;w&#39;, encoding=&#39;utf-8&#39;) as f:
+            for email in sorted(unique_emails):
+                f.write(f&quot;{email}\n&quot;)
+                
+        logger.info(&quot;Processing completed successfully&quot;)
+        
+    except Exception as e:
+        logger.error(f&quot;Error processing MBOX file: {e}&quot;)
+        raise
+
 if __name__ == &quot;__main__&quot;:
-import argparse
-parser = argparse.ArgumentParser(description=&quot;Extract sender emails from MBOX file&quot;)
-parser.add_argument(&quot;mbox_path&quot;, help=&quot;Path to MBOX file&quot;)
-parser.add_argument(&quot;output_path&quot;, help=&quot;Path to output file&quot;)
-args = parser.parse_args()
-process_mbox_file(args.mbox_path, args.output_path)" data-download-link="" data-download-link-label="Download Python"><code class="language-python">from typing import Set, Optional, Generator
+    import argparse
+    
+    parser = argparse.ArgumentParser(description=&quot;Extract sender emails from MBOX file&quot;)
+    parser.add_argument(&quot;mbox_path&quot;, help=&quot;Path to MBOX file&quot;)
+    parser.add_argument(&quot;output_path&quot;, help=&quot;Path to output file&quot;)
+    args = parser.parse_args()
+    
+    process_mbox_file(args.mbox_path, args.output_path)" data-download-link="" data-download-label="Download Python">
+  <code class="language-python">from typing import Set, Optional, Generator
 import mailbox
 import email.utils
 import re
@@ -316,233 +353,302 @@ import logging
 from pathlib import Path
 import chardet
 from email.errors import HeaderParseError
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
 def decode_text(text: bytes, suggested_encoding: Optional[str] = None) -&gt; str:
-"""
-Decode bytes to string, attempting multiple encodings.
-Args:
-text: Bytes to decode
-suggested_encoding: Optional encoding to try first
-Returns:
-Decoded string
-"""
-encodings = [suggested_encoding] if suggested_encoding else []
-encodings.extend(['utf-8', 'iso-8859-1', 'ascii'])
-for encoding in encodings:
-try:
-if encoding:
-return text.decode(encoding)
-except (UnicodeDecodeError, LookupError):
-continue
-# Last resort: detect encoding
-detected = chardet.detect(text)
-try:
-return text.decode(detected['encoding'] or 'ascii', errors='replace')
-except (UnicodeDecodeError, LookupError):
-return text.decode('ascii', errors='replace')
+    &quot;&quot;&quot;
+    Decode bytes to string, attempting multiple encodings.
+    
+    Args:
+        text: Bytes to decode
+        suggested_encoding: Optional encoding to try first
+        
+    Returns:
+        Decoded string
+    &quot;&quot;&quot;
+    encodings = [suggested_encoding] if suggested_encoding else []
+    encodings.extend([&#39;utf-8&#39;, &#39;iso-8859-1&#39;, &#39;ascii&#39;])
+    
+    for encoding in encodings:
+        try:
+            if encoding:
+                return text.decode(encoding)
+        except (UnicodeDecodeError, LookupError):
+            continue
+            
+    # Last resort: detect encoding
+    detected = chardet.detect(text)
+    try:
+        return text.decode(detected[&#39;encoding&#39;] or &#39;ascii&#39;, errors=&#39;replace&#39;)
+    except (UnicodeDecodeError, LookupError):
+        return text.decode(&#39;ascii&#39;, errors=&#39;replace&#39;)
+
 def validate_email(email: str) -&gt; bool:
-"""
-Validate email address format.
-Args:
-email: Email address to validate
-Returns:
-True if valid, False otherwise
-"""
-pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
-return bool(re.match(pattern, email))
+    &quot;&quot;&quot;
+    Validate email address format.
+    
+    Args:
+        email: Email address to validate
+        
+    Returns:
+        True if valid, False otherwise
+    &quot;&quot;&quot;
+    pattern = r&#39;^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$&#39;
+    return bool(re.match(pattern, email))
+
 def extract_email_streaming(mbox_path: Path) -&gt; Generator[str, None, None]:
-"""
-Memory-efficient streaming extraction of sender emails.
-Args:
-mbox_path: Path to MBOX file
-Yields:
-Extracted email addresses
-"""
-try:
-mbox = mailbox.mbox(str(mbox_path))
-for message in mbox:
-try:
-from_header = message.get('From')
-if not from_header:
-continue
-# Decode header
-decoded_parts = decode_header(from_header)
-sender_str = ''
-for part, encoding in decoded_parts:
-if isinstance(part, bytes):
-sender_str += decode_text(part, encoding)
-else:
-sender_str += str(part)
-# Extract email
-match = re.search(r'&lt;([^&gt;]+)&gt;', sender_str)
-email = match.group(1) if match else re.search(r'[\w\.-]+@[\w\.-]+', sender_str).group(0)
-if email and validate_email(email):
-yield email.lower()
-except (HeaderParseError, AttributeError) as e:
-logger.warning(f"Error processing message: {e}")
-continue
-except Exception as e:
-logger.error(f"Error processing MBOX file: {e}")
-raise
+    &quot;&quot;&quot;
+    Memory-efficient streaming extraction of sender emails.
+    
+    Args:
+        mbox_path: Path to MBOX file
+        
+    Yields:
+        Extracted email addresses
+    &quot;&quot;&quot;
+    try:
+        mbox = mailbox.mbox(str(mbox_path))
+        for message in mbox:
+            try:
+                from_header = message.get(&#39;From&#39;)
+                if not from_header:
+                    continue
+                    
+                # Decode header
+                decoded_parts = decode_header(from_header)
+                sender_str = &#39;&#39;
+                for part, encoding in decoded_parts:
+                    if isinstance(part, bytes):
+                        sender_str += decode_text(part, encoding)
+                    else:
+                        sender_str += str(part)
+                
+                # Extract email
+                match = re.search(r&#39;&lt;([^&gt;]+)&gt;&#39;, sender_str)
+                email = match.group(1) if match else re.search(r&#39;[\w\.-]+@[\w\.-]+&#39;, sender_str).group(0)
+                
+                if email and validate_email(email):
+                    yield email.lower()
+                    
+            except (HeaderParseError, AttributeError) as e:
+                logger.warning(f&quot;Error processing message: {e}&quot;)
+                continue
+                
+    except Exception as e:
+        logger.error(f&quot;Error processing MBOX file: {e}&quot;)
+        raise
+
 def extract_sender_emails_batch(
-mbox_path: Path,
-batch_size: int = 1000
+    mbox_path: Path,
+    batch_size: int = 1000
 ) -&gt; Generator[Set[str], None, None]:
-"""
-Extract sender emails in batches to manage memory usage.
-Args:
-mbox_path: Path to MBOX file
-batch_size: Number of messages to process per batch
-Yields:
-Sets of unique email addresses
-"""
-current_batch: Set[str] = set()
-processed = 0
-for email in extract_email_streaming(mbox_path):
-current_batch.add(email)
-processed += 1
-if processed % batch_size == 0:
-yield current_batch
-current_batch = set()
-if current_batch:
-yield current_batch
+    &quot;&quot;&quot;
+    Extract sender emails in batches to manage memory usage.
+    
+    Args:
+        mbox_path: Path to MBOX file
+        batch_size: Number of messages to process per batch
+        
+    Yields:
+        Sets of unique email addresses
+    &quot;&quot;&quot;
+    current_batch: Set[str] = set()
+    processed = 0
+    
+    for email in extract_email_streaming(mbox_path):
+        current_batch.add(email)
+        processed += 1
+        
+        if processed % batch_size == 0:
+            yield current_batch
+            current_batch = set()
+            
+    if current_batch:
+        yield current_batch
+
 # Usage example with error handling and progress tracking
 def process_mbox_file(mbox_path: str, output_path: str) -&gt; None:
-"""
-Process MBOX file and save unique sender emails.
-Args:
-mbox_path: Path to input MBOX file
-output_path: Path to output file
-"""
-mbox_path = Path(mbox_path)
-output_path = Path(output_path)
-if not mbox_path.exists():
-raise FileNotFoundError(f"MBOX file not found: {mbox_path}")
-try:
-unique_emails: Set[str] = set()
-total_processed = 0
-logger.info("Starting MBOX processing...")
-for batch in extract_sender_emails_batch(mbox_path):
-unique_emails.update(batch)
-total_processed += len(batch)
-logger.info(f"Processed {total_processed} messages...")
-logger.info(f"Writing {len(unique_emails)} unique emails to {output_path}")
-with output_path.open('w', encoding='utf-8') as f:
-for email in sorted(unique_emails):
-f.write(f"{email}\n")
-logger.info("Processing completed successfully")
-except Exception as e:
-logger.error(f"Error processing MBOX file: {e}")
-raise
-if __name__ == "__main__":
-import argparse
-parser = argparse.ArgumentParser(description="Extract sender emails from MBOX file")
-parser.add_argument("mbox_path", help="Path to MBOX file")
-parser.add_argument("output_path", help="Path to output file")
-args = parser.parse_args()
-process_mbox_file(args.mbox_path, args.output_path)
+    &quot;&quot;&quot;
+    Process MBOX file and save unique sender emails.
+    
+    Args:
+        mbox_path: Path to input MBOX file
+        output_path: Path to output file
+    &quot;&quot;&quot;
+    mbox_path = Path(mbox_path)
+    output_path = Path(output_path)
+    
+    if not mbox_path.exists():
+        raise FileNotFoundError(f&quot;MBOX file not found: {mbox_path}&quot;)
+        
+    try:
+        unique_emails: Set[str] = set()
+        total_processed = 0
+        
+        logger.info(&quot;Starting MBOX processing...&quot;)
+        
+        for batch in extract_sender_emails_batch(mbox_path):
+            unique_emails.update(batch)
+            total_processed += len(batch)
+            logger.info(f&quot;Processed {total_processed} messages...&quot;)
+            
+        logger.info(f&quot;Writing {len(unique_emails)} unique emails to {output_path}&quot;)
+        
+        with output_path.open(&#39;w&#39;, encoding=&#39;utf-8&#39;) as f:
+            for email in sorted(unique_emails):
+                f.write(f&quot;{email}\n&quot;)
+                
+        logger.info(&quot;Processing completed successfully&quot;)
+        
+    except Exception as e:
+        logger.error(f&quot;Error processing MBOX file: {e}&quot;)
+        raise
 
+if __name__ == &quot;__main__&quot;:
+    import argparse
+    
+    parser = argparse.ArgumentParser(description=&quot;Extract sender emails from MBOX file&quot;)
+    parser.add_argument(&quot;mbox_path&quot;, help=&quot;Path to MBOX file&quot;)
+    parser.add_argument(&quot;output_path&quot;, help=&quot;Path to output file&quot;)
+    args = parser.parse_args()
+    
+    process_mbox_file(args.mbox_path, args.output_path)</code>
+</section>
 
-a. **Create the Script File:**
-   - Open a text editor (e.g., Notepad, VS Code) and paste the above script.
-   - Save the file with a `.py` extension, such as `extract_senders.py`.
+<p>a. <strong>Create the Script File:</strong></p>
+<ul>
+  <li>Open a text editor (e.g., Notepad, VS Code) and paste the above script.</li>
+  <li>Save the file with a <code class="language-plaintext highlighter-rouge">.py</code> extension, such as <code class="language-plaintext highlighter-rouge">extract_senders.py</code>.</li>
+</ul>
 
-b. **Customize the Script:**
-   - Replace `'C:\path\to\your\emails.mbox'` with the actual path to your MBOX file.
-   - Ensure the path uses raw string notation (`r'path'`) or double backslashes to avoid escape character issues.
+<p>b. <strong>Customize the Script:</strong></p>
+<ul>
+  <li>Replace <code class="language-plaintext highlighter-rouge">'C:\path\to\your\emails.mbox'</code> with the actual path to your MBOX file.</li>
+  <li>Ensure the path uses raw string notation (<code class="language-plaintext highlighter-rouge">r'path'</code>) or double backslashes to avoid escape character issues.</li>
+</ul>
 
-c. **Execute the Script:**
-   - Open **Command Prompt**:
-     - Press `Win + R`, type `cmd`, and press `Enter`.
-   - Navigate to the script's directory:
-     ```bash
-     cd C:\path\to\your\script
-     ```
-   - Run the script:
-     ```bash
-     python extract_senders.py
-     ```
-   - **Output:** A file named `senders.txt` containing all unique sender email addresses.
+<p>c. <strong>Execute the Script:</strong></p>
+<ul>
+  <li>Open <strong>Command Prompt</strong>:
+    <ul>
+      <li>Press <code class="language-plaintext highlighter-rouge">Win + R</code>, type <code class="language-plaintext highlighter-rouge">cmd</code>, and press <code class="language-plaintext highlighter-rouge">Enter</code>.</li>
+    </ul>
+  </li>
+  <li>Navigate to the script’s directory:
+    <div class="language-bash highlighter-rouge"><div class="highlight"><section><code><span class="nb">cd </span>C:<span class="se">\p</span>ath<span class="se">\t</span>o<span class="se">\y</span>our<span class="se">\s</span>cript
+</code></section></div>    </div>
+  </li>
+  <li>Run the script:
+    <div class="language-bash highlighter-rouge"><div class="highlight"><section><code>python extract_senders.py
+</code></section></div>    </div>
+  </li>
+  <li><strong>Output:</strong> A file named <code class="language-plaintext highlighter-rouge">senders.txt</code> containing all unique sender email addresses.</li>
+</ul>
+  <h3 id="powershell">
+    
+    
+     <a href="#powershell">#</a><a href="#" aria-label="Back to top">powershell</a>
+        
+    
+  </h3>
+      
 
-### powershell
+<section class="code-block-container" role="group" aria-label="Powershell Code Block" data-filename="powershell_code_block.txt" data-code="$mboxPath = &#39;C:\path\to\your\mboxfile.mbox&#39;
+$outputPath = &#39;C:\path\to\your\senders_powershell.txt&#39;
 
-<section data-filename="powershell_code-block.txt" data-code="$mboxPath = 'C:\path\to\your\mboxfile.mbox'
-$outputPath = 'C:\path\to\your\senders_powershell.txt'
 try {
-# Read the MBOX file
-$mbox = Get-Content $mboxPath
-# Initialize an array to hold sender emails
-$senderEmails = @()
-foreach ($line in $mbox) {
-if ($line -like &quot;From: *&quot;) {
-# Extract email using regex
-if ($line -match '&lt;([\w\.-]+@[\w\.-]+)&gt;') {
-$senderEmails += $matches[1]
-}
-elseif ($line -match '([\w\.-]+@[\w\.-]+)') {
-$senderEmails += $matches[1]
-}
-}
-}
-# Remove duplicates and sort
-$uniqueSenders = $senderEmails | Sort-Object -Unique
-# Output to file
-$uniqueSenders | Out-File -FilePath $outputPath -Encoding utf8
-Write-Host &quot;Sender email addresses have been saved to $outputPath&quot;
+    # Read the MBOX file
+    $mbox = Get-Content $mboxPath
+    
+    # Initialize an array to hold sender emails
+    $senderEmails = @()
+    
+    foreach ($line in $mbox) {
+        if ($line -like &quot;From: *&quot;) {
+            # Extract email using regex
+            if ($line -match &#39;&lt;([\w\.-]+@[\w\.-]+)&gt;&#39;) {
+                $senderEmails += $matches[1]
+            }
+            elseif ($line -match &#39;([\w\.-]+@[\w\.-]+)&#39;) {
+                $senderEmails += $matches[1]
+            }
+        }
+    }
+    
+    # Remove duplicates and sort
+    $uniqueSenders = $senderEmails | Sort-Object -Unique
+    
+    # Output to file
+    $uniqueSenders | Out-File -FilePath $outputPath -Encoding utf8
+    
+    Write-Host &quot;Sender email addresses have been saved to $outputPath&quot;
 }
 catch {
-Write-Host &quot;An error occurred: $_&quot;
-}" data-download-link="" data-download-link-label="Download Powershell"><code class="language-powershell">$mboxPath = 'C:\path\to\your\mboxfile.mbox'
-$outputPath = 'C:\path\to\your\senders_powershell.txt'
+    Write-Host &quot;An error occurred: $_&quot;
+}" data-download-link="" data-download-label="Download Powershell">
+  <code class="language-powershell">$mboxPath = &#39;C:\path\to\your\mboxfile.mbox&#39;
+$outputPath = &#39;C:\path\to\your\senders_powershell.txt&#39;
+
 try {
-# Read the MBOX file
-$mbox = Get-Content $mboxPath
-# Initialize an array to hold sender emails
-$senderEmails = @()
-foreach ($line in $mbox) {
-if ($line -like "From: *") {
-# Extract email using regex
-if ($line -match '&lt;([\w\.-]+@[\w\.-]+)&gt;') {
-$senderEmails += $matches[1]
-}
-elseif ($line -match '([\w\.-]+@[\w\.-]+)') {
-$senderEmails += $matches[1]
-}
-}
-}
-# Remove duplicates and sort
-$uniqueSenders = $senderEmails | Sort-Object -Unique
-# Output to file
-$uniqueSenders | Out-File -FilePath $outputPath -Encoding utf8
-Write-Host "Sender email addresses have been saved to $outputPath"
+    # Read the MBOX file
+    $mbox = Get-Content $mboxPath
+    
+    # Initialize an array to hold sender emails
+    $senderEmails = @()
+    
+    foreach ($line in $mbox) {
+        if ($line -like &quot;From: *&quot;) {
+            # Extract email using regex
+            if ($line -match &#39;&lt;([\w\.-]+@[\w\.-]+)&gt;&#39;) {
+                $senderEmails += $matches[1]
+            }
+            elseif ($line -match &#39;([\w\.-]+@[\w\.-]+)&#39;) {
+                $senderEmails += $matches[1]
+            }
+        }
+    }
+    
+    # Remove duplicates and sort
+    $uniqueSenders = $senderEmails | Sort-Object -Unique
+    
+    # Output to file
+    $uniqueSenders | Out-File -FilePath $outputPath -Encoding utf8
+    
+    Write-Host &quot;Sender email addresses have been saved to $outputPath&quot;
 }
 catch {
-Write-Host "An error occurred: $_"
-}
+    Write-Host &quot;An error occurred: $_&quot;
+}</code>
+</section>
 
+<p><strong>Steps to Run the Script:</strong></p>
 
-**Steps to Run the Script:**
+<p>a. <strong>Create the Script File:</strong></p>
+<ul>
+  <li>Open Notepad or another text editor and paste the above script.</li>
+  <li>Save the file with a <code class="language-plaintext highlighter-rouge">.ps1</code> extension, e.g., <code class="language-plaintext highlighter-rouge">extract_senders.ps1</code>.</li>
+</ul>
 
-a. **Create the Script File:**
-   - Open Notepad or another text editor and paste the above script.
-   - Save the file with a `.ps1` extension, e.g., `extract_senders.ps1`.
+<p>b. <strong>Customize the Script:</strong></p>
+<ul>
+  <li>Replace <code class="language-plaintext highlighter-rouge">'C:\path\to\your\mboxfile.mbox'</code> with the path to your MBOX file.</li>
+  <li>Ensure the output path is correctly specified.</li>
+</ul>
 
-b. **Customize the Script:**
-   - Replace `'C:\path\to\your\mboxfile.mbox'` with the path to your MBOX file.
-   - Ensure the output path is correctly specified.
-
-c. **Execute the Script:**
-   - Open PowerShell with administrative privileges.
-   - Navigate to the script's directory:
-     ```powershell
-     cd C:\path\to\your\script
-     ```
-   - Run the script:
-     ```powershell
-     .\extract_senders.ps1
-     ```
-</code></section></code></section>
+<p>c. <strong>Execute the Script:</strong></p>
+<ul>
+  <li>Open PowerShell with administrative privileges.</li>
+  <li>Navigate to the script’s directory:
+    <div class="language-powershell highlighter-rouge"><div class="highlight"><section><code><span class="n">cd</span><span class="w"> </span><span class="nx">C:\path\to\your\script</span><span class="w">
+</span></code></section></div>    </div>
+  </li>
+  <li>Run the script:
+    <div class="language-powershell highlighter-rouge"><div class="highlight"><section><code><span class="o">.</span><span class="n">\extract_senders.ps1</span><span class="w">
+</span></code></section></div>    </div>
+  </li>
+</ul>
 
         </div>
         
@@ -716,7 +822,7 @@ c. **Execute the Script:**
         
         
         <a href="https://ib.bsb.br/404" aria-label="404">
-          2025-04-08 09:05:11
+          2025-04-08 16:00:38
         </a>
         &#x23;
     

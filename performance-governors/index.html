@@ -90,7 +90,7 @@
         <div class="page-stats mt-3" role="status" aria-label="Page statistics">
       
       <span class="badge bg-primary">
-        3050 characters
+        3794 characters
       </span>
         <span class="separator mx-2" aria-hidden="true">•</span>
         <span class="badge bg-primary">
@@ -135,40 +135,45 @@
 
 <p>Add this content:</p>
 
-<section data-filename="_code-block.txt" data-code="[Unit]
+<section class="code-block-container" role="group" aria-label=" Code Block" data-filename="_code_block.txt" data-code="[Unit]
 Description=Set CPU and GPU governor to performance
 After=multi-user.target
+
 [Service]
 Type=oneshot
 RemainAfterExit=yes
 ExecStart=/etc/init.d/performance_governors.sh start
 ExecStop=/etc/init.d/performance_governors.sh stop
+
 [Install]
 WantedBy=multi-user.target
 Reload systemd to recognize the new service:
-sudo systemctl daemon-reload" data-download-link="" data-download-link-label="Download "><code class="language-">[Unit]
+sudo systemctl daemon-reload" data-download-link="" data-download-label="Download ">
+  <code class="language-">[Unit]
 Description=Set CPU and GPU governor to performance
 After=multi-user.target
+
 [Service]
 Type=oneshot
 RemainAfterExit=yes
 ExecStart=/etc/init.d/performance_governors.sh start
 ExecStop=/etc/init.d/performance_governors.sh stop
+
 [Install]
 WantedBy=multi-user.target
 Reload systemd to recognize the new service:
-sudo systemctl daemon-reload
+sudo systemctl daemon-reload</code>
+</section>
 
+<p>Reload systemd to recognize the new service: <code class="language-plaintext highlighter-rouge">sudo systemctl daemon-reload</code></p>
 
-Reload systemd to recognize the new service: `sudo systemctl daemon-reload`
+<p>Enable and start the service:
+<code class="language-plaintext highlighter-rouge">sudo systemctl enable performance_governors</code>
+<code class="language-plaintext highlighter-rouge">sudo systemctl start performance_governors</code></p>
 
-Enable and start the service:
-`sudo systemctl enable performance_governors`
-`sudo systemctl start performance_governors`
+<p>Check the status: <code class="language-plaintext highlighter-rouge">sudo systemctl status performance_governors</code></p>
 
-Check the status: `sudo systemctl status performance_governors`
-
-<section data-filename="bash_code-block.sh" data-code="#!/bin/bash
+<section class="code-block-container" role="group" aria-label="Bash Code Block" data-filename="bash_code_block.sh" data-code="#!/bin/bash
 ### BEGIN INIT INFO
 # Provides:          performance_governors
 # Required-Start:    $remote_fs $syslog
@@ -178,92 +183,105 @@ Check the status: `sudo systemctl status performance_governors`
 # Short-Description: CPU Performance Governors
 # Description:       Script to manage CPU performance governor settings for RK3588
 ### END INIT INFO
+
 # Source function library
 . /lib/lsb/init-functions
+
 # Path to the log file
 LOG=&quot;/var/log/performance_governors.log&quot;
+
 # Function to write to log
 log_message() {
-echo &quot;$(date '+%Y-%m-%d %H:%M:%S') $1&quot; &gt;&gt; &quot;$LOG&quot;
+    echo &quot;$(date &#39;+%Y-%m-%d %H:%M:%S&#39;) $1&quot; &gt;&gt; &quot;$LOG&quot;
 }
+
 # Function to set governor
 set_governor() {
-local path=&quot;$1&quot;
-if [ -f &quot;$path&quot; ]; then
-echo performance &gt; &quot;$path&quot; 2&gt;/dev/null
-if [ $? -eq 0 ]; then
-log_message &quot;Successfully set performance governor for $path&quot;
-return 0
-else
-log_message &quot;Failed to set performance governor for $path&quot;
-return 1
-fi
-else
-log_message &quot;Path does not exist: $path&quot;
-return 1
-fi
+    local path=&quot;$1&quot;
+    if [ -f &quot;$path&quot; ]; then
+        echo performance &gt; &quot;$path&quot; 2&gt;/dev/null
+        if [ $? -eq 0 ]; then
+            log_message &quot;Successfully set performance governor for $path&quot;
+            return 0
+        else
+            log_message &quot;Failed to set performance governor for $path&quot;
+            return 1
+        fi
+    else
+        log_message &quot;Path does not exist: $path&quot;
+        return 1
+    fi
 }
+
 # Function to start the service
 do_start() {
-log_message &quot;Starting performance governors&quot;
-local governors=(
-&quot;/sys/class/devfreq/fb000000.gpu/governor&quot;
-&quot;/sys/devices/system/cpu/cpufreq/policy0/scaling_governor&quot;
-&quot;/sys/devices/system/cpu/cpufreq/policy4/scaling_governor&quot;
-&quot;/sys/devices/system/cpu/cpufreq/policy6/scaling_governor&quot;
-&quot;/sys/class/devfreq/dmc/governor&quot;
-&quot;/sys/class/devfreq/fdab0000.npu/governor&quot;
-)
-local failed=0
-for governor in &quot;${governors[@]}&quot;; do
-set_governor &quot;$governor&quot; || failed=1
-done
-if [ $failed -eq 0 ]; then
-log_message &quot;All performance governors set successfully&quot;
-return 0
-else
-log_message &quot;Some governors failed to set&quot;
-return 1
-fi
+    log_message &quot;Starting performance governors&quot;
+    
+    local governors=(
+        &quot;/sys/class/devfreq/fb000000.gpu/governor&quot;
+        &quot;/sys/devices/system/cpu/cpufreq/policy0/scaling_governor&quot;
+        &quot;/sys/devices/system/cpu/cpufreq/policy4/scaling_governor&quot;
+        &quot;/sys/devices/system/cpu/cpufreq/policy6/scaling_governor&quot;
+        &quot;/sys/class/devfreq/dmc/governor&quot;
+        &quot;/sys/class/devfreq/fdab0000.npu/governor&quot;
+    )
+    
+    local failed=0
+    for governor in &quot;${governors[@]}&quot;; do
+        set_governor &quot;$governor&quot; || failed=1
+    done
+    
+    if [ $failed -eq 0 ]; then
+        log_message &quot;All performance governors set successfully&quot;
+        return 0
+    else
+        log_message &quot;Some governors failed to set&quot;
+        return 1
+    fi
 }
+
 # Function to stop the service (reset to default)
 do_stop() {
-log_message &quot;Stopping performance governors (resetting to default)&quot;
-return 0
+    log_message &quot;Stopping performance governors (resetting to default)&quot;
+    return 0
 }
+
 # Function to check status
 do_status() {
-local failed=0
-for governor in /sys/devices/system/cpu/cpufreq/policy*/scaling_governor; do
-if [ -f &quot;$governor&quot; ]; then
-current=$(cat &quot;$governor&quot;)
-echo &quot;Current governor for $governor: $current&quot;
-[ &quot;$current&quot; != &quot;performance&quot; ] &amp;&amp; failed=1
-fi
-done
-return $failed
+    local failed=0
+    for governor in /sys/devices/system/cpu/cpufreq/policy*/scaling_governor; do
+        if [ -f &quot;$governor&quot; ]; then
+            current=$(cat &quot;$governor&quot;)
+            echo &quot;Current governor for $governor: $current&quot;
+            [ &quot;$current&quot; != &quot;performance&quot; ] &amp;&amp; failed=1
+        fi
+    done
+    return $failed
 }
+
 # Main script logic
 case &quot;$1&quot; in
-start)
-do_start
-;;
-stop)
-do_stop
-;;
-restart)
-do_stop
-do_start
-;;
-status)
-do_status
-;;
-*)
-echo &quot;Usage: $0 {start|stop|restart|status}&quot;
-exit 1
-;;
+    start)
+        do_start
+        ;;
+    stop)
+        do_stop
+        ;;
+    restart)
+        do_stop
+        do_start
+        ;;
+    status)
+        do_status
+        ;;
+    *)
+        echo &quot;Usage: $0 {start|stop|restart|status}&quot;
+        exit 1
+        ;;
 esac
-exit $?" data-download-link="" data-download-link-label="Download Bash"><code class="language-bash">#!/bin/bash
+
+exit $?" data-download-link="" data-download-label="Download Bash">
+  <code class="language-bash">#!/bin/bash
 ### BEGIN INIT INFO
 # Provides:          performance_governors
 # Required-Start:    $remote_fs $syslog
@@ -273,94 +291,105 @@ exit $?" data-download-link="" data-download-link-label="Download Bash"><code cl
 # Short-Description: CPU Performance Governors
 # Description:       Script to manage CPU performance governor settings for RK3588
 ### END INIT INFO
+
 # Source function library
 . /lib/lsb/init-functions
+
 # Path to the log file
-LOG="/var/log/performance_governors.log"
+LOG=&quot;/var/log/performance_governors.log&quot;
+
 # Function to write to log
 log_message() {
-echo "$(date '+%Y-%m-%d %H:%M:%S') $1" &gt;&gt; "$LOG"
+    echo &quot;$(date &#39;+%Y-%m-%d %H:%M:%S&#39;) $1&quot; &gt;&gt; &quot;$LOG&quot;
 }
+
 # Function to set governor
 set_governor() {
-local path="$1"
-if [ -f "$path" ]; then
-echo performance &gt; "$path" 2&gt;/dev/null
-if [ $? -eq 0 ]; then
-log_message "Successfully set performance governor for $path"
-return 0
-else
-log_message "Failed to set performance governor for $path"
-return 1
-fi
-else
-log_message "Path does not exist: $path"
-return 1
-fi
+    local path=&quot;$1&quot;
+    if [ -f &quot;$path&quot; ]; then
+        echo performance &gt; &quot;$path&quot; 2&gt;/dev/null
+        if [ $? -eq 0 ]; then
+            log_message &quot;Successfully set performance governor for $path&quot;
+            return 0
+        else
+            log_message &quot;Failed to set performance governor for $path&quot;
+            return 1
+        fi
+    else
+        log_message &quot;Path does not exist: $path&quot;
+        return 1
+    fi
 }
+
 # Function to start the service
 do_start() {
-log_message "Starting performance governors"
-local governors=(
-"/sys/class/devfreq/fb000000.gpu/governor"
-"/sys/devices/system/cpu/cpufreq/policy0/scaling_governor"
-"/sys/devices/system/cpu/cpufreq/policy4/scaling_governor"
-"/sys/devices/system/cpu/cpufreq/policy6/scaling_governor"
-"/sys/class/devfreq/dmc/governor"
-"/sys/class/devfreq/fdab0000.npu/governor"
-)
-local failed=0
-for governor in "${governors[@]}"; do
-set_governor "$governor" || failed=1
-done
-if [ $failed -eq 0 ]; then
-log_message "All performance governors set successfully"
-return 0
-else
-log_message "Some governors failed to set"
-return 1
-fi
+    log_message &quot;Starting performance governors&quot;
+    
+    local governors=(
+        &quot;/sys/class/devfreq/fb000000.gpu/governor&quot;
+        &quot;/sys/devices/system/cpu/cpufreq/policy0/scaling_governor&quot;
+        &quot;/sys/devices/system/cpu/cpufreq/policy4/scaling_governor&quot;
+        &quot;/sys/devices/system/cpu/cpufreq/policy6/scaling_governor&quot;
+        &quot;/sys/class/devfreq/dmc/governor&quot;
+        &quot;/sys/class/devfreq/fdab0000.npu/governor&quot;
+    )
+    
+    local failed=0
+    for governor in &quot;${governors[@]}&quot;; do
+        set_governor &quot;$governor&quot; || failed=1
+    done
+    
+    if [ $failed -eq 0 ]; then
+        log_message &quot;All performance governors set successfully&quot;
+        return 0
+    else
+        log_message &quot;Some governors failed to set&quot;
+        return 1
+    fi
 }
+
 # Function to stop the service (reset to default)
 do_stop() {
-log_message "Stopping performance governors (resetting to default)"
-return 0
+    log_message &quot;Stopping performance governors (resetting to default)&quot;
+    return 0
 }
+
 # Function to check status
 do_status() {
-local failed=0
-for governor in /sys/devices/system/cpu/cpufreq/policy*/scaling_governor; do
-if [ -f "$governor" ]; then
-current=$(cat "$governor")
-echo "Current governor for $governor: $current"
-[ "$current" != "performance" ] &amp;&amp; failed=1
-fi
-done
-return $failed
+    local failed=0
+    for governor in /sys/devices/system/cpu/cpufreq/policy*/scaling_governor; do
+        if [ -f &quot;$governor&quot; ]; then
+            current=$(cat &quot;$governor&quot;)
+            echo &quot;Current governor for $governor: $current&quot;
+            [ &quot;$current&quot; != &quot;performance&quot; ] &amp;&amp; failed=1
+        fi
+    done
+    return $failed
 }
-# Main script logic
-case "$1" in
-start)
-do_start
-;;
-stop)
-do_stop
-;;
-restart)
-do_stop
-do_start
-;;
-status)
-do_status
-;;
-*)
-echo "Usage: $0 {start|stop|restart|status}"
-exit 1
-;;
-esac
-exit $?
 
-</code></section></code></section>
+# Main script logic
+case &quot;$1&quot; in
+    start)
+        do_start
+        ;;
+    stop)
+        do_stop
+        ;;
+    restart)
+        do_stop
+        do_start
+        ;;
+    status)
+        do_status
+        ;;
+    *)
+        echo &quot;Usage: $0 {start|stop|restart|status}&quot;
+        exit 1
+        ;;
+esac
+
+exit $?</code>
+</section>
 
         </div>
         
@@ -478,7 +507,7 @@ exit $?
         
         
         <a href="https://ib.bsb.br/404" aria-label="404">
-          2025-04-08 09:05:11
+          2025-04-08 16:00:38
         </a>
         &#x23;
     
