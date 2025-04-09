@@ -7,120 +7,221 @@ type: post
 layout: post
 ---
 
-# Building and Running the File Organizer on Windows
+# Rust approach
 
 ## Prerequisites
 
 Before you begin, you need to install Rust:
 
-1. Visit [https://rustup.rs/](https://rustup.rs/) to download the Rust installer
-2. Run the installer to set up:
-   - `rustc` (the compiler)
-   - `cargo` (the build tool and package manager)
+1.  Visit [https://rustup.rs/](https://rustup.rs/) to download the Rust installer.
+2.  Run the installer to set up:
+    * `rustc` (the compiler)
+    * `cargo` (the build tool and package manager)
 
 ## Creating the Project
 
-Open a command prompt and run:
+Open a command prompt or terminal (like PowerShell, CMD, or Git Bash) and run:
 
 ```bash
 # Create a new Rust project
-cargo new file_organizer_rs
-cd file_organizer_rs
+cargo new rust_file_organizer
+cd rust_file_organizer
 
 # Replace default files with project files
-# Replace the contents of Cargo.toml with the provided configuration
-# Replace the contents of src/main.rs with the provided source code
+# Replace the contents of Cargo.toml with the provided configuration (see below)
+# Replace the contents of src/main.rs with the provided source code (see below)
 ```
 
 ## Building the Project
 
 ### Debug Build (For Development)
 
+Use this build for development and testing.
+
 ```bash
 cargo build
 ```
 
-The executable will be created in the `target/debug/` directory.
+The executable will be created in the `target/debug/rust_file_organizer.exe` directory.
 
 ### Release Build (For Distribution)
 
-For a smaller, optimized executable:
+Use this build for a smaller, optimized executable suitable for distribution.
 
 ```bash
 cargo build --release
 ```
 
-The executable will be created in the `target/release/` directory.
+The executable will be created in the `target/release/rust_file_organizer.exe` directory.
 
 ## Running the Tool
 
 ### Getting Help
 
-View all available options:
+View the basic help message with available options:
 
 ```bash
-.\target\release\file_organizer_rs.exe --help
+.\target\debug\rust_file_organizer.exe -h
 ```
 
-### Usage Examples
-
-#### Basic File Organization
-
-Copy files by category from Downloads to an organized folder:
+View the more detailed help message:
 
 ```bash
-.\target\debug\file_organizer_rs.exe --source C:\Users\YourUser\Downloads --target C:\OrganizedFiles
+.\target\debug\rust_file_organizer.exe --help
 ```
 
-#### Moving Files with Duplicate Handling
+*(Use `.\target\release\` instead of `.\target\debug\` if running the release build).*
 
-Move files from Downloads, adding timestamps to duplicates:
+## Command-Line Options
+
+The Rust File Organizer requires two mandatory options:
+
+* `--source <DIR>` or `-s <DIR>`: The source directory containing files to organize.
+* `--target <DIR>` or `-t <DIR>`: The target directory where organized files will be placed into subfolders.
+
+### Basic Options
+
+| Option                        | Short | Description                                | Default                       |
+| :---------------------------- | :---- | :----------------------------------------- | :---------------------------- |
+| `--source <DIR>`              | `-s`  | Source directory to organize files from  | **(Required)** |
+| `--target <DIR>`              | `-t`  | Target directory to place organized files  | **(Required)** |
+| `--config <FILE>`             | `-c`  | Path to custom JSON configuration file     | None (uses built-in defaults) |
+| `--organize-by <ORGANIZE_BY>` |       | Organization method (`category`, `extension`) | `category`                    |
+| `--move-files`                |       | Move files instead of copying them         | False (copy mode)             |
+| `--include-hidden`            | `-i`  | Include hidden files and directories     | False                         |
+| `--follow-links`              | `-l`  | Follow symbolic links during directory traversal | False                         |
+
+### Duplicate Handling Options
+
+These options control how the tool handles files that already exist in the target location with the same name. They conflict with each other – **only use one**. If none are specified, the default behavior is to **overwrite**.
+
+| Option                   | Short | Description                                | Default Behavior |
+| :----------------------- | :---- | :----------------------------------------- | :--------------- |
+| `--timestamp-duplicates` |       | Add timestamp to duplicate files           | Disabled         |
+| `--skip-existing`        | `-k`  | Skip existing files in target              | Disabled         |
+| `--overwrite`            |       | **Explicitly** overwrite existing files in target | **Default Action** |
+
+### Advanced Options
+
+| Option                         | Short | Description                                                              | Default             |
+| :----------------------------- | :---- | :----------------------------------------------------------------------- | :------------------ |
+| `--remove-empty-source-dirs` |       | Remove empty directories in source after moving files (requires `--move-files`) | False               |
+| `--log-file <FILE>`            |       | Write logs to specified file (in addition to console)                    | None (console only) |
+| `--log-level <LOG_LEVEL>`      |       | Set logging level (`error`, `warn`, `info`, `debug`, `trace`)            | `info`              |
+| `--help`                       | `-h`  | Print the concise help message and exit.                                 | N/A                 |
+| `--version`                    | `-V`  | Print version information and exit.                                      | N/A                 |
+
+## Organization Methods
+
+The `--organize-by` option accepts the following values:
+
+* `category`: Organizes files into subfolders named by category, based on file extension mapping (default).
+* `extension`: Organizes files into subfolders named directly by their file extension (e.g., `.txt`, `.jpg`).
+
+## Usage Examples
+
+*(Remember to replace `YourUser`, `C:\Path\To\Source`, etc., with your actual paths. Examples use the debug build path.)*
+
+### Basic File Organization (Copy by Category)
 
 ```bash
-.\target\debug\file_organizer_rs.exe --source C:\Users\YourUser\Downloads --target C:\OrganizedFiles --move --timestamp-duplicates
+.\target\debug\rust_file_organizer.exe --source C:\Users\YourUser\Downloads --target C:\OrganizedFiles
 ```
 
-#### Organizing by File Extension
-
-Organize files by extension, including hidden files:
+### Moving Files & Timestamping Duplicates
 
 ```bash
-.\target\release\file_organizer_rs.exe -s "C:\Path\To\Source" -t "C:\Path\To\Target" --organize-by extension --include-hidden
+.\target\debug\rust_file_organizer.exe --source C:\Users\YourUser\Downloads --target C:\OrganizedFiles --move-files --timestamp-duplicates
 ```
 
-#### Advanced Configuration
-
-Use a custom configuration file and log all activity:
+### Organizing by Extension & Including Hidden Files
 
 ```bash
-.\target\release\file_organizer_rs.exe -s .\input -t .\output -c .\my_config.json --log-file activity.log --overwrite
+.\target\debug\rust_file_organizer.exe -s "C:\Path\To\Source" -t "C:\Path\To\Target" --organize-by extension --include-hidden
 ```
 
-## Common Options Reference
+### Skipping Existing Files During Copy
 
-| Option | Short | Description |
-|--------|-------|-------------|
-| `--source` | `-s` | Source directory to organize files from |
-| `--target` | `-t` | Target directory to place organized files |
-| `--move` | | Move files instead of copying them |
-| `--organize-by` | | Organization method (extension or category) |
-| `--timestamp-duplicates` | | Add timestamp to duplicate files |
-| `--include-hidden` | `-i` | Include hidden files and directories |
-| `--overwrite` | | Overwrite existing files in target |
-| `--config` | `-c` | Path to custom configuration file |
-| `--log-file` | | Write logs to specified file |
+```bash
+.\target\debug\rust_file_organizer.exe -s "C:\Path\To\Source" -t "C:\Path\To\Target" --skip-existing
+```
+
+### Moving Files & Cleaning Up Empty Source Directories
+
+```bash
+.\target\debug\rust_file_organizer.exe -s "C:\Path\To\Source" -t "C:\Path\To\Target" --move-files --remove-empty-source-dirs
+```
+
+### Using a Custom Config, Overwriting, Logging to File
+
+```bash
+.\target\debug\rust_file_organizer.exe -s .\input -t .\output -c .\my_config.json --overwrite --log-file activity.log --log-level debug
+```
+
+## Option Conflicts and Dependencies
+
+* **Duplicate Handling**: `--timestamp-duplicates`, `--skip-existing`, and `--overwrite` conflict. Use at most one. Default is overwrite if none are specified.
+* **Empty Directory Removal**: `--remove-empty-source-dirs` requires `--move-files` to be active.
 
 ## Testing Your Installation
 
-After building, verify your installation works by running a simple test:
+After building, verify it works:
 
 ```bash
-# Create test directories
+# Create test directories (using PowerShell/CMD syntax)
 mkdir test_source test_target
 
-# Copy some test files to test_source
-# Then run the organizer
-.\target\debug\file_organizer_rs.exe -s .\test_source -t .\test_target
+# Copy some test files (e.g., image.jpg, document.pdf) into test_source
+
+# Run the organizer
+.\target\debug\rust_file_organizer.exe -s .\test_source -t .\test_target
+
+# Check the test_target directory for organized subfolders (e.g., images, documents)
+```
+
+## Configuration File Format (`--config`)
+
+Provide a JSON file mapping category names (strings) to lists of file extensions (strings, including the leading dot).
+
+Example `my_config.json`:
+
+```json
+{
+  "images": [".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp"],
+  "documents": [".pdf", ".docx", ".doc", ".txt", ".rtf", ".odt", ".xlsx", ".xls", ".csv", ".pptx", ".ppt", ".md"],
+  "archives": [".zip", ".rar", ".tar", ".gz", ".7z"],
+  "code": [".rs", ".py", ".js", ".html", ".css", ".java"],
+  "other": []
+}
+```
+
+* An `"other"` category is recommended to catch files whose extensions don't match other categories. If organizing by category and a file doesn't match any defined category (and no `"other"` category exists), it might be skipped or handled less predictably depending on implementation details. The built-in default configuration includes an "other" category.
+* If a file has no extension, it will typically be placed in a `no_extension` folder when organizing by extension, or potentially skipped/placed in "other" when organizing by category.
+
+## Troubleshooting
+
+### Common Issues
+
+1.  **Permission Errors**: Ensure the application has read permissions for the entire source directory tree and write/create permissions for the target directory. Run as administrator if necessary, but be cautious.
+2.  **Path Not Found**: Double-check that the source and target paths are spelled correctly and accessible from where you are running the command. Use absolute paths if relative paths are causing issues.
+3.  **Duplicate Handling**: If files aren't being handled as expected (e.g., overwritten when you wanted skipping), verify which duplicate handling flag (`--skip-existing`, `--timestamp-duplicates`, `--overwrite`) is active or if the default overwrite behavior is occurring.
+4.  **Cross-Device Move Errors**: If moving files (`--move-files`) between different drives or partitions fails, the tool attempts a copy-then-delete fallback. Ensure there's enough space on the target drive for the copy.
+5.  **Configuration File Errors**: If using `--config`, ensure the JSON file is correctly formatted and the path is correct. Check logs for parsing errors.
+
+### Logging for Diagnostics
+
+Use the logging options to get more detailed information:
+
+* `--log-level debug` or `--log-level trace`: Provides much more detailed output about scanning, decisions, and operations.
+* `--log-file <path/to/logfile.log>`: Writes all logs to a file, making it easier to review extensive output.
+
+Example for detailed logging to a file:
+
+```bash
+.\target\debug\rust_file_organizer.exe -s <source> -t <target> --log-level trace --log-file organizer.log
+```
+
+Review the console output and the specified log file (`organizer.log` in the example) for specific error messages or steps where the process might be failing.
 ```
 
 ## Cargo.toml
