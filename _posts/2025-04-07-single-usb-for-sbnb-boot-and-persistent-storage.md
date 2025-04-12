@@ -13,8 +13,6 @@ This guide provides comprehensive, step-by-step instructions for configuring a s
 1.  **Booting the Sbnb Linux Operating System:** The drive will be prepared with a standard UEFI-compatible structure, specifically an EFI System Partition (ESP) containing the Sbnb EFI bootloader (`sbnb.efi`) and necessary configuration files. This allows the server's firmware to locate and start the Sbnb boot process. The `sbnb.efi` file itself is typically a Unified Kernel Image (UKI), bundling the Linux kernel, initramfs, and kernel command line into a single executable file.
 2.  **Providing Simple Persistent Storage:** Utilizing a separate partition on the same physical USB drive, formatted with a standard Linux filesystem (`ext4` is used in this guide). This partition is intended to be automatically mounted at the `/mnt/sbnb-data` directory path within the running Sbnb Linux system via a custom boot script (`sbnb-cmds.sh`). This provides a space where data (like container volumes, application data, logs, user files) can persist across reboots of the otherwise ephemeral, RAM-based Sbnb OS.
 
-**Important Note on Sbnb Version:** This guide is based on analysis of the Sbnb GitHub repository content provided previously. If you are using a significantly different version of Sbnb Linux, the boot process, script names, expected labels, or available tools might differ. Always consult the documentation specific to your Sbnb version if available, and be prepared to adapt these steps.
-
 **Why `ext4` instead of LVM:** Initial analysis suggested LVM might be suitable, but further review of the default Sbnb Linux build configuration indicates the necessary `lvm2` user-space tools are likely missing from the base runtime environment. Without these tools, managing LVM volumes during boot via standard scripts is infeasible unless you create a custom Sbnb build that includes the `lvm2` package. This revised guide therefore uses a standard `ext4` filesystem partition, relying only on basic tools expected to be present in Sbnb.
 
 **Contrasting with Standard Sbnb Workflow:** It's crucial to understand that this guide describes a highly non-standard setup. The intended Sbnb workflow prioritizes resilience, performance, and statelessness:
@@ -91,75 +89,306 @@ This guide provides comprehensive, step-by-step instructions for configuring a s
 ### Phase 2: Partition the USB Drive
 
 **(Warning: The following `parted` commands are DESTRUCTIVE to `/dev/sdX`. Double-check the device name!)**
+```bash
+#!/bin/bash
 
-1.  **Unmount Existing Partitions:**
-    ```bash
-    echo "--- Unmounting any partitions on /dev/sdX ---"
-    findmnt -n -o TARGET --source /dev/sdX* | xargs --no-run-if-empty sudo umount -v -l
-    lsblk /dev/sdX
-    ```
-2.  **Wipe Existing Signatures (Recommended):**
-    ```bash
-    echo "--- Wiping signatures from /dev/sdX ---"
-    sudo wipefs --all --force /dev/sdX
-    ```
-3.  **Create New GPT Partition Table:** Needed for UEFI and modern features.
-    ```bash
-    echo "--- Creating new GPT label on /dev/sdX ---"
-    sudo parted /dev/sdX --script -- mklabel gpt
-    ```
-4.  **Create EFI System Partition (ESP):** FAT32, ~1GB. The UEFI firmware identifies this via the `boot` and `esp` flags to find bootloaders.
-    ```bash
-    echo "--- Creating ESP partition (1) on /dev/sdX ---"
-    sudo parted /dev/sdX --script -- mkpart "sbnb-esp" fat32 1MiB 1025MiB
-    sudo parted /dev/sdX --script -- set 1 boot on
-    sudo parted /dev/sdX --script -- set 1 esp on
-    ```
-5.  **Create Linux Data Partition:** Uses remaining space. Standard Linux filesystem type (ID `8300`).
-    ```bash
-    echo "--- Creating Linux data partition (2) on /dev/sdX ---"
-    sudo parted /dev/sdX --script -- mkpart "sbnb-data" ext4 1025MiB 100%
-    ```
-6.  **Verify Partitioning:** Check layout, types, flags, sizes.
-    ```bash
-    echo "--- Verifying partitions on /dev/sdX ---"
-    sudo parted /dev/sdX --script -- print
-    echo "--- Block device view: ---"
-    lsblk -o NAME,SIZE,TYPE,FSTYPE,PARTLABEL,MOUNTPOINT,PARTFLAGS /dev/sdX
-    # Expect /dev/sdX1: ~1G, Type EFI System, PARTFLAGS includes 'boot', 'esp'
-    # Expect /dev/sdX2: remaining size, Type Linux
-    # Graphical tools should show a small FAT32 partition flagged boot/esp, and a larger second partition.
-    ```
+# --- Configuration ---
+# Exit immediately if a command exits with a non-zero status.
+# Treat unset variables as an error when substituting.
+# Pipelines return the exit status of the last command to exit non-zero.
+set -euo pipefail
 
-### Phase 3: Format Filesystems
+# --- Variables ---
+# EFI System Partition (ESP) Label (CRITICAL - must match bootloader config)
+ESP_LABEL="sbnb"
+# Data Partition Label (Recommended for identification)
+DATA_LABEL="SBNB_DATA"
+# ESP Size (Adjust if needed, ~1GB is usually sufficient)
+ESP_SIZE="1025MiB"
+# List of required commands for the script to function
+REQUIRED_CMDS=(
+    "parted" "mkfs.vfat" "mkfs.ext4" "wipefs" "findmnt" "lsblk"
+    "blkid" "fsck.vfat" "e2fsck" "sync" "id" "grep" "read"
+    "sleep" "xargs" "umount" "partprobe" "realpath"
+)
 
-1.  **Format EFI Partition (with `sbnb` label):** **CRITICAL LABEL!** `mkfs.vfat` creates FAT32. `-n sbnb` sets the label checked by `boot-sbnb.sh`.
-    ```bash
-    echo "--- Formatting ESP partition (/dev/sdX1) as FAT32 with label 'sbnb' ---"
-    sudo mkfs.vfat -F 32 -n sbnb /dev/sdX1
-    # (Optional but recommended) Check filesystem integrity before use.
-    echo "--- Checking ESP filesystem (fsck.vfat) ---"
-    sudo fsck.vfat -a /dev/sdX1
-    # Check fsck exit code (0 = OK, non-zero = errors found/uncorrected)
-    if [ $? -ne 0 ]; then echo "WARNING: fsck found errors on ESP partition!"; fi
-    # Verify label using blkid (reads filesystem metadata)
-    echo "--- Verifying ESP label ---"
-    sudo blkid /dev/sdX1 # Output MUST include LABEL="sbnb"
-    ```
-2.  **Format Data Partition:** `mkfs.ext4` creates ext4. `-L DATA_LABEL` aids identification. `-m 0` maximizes space. Ext4 journaling helps data integrity on unclean shutdown. (Note: F2FS is another option sometimes recommended for flash, but requires Sbnb kernel/tools support and different `mkfs.f2fs` command).
-    ```bash
-    DATA_PARTITION="/dev/sdX2"
-    DATA_LABEL="SBNB_DATA"
-    echo "--- Formatting Data partition (${DATA_PARTITION}) as ext4 with label '${DATA_LABEL}' ---"
-    sudo mkfs.ext4 -m 0 -L ${DATA_LABEL} ${DATA_PARTITION}
-    # (Optional but recommended) Check the new ext4 filesystem integrity.
-    echo "--- Checking Data partition filesystem (e2fsck) ---"
-    sudo e2fsck -f -y ${DATA_PARTITION} # -f forces check, -y assumes yes
-    if [ $? -ne 0 ]; then echo "WARNING: e2fsck found errors on Data partition!"; fi
-    # Verify the label using blkid
-    echo "--- Verifying Data partition label ---"
-    sudo blkid ${DATA_PARTITION} # Output should include LABEL="SBNB_DATA" and TYPE="ext4"
-    ```
+# --- Functions ---
+# Function to check for required commands
+check_dependencies() {
+    echo "--- Checking for required commands ---"
+    local missing_cmds=()
+    for cmd in "${REQUIRED_CMDS[@]}"; do
+        if ! command -v "$cmd" &> /dev/null; then
+            missing_cmds+=("$cmd")
+        fi
+    done
+
+    if [ ${#missing_cmds[@]} -ne 0 ]; then
+        echo "ERROR: The following required commands are not found:" >&2
+        printf " - %s\n" "${missing_cmds[@]}" >&2
+        echo "Please install them and try again." >&2
+        exit 1
+    fi
+    echo "All required commands found."
+}
+
+# Function to get the base block device for a given path (handles partitions, links, etc.)
+get_base_device() {
+    local path="$1"
+    local resolved_path
+    resolved_path=$(realpath "$path") || { echo "ERROR: Cannot resolve path '$path'" >&2; return 1; }
+    # lsblk -no pkname gets the parent kernel name (base device)
+    lsblk -no pkname "$resolved_path" || { echo "ERROR: Cannot find base device for '$resolved_path' using lsblk." >&2; return 1; }
+}
+
+# --- Script Start ---
+echo "-----------------------------------------------------"
+echo "--- USB Drive Partitioning and Formatting Script ---"
+echo "---          (Version 2 - Enhanced Safety)       ---"
+echo "-----------------------------------------------------"
+echo ""
+echo "WARNING: This script is DESTRUCTIVE and will ERASE"
+echo "         ALL DATA on the target device."
+echo ""
+
+# --- Check for Root Privileges ---
+if [ "$(id -u)" -ne 0 ]; then
+  echo "ERROR: This script must be run as root (e.g., using sudo)." >&2
+  exit 1
+fi
+
+# --- Check Dependencies ---
+check_dependencies
+
+# --- Check for Device Argument ---
+if [ -z "${1:-}" ]; then
+  echo "Usage: $0 /dev/sdX"
+  echo "ERROR: Please provide the target block device (e.g., /dev/sda, /dev/sdb)." >&2
+  echo ""
+  echo "Available block devices (excluding ROM, loop, and RAM devices):"
+  lsblk -d -o NAME,SIZE,TYPE,MODEL | grep -vE 'rom|loop|ram'
+  exit 1
+fi
+
+DEVICE="$1"
+
+# --- Validate Device ---
+if [ ! -b "$DEVICE" ]; then
+  echo "ERROR: '$DEVICE' is not a valid block device." >&2
+  exit 1
+fi
+
+# --- CRITICAL SAFETY CHECK: Prevent targeting the root filesystem device ---
+echo "--- Performing safety checks ---"
+ROOT_DEV_PATH=$(findmnt -n -o SOURCE /)
+ROOT_BASE_DEV_NAME=$(get_base_device "$ROOT_DEV_PATH") || exit 1 # Exit if function fails
+TARGET_BASE_DEV_NAME=$(get_base_device "$DEVICE") || exit 1
+
+# Construct full device paths for comparison
+ROOT_BASE_DEV="/dev/${ROOT_BASE_DEV_NAME}"
+TARGET_BASE_DEV="/dev/${TARGET_BASE_DEV_NAME}" # Assumes the input $DEVICE is the base device
+
+if [ "$TARGET_BASE_DEV" == "$ROOT_BASE_DEV" ]; then
+    echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" >&2
+    echo "FATAL ERROR: Target device '$DEVICE' appears to be the same" >&2
+    echo "             device ('$ROOT_BASE_DEV') as the running root" >&2
+    echo "             filesystem ('$ROOT_DEV_PATH')." >&2
+    echo "             Aborting to prevent data loss." >&2
+    echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" >&2
+    exit 1
+fi
+echo "Safety check passed: Target device '$DEVICE' is not the root filesystem device ('$ROOT_BASE_DEV')."
+
+# Check if the device looks like an SD card reader often used for the OS drive
+if [[ "$DEVICE" == /dev/mmcblk* ]]; then
+    echo "WARNING: '$DEVICE' looks like an SD card (e.g., /dev/mmcblk0)."
+    echo "         Double-check this is not your primary OS drive!"
+fi
+
+
+# --- Confirmation ---
+echo ""
+echo "Target Device: $DEVICE"
+echo "Partitions to be created:"
+echo "  1: EFI System Partition (ESP), FAT32, Label: '$ESP_LABEL', Size: $ESP_SIZE, Flags: boot, esp"
+echo "  2: Linux Data Partition, ext4, Label: '$DATA_LABEL', Size: Remaining space"
+echo ""
+read -p "ARE YOU ABSOLUTELY SURE you want to erase '$DEVICE' and proceed? (yes/NO): " CONFIRMATION
+CONFIRMATION=${CONFIRMATION:-NO} # Default to NO if user just presses Enter
+
+if [[ "$CONFIRMATION" != "yes" ]]; then
+  echo "Operation cancelled by user."
+  exit 0
+fi
+
+echo ""
+echo "--- Proceeding with operations on $DEVICE ---"
+
+# --- Phase 2: Partition the USB Drive ---
+
+# 1. Unmount Existing Partitions
+echo ""
+echo "--- Unmounting any existing partitions on ${DEVICE}* ---"
+# Use findmnt to get mount points and umount them safely
+# Also try to unmount the base device itself in case it's loop-mounted etc.
+findmnt -n -o TARGET --source "${DEVICE}*" | xargs --no-run-if-empty umount -v -l || echo "Info: No partitions were mounted or umount failed (might be okay)."
+umount "$DEVICE" &>/dev/null || true # Attempt to unmount base device, ignore errors
+sleep 1 # Give time for umount to settle
+lsblk "$DEVICE"
+
+# 2. Wipe Existing Signatures (Recommended)
+echo ""
+echo "--- Wiping filesystem/partition signatures from $DEVICE ---"
+wipefs --all --force "$DEVICE"
+sync # Flush kernel buffers to disk to ensure changes are physically written
+
+# 3. Create New GPT Partition Table
+echo ""
+echo "--- Creating new GPT partition table on $DEVICE ---"
+parted "$DEVICE" --script -- mklabel gpt
+sync # Flush kernel buffers to disk
+
+# 4. Create EFI System Partition (ESP)
+echo ""
+echo "--- Creating ESP partition (1) on $DEVICE ---"
+parted "$DEVICE" --script -- mkpart "${ESP_LABEL}" fat32 1MiB "${ESP_SIZE}"
+parted "$DEVICE" --script -- set 1 boot on
+parted "$DEVICE" --script -- set 1 esp on
+sync # Flush kernel buffers to disk
+
+# 5. Create Linux Data Partition
+echo ""
+echo "--- Creating Linux data partition (2) on $DEVICE ---"
+# Use the end of the ESP as the start for the data partition
+parted "$DEVICE" --script -- mkpart "${DATA_LABEL}" ext4 "${ESP_SIZE}" 100%
+sync # Flush kernel buffers to disk
+echo "Waiting briefly for kernel to recognize new partitions..."
+sleep 2
+
+# Define partition variables (assuming standard naming, e.g., /dev/sda1, /dev/sda2)
+# Adding 'p' for NVMe devices (e.g., /dev/nvme0n1p1) - check if base device name contains 'nvme'
+if [[ "$DEVICE" == *nvme* ]]; then
+    PART_PREFIX="p"
+else
+    PART_PREFIX=""
+fi
+ESP_PARTITION="${DEVICE}${PART_PREFIX}1"
+DATA_PARTITION="${DEVICE}${PART_PREFIX}2"
+
+# Check if partition devices exist, retry with partprobe if needed
+echo "--- Checking for partition device nodes (${ESP_PARTITION}, ${DATA_PARTITION}) ---"
+PARTITIONS_FOUND=false
+for i in {1..5}; do
+    if [ -b "$ESP_PARTITION" ] && [ -b "$DATA_PARTITION" ]; then
+        echo "Partition nodes found."
+        PARTITIONS_FOUND=true
+        break
+    fi
+    echo "Partition nodes not yet found. Retrying probe (Attempt $i/5)..."
+    partprobe "$DEVICE" || echo "Warning: partprobe command failed, continuing check..."
+    sleep 1
+done
+
+if [ "$PARTITIONS_FOUND" = false ]; then
+    echo "ERROR: Partition devices ($ESP_PARTITION, $DATA_PARTITION) not found after partitioning and retries." >&2
+    echo "       Please check manually ('lsblk $DEVICE', 'parted $DEVICE print')." >&2
+    lsblk "$DEVICE"
+    exit 1
+fi
+
+# 6. Verify Partitioning
+echo ""
+echo "--- Verifying partitions on $DEVICE ---"
+parted "$DEVICE" --script -- print
+echo ""
+echo "--- Block device view: ---"
+lsblk -o NAME,SIZE,TYPE,FSTYPE,PARTLABEL,MOUNTPOINT,PARTFLAGS "$DEVICE"
+echo "----------------------------"
+echo "Expected: ${ESP_PARTITION} (~${ESP_SIZE}), Type EFI System, Flags: boot, esp"
+echo "Expected: ${DATA_PARTITION} (Remaining size), Type Linux filesystem"
+echo "----------------------------"
+sleep 2 # Pause for user to review
+
+
+# --- Phase 3: Format Filesystems ---
+
+# 1. Format EFI Partition
+echo ""
+echo "--- Formatting ESP partition (${ESP_PARTITION}) as FAT32 with label '${ESP_LABEL}' ---"
+mkfs.vfat -F 32 -n "${ESP_LABEL}" "${ESP_PARTITION}"
+sync # Flush kernel buffers to disk
+
+# Check filesystem integrity
+echo "--- Checking ESP filesystem (fsck.vfat) ---"
+FSCK_VFAT_EXIT_CODE=0
+fsck.vfat -a "${ESP_PARTITION}" || FSCK_VFAT_EXIT_CODE=$? # Run fsck, capture exit code on failure
+
+if [ $FSCK_VFAT_EXIT_CODE -eq 0 ]; then
+  echo "ESP filesystem check passed (or no check performed)."
+elif [ $FSCK_VFAT_EXIT_CODE -eq 1 ]; then
+  # Exit code 1 usually means errors were found AND corrected.
+  echo "WARNING: fsck.vfat found and corrected errors on ESP partition (${ESP_PARTITION}). Check output above."
+else
+  # Exit codes > 1 typically indicate uncorrected errors.
+  echo "ERROR: fsck.vfat reported uncorrectable errors (Exit Code: $FSCK_VFAT_EXIT_CODE) on ESP partition (${ESP_PARTITION})." >&2
+  echo "       Cannot proceed safely. Please investigate manually." >&2
+  exit 1
+fi
+
+# Verify label using blkid
+echo "--- Verifying ESP label ---"
+if blkid -s LABEL -o value "${ESP_PARTITION}" | grep -q "^${ESP_LABEL}$"; then
+    echo "ESP Label '${ESP_LABEL}' verified successfully on ${ESP_PARTITION}."
+else
+    echo "ERROR: Failed to verify ESP Label '${ESP_LABEL}' on ${ESP_PARTITION}." >&2
+    blkid "${ESP_PARTITION}" # Show full blkid output for debugging
+    exit 1
+fi
+
+# 2. Format Data Partition
+echo ""
+echo "--- Formatting Data partition (${DATA_PARTITION}) as ext4 with label '${DATA_LABEL}' ---"
+mkfs.ext4 -m 0 -L "${DATA_LABEL}" "${DATA_PARTITION}"
+sync # Flush kernel buffers to disk
+
+# Check the new ext4 filesystem integrity
+echo "--- Checking Data partition filesystem (e2fsck) ---"
+# -f forces check even if clean, -y assumes yes to all prompts (use with caution)
+E2FSCK_EXIT_CODE=0
+e2fsck -f -y "${DATA_PARTITION}" || E2FSCK_EXIT_CODE=$? # Capture exit code on failure
+
+if [ $E2FSCK_EXIT_CODE -eq 0 ]; then
+    echo "Data partition filesystem check passed."
+elif [ $E2FSCK_EXIT_CODE -eq 1 ]; then
+    # Exit code 1 means errors were corrected.
+    echo "WARNING: e2fsck found and corrected errors on Data partition (${DATA_PARTITION}). Check output above."
+else
+    # Exit codes > 1 indicate uncorrected errors.
+    echo "ERROR: e2fsck reported uncorrectable errors (Exit Code: $E2FSCK_EXIT_CODE) on Data partition (${DATA_PARTITION})." >&2
+    echo "       Cannot proceed safely. Please investigate manually." >&2
+    exit 1
+fi
+
+# Verify the label using blkid
+echo "--- Verifying Data partition label ---"
+if blkid -s LABEL -o value "${DATA_PARTITION}" | grep -q "^${DATA_LABEL}$"; then
+    echo "Data Label '${DATA_LABEL}' verified successfully on ${DATA_PARTITION}."
+else
+    echo "ERROR: Failed to verify Data Label '${DATA_LABEL}' on ${DATA_PARTITION}." >&2
+    blkid "${DATA_PARTITION}" # Show full blkid output for debugging
+    exit 1
+fi
+
+echo ""
+echo "-----------------------------------------------------"
+echo "--- Script finished successfully! ---"
+echo "Device: $DEVICE"
+echo "Partitions created and formatted:"
+lsblk -o NAME,SIZE,TYPE,FSTYPE,LABEL,PARTLABEL,MOUNTPOINT "$DEVICE"
+echo "-----------------------------------------------------"
+
+exit 0
+```
 
 ### Phase 4: Install Sbnb Boot Files and Configuration
 
@@ -182,107 +411,110 @@ This guide provides comprehensive, step-by-step instructions for configuring a s
 4.  **(Recommended) Create Sbnb Configuration File:** Place `sbnb-tskey.txt` in ESP root (`/mnt/sbnb-mount/`). The `boot-sbnb.sh` script reads this to configure Tailscale.
     ```bash
     echo "--- Creating Sbnb configuration file (sbnb-tskey.txt) ---"
-    echo "SBNB_TAILSCALE_KEY=tskey-auth-..." | sudo tee /mnt/sbnb-mount/sbnb-tskey.txt > /dev/null
+    echo "tskey-auth-..." | sudo tee /mnt/sbnb-mount/sbnb-tskey.txt > /dev/null
     ```
 5.  **(Crucial) Handle Data Partition Mounting via `sbnb-cmds.sh`:**
     * **Context & Goal:** Sbnb boots -> systemd -> `sbnb.service` -> `boot-sbnb.sh` -> mounts ESP to `/mnt/sbnb` -> executes `/mnt/sbnb/sbnb-cmds.sh`. This script mounts the data partition (labeled `SBNB_DATA`) to `/mnt/sbnb-data`.
     * **Device Detection Timing:** There's a potential race: the kernel/udev might not have created the `/dev/disk/by-label/SBNB_DATA` symlink or the `/dev/sdX2` node exactly when the script runs. The wait loop mitigates this.
     * **Default Script Conflict Uncertainty:** The `boot-sbnb.sh` excerpt doesn't show conflicting actions at its execution point. However, other early boot mechanisms could exist in Sbnb. If `/mnt/sbnb-data` behaves unexpectedly, investigate potential early boot scripts/services related to storage in your Sbnb version (advanced).
     * **`sbnb-cmds.sh` Script (Wait Loop & Logging):** Create this in the ESP root (`/mnt/sbnb-mount/` during prep).
-        ```bash
-        #!/bin/sh
-        # Custom sbnb-cmds.sh for USB Persistent Partition setup (No LVM)
-        # Mounts partition labeled DATA_LABEL to MOUNT_POINT after waiting for device.
-        # For debugging, uncomment 'set -x' to trace command execution.
-        # set -x
+```bash
+#!/bin/sh
+# Custom sbnb-cmds.sh for USB Persistent Partition setup (No LVM)
+# Mounts partition labeled DATA_LABEL to MOUNT_POINT after waiting for device.
+# For debugging, uncomment 'set -x' to trace command execution.
+# set -x
 
-        # Function to log messages consistently to kernel buffer (dmesg) and console (tty)
-        log_msg() {
-          echo "sbnb-cmds.sh: $1" | tee /dev/kmsg
-        }
+# Function to log messages consistently to kernel buffer (dmesg) and console (tty)
+log_msg() {
+  echo "sbnb-cmds.sh: $1" | tee /dev/kmsg
+}
 
-        log_msg "--- Running Custom USB Partition Mount Script ---"
+log_msg "--- Running Custom USB Partition Mount Script ---"
 
-        # --- Configuration ---
-        MOUNT_POINT="/mnt/sbnb-data"  # Target directory for persistent data
-        DATA_LABEL="SBNB_DATA"        # Filesystem label of the data partition (MUST match mkfs.ext4 -L)
-        # Alternative: Use UUID for potentially more stable identification if labels change/conflict
-        # Get UUID using 'sudo blkid /dev/sdX2' on prep machine, then set:
-        # DATA_UUID="YOUR-UUID-HERE"
-        MAX_WAIT_SECONDS=15           # Max time (seconds) to wait for the device node/label
-        WAIT_INTERVAL=1               # Check frequency (seconds)
-        MOUNT_OPTS="defaults,noatime,nodiratime" # Mount options (noatime/nodiratime reduce writes on flash)
-        # --- End Configuration ---
+# --- Configuration ---
+MOUNT_POINT="/mnt/sbnb-data"  # Target directory for persistent data
+DATA_LABEL="SBNB_DATA"        # Filesystem label of the data partition (MUST match mkfs.ext4 -L)
+# Alternative: Use UUID for potentially more stable identification if labels change/conflict
+# Get UUID using 'sudo blkid /dev/sdX2' on prep machine, then set:
+# DATA_UUID="YOUR-UUID-HERE"
+MAX_WAIT_SECONDS=15           # Max time (seconds) to wait for the device node/label
+WAIT_INTERVAL=1               # Check frequency (seconds)
+MOUNT_OPTS="defaults,noatime,nodiratime" # Mount options (noatime/nodiratime reduce writes on flash)
+# --- End Configuration ---
 
-        DATA_DEVICE=""                # Will hold the found device path
+DATA_DEVICE=""                # Will hold the found device path
 
-        # --- Wait Loop for Device ---
-        # Attempts to find the device by label or UUID (if configured).
-        # Waits because device node creation by kernel/udev might be delayed.
-        elapsed_wait=0
-        log_msg "Waiting up to ${MAX_WAIT_SECONDS}s for device (Label: ${DATA_LABEL:-N/A})..."
-        while [ -z "$DATA_DEVICE" ] && [ $elapsed_wait -lt $MAX_WAIT_SECONDS ]; do
-          # Check for device using the label symlink first (usually faster if udev ran)
-          label_path="/dev/disk/by-label/${DATA_LABEL}"
-          if [ -e "$label_path" ]; then
-              # Readlink -f resolves the symlink to the actual device path (e.g., /dev/sdb2)
-              DATA_DEVICE=$(readlink -f "$label_path")
-              log_msg "Found device via label symlink: $label_path -> $DATA_DEVICE"
-              break # Exit loop
-          fi
+# --- Wait Loop for Device ---
+# Attempts to find the device by label or UUID (if configured).
+# Waits because device node creation by kernel/udev might be delayed.
+elapsed_wait=0
+log_msg "Waiting up to ${MAX_WAIT_SECONDS}s for device (Label: ${DATA_LABEL:-N/A})..."
+while [ -z "$DATA_DEVICE" ] && [ $elapsed_wait -lt $MAX_WAIT_SECONDS ]; do
+  # Check for device using the label symlink first (usually faster if udev ran)
+  label_path="/dev/disk/by-label/${DATA_LABEL}"
+  if [ -e "$label_path" ]; then
+      # Readlink -f resolves the symlink to the actual device path (e.g., /dev/sdb2)
+      DATA_DEVICE=$(readlink -f "$label_path")
+      log_msg "Found device via label symlink: $label_path -> $DATA_DEVICE"
+      break # Exit loop
+  fi
 
-          # Fallback: Use blkid command to scan for the label (can be slower)
-          blkid_device=$(blkid -L "${DATA_LABEL}" 2>/dev/null)
-          if [ -n "$blkid_device" ]; then
-              DATA_DEVICE="$blkid_device"
-              log_msg "Found device via blkid label lookup: $DATA_DEVICE"
-              break # Exit loop
-          fi
+  # Fallback: Use blkid command to scan for the label (can be slower)
+  blkid_device=$(blkid -L "${DATA_LABEL}" 2>/dev/null)
+  if [ -n "$blkid_device" ]; then
+      DATA_DEVICE="$blkid_device"
+      log_msg "Found device via blkid label lookup: $DATA_DEVICE"
+      break # Exit loop
+  fi
 
-          # (Add similar checks here using DATA_UUID if using UUID instead of Label)
+  # (Add similar checks here using DATA_UUID if using UUID instead of Label)
 
-          # Device not found yet, wait before next check
-          sleep $WAIT_INTERVAL
-          elapsed_wait=$((elapsed_wait + WAIT_INTERVAL))
-        done
+  # Device not found yet, wait before next check
+  sleep $WAIT_INTERVAL
+  elapsed_wait=$((elapsed_wait + WAIT_INTERVAL))
+done
 
-        # --- Mount Logic ---
-        # Proceed only if a device path was successfully determined
-        if [ -n "$DATA_DEVICE" ] && [ -e "$DATA_DEVICE" ]; then
-          log_msg "Data partition device resolved to ${DATA_DEVICE} after ${elapsed_wait}s."
+# --- Mount Logic ---
+# Proceed only if a device path was successfully determined
+if [ -n "$DATA_DEVICE" ] && [ -e "$DATA_DEVICE" ]; then
+  log_msg "Data partition device resolved to ${DATA_DEVICE} after ${elapsed_wait}s."
 
-          # Check if the target directory is already a mount point
-          if ! mountpoint -q "$MOUNT_POINT"; then
-            log_msg "Attempting to mount $DATA_DEVICE at $MOUNT_POINT with options: $MOUNT_OPTS..."
-            # Ensure the target directory exists
-            mkdir -p "$MOUNT_POINT"
-            # Mount the device
-            if mount -o "$MOUNT_OPTS" "$DATA_DEVICE" "$MOUNT_POINT"; then
-              log_msg "Successfully mounted persistent partition at $MOUNT_POINT."
-            else
-              mount_exit_code=$?
-              log_msg "ERROR: Failed to mount $DATA_DEVICE at $MOUNT_POINT (exit code: $mount_exit_code). Check filesystem type/integrity (run fsck?). See dmesg for details." >&2
-            fi
-          else
-            # Mount point exists, verify if it's the correct device
-            log_msg "$MOUNT_POINT is already a mount point. Checking device..."
-            # Check /proc/mounts for the currently mounted device at MOUNT_POINT
-            if grep -qs "$DATA_DEVICE $MOUNT_POINT" /proc/mounts; then
-                  log_msg "Persistent partition already correctly mounted at $MOUNT_POINT."
-            else
-                  mounted_dev=$(grep -s "$MOUNT_POINT" /proc/mounts | awk '{print $1}')
-                  log_msg "ERROR: $MOUNT_POINT is already mounted, but by '$mounted_dev' NOT '$DATA_DEVICE'! Check system configuration." >&2
-            fi
-          fi
-        else
-          # Device wasn't found within the timeout
-          log_msg "ERROR: Data partition device (Label: ${DATA_LABEL:-N/A}) not found after waiting ${MAX_WAIT_SECONDS}s. Cannot mount persistent storage." >&2
-        fi
+  # Check if the target directory is already a mount point
+  if ! mountpoint -q "$MOUNT_POINT"; then
+    log_msg "Attempting to mount $DATA_DEVICE at $MOUNT_POINT with options: $MOUNT_OPTS..."
+    # Ensure the target directory exists
+    mkdir -p "$MOUNT_POINT"
+    # Mount the device
+    if mount -o "$MOUNT_OPTS" "$DATA_DEVICE" "$MOUNT_POINT"; then
+      log_msg "Successfully mounted persistent partition at $MOUNT_POINT."
+    else
+      mount_exit_code=$?
+      log_msg "ERROR: Failed to mount $DATA_DEVICE at $MOUNT_POINT (exit code: $mount_exit_code). Check filesystem type/integrity (run fsck?). See dmesg for details." >&2
+    fi
+  else
+    # Mount point exists, verify if it's the correct device
+    log_msg "$MOUNT_POINT is already a mount point. Checking device..."
+    # Check /proc/mounts for the currently mounted device at MOUNT_POINT
+    if grep -qs "$DATA_DEVICE $MOUNT_POINT" /proc/mounts; then
+          log_msg "Persistent partition already correctly mounted at $MOUNT_POINT."
+    else
+          mounted_dev=$(grep -s "$MOUNT_POINT" /proc/mounts | awk '{print $1}')
+          log_msg "ERROR: $MOUNT_POINT is already mounted, but by '$mounted_dev' NOT '$DATA_DEVICE'! Check system configuration." >&2
+    fi
+  fi
+else
+  # Device wasn't found within the timeout
+  log_msg "ERROR: Data partition device (Label: ${DATA_LABEL:-N/A}) not found after waiting ${MAX_WAIT_SECONDS}s. Cannot mount persistent storage." >&2
+fi
 
-        log_msg "--- Finished Custom USB Partition Mount Script ---"
-        # Exit 0 ensures the rest of the Sbnb boot sequence continues
-        exit 0
-        ```
+mkdir -p /etc/docker
+cp /mnt/sbnb-data/docker/docker-daemon.json.template /etc/docker/daemon.json
+
+log_msg "--- Finished Custom USB Partition Mount Script ---"
+# Exit 0 ensures the rest of the Sbnb boot sequence continues
+exit 0
+```
     * Place script content into `/mnt/sbnb-mount/sbnb-cmds.sh`.
     * Make executable: `sudo chmod +x /mnt/sbnb-mount/sbnb-cmds.sh`.
 
