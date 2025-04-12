@@ -67,8 +67,8 @@
         
           <span class="post-updated">
             ↣
-            <time datetime="2025-04-07T14:04:23+00:00">
-              07 Apr 2025
+            <time datetime="2025-04-12T20:33:58+00:00">
+              12 Apr 2025
             </time>
           </span>
         
@@ -90,11 +90,11 @@
         <div class="page-stats mt-3" role="status" aria-label="Page statistics">
       
       <span class="badge bg-primary">
-        22295 characters
+        30086 characters
       </span>
         <span class="separator mx-2" aria-hidden="true">•</span>
         <span class="badge bg-primary">
-        2910 words
+        3968 words
       </span>
       </div>
         <div class="action-buttons d-flex flex-wrap gap-2">
@@ -128,15 +128,13 @@
       <article class="post-wrapper">
         <div class="post-content-body">
           
-<ul><li><a href="#primary-drawbacks--warnings-reiterated--expanded">Primary Drawbacks &amp; Warnings (Reiterated &amp; Expanded):</a><ul><li><a href="#when-might-this-be-considered-limited-scenarios-with-full-risk-acceptance">When Might This Be Considered? (Limited Scenarios with Full Risk Acceptance)</a></li></ul></li><li><a href="#prerequisites">Prerequisites</a></li><li><a href="#step-by-step-instructions">Step-by-Step Instructions</a><ul><li><a href="#phase-1-prepare-the-linux-environment-opensuse-tumbleweed">Phase 1: Prepare the Linux Environment (openSUSE Tumbleweed)</a></li><li><a href="#phase-2-partition-the-usb-drive">Phase 2: Partition the USB Drive</a></li><li><a href="#phase-3-format-filesystems">Phase 3: Format Filesystems</a></li><li><a href="#phase-4-install-sbnb-boot-files-and-configuration">Phase 4: Install Sbnb Boot Files and Configuration</a></li><li><a href="#phase-45-backing-up-data-critical">Phase 4.5: Backing Up Data (CRITICAL!)</a></li><li><a href="#phase-5-boot-and-verify">Phase 5: Boot and Verify</a></li></ul></li><li><a href="#troubleshooting">Troubleshooting</a></li><li><a href="#final-recommendation">Final Recommendation</a></li></ul>
+<ul><li><a href="#primary-drawbacks--warnings-reiterated--expanded">Primary Drawbacks &amp; Warnings (Reiterated &amp; Expanded):</a><ul><li><a href="#when-might-this-be-considered-limited-scenarios-with-full-risk-acceptance">When Might This Be Considered? (Limited Scenarios with Full Risk Acceptance)</a></li></ul></li><li><a href="#prerequisites">Prerequisites</a></li><li><a href="#step-by-step-instructions">Step-by-Step Instructions</a><ul><li><a href="#phase-1-prepare-the-linux-environment-opensuse-tumbleweed">Phase 1: Prepare the Linux Environment (openSUSE Tumbleweed)</a></li><li><a href="#phase-2-partition-the-usb-drive">Phase 2: Partition the USB Drive</a></li><li><a href="#phase-4-install-sbnb-boot-files-and-configuration">Phase 4: Install Sbnb Boot Files and Configuration</a></li><li><a href="#phase-45-backing-up-data-critical">Phase 4.5: Backing Up Data (CRITICAL!)</a></li><li><a href="#phase-5-boot-and-verify">Phase 5: Boot and Verify</a></li></ul></li><li><a href="#troubleshooting">Troubleshooting</a></li><li><a href="#final-recommendation">Final Recommendation</a></li></ul>
           <p>This guide provides comprehensive, step-by-step instructions for configuring a single USB flash drive (or potentially an external USB hard drive) to perform two distinct functions simultaneously:</p>
 
 <ol>
   <li><strong>Booting the Sbnb Linux Operating System:</strong> The drive will be prepared with a standard UEFI-compatible structure, specifically an EFI System Partition (ESP) containing the Sbnb EFI bootloader (<code class="language-plaintext highlighter-rouge">sbnb.efi</code>) and necessary configuration files. This allows the server’s firmware to locate and start the Sbnb boot process. The <code class="language-plaintext highlighter-rouge">sbnb.efi</code> file itself is typically a Unified Kernel Image (UKI), bundling the Linux kernel, initramfs, and kernel command line into a single executable file.</li>
   <li><strong>Providing Simple Persistent Storage:</strong> Utilizing a separate partition on the same physical USB drive, formatted with a standard Linux filesystem (<code class="language-plaintext highlighter-rouge">ext4</code> is used in this guide). This partition is intended to be automatically mounted at the <code class="language-plaintext highlighter-rouge">/mnt/sbnb-data</code> directory path within the running Sbnb Linux system via a custom boot script (<code class="language-plaintext highlighter-rouge">sbnb-cmds.sh</code>). This provides a space where data (like container volumes, application data, logs, user files) can persist across reboots of the otherwise ephemeral, RAM-based Sbnb OS.</li>
 </ol>
-
-<p><strong>Important Note on Sbnb Version:</strong> This guide is based on analysis of the Sbnb GitHub repository content provided previously. If you are using a significantly different version of Sbnb Linux, the boot process, script names, expected labels, or available tools might differ. Always consult the documentation specific to your Sbnb version if available, and be prepared to adapt these steps.</p>
 
 <p><strong>Why <code class="language-plaintext highlighter-rouge">ext4</code> instead of LVM:</strong> Initial analysis suggested LVM might be suitable, but further review of the default Sbnb Linux build configuration indicates the necessary <code class="language-plaintext highlighter-rouge">lvm2</code> user-space tools are likely missing from the base runtime environment. Without these tools, managing LVM volumes during boot via standard scripts is infeasible unless you create a custom Sbnb build that includes the <code class="language-plaintext highlighter-rouge">lvm2</code> package. This revised guide therefore uses a standard <code class="language-plaintext highlighter-rouge">ext4</code> filesystem partition, relying only on basic tools expected to be present in Sbnb.</p>
 
@@ -270,85 +268,305 @@
       
 
 <p><strong>(Warning: The following <code class="language-plaintext highlighter-rouge">parted</code> commands are DESTRUCTIVE to <code class="language-plaintext highlighter-rouge">/dev/sdX</code>. Double-check the device name!)</strong></p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><section><code><span class="c">#!/bin/bash</span>
 
-<ol>
-  <li><strong>Unmount Existing Partitions:</strong>
-    <div class="language-bash highlighter-rouge"><div class="highlight"><section><code><span class="nb">echo</span> <span class="s2">"--- Unmounting any partitions on /dev/sdX ---"</span>
-findmnt <span class="nt">-n</span> <span class="nt">-o</span> TARGET <span class="nt">--source</span> /dev/sdX<span class="k">*</span> | xargs <span class="nt">--no-run-if-empty</span> <span class="nb">sudo </span>umount <span class="nt">-v</span> <span class="nt">-l</span>
-lsblk /dev/sdX
-</code></section></div>    </div>
-  </li>
-  <li><strong>Wipe Existing Signatures (Recommended):</strong>
-    <div class="language-bash highlighter-rouge"><div class="highlight"><section><code><span class="nb">echo</span> <span class="s2">"--- Wiping signatures from /dev/sdX ---"</span>
-<span class="nb">sudo </span>wipefs <span class="nt">--all</span> <span class="nt">--force</span> /dev/sdX
-</code></section></div>    </div>
-  </li>
-  <li><strong>Create New GPT Partition Table:</strong> Needed for UEFI and modern features.
-    <div class="language-bash highlighter-rouge"><div class="highlight"><section><code><span class="nb">echo</span> <span class="s2">"--- Creating new GPT label on /dev/sdX ---"</span>
-<span class="nb">sudo </span>parted /dev/sdX <span class="nt">--script</span> <span class="nt">--</span> mklabel gpt
-</code></section></div>    </div>
-  </li>
-  <li><strong>Create EFI System Partition (ESP):</strong> FAT32, ~1GB. The UEFI firmware identifies this via the <code class="language-plaintext highlighter-rouge">boot</code> and <code class="language-plaintext highlighter-rouge">esp</code> flags to find bootloaders.
-    <div class="language-bash highlighter-rouge"><div class="highlight"><section><code><span class="nb">echo</span> <span class="s2">"--- Creating ESP partition (1) on /dev/sdX ---"</span>
-<span class="nb">sudo </span>parted /dev/sdX <span class="nt">--script</span> <span class="nt">--</span> mkpart <span class="s2">"sbnb-esp"</span> fat32 1MiB 1025MiB
-<span class="nb">sudo </span>parted /dev/sdX <span class="nt">--script</span> <span class="nt">--</span> <span class="nb">set </span>1 boot on
-<span class="nb">sudo </span>parted /dev/sdX <span class="nt">--script</span> <span class="nt">--</span> <span class="nb">set </span>1 esp on
-</code></section></div>    </div>
-  </li>
-  <li><strong>Create Linux Data Partition:</strong> Uses remaining space. Standard Linux filesystem type (ID <code class="language-plaintext highlighter-rouge">8300</code>).
-    <div class="language-bash highlighter-rouge"><div class="highlight"><section><code><span class="nb">echo</span> <span class="s2">"--- Creating Linux data partition (2) on /dev/sdX ---"</span>
-<span class="nb">sudo </span>parted /dev/sdX <span class="nt">--script</span> <span class="nt">--</span> mkpart <span class="s2">"sbnb-data"</span> ext4 1025MiB 100%
-</code></section></div>    </div>
-  </li>
-  <li><strong>Verify Partitioning:</strong> Check layout, types, flags, sizes.
-    <div class="language-bash highlighter-rouge"><div class="highlight"><section><code><span class="nb">echo</span> <span class="s2">"--- Verifying partitions on /dev/sdX ---"</span>
-<span class="nb">sudo </span>parted /dev/sdX <span class="nt">--script</span> <span class="nt">--</span> print
-<span class="nb">echo</span> <span class="s2">"--- Block device view: ---"</span>
-lsblk <span class="nt">-o</span> NAME,SIZE,TYPE,FSTYPE,PARTLABEL,MOUNTPOINT,PARTFLAGS /dev/sdX
-<span class="c"># Expect /dev/sdX1: ~1G, Type EFI System, PARTFLAGS includes 'boot', 'esp'</span>
-<span class="c"># Expect /dev/sdX2: remaining size, Type Linux</span>
-<span class="c"># Graphical tools should show a small FAT32 partition flagged boot/esp, and a larger second partition.</span>
-</code></section></div>    </div>
-  </li>
-</ol>
-  <h3 id="phase-3-format-filesystems">
-    
-    
-     <a href="#phase-3-format-filesystems">#</a><a href="#" aria-label="Back to top">Phase 3: Format Filesystems</a>
-        
-    
-  </h3>
-      
+<span class="c"># --- Configuration ---</span>
+<span class="c"># Exit immediately if a command exits with a non-zero status.</span>
+<span class="c"># Treat unset variables as an error when substituting.</span>
+<span class="c"># Pipelines return the exit status of the last command to exit non-zero.</span>
+<span class="nb">set</span> <span class="nt">-euo</span> pipefail
 
-<ol>
-  <li><strong>Format EFI Partition (with <code class="language-plaintext highlighter-rouge">sbnb</code> label):</strong> <strong>CRITICAL LABEL!</strong> <code class="language-plaintext highlighter-rouge">mkfs.vfat</code> creates FAT32. <code class="language-plaintext highlighter-rouge">-n sbnb</code> sets the label checked by <code class="language-plaintext highlighter-rouge">boot-sbnb.sh</code>.
-    <div class="language-bash highlighter-rouge"><div class="highlight"><section><code><span class="nb">echo</span> <span class="s2">"--- Formatting ESP partition (/dev/sdX1) as FAT32 with label 'sbnb' ---"</span>
-<span class="nb">sudo </span>mkfs.vfat <span class="nt">-F</span> 32 <span class="nt">-n</span> sbnb /dev/sdX1
-<span class="c"># (Optional but recommended) Check filesystem integrity before use.</span>
-<span class="nb">echo</span> <span class="s2">"--- Checking ESP filesystem (fsck.vfat) ---"</span>
-<span class="nb">sudo </span>fsck.vfat <span class="nt">-a</span> /dev/sdX1
-<span class="c"># Check fsck exit code (0 = OK, non-zero = errors found/uncorrected)</span>
-<span class="k">if</span> <span class="o">[</span> <span class="nv">$?</span> <span class="nt">-ne</span> 0 <span class="o">]</span><span class="p">;</span> <span class="k">then </span><span class="nb">echo</span> <span class="s2">"WARNING: fsck found errors on ESP partition!"</span><span class="p">;</span> <span class="k">fi</span>
-<span class="c"># Verify label using blkid (reads filesystem metadata)</span>
-<span class="nb">echo</span> <span class="s2">"--- Verifying ESP label ---"</span>
-<span class="nb">sudo </span>blkid /dev/sdX1 <span class="c"># Output MUST include LABEL="sbnb"</span>
-</code></section></div>    </div>
-  </li>
-  <li><strong>Format Data Partition:</strong> <code class="language-plaintext highlighter-rouge">mkfs.ext4</code> creates ext4. <code class="language-plaintext highlighter-rouge">-L DATA_LABEL</code> aids identification. <code class="language-plaintext highlighter-rouge">-m 0</code> maximizes space. Ext4 journaling helps data integrity on unclean shutdown. (Note: F2FS is another option sometimes recommended for flash, but requires Sbnb kernel/tools support and different <code class="language-plaintext highlighter-rouge">mkfs.f2fs</code> command).
-    <div class="language-bash highlighter-rouge"><div class="highlight"><section><code><span class="nv">DATA_PARTITION</span><span class="o">=</span><span class="s2">"/dev/sdX2"</span>
+<span class="c"># --- Variables ---</span>
+<span class="c"># EFI System Partition (ESP) Label (CRITICAL - must match bootloader config)</span>
+<span class="nv">ESP_LABEL</span><span class="o">=</span><span class="s2">"sbnb"</span>
+<span class="c"># Data Partition Label (Recommended for identification)</span>
 <span class="nv">DATA_LABEL</span><span class="o">=</span><span class="s2">"SBNB_DATA"</span>
+<span class="c"># ESP Size (Adjust if needed, ~1GB is usually sufficient)</span>
+<span class="nv">ESP_SIZE</span><span class="o">=</span><span class="s2">"1025MiB"</span>
+<span class="c"># List of required commands for the script to function</span>
+<span class="nv">REQUIRED_CMDS</span><span class="o">=(</span>
+    <span class="s2">"parted"</span> <span class="s2">"mkfs.vfat"</span> <span class="s2">"mkfs.ext4"</span> <span class="s2">"wipefs"</span> <span class="s2">"findmnt"</span> <span class="s2">"lsblk"</span>
+    <span class="s2">"blkid"</span> <span class="s2">"fsck.vfat"</span> <span class="s2">"e2fsck"</span> <span class="s2">"sync"</span> <span class="s2">"id"</span> <span class="s2">"grep"</span> <span class="s2">"read"</span>
+    <span class="s2">"sleep"</span> <span class="s2">"xargs"</span> <span class="s2">"umount"</span> <span class="s2">"partprobe"</span> <span class="s2">"realpath"</span>
+<span class="o">)</span>
+
+<span class="c"># --- Functions ---</span>
+<span class="c"># Function to check for required commands</span>
+check_dependencies<span class="o">()</span> <span class="o">{</span>
+    <span class="nb">echo</span> <span class="s2">"--- Checking for required commands ---"</span>
+    <span class="nb">local </span><span class="nv">missing_cmds</span><span class="o">=()</span>
+    <span class="k">for </span>cmd <span class="k">in</span> <span class="s2">"</span><span class="k">${</span><span class="nv">REQUIRED_CMDS</span><span class="p">[@]</span><span class="k">}</span><span class="s2">"</span><span class="p">;</span> <span class="k">do
+        if</span> <span class="o">!</span> <span class="nb">command</span> <span class="nt">-v</span> <span class="s2">"</span><span class="nv">$cmd</span><span class="s2">"</span> &amp;&gt; /dev/null<span class="p">;</span> <span class="k">then
+            </span>missing_cmds+<span class="o">=(</span><span class="s2">"</span><span class="nv">$cmd</span><span class="s2">"</span><span class="o">)</span>
+        <span class="k">fi
+    done
+
+    if</span> <span class="o">[</span> <span class="k">${#</span><span class="nv">missing_cmds</span><span class="p">[@]</span><span class="k">}</span> <span class="nt">-ne</span> 0 <span class="o">]</span><span class="p">;</span> <span class="k">then
+        </span><span class="nb">echo</span> <span class="s2">"ERROR: The following required commands are not found:"</span> <span class="o">&gt;</span>&amp;2
+        <span class="nb">printf</span> <span class="s2">" - %s</span><span class="se">\n</span><span class="s2">"</span> <span class="s2">"</span><span class="k">${</span><span class="nv">missing_cmds</span><span class="p">[@]</span><span class="k">}</span><span class="s2">"</span> <span class="o">&gt;</span>&amp;2
+        <span class="nb">echo</span> <span class="s2">"Please install them and try again."</span> <span class="o">&gt;</span>&amp;2
+        <span class="nb">exit </span>1
+    <span class="k">fi
+    </span><span class="nb">echo</span> <span class="s2">"All required commands found."</span>
+<span class="o">}</span>
+
+<span class="c"># Function to get the base block device for a given path (handles partitions, links, etc.)</span>
+get_base_device<span class="o">()</span> <span class="o">{</span>
+    <span class="nb">local </span><span class="nv">path</span><span class="o">=</span><span class="s2">"</span><span class="nv">$1</span><span class="s2">"</span>
+    <span class="nb">local </span>resolved_path
+    <span class="nv">resolved_path</span><span class="o">=</span><span class="si">$(</span><span class="nb">realpath</span> <span class="s2">"</span><span class="nv">$path</span><span class="s2">"</span><span class="si">)</span> <span class="o">||</span> <span class="o">{</span> <span class="nb">echo</span> <span class="s2">"ERROR: Cannot resolve path '</span><span class="nv">$path</span><span class="s2">'"</span> <span class="o">&gt;</span>&amp;2<span class="p">;</span> <span class="k">return </span>1<span class="p">;</span> <span class="o">}</span>
+    <span class="c"># lsblk -no pkname gets the parent kernel name (base device)</span>
+    lsblk <span class="nt">-no</span> pkname <span class="s2">"</span><span class="nv">$resolved_path</span><span class="s2">"</span> <span class="o">||</span> <span class="o">{</span> <span class="nb">echo</span> <span class="s2">"ERROR: Cannot find base device for '</span><span class="nv">$resolved_path</span><span class="s2">' using lsblk."</span> <span class="o">&gt;</span>&amp;2<span class="p">;</span> <span class="k">return </span>1<span class="p">;</span> <span class="o">}</span>
+<span class="o">}</span>
+
+<span class="c"># --- Script Start ---</span>
+<span class="nb">echo</span> <span class="s2">"-----------------------------------------------------"</span>
+<span class="nb">echo</span> <span class="s2">"--- USB Drive Partitioning and Formatting Script ---"</span>
+<span class="nb">echo</span> <span class="s2">"---          (Version 2 - Enhanced Safety)       ---"</span>
+<span class="nb">echo</span> <span class="s2">"-----------------------------------------------------"</span>
+<span class="nb">echo</span> <span class="s2">""</span>
+<span class="nb">echo</span> <span class="s2">"WARNING: This script is DESTRUCTIVE and will ERASE"</span>
+<span class="nb">echo</span> <span class="s2">"         ALL DATA on the target device."</span>
+<span class="nb">echo</span> <span class="s2">""</span>
+
+<span class="c"># --- Check for Root Privileges ---</span>
+<span class="k">if</span> <span class="o">[</span> <span class="s2">"</span><span class="si">$(</span><span class="nb">id</span> <span class="nt">-u</span><span class="si">)</span><span class="s2">"</span> <span class="nt">-ne</span> 0 <span class="o">]</span><span class="p">;</span> <span class="k">then
+  </span><span class="nb">echo</span> <span class="s2">"ERROR: This script must be run as root (e.g., using sudo)."</span> <span class="o">&gt;</span>&amp;2
+  <span class="nb">exit </span>1
+<span class="k">fi</span>
+
+<span class="c"># --- Check Dependencies ---</span>
+check_dependencies
+
+<span class="c"># --- Check for Device Argument ---</span>
+<span class="k">if</span> <span class="o">[</span> <span class="nt">-z</span> <span class="s2">"</span><span class="k">${</span><span class="nv">1</span><span class="k">:-}</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then
+  </span><span class="nb">echo</span> <span class="s2">"Usage: </span><span class="nv">$0</span><span class="s2"> /dev/sdX"</span>
+  <span class="nb">echo</span> <span class="s2">"ERROR: Please provide the target block device (e.g., /dev/sda, /dev/sdb)."</span> <span class="o">&gt;</span>&amp;2
+  <span class="nb">echo</span> <span class="s2">""</span>
+  <span class="nb">echo</span> <span class="s2">"Available block devices (excluding ROM, loop, and RAM devices):"</span>
+  lsblk <span class="nt">-d</span> <span class="nt">-o</span> NAME,SIZE,TYPE,MODEL | <span class="nb">grep</span> <span class="nt">-vE</span> <span class="s1">'rom|loop|ram'</span>
+  <span class="nb">exit </span>1
+<span class="k">fi
+
+</span><span class="nv">DEVICE</span><span class="o">=</span><span class="s2">"</span><span class="nv">$1</span><span class="s2">"</span>
+
+<span class="c"># --- Validate Device ---</span>
+<span class="k">if</span> <span class="o">[</span> <span class="o">!</span> <span class="nt">-b</span> <span class="s2">"</span><span class="nv">$DEVICE</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then
+  </span><span class="nb">echo</span> <span class="s2">"ERROR: '</span><span class="nv">$DEVICE</span><span class="s2">' is not a valid block device."</span> <span class="o">&gt;</span>&amp;2
+  <span class="nb">exit </span>1
+<span class="k">fi</span>
+
+<span class="c"># --- CRITICAL SAFETY CHECK: Prevent targeting the root filesystem device ---</span>
+<span class="nb">echo</span> <span class="s2">"--- Performing safety checks ---"</span>
+<span class="nv">ROOT_DEV_PATH</span><span class="o">=</span><span class="si">$(</span>findmnt <span class="nt">-n</span> <span class="nt">-o</span> SOURCE /<span class="si">)</span>
+<span class="nv">ROOT_BASE_DEV_NAME</span><span class="o">=</span><span class="si">$(</span>get_base_device <span class="s2">"</span><span class="nv">$ROOT_DEV_PATH</span><span class="s2">"</span><span class="si">)</span> <span class="o">||</span> <span class="nb">exit </span>1 <span class="c"># Exit if function fails</span>
+<span class="nv">TARGET_BASE_DEV_NAME</span><span class="o">=</span><span class="si">$(</span>get_base_device <span class="s2">"</span><span class="nv">$DEVICE</span><span class="s2">"</span><span class="si">)</span> <span class="o">||</span> <span class="nb">exit </span>1
+
+<span class="c"># Construct full device paths for comparison</span>
+<span class="nv">ROOT_BASE_DEV</span><span class="o">=</span><span class="s2">"/dev/</span><span class="k">${</span><span class="nv">ROOT_BASE_DEV_NAME</span><span class="k">}</span><span class="s2">"</span>
+<span class="nv">TARGET_BASE_DEV</span><span class="o">=</span><span class="s2">"/dev/</span><span class="k">${</span><span class="nv">TARGET_BASE_DEV_NAME</span><span class="k">}</span><span class="s2">"</span> <span class="c"># Assumes the input $DEVICE is the base device</span>
+
+<span class="k">if</span> <span class="o">[</span> <span class="s2">"</span><span class="nv">$TARGET_BASE_DEV</span><span class="s2">"</span> <span class="o">==</span> <span class="s2">"</span><span class="nv">$ROOT_BASE_DEV</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then
+    </span><span class="nb">echo</span> <span class="s2">"!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"</span> <span class="o">&gt;</span>&amp;2
+    <span class="nb">echo</span> <span class="s2">"FATAL ERROR: Target device '</span><span class="nv">$DEVICE</span><span class="s2">' appears to be the same"</span> <span class="o">&gt;</span>&amp;2
+    <span class="nb">echo</span> <span class="s2">"             device ('</span><span class="nv">$ROOT_BASE_DEV</span><span class="s2">') as the running root"</span> <span class="o">&gt;</span>&amp;2
+    <span class="nb">echo</span> <span class="s2">"             filesystem ('</span><span class="nv">$ROOT_DEV_PATH</span><span class="s2">')."</span> <span class="o">&gt;</span>&amp;2
+    <span class="nb">echo</span> <span class="s2">"             Aborting to prevent data loss."</span> <span class="o">&gt;</span>&amp;2
+    <span class="nb">echo</span> <span class="s2">"!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"</span> <span class="o">&gt;</span>&amp;2
+    <span class="nb">exit </span>1
+<span class="k">fi
+</span><span class="nb">echo</span> <span class="s2">"Safety check passed: Target device '</span><span class="nv">$DEVICE</span><span class="s2">' is not the root filesystem device ('</span><span class="nv">$ROOT_BASE_DEV</span><span class="s2">')."</span>
+
+<span class="c"># Check if the device looks like an SD card reader often used for the OS drive</span>
+<span class="k">if</span> <span class="o">[[</span> <span class="s2">"</span><span class="nv">$DEVICE</span><span class="s2">"</span> <span class="o">==</span> /dev/mmcblk<span class="k">*</span> <span class="o">]]</span><span class="p">;</span> <span class="k">then
+    </span><span class="nb">echo</span> <span class="s2">"WARNING: '</span><span class="nv">$DEVICE</span><span class="s2">' looks like an SD card (e.g., /dev/mmcblk0)."</span>
+    <span class="nb">echo</span> <span class="s2">"         Double-check this is not your primary OS drive!"</span>
+<span class="k">fi</span>
+
+
+<span class="c"># --- Confirmation ---</span>
+<span class="nb">echo</span> <span class="s2">""</span>
+<span class="nb">echo</span> <span class="s2">"Target Device: </span><span class="nv">$DEVICE</span><span class="s2">"</span>
+<span class="nb">echo</span> <span class="s2">"Partitions to be created:"</span>
+<span class="nb">echo</span> <span class="s2">"  1: EFI System Partition (ESP), FAT32, Label: '</span><span class="nv">$ESP_LABEL</span><span class="s2">', Size: </span><span class="nv">$ESP_SIZE</span><span class="s2">, Flags: boot, esp"</span>
+<span class="nb">echo</span> <span class="s2">"  2: Linux Data Partition, ext4, Label: '</span><span class="nv">$DATA_LABEL</span><span class="s2">', Size: Remaining space"</span>
+<span class="nb">echo</span> <span class="s2">""</span>
+<span class="nb">read</span> <span class="nt">-p</span> <span class="s2">"ARE YOU ABSOLUTELY SURE you want to erase '</span><span class="nv">$DEVICE</span><span class="s2">' and proceed? (yes/NO): "</span> CONFIRMATION
+<span class="nv">CONFIRMATION</span><span class="o">=</span><span class="k">${</span><span class="nv">CONFIRMATION</span><span class="k">:-</span><span class="nv">NO</span><span class="k">}</span> <span class="c"># Default to NO if user just presses Enter</span>
+
+<span class="k">if</span> <span class="o">[[</span> <span class="s2">"</span><span class="nv">$CONFIRMATION</span><span class="s2">"</span> <span class="o">!=</span> <span class="s2">"yes"</span> <span class="o">]]</span><span class="p">;</span> <span class="k">then
+  </span><span class="nb">echo</span> <span class="s2">"Operation cancelled by user."</span>
+  <span class="nb">exit </span>0
+<span class="k">fi
+
+</span><span class="nb">echo</span> <span class="s2">""</span>
+<span class="nb">echo</span> <span class="s2">"--- Proceeding with operations on </span><span class="nv">$DEVICE</span><span class="s2"> ---"</span>
+
+<span class="c"># --- Phase 2: Partition the USB Drive ---</span>
+
+<span class="c"># 1. Unmount Existing Partitions</span>
+<span class="nb">echo</span> <span class="s2">""</span>
+<span class="nb">echo</span> <span class="s2">"--- Unmounting any existing partitions on </span><span class="k">${</span><span class="nv">DEVICE</span><span class="k">}</span><span class="s2">* ---"</span>
+<span class="c"># Use findmnt to get mount points and umount them safely</span>
+<span class="c"># Also try to unmount the base device itself in case it's loop-mounted etc.</span>
+findmnt <span class="nt">-n</span> <span class="nt">-o</span> TARGET <span class="nt">--source</span> <span class="s2">"</span><span class="k">${</span><span class="nv">DEVICE</span><span class="k">}</span><span class="s2">*"</span> | xargs <span class="nt">--no-run-if-empty</span> umount <span class="nt">-v</span> <span class="nt">-l</span> <span class="o">||</span> <span class="nb">echo</span> <span class="s2">"Info: No partitions were mounted or umount failed (might be okay)."</span>
+umount <span class="s2">"</span><span class="nv">$DEVICE</span><span class="s2">"</span> &amp;&gt;/dev/null <span class="o">||</span> <span class="nb">true</span> <span class="c"># Attempt to unmount base device, ignore errors</span>
+<span class="nb">sleep </span>1 <span class="c"># Give time for umount to settle</span>
+lsblk <span class="s2">"</span><span class="nv">$DEVICE</span><span class="s2">"</span>
+
+<span class="c"># 2. Wipe Existing Signatures (Recommended)</span>
+<span class="nb">echo</span> <span class="s2">""</span>
+<span class="nb">echo</span> <span class="s2">"--- Wiping filesystem/partition signatures from </span><span class="nv">$DEVICE</span><span class="s2"> ---"</span>
+wipefs <span class="nt">--all</span> <span class="nt">--force</span> <span class="s2">"</span><span class="nv">$DEVICE</span><span class="s2">"</span>
+<span class="nb">sync</span> <span class="c"># Flush kernel buffers to disk to ensure changes are physically written</span>
+
+<span class="c"># 3. Create New GPT Partition Table</span>
+<span class="nb">echo</span> <span class="s2">""</span>
+<span class="nb">echo</span> <span class="s2">"--- Creating new GPT partition table on </span><span class="nv">$DEVICE</span><span class="s2"> ---"</span>
+parted <span class="s2">"</span><span class="nv">$DEVICE</span><span class="s2">"</span> <span class="nt">--script</span> <span class="nt">--</span> mklabel gpt
+<span class="nb">sync</span> <span class="c"># Flush kernel buffers to disk</span>
+
+<span class="c"># 4. Create EFI System Partition (ESP)</span>
+<span class="nb">echo</span> <span class="s2">""</span>
+<span class="nb">echo</span> <span class="s2">"--- Creating ESP partition (1) on </span><span class="nv">$DEVICE</span><span class="s2"> ---"</span>
+parted <span class="s2">"</span><span class="nv">$DEVICE</span><span class="s2">"</span> <span class="nt">--script</span> <span class="nt">--</span> mkpart <span class="s2">"</span><span class="k">${</span><span class="nv">ESP_LABEL</span><span class="k">}</span><span class="s2">"</span> fat32 1MiB <span class="s2">"</span><span class="k">${</span><span class="nv">ESP_SIZE</span><span class="k">}</span><span class="s2">"</span>
+parted <span class="s2">"</span><span class="nv">$DEVICE</span><span class="s2">"</span> <span class="nt">--script</span> <span class="nt">--</span> <span class="nb">set </span>1 boot on
+parted <span class="s2">"</span><span class="nv">$DEVICE</span><span class="s2">"</span> <span class="nt">--script</span> <span class="nt">--</span> <span class="nb">set </span>1 esp on
+<span class="nb">sync</span> <span class="c"># Flush kernel buffers to disk</span>
+
+<span class="c"># 5. Create Linux Data Partition</span>
+<span class="nb">echo</span> <span class="s2">""</span>
+<span class="nb">echo</span> <span class="s2">"--- Creating Linux data partition (2) on </span><span class="nv">$DEVICE</span><span class="s2"> ---"</span>
+<span class="c"># Use the end of the ESP as the start for the data partition</span>
+parted <span class="s2">"</span><span class="nv">$DEVICE</span><span class="s2">"</span> <span class="nt">--script</span> <span class="nt">--</span> mkpart <span class="s2">"</span><span class="k">${</span><span class="nv">DATA_LABEL</span><span class="k">}</span><span class="s2">"</span> ext4 <span class="s2">"</span><span class="k">${</span><span class="nv">ESP_SIZE</span><span class="k">}</span><span class="s2">"</span> 100%
+<span class="nb">sync</span> <span class="c"># Flush kernel buffers to disk</span>
+<span class="nb">echo</span> <span class="s2">"Waiting briefly for kernel to recognize new partitions..."</span>
+<span class="nb">sleep </span>2
+
+<span class="c"># Define partition variables (assuming standard naming, e.g., /dev/sda1, /dev/sda2)</span>
+<span class="c"># Adding 'p' for NVMe devices (e.g., /dev/nvme0n1p1) - check if base device name contains 'nvme'</span>
+<span class="k">if</span> <span class="o">[[</span> <span class="s2">"</span><span class="nv">$DEVICE</span><span class="s2">"</span> <span class="o">==</span> <span class="k">*</span>nvme<span class="k">*</span> <span class="o">]]</span><span class="p">;</span> <span class="k">then
+    </span><span class="nv">PART_PREFIX</span><span class="o">=</span><span class="s2">"p"</span>
+<span class="k">else
+    </span><span class="nv">PART_PREFIX</span><span class="o">=</span><span class="s2">""</span>
+<span class="k">fi
+</span><span class="nv">ESP_PARTITION</span><span class="o">=</span><span class="s2">"</span><span class="k">${</span><span class="nv">DEVICE</span><span class="k">}${</span><span class="nv">PART_PREFIX</span><span class="k">}</span><span class="s2">1"</span>
+<span class="nv">DATA_PARTITION</span><span class="o">=</span><span class="s2">"</span><span class="k">${</span><span class="nv">DEVICE</span><span class="k">}${</span><span class="nv">PART_PREFIX</span><span class="k">}</span><span class="s2">2"</span>
+
+<span class="c"># Check if partition devices exist, retry with partprobe if needed</span>
+<span class="nb">echo</span> <span class="s2">"--- Checking for partition device nodes (</span><span class="k">${</span><span class="nv">ESP_PARTITION</span><span class="k">}</span><span class="s2">, </span><span class="k">${</span><span class="nv">DATA_PARTITION</span><span class="k">}</span><span class="s2">) ---"</span>
+<span class="nv">PARTITIONS_FOUND</span><span class="o">=</span><span class="nb">false
+</span><span class="k">for </span>i <span class="k">in</span> <span class="o">{</span>1..5<span class="o">}</span><span class="p">;</span> <span class="k">do
+    if</span> <span class="o">[</span> <span class="nt">-b</span> <span class="s2">"</span><span class="nv">$ESP_PARTITION</span><span class="s2">"</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="o">[</span> <span class="nt">-b</span> <span class="s2">"</span><span class="nv">$DATA_PARTITION</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then
+        </span><span class="nb">echo</span> <span class="s2">"Partition nodes found."</span>
+        <span class="nv">PARTITIONS_FOUND</span><span class="o">=</span><span class="nb">true
+        break
+    </span><span class="k">fi
+    </span><span class="nb">echo</span> <span class="s2">"Partition nodes not yet found. Retrying probe (Attempt </span><span class="nv">$i</span><span class="s2">/5)..."</span>
+    partprobe <span class="s2">"</span><span class="nv">$DEVICE</span><span class="s2">"</span> <span class="o">||</span> <span class="nb">echo</span> <span class="s2">"Warning: partprobe command failed, continuing check..."</span>
+    <span class="nb">sleep </span>1
+<span class="k">done
+
+if</span> <span class="o">[</span> <span class="s2">"</span><span class="nv">$PARTITIONS_FOUND</span><span class="s2">"</span> <span class="o">=</span> <span class="nb">false</span> <span class="o">]</span><span class="p">;</span> <span class="k">then
+    </span><span class="nb">echo</span> <span class="s2">"ERROR: Partition devices (</span><span class="nv">$ESP_PARTITION</span><span class="s2">, </span><span class="nv">$DATA_PARTITION</span><span class="s2">) not found after partitioning and retries."</span> <span class="o">&gt;</span>&amp;2
+    <span class="nb">echo</span> <span class="s2">"       Please check manually ('lsblk </span><span class="nv">$DEVICE</span><span class="s2">', 'parted </span><span class="nv">$DEVICE</span><span class="s2"> print')."</span> <span class="o">&gt;</span>&amp;2
+    lsblk <span class="s2">"</span><span class="nv">$DEVICE</span><span class="s2">"</span>
+    <span class="nb">exit </span>1
+<span class="k">fi</span>
+
+<span class="c"># 6. Verify Partitioning</span>
+<span class="nb">echo</span> <span class="s2">""</span>
+<span class="nb">echo</span> <span class="s2">"--- Verifying partitions on </span><span class="nv">$DEVICE</span><span class="s2"> ---"</span>
+parted <span class="s2">"</span><span class="nv">$DEVICE</span><span class="s2">"</span> <span class="nt">--script</span> <span class="nt">--</span> print
+<span class="nb">echo</span> <span class="s2">""</span>
+<span class="nb">echo</span> <span class="s2">"--- Block device view: ---"</span>
+lsblk <span class="nt">-o</span> NAME,SIZE,TYPE,FSTYPE,PARTLABEL,MOUNTPOINT,PARTFLAGS <span class="s2">"</span><span class="nv">$DEVICE</span><span class="s2">"</span>
+<span class="nb">echo</span> <span class="s2">"----------------------------"</span>
+<span class="nb">echo</span> <span class="s2">"Expected: </span><span class="k">${</span><span class="nv">ESP_PARTITION</span><span class="k">}</span><span class="s2"> (~</span><span class="k">${</span><span class="nv">ESP_SIZE</span><span class="k">}</span><span class="s2">), Type EFI System, Flags: boot, esp"</span>
+<span class="nb">echo</span> <span class="s2">"Expected: </span><span class="k">${</span><span class="nv">DATA_PARTITION</span><span class="k">}</span><span class="s2"> (Remaining size), Type Linux filesystem"</span>
+<span class="nb">echo</span> <span class="s2">"----------------------------"</span>
+<span class="nb">sleep </span>2 <span class="c"># Pause for user to review</span>
+
+
+<span class="c"># --- Phase 3: Format Filesystems ---</span>
+
+<span class="c"># 1. Format EFI Partition</span>
+<span class="nb">echo</span> <span class="s2">""</span>
+<span class="nb">echo</span> <span class="s2">"--- Formatting ESP partition (</span><span class="k">${</span><span class="nv">ESP_PARTITION</span><span class="k">}</span><span class="s2">) as FAT32 with label '</span><span class="k">${</span><span class="nv">ESP_LABEL</span><span class="k">}</span><span class="s2">' ---"</span>
+mkfs.vfat <span class="nt">-F</span> 32 <span class="nt">-n</span> <span class="s2">"</span><span class="k">${</span><span class="nv">ESP_LABEL</span><span class="k">}</span><span class="s2">"</span> <span class="s2">"</span><span class="k">${</span><span class="nv">ESP_PARTITION</span><span class="k">}</span><span class="s2">"</span>
+<span class="nb">sync</span> <span class="c"># Flush kernel buffers to disk</span>
+
+<span class="c"># Check filesystem integrity</span>
+<span class="nb">echo</span> <span class="s2">"--- Checking ESP filesystem (fsck.vfat) ---"</span>
+<span class="nv">FSCK_VFAT_EXIT_CODE</span><span class="o">=</span>0
+fsck.vfat <span class="nt">-a</span> <span class="s2">"</span><span class="k">${</span><span class="nv">ESP_PARTITION</span><span class="k">}</span><span class="s2">"</span> <span class="o">||</span> <span class="nv">FSCK_VFAT_EXIT_CODE</span><span class="o">=</span><span class="nv">$?</span> <span class="c"># Run fsck, capture exit code on failure</span>
+
+<span class="k">if</span> <span class="o">[</span> <span class="nv">$FSCK_VFAT_EXIT_CODE</span> <span class="nt">-eq</span> 0 <span class="o">]</span><span class="p">;</span> <span class="k">then
+  </span><span class="nb">echo</span> <span class="s2">"ESP filesystem check passed (or no check performed)."</span>
+<span class="k">elif</span> <span class="o">[</span> <span class="nv">$FSCK_VFAT_EXIT_CODE</span> <span class="nt">-eq</span> 1 <span class="o">]</span><span class="p">;</span> <span class="k">then</span>
+  <span class="c"># Exit code 1 usually means errors were found AND corrected.</span>
+  <span class="nb">echo</span> <span class="s2">"WARNING: fsck.vfat found and corrected errors on ESP partition (</span><span class="k">${</span><span class="nv">ESP_PARTITION</span><span class="k">}</span><span class="s2">). Check output above."</span>
+<span class="k">else</span>
+  <span class="c"># Exit codes &gt; 1 typically indicate uncorrected errors.</span>
+  <span class="nb">echo</span> <span class="s2">"ERROR: fsck.vfat reported uncorrectable errors (Exit Code: </span><span class="nv">$FSCK_VFAT_EXIT_CODE</span><span class="s2">) on ESP partition (</span><span class="k">${</span><span class="nv">ESP_PARTITION</span><span class="k">}</span><span class="s2">)."</span> <span class="o">&gt;</span>&amp;2
+  <span class="nb">echo</span> <span class="s2">"       Cannot proceed safely. Please investigate manually."</span> <span class="o">&gt;</span>&amp;2
+  <span class="nb">exit </span>1
+<span class="k">fi</span>
+
+<span class="c"># Verify label using blkid</span>
+<span class="nb">echo</span> <span class="s2">"--- Verifying ESP label ---"</span>
+<span class="k">if </span>blkid <span class="nt">-s</span> LABEL <span class="nt">-o</span> value <span class="s2">"</span><span class="k">${</span><span class="nv">ESP_PARTITION</span><span class="k">}</span><span class="s2">"</span> | <span class="nb">grep</span> <span class="nt">-q</span> <span class="s2">"^</span><span class="k">${</span><span class="nv">ESP_LABEL</span><span class="k">}</span><span class="s2">$"</span><span class="p">;</span> <span class="k">then
+    </span><span class="nb">echo</span> <span class="s2">"ESP Label '</span><span class="k">${</span><span class="nv">ESP_LABEL</span><span class="k">}</span><span class="s2">' verified successfully on </span><span class="k">${</span><span class="nv">ESP_PARTITION</span><span class="k">}</span><span class="s2">."</span>
+<span class="k">else
+    </span><span class="nb">echo</span> <span class="s2">"ERROR: Failed to verify ESP Label '</span><span class="k">${</span><span class="nv">ESP_LABEL</span><span class="k">}</span><span class="s2">' on </span><span class="k">${</span><span class="nv">ESP_PARTITION</span><span class="k">}</span><span class="s2">."</span> <span class="o">&gt;</span>&amp;2
+    blkid <span class="s2">"</span><span class="k">${</span><span class="nv">ESP_PARTITION</span><span class="k">}</span><span class="s2">"</span> <span class="c"># Show full blkid output for debugging</span>
+    <span class="nb">exit </span>1
+<span class="k">fi</span>
+
+<span class="c"># 2. Format Data Partition</span>
+<span class="nb">echo</span> <span class="s2">""</span>
 <span class="nb">echo</span> <span class="s2">"--- Formatting Data partition (</span><span class="k">${</span><span class="nv">DATA_PARTITION</span><span class="k">}</span><span class="s2">) as ext4 with label '</span><span class="k">${</span><span class="nv">DATA_LABEL</span><span class="k">}</span><span class="s2">' ---"</span>
-<span class="nb">sudo </span>mkfs.ext4 <span class="nt">-m</span> 0 <span class="nt">-L</span> <span class="k">${</span><span class="nv">DATA_LABEL</span><span class="k">}</span> <span class="k">${</span><span class="nv">DATA_PARTITION</span><span class="k">}</span>
-<span class="c"># (Optional but recommended) Check the new ext4 filesystem integrity.</span>
+mkfs.ext4 <span class="nt">-m</span> 0 <span class="nt">-L</span> <span class="s2">"</span><span class="k">${</span><span class="nv">DATA_LABEL</span><span class="k">}</span><span class="s2">"</span> <span class="s2">"</span><span class="k">${</span><span class="nv">DATA_PARTITION</span><span class="k">}</span><span class="s2">"</span>
+<span class="nb">sync</span> <span class="c"># Flush kernel buffers to disk</span>
+
+<span class="c"># Check the new ext4 filesystem integrity</span>
 <span class="nb">echo</span> <span class="s2">"--- Checking Data partition filesystem (e2fsck) ---"</span>
-<span class="nb">sudo </span>e2fsck <span class="nt">-f</span> <span class="nt">-y</span> <span class="k">${</span><span class="nv">DATA_PARTITION</span><span class="k">}</span> <span class="c"># -f forces check, -y assumes yes</span>
-<span class="k">if</span> <span class="o">[</span> <span class="nv">$?</span> <span class="nt">-ne</span> 0 <span class="o">]</span><span class="p">;</span> <span class="k">then </span><span class="nb">echo</span> <span class="s2">"WARNING: e2fsck found errors on Data partition!"</span><span class="p">;</span> <span class="k">fi</span>
+<span class="c"># -f forces check even if clean, -y assumes yes to all prompts (use with caution)</span>
+<span class="nv">E2FSCK_EXIT_CODE</span><span class="o">=</span>0
+e2fsck <span class="nt">-f</span> <span class="nt">-y</span> <span class="s2">"</span><span class="k">${</span><span class="nv">DATA_PARTITION</span><span class="k">}</span><span class="s2">"</span> <span class="o">||</span> <span class="nv">E2FSCK_EXIT_CODE</span><span class="o">=</span><span class="nv">$?</span> <span class="c"># Capture exit code on failure</span>
+
+<span class="k">if</span> <span class="o">[</span> <span class="nv">$E2FSCK_EXIT_CODE</span> <span class="nt">-eq</span> 0 <span class="o">]</span><span class="p">;</span> <span class="k">then
+    </span><span class="nb">echo</span> <span class="s2">"Data partition filesystem check passed."</span>
+<span class="k">elif</span> <span class="o">[</span> <span class="nv">$E2FSCK_EXIT_CODE</span> <span class="nt">-eq</span> 1 <span class="o">]</span><span class="p">;</span> <span class="k">then</span>
+    <span class="c"># Exit code 1 means errors were corrected.</span>
+    <span class="nb">echo</span> <span class="s2">"WARNING: e2fsck found and corrected errors on Data partition (</span><span class="k">${</span><span class="nv">DATA_PARTITION</span><span class="k">}</span><span class="s2">). Check output above."</span>
+<span class="k">else</span>
+    <span class="c"># Exit codes &gt; 1 indicate uncorrected errors.</span>
+    <span class="nb">echo</span> <span class="s2">"ERROR: e2fsck reported uncorrectable errors (Exit Code: </span><span class="nv">$E2FSCK_EXIT_CODE</span><span class="s2">) on Data partition (</span><span class="k">${</span><span class="nv">DATA_PARTITION</span><span class="k">}</span><span class="s2">)."</span> <span class="o">&gt;</span>&amp;2
+    <span class="nb">echo</span> <span class="s2">"       Cannot proceed safely. Please investigate manually."</span> <span class="o">&gt;</span>&amp;2
+    <span class="nb">exit </span>1
+<span class="k">fi</span>
+
 <span class="c"># Verify the label using blkid</span>
 <span class="nb">echo</span> <span class="s2">"--- Verifying Data partition label ---"</span>
-<span class="nb">sudo </span>blkid <span class="k">${</span><span class="nv">DATA_PARTITION</span><span class="k">}</span> <span class="c"># Output should include LABEL="SBNB_DATA" and TYPE="ext4"</span>
-</code></section></div>    </div>
-  </li>
-</ol>
+<span class="k">if </span>blkid <span class="nt">-s</span> LABEL <span class="nt">-o</span> value <span class="s2">"</span><span class="k">${</span><span class="nv">DATA_PARTITION</span><span class="k">}</span><span class="s2">"</span> | <span class="nb">grep</span> <span class="nt">-q</span> <span class="s2">"^</span><span class="k">${</span><span class="nv">DATA_LABEL</span><span class="k">}</span><span class="s2">$"</span><span class="p">;</span> <span class="k">then
+    </span><span class="nb">echo</span> <span class="s2">"Data Label '</span><span class="k">${</span><span class="nv">DATA_LABEL</span><span class="k">}</span><span class="s2">' verified successfully on </span><span class="k">${</span><span class="nv">DATA_PARTITION</span><span class="k">}</span><span class="s2">."</span>
+<span class="k">else
+    </span><span class="nb">echo</span> <span class="s2">"ERROR: Failed to verify Data Label '</span><span class="k">${</span><span class="nv">DATA_LABEL</span><span class="k">}</span><span class="s2">' on </span><span class="k">${</span><span class="nv">DATA_PARTITION</span><span class="k">}</span><span class="s2">."</span> <span class="o">&gt;</span>&amp;2
+    blkid <span class="s2">"</span><span class="k">${</span><span class="nv">DATA_PARTITION</span><span class="k">}</span><span class="s2">"</span> <span class="c"># Show full blkid output for debugging</span>
+    <span class="nb">exit </span>1
+<span class="k">fi
+
+</span><span class="nb">echo</span> <span class="s2">""</span>
+<span class="nb">echo</span> <span class="s2">"-----------------------------------------------------"</span>
+<span class="nb">echo</span> <span class="s2">"--- Script finished successfully! ---"</span>
+<span class="nb">echo</span> <span class="s2">"Device: </span><span class="nv">$DEVICE</span><span class="s2">"</span>
+<span class="nb">echo</span> <span class="s2">"Partitions created and formatted:"</span>
+lsblk <span class="nt">-o</span> NAME,SIZE,TYPE,FSTYPE,LABEL,PARTLABEL,MOUNTPOINT <span class="s2">"</span><span class="nv">$DEVICE</span><span class="s2">"</span>
+<span class="nb">echo</span> <span class="s2">"-----------------------------------------------------"</span>
+
+<span class="nb">exit </span>0
+</code></section></div></div>
   <h3 id="phase-4-install-sbnb-boot-files-and-configuration">
     
     
@@ -377,7 +595,7 @@ lsblk <span class="nt">-o</span> NAME,SIZE,TYPE,FSTYPE,PARTLABEL,MOUNTPOINT,PART
   </li>
   <li><strong>(Recommended) Create Sbnb Configuration File:</strong> Place <code class="language-plaintext highlighter-rouge">sbnb-tskey.txt</code> in ESP root (<code class="language-plaintext highlighter-rouge">/mnt/sbnb-mount/</code>). The <code class="language-plaintext highlighter-rouge">boot-sbnb.sh</code> script reads this to configure Tailscale.
     <div class="language-bash highlighter-rouge"><div class="highlight"><section><code><span class="nb">echo</span> <span class="s2">"--- Creating Sbnb configuration file (sbnb-tskey.txt) ---"</span>
-<span class="nb">echo</span> <span class="s2">"SBNB_TAILSCALE_KEY=tskey-auth-..."</span> | <span class="nb">sudo tee</span> /mnt/sbnb-mount/sbnb-tskey.txt <span class="o">&gt;</span> /dev/null
+<span class="nb">echo</span> <span class="s2">"tskey-auth-..."</span> | <span class="nb">sudo tee</span> /mnt/sbnb-mount/sbnb-tskey.txt <span class="o">&gt;</span> /dev/null
 </code></section></div>    </div>
   </li>
   <li><strong>(Crucial) Handle Data Partition Mounting via <code class="language-plaintext highlighter-rouge">sbnb-cmds.sh</code>:</strong>
@@ -386,104 +604,219 @@ lsblk <span class="nt">-o</span> NAME,SIZE,TYPE,FSTYPE,PARTLABEL,MOUNTPOINT,PART
       <li><strong>Device Detection Timing:</strong> There’s a potential race: the kernel/udev might not have created the <code class="language-plaintext highlighter-rouge">/dev/disk/by-label/SBNB_DATA</code> symlink or the <code class="language-plaintext highlighter-rouge">/dev/sdX2</code> node exactly when the script runs. The wait loop mitigates this.</li>
       <li><strong>Default Script Conflict Uncertainty:</strong> The <code class="language-plaintext highlighter-rouge">boot-sbnb.sh</code> excerpt doesn’t show conflicting actions at its execution point. However, other early boot mechanisms could exist in Sbnb. If <code class="language-plaintext highlighter-rouge">/mnt/sbnb-data</code> behaves unexpectedly, investigate potential early boot scripts/services related to storage in your Sbnb version (advanced).</li>
       <li><strong><code class="language-plaintext highlighter-rouge">sbnb-cmds.sh</code> Script (Wait Loop &amp; Logging):</strong> Create this in the ESP root (<code class="language-plaintext highlighter-rouge">/mnt/sbnb-mount/</code> during prep).
-        <div class="language-bash highlighter-rouge"><div class="highlight"><section><code>  <span class="c">#!/bin/sh</span>
-  <span class="c"># Custom sbnb-cmds.sh for USB Persistent Partition setup (No LVM)</span>
-  <span class="c"># Mounts partition labeled DATA_LABEL to MOUNT_POINT after waiting for device.</span>
-  <span class="c"># For debugging, uncomment 'set -x' to trace command execution.</span>
-  <span class="c"># set -x</span>
-
-  <span class="c"># Function to log messages consistently to kernel buffer (dmesg) and console (tty)</span>
-  log_msg<span class="o">()</span> <span class="o">{</span>
-    <span class="nb">echo</span> <span class="s2">"sbnb-cmds.sh: </span><span class="nv">$1</span><span class="s2">"</span> | <span class="nb">tee</span> /dev/kmsg
-  <span class="o">}</span>
-
-  log_msg <span class="s2">"--- Running Custom USB Partition Mount Script ---"</span>
-
-  <span class="c"># --- Configuration ---</span>
-  <span class="nv">MOUNT_POINT</span><span class="o">=</span><span class="s2">"/mnt/sbnb-data"</span>  <span class="c"># Target directory for persistent data</span>
-  <span class="nv">DATA_LABEL</span><span class="o">=</span><span class="s2">"SBNB_DATA"</span>        <span class="c"># Filesystem label of the data partition (MUST match mkfs.ext4 -L)</span>
-  <span class="c"># Alternative: Use UUID for potentially more stable identification if labels change/conflict</span>
-  <span class="c"># Get UUID using 'sudo blkid /dev/sdX2' on prep machine, then set:</span>
-  <span class="c"># DATA_UUID="YOUR-UUID-HERE"</span>
-  <span class="nv">MAX_WAIT_SECONDS</span><span class="o">=</span>15           <span class="c"># Max time (seconds) to wait for the device node/label</span>
-  <span class="nv">WAIT_INTERVAL</span><span class="o">=</span>1               <span class="c"># Check frequency (seconds)</span>
-  <span class="nv">MOUNT_OPTS</span><span class="o">=</span><span class="s2">"defaults,noatime,nodiratime"</span> <span class="c"># Mount options (noatime/nodiratime reduce writes on flash)</span>
-  <span class="c"># --- End Configuration ---</span>
-
-  <span class="nv">DATA_DEVICE</span><span class="o">=</span><span class="s2">""</span>                <span class="c"># Will hold the found device path</span>
-
-  <span class="c"># --- Wait Loop for Device ---</span>
-  <span class="c"># Attempts to find the device by label or UUID (if configured).</span>
-  <span class="c"># Waits because device node creation by kernel/udev might be delayed.</span>
-  <span class="nv">elapsed_wait</span><span class="o">=</span>0
-  log_msg <span class="s2">"Waiting up to </span><span class="k">${</span><span class="nv">MAX_WAIT_SECONDS</span><span class="k">}</span><span class="s2">s for device (Label: </span><span class="k">${</span><span class="nv">DATA_LABEL</span><span class="k">:-</span><span class="nv">N</span><span class="p">/A</span><span class="k">}</span><span class="s2">)..."</span>
-  <span class="k">while</span> <span class="o">[</span> <span class="nt">-z</span> <span class="s2">"</span><span class="nv">$DATA_DEVICE</span><span class="s2">"</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="o">[</span> <span class="nv">$elapsed_wait</span> <span class="nt">-lt</span> <span class="nv">$MAX_WAIT_SECONDS</span> <span class="o">]</span><span class="p">;</span> <span class="k">do</span>
-    <span class="c"># Check for device using the label symlink first (usually faster if udev ran)</span>
-    <span class="nv">label_path</span><span class="o">=</span><span class="s2">"/dev/disk/by-label/</span><span class="k">${</span><span class="nv">DATA_LABEL</span><span class="k">}</span><span class="s2">"</span>
-    <span class="k">if</span> <span class="o">[</span> <span class="nt">-e</span> <span class="s2">"</span><span class="nv">$label_path</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then</span>
-        <span class="c"># Readlink -f resolves the symlink to the actual device path (e.g., /dev/sdb2)</span>
-        <span class="nv">DATA_DEVICE</span><span class="o">=</span><span class="si">$(</span><span class="nb">readlink</span> <span class="nt">-f</span> <span class="s2">"</span><span class="nv">$label_path</span><span class="s2">"</span><span class="si">)</span>
-        log_msg <span class="s2">"Found device via label symlink: </span><span class="nv">$label_path</span><span class="s2"> -&gt; </span><span class="nv">$DATA_DEVICE</span><span class="s2">"</span>
-        <span class="nb">break</span> <span class="c"># Exit loop</span>
-    <span class="k">fi</span>
-
-    <span class="c"># Fallback: Use blkid command to scan for the label (can be slower)</span>
-    <span class="nv">blkid_device</span><span class="o">=</span><span class="si">$(</span>blkid <span class="nt">-L</span> <span class="s2">"</span><span class="k">${</span><span class="nv">DATA_LABEL</span><span class="k">}</span><span class="s2">"</span> 2&gt;/dev/null<span class="si">)</span>
-    <span class="k">if</span> <span class="o">[</span> <span class="nt">-n</span> <span class="s2">"</span><span class="nv">$blkid_device</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then
-        </span><span class="nv">DATA_DEVICE</span><span class="o">=</span><span class="s2">"</span><span class="nv">$blkid_device</span><span class="s2">"</span>
-        log_msg <span class="s2">"Found device via blkid label lookup: </span><span class="nv">$DATA_DEVICE</span><span class="s2">"</span>
-        <span class="nb">break</span> <span class="c"># Exit loop</span>
-    <span class="k">fi</span>
-
-    <span class="c"># (Add similar checks here using DATA_UUID if using UUID instead of Label)</span>
-
-    <span class="c"># Device not found yet, wait before next check</span>
-    <span class="nb">sleep</span> <span class="nv">$WAIT_INTERVAL</span>
-    <span class="nv">elapsed_wait</span><span class="o">=</span><span class="k">$((</span>elapsed_wait <span class="o">+</span> WAIT_INTERVAL<span class="k">))</span>
-  <span class="k">done</span>
-
-  <span class="c"># --- Mount Logic ---</span>
-  <span class="c"># Proceed only if a device path was successfully determined</span>
-  <span class="k">if</span> <span class="o">[</span> <span class="nt">-n</span> <span class="s2">"</span><span class="nv">$DATA_DEVICE</span><span class="s2">"</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="o">[</span> <span class="nt">-e</span> <span class="s2">"</span><span class="nv">$DATA_DEVICE</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then
-    </span>log_msg <span class="s2">"Data partition device resolved to </span><span class="k">${</span><span class="nv">DATA_DEVICE</span><span class="k">}</span><span class="s2"> after </span><span class="k">${</span><span class="nv">elapsed_wait</span><span class="k">}</span><span class="s2">s."</span>
-
-    <span class="c"># Check if the target directory is already a mount point</span>
-    <span class="k">if</span> <span class="o">!</span> mountpoint <span class="nt">-q</span> <span class="s2">"</span><span class="nv">$MOUNT_POINT</span><span class="s2">"</span><span class="p">;</span> <span class="k">then
-      </span>log_msg <span class="s2">"Attempting to mount </span><span class="nv">$DATA_DEVICE</span><span class="s2"> at </span><span class="nv">$MOUNT_POINT</span><span class="s2"> with options: </span><span class="nv">$MOUNT_OPTS</span><span class="s2">..."</span>
-      <span class="c"># Ensure the target directory exists</span>
-      <span class="nb">mkdir</span> <span class="nt">-p</span> <span class="s2">"</span><span class="nv">$MOUNT_POINT</span><span class="s2">"</span>
-      <span class="c"># Mount the device</span>
-      <span class="k">if </span>mount <span class="nt">-o</span> <span class="s2">"</span><span class="nv">$MOUNT_OPTS</span><span class="s2">"</span> <span class="s2">"</span><span class="nv">$DATA_DEVICE</span><span class="s2">"</span> <span class="s2">"</span><span class="nv">$MOUNT_POINT</span><span class="s2">"</span><span class="p">;</span> <span class="k">then
-        </span>log_msg <span class="s2">"Successfully mounted persistent partition at </span><span class="nv">$MOUNT_POINT</span><span class="s2">."</span>
-      <span class="k">else
-        </span><span class="nv">mount_exit_code</span><span class="o">=</span><span class="nv">$?</span>
-        log_msg <span class="s2">"ERROR: Failed to mount </span><span class="nv">$DATA_DEVICE</span><span class="s2"> at </span><span class="nv">$MOUNT_POINT</span><span class="s2"> (exit code: </span><span class="nv">$mount_exit_code</span><span class="s2">). Check filesystem type/integrity (run fsck?). See dmesg for details."</span> <span class="o">&gt;</span>&amp;2
-      <span class="k">fi
-    else</span>
-      <span class="c"># Mount point exists, verify if it's the correct device</span>
-      log_msg <span class="s2">"</span><span class="nv">$MOUNT_POINT</span><span class="s2"> is already a mount point. Checking device..."</span>
-      <span class="c"># Check /proc/mounts for the currently mounted device at MOUNT_POINT</span>
-      <span class="k">if </span><span class="nb">grep</span> <span class="nt">-qs</span> <span class="s2">"</span><span class="nv">$DATA_DEVICE</span><span class="s2"> </span><span class="nv">$MOUNT_POINT</span><span class="s2">"</span> /proc/mounts<span class="p">;</span> <span class="k">then
-            </span>log_msg <span class="s2">"Persistent partition already correctly mounted at </span><span class="nv">$MOUNT_POINT</span><span class="s2">."</span>
-      <span class="k">else
-            </span><span class="nv">mounted_dev</span><span class="o">=</span><span class="si">$(</span><span class="nb">grep</span> <span class="nt">-s</span> <span class="s2">"</span><span class="nv">$MOUNT_POINT</span><span class="s2">"</span> /proc/mounts | <span class="nb">awk</span> <span class="s1">'{print $1}'</span><span class="si">)</span>
-            log_msg <span class="s2">"ERROR: </span><span class="nv">$MOUNT_POINT</span><span class="s2"> is already mounted, but by '</span><span class="nv">$mounted_dev</span><span class="s2">' NOT '</span><span class="nv">$DATA_DEVICE</span><span class="s2">'! Check system configuration."</span> <span class="o">&gt;</span>&amp;2
-      <span class="k">fi
-    fi
-  else</span>
-    <span class="c"># Device wasn't found within the timeout</span>
-    log_msg <span class="s2">"ERROR: Data partition device (Label: </span><span class="k">${</span><span class="nv">DATA_LABEL</span><span class="k">:-</span><span class="nv">N</span><span class="p">/A</span><span class="k">}</span><span class="s2">) not found after waiting </span><span class="k">${</span><span class="nv">MAX_WAIT_SECONDS</span><span class="k">}</span><span class="s2">s. Cannot mount persistent storage."</span> <span class="o">&gt;</span>&amp;2
-  <span class="k">fi
-
-  </span>log_msg <span class="s2">"--- Finished Custom USB Partition Mount Script ---"</span>
-  <span class="c"># Exit 0 ensures the rest of the Sbnb boot sequence continues</span>
-  <span class="nb">exit </span>0
-</code></section></div>        </div>
+```bash
+#!/bin/sh
+  <h1 id="custom-sbnb-cmdssh-for-usb-persistent-partition-setup-no-lvm">
+    
+    
+     <a href="#custom-sbnb-cmdssh-for-usb-persistent-partition-setup-no-lvm">#</a><a href="#" aria-label="Back to top">Custom sbnb-cmds.sh for USB Persistent Partition setup (No LVM)</a>
+        
+    
+  </h1>
+      
+  <h1 id="mounts-partition-labeled-data_label-to-mount_point-after-waiting-for-device">
+    
+    
+     <a href="#mounts-partition-labeled-data_label-to-mount_point-after-waiting-for-device">#</a><a href="#" aria-label="Back to top">Mounts partition labeled DATA_LABEL to MOUNT_POINT after waiting for device.</a>
+        
+    
+  </h1>
+      
+  <h1 id="for-debugging-uncomment-set--x-to-trace-command-execution">
+    
+    
+     <a href="#for-debugging-uncomment-set--x-to-trace-command-execution">#</a><a href="#" aria-label="Back to top">For debugging, uncomment ‘set -x’ to trace command execution.</a>
+        
+    
+  </h1>
+      
+  <h1 id="set--x">
+    
+    
+     <a href="#set--x">#</a><a href="#" aria-label="Back to top">set -x</a>
+        
+    
+  </h1>
+      
       </li>
-      <li>Place script content into <code class="language-plaintext highlighter-rouge">/mnt/sbnb-mount/sbnb-cmds.sh</code>.</li>
-      <li>Make executable: <code class="language-plaintext highlighter-rouge">sudo chmod +x /mnt/sbnb-mount/sbnb-cmds.sh</code>.</li>
     </ul>
   </li>
+</ol>
+  <h1 id="function-to-log-messages-consistently-to-kernel-buffer-dmesg-and-console-tty">
+    
+    
+     <a href="#function-to-log-messages-consistently-to-kernel-buffer-dmesg-and-console-tty">#</a><a href="#" aria-label="Back to top">Function to log messages consistently to kernel buffer (dmesg) and console (tty)</a>
+        
+    
+  </h1>
+      
+<p>log_msg() {
+  echo “sbnb-cmds.sh: $1” | tee /dev/kmsg
+}</p>
+
+<p>log_msg “— Running Custom USB Partition Mount Script —”</p>
+  <h1 id="-configuration-">
+    
+    
+     <a href="#-configuration-">#</a><a href="#" aria-label="Back to top">— Configuration —</a>
+        
+    
+  </h1>
+      
+<p>MOUNT_POINT=”/mnt/sbnb-data”  # Target directory for persistent data
+DATA_LABEL=”SBNB_DATA”        # Filesystem label of the data partition (MUST match mkfs.ext4 -L)</p>
+  <h1 id="alternative-use-uuid-for-potentially-more-stable-identification-if-labels-changeconflict">
+    
+    
+     <a href="#alternative-use-uuid-for-potentially-more-stable-identification-if-labels-changeconflict">#</a><a href="#" aria-label="Back to top">Alternative: Use UUID for potentially more stable identification if labels change/conflict</a>
+        
+    
+  </h1>
+      
+  <h1 id="get-uuid-using-sudo-blkid-devsdx2-on-prep-machine-then-set">
+    
+    
+     <a href="#get-uuid-using-sudo-blkid-devsdx2-on-prep-machine-then-set">#</a><a href="#" aria-label="Back to top">Get UUID using ‘sudo blkid /dev/sdX2’ on prep machine, then set:</a>
+        
+    
+  </h1>
+      
+  <h1 id="data_uuidyour-uuid-here">
+    
+    
+     <a href="#data_uuidyour-uuid-here">#</a><a href="#" aria-label="Back to top">DATA_UUID=”YOUR-UUID-HERE”</a>
+        
+    
+  </h1>
+      
+<p>MAX_WAIT_SECONDS=15           # Max time (seconds) to wait for the device node/label
+WAIT_INTERVAL=1               # Check frequency (seconds)
+MOUNT_OPTS=”defaults,noatime,nodiratime” # Mount options (noatime/nodiratime reduce writes on flash)</p>
+  <h1 id="-end-configuration-">
+    
+    
+     <a href="#-end-configuration-">#</a><a href="#" aria-label="Back to top">— End Configuration —</a>
+        
+    
+  </h1>
+      
+
+<p>DATA_DEVICE=””                # Will hold the found device path</p>
+  <h1 id="-wait-loop-for-device-">
+    
+    
+     <a href="#-wait-loop-for-device-">#</a><a href="#" aria-label="Back to top">— Wait Loop for Device —</a>
+        
+    
+  </h1>
+      
+  <h1 id="attempts-to-find-the-device-by-label-or-uuid-if-configured">
+    
+    
+     <a href="#attempts-to-find-the-device-by-label-or-uuid-if-configured">#</a><a href="#" aria-label="Back to top">Attempts to find the device by label or UUID (if configured).</a>
+        
+    
+  </h1>
+      
+  <h1 id="waits-because-device-node-creation-by-kerneludev-might-be-delayed">
+    
+    
+     <a href="#waits-because-device-node-creation-by-kerneludev-might-be-delayed">#</a><a href="#" aria-label="Back to top">Waits because device node creation by kernel/udev might be delayed.</a>
+        
+    
+  </h1>
+      
+<p>elapsed_wait=0
+log_msg “Waiting up to ${MAX_WAIT_SECONDS}s for device (Label: ${DATA_LABEL:-N/A})…”
+while [ -z “$DATA_DEVICE” ] &amp;&amp; [ $elapsed_wait -lt $MAX_WAIT_SECONDS ]; do
+  # Check for device using the label symlink first (usually faster if udev ran)
+  label_path=”/dev/disk/by-label/${DATA_LABEL}”
+  if [ -e “$label_path” ]; then
+      # Readlink -f resolves the symlink to the actual device path (e.g., /dev/sdb2)
+      DATA_DEVICE=$(readlink -f “$label_path”)
+      log_msg “Found device via label symlink: $label_path -&gt; $DATA_DEVICE”
+      break # Exit loop
+  fi</p>
+
+<p># Fallback: Use blkid command to scan for the label (can be slower)
+  blkid_device=$(blkid -L “${DATA_LABEL}” 2&gt;/dev/null)
+  if [ -n “$blkid_device” ]; then
+      DATA_DEVICE=”$blkid_device”
+      log_msg “Found device via blkid label lookup: $DATA_DEVICE”
+      break # Exit loop
+  fi</p>
+
+<p># (Add similar checks here using DATA_UUID if using UUID instead of Label)</p>
+
+<p># Device not found yet, wait before next check
+  sleep $WAIT_INTERVAL
+  elapsed_wait=$((elapsed_wait + WAIT_INTERVAL))
+done</p>
+  <h1 id="-mount-logic-">
+    
+    
+     <a href="#-mount-logic-">#</a><a href="#" aria-label="Back to top">— Mount Logic —</a>
+        
+    
+  </h1>
+      
+  <h1 id="proceed-only-if-a-device-path-was-successfully-determined">
+    
+    
+     <a href="#proceed-only-if-a-device-path-was-successfully-determined">#</a><a href="#" aria-label="Back to top">Proceed only if a device path was successfully determined</a>
+        
+    
+  </h1>
+      
+<p>if [ -n “$DATA_DEVICE” ] &amp;&amp; [ -e “$DATA_DEVICE” ]; then
+  log_msg “Data partition device resolved to ${DATA_DEVICE} after ${elapsed_wait}s.”</p>
+
+<p># Check if the target directory is already a mount point
+  if ! mountpoint -q “$MOUNT_POINT”; then
+    log_msg “Attempting to mount $DATA_DEVICE at $MOUNT_POINT with options: $MOUNT_OPTS…”
+    # Ensure the target directory exists
+    mkdir -p “$MOUNT_POINT”
+    # Mount the device
+    if mount -o “$MOUNT_OPTS” “$DATA_DEVICE” “$MOUNT_POINT”; then
+      log_msg “Successfully mounted persistent partition at $MOUNT_POINT.”
+    else
+      mount_exit_code=$?
+      log_msg “ERROR: Failed to mount $DATA_DEVICE at $MOUNT_POINT (exit code: $mount_exit_code). Check filesystem type/integrity (run fsck?). See dmesg for details.” &gt;&amp;2
+    fi
+  else
+    # Mount point exists, verify if it’s the correct device
+    log_msg “$MOUNT_POINT is already a mount point. Checking device…”
+    # Check /proc/mounts for the currently mounted device at MOUNT_POINT
+    if grep -qs “$DATA_DEVICE $MOUNT_POINT” /proc/mounts; then
+          log_msg “Persistent partition already correctly mounted at $MOUNT_POINT.”
+    else
+          mounted_dev=$(grep -s “$MOUNT_POINT” /proc/mounts | awk ‘{print $1}’)
+          log_msg “ERROR: $MOUNT_POINT is already mounted, but by ‘$mounted_dev’ NOT ‘$DATA_DEVICE’! Check system configuration.” &gt;&amp;2
+    fi
+  fi
+else
+  # Device wasn’t found within the timeout
+  log_msg “ERROR: Data partition device (Label: ${DATA_LABEL:-N/A}) not found after waiting ${MAX_WAIT_SECONDS}s. Cannot mount persistent storage.” &gt;&amp;2
+fi</p>
+
+<p>mkdir -p /etc/docker
+cp /mnt/sbnb-data/docker/docker-daemon.json.template /etc/docker/daemon.json</p>
+
+<p>log_msg “— Finished Custom USB Partition Mount Script —”</p>
+  <h1 id="exit-0-ensures-the-rest-of-the-sbnb-boot-sequence-continues">
+    
+    
+     <a href="#exit-0-ensures-the-rest-of-the-sbnb-boot-sequence-continues">#</a><a href="#" aria-label="Back to top">Exit 0 ensures the rest of the Sbnb boot sequence continues</a>
+        
+    
+  </h1>
+      
+<p>exit 0
+```
+    * Place script content into <code class="language-plaintext highlighter-rouge">/mnt/sbnb-mount/sbnb-cmds.sh</code>.
+    * Make executable: <code class="language-plaintext highlighter-rouge">sudo chmod +x /mnt/sbnb-mount/sbnb-cmds.sh</code>.</p>
+
+<ol>
   <li><strong>Unmount the EFI Partition:</strong>
     <div class="language-bash highlighter-rouge"><div class="highlight"><section><code><span class="nb">echo</span> <span class="s2">"--- Unmounting ESP partition ---"</span>
 <span class="c"># Ensure buffers are flushed before unmounting</span>
@@ -835,7 +1168,7 @@ sudo </span>umount /mnt/sbnb-mount
         
         
         <a href="https://ib.bsb.br/404" aria-label="404">
-          2025-04-11 14:04:16
+          2025-04-12 17:36:39
         </a>
         &#x23;
     
@@ -903,7 +1236,7 @@ sudo </span>umount /mnt/sbnb-mount
         "headline": "Single USB for Sbnb Boot and Persistent Storage",
         "description": "",
         "datePublished": "2025-04-07T00:00:00+00:00",
-        "dateModified": "2025-04-07T14:04:23+00:00",
+        "dateModified": "2025-04-12T20:33:58+00:00",
         "author": {
           "@type": "Person",
           "name": "Author"
