@@ -1,6 +1,6 @@
 ---
 title: Concursos DELTA iminentes
-date: 2023-12-22 01:00:00 -02:00
+date: 2023-12-22
 categories:
 - Δ24
 tags: [edital]
@@ -13,7 +13,6 @@ sha:
 
 | **Último Edital** | **UF** |
 |:---:|:---:|
-| 2014 | [CE](https://cj.estrategia.com/portal/concurso-delegado-ce/) |
 | 2014 | [DF](https://cj.estrategia.com/portal/concurso-delegado-df/) |
 | 2014 | [TO](https://cj.estrategia.com/portal/concurso-delegado-to/) |
 | 2017 | [AC](https://cj.estrategia.com/portal/concurso-delegado-ac/) |
