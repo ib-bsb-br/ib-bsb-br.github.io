@@ -6,10 +6,10 @@ type: post
 layout: post
 published: true
 slug: requirements-for-sysprepbat-on-windows-server-2003
-title: 'Requirements for sysprep.bat on Windows Server 2003'
+title: Requirements for sysprep.bat on Windows Server 2003
+comment: https://www.vernalex.com/guides/sysprep/index.shtml
 ---
 
-bibref https://www.vernalex.com/guides/sysprep/index.shtml
 
 ## sysprep.bat
 
