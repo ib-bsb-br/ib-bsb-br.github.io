@@ -8,9 +8,12 @@ published: true
 slug: requirements-for-sysprepbat-on-windows-server-2003
 title: 'Requirements for sysprep.bat on Windows Server 2003'
 ---
+
+bibref https://www.vernalex.com/guides/sysprep/index.shtml
+
 ## sysprep.bat
 
-```sysprep.bat
+{% codeblock bat %}
 @ECHO OFF
 CLS
 ECHO System Preparation Tool
@@ -98,7 +101,7 @@ sync -r -e
 ECHO.
 ECHO Executing system preparation tool (reseal / minisetup)...
 start sysprep -reseal -mini -quiet
-```
+{% endcodeblock %}
 
 To successfully execute the provided sysprep.bat script during a System Preparation (Sysprep) process on Windows Server 2003 Standard R2 x64, specific external software, utilities, and directory structures must be correctly configured and accessible. This document provides a detailed outline of these essential requirements. Sysprep itself is used to generalize a Windows installation, removing unique identifiers like the Security Identifier (SID) and configuring the OS to run an initial setup wizard (Mini-Setup) on the next boot, making the image suitable for deployment onto multiple machines. The process often involves external tools, like those in this script, to ensure data integrity by flushing disk caches, manage device drivers effectively for hardware independence across different target machines, and terminate potentially problematic background processes before sealing the final image. Failing to meet these prerequisites by having missing components or incorrect configurations will likely cause script execution errors, prevent the Sysprep process from completing successfully, or lead to deployment failures and unstable systems on target computers.
 
