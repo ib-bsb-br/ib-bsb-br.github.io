@@ -1,4 +1,164 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2025-04-14T21:15:54+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">Starting a Windows Server 2003 VM on Sbnb Linux (QEMU CLI)</title><link href="https://ib.bsb.br/starting-a-windows-server-2003-vm-on-sbnb-linux-qemu-cli/" rel="alternate" type="text/html" title="Starting a Windows Server 2003 VM on Sbnb Linux (QEMU CLI)" /><published>2025-04-14T00:00:00+00:00</published><updated>2025-04-14T21:07:11+00:00</updated><id>https://ib.bsb.br/starting-a-windows-server-2003-vm-on-sbnb-linux-qemu-cli</id><content type="html" xml:base="https://ib.bsb.br/starting-a-windows-server-2003-vm-on-sbnb-linux-qemu-cli/"><![CDATA[<p>This guide provides detailed, step-by-step instructions to install and run the legacy Microsoft Windows Server 2003 x64 operating system within a virtual machine (VM) on your Sbnb Linux system. We will utilize the powerful qemu-system-x86_64 command-line interface for fine-grained control over the VM’s configuration and execution.</p>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2025-04-16T15:45:48+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">Requirements for sysprep.bat on Windows Server 2003</title><link href="https://ib.bsb.br/requirements-for-sysprepbat-on-windows-server-2003/" rel="alternate" type="text/html" title="Requirements for sysprep.bat on Windows Server 2003" /><published>2025-04-16T00:00:00+00:00</published><updated>2025-04-16T15:42:58+00:00</updated><id>https://ib.bsb.br/requirements-for-sysprepbat-on-windows-server-2003</id><content type="html" xml:base="https://ib.bsb.br/requirements-for-sysprepbat-on-windows-server-2003/"><![CDATA[<h2 id="sysprepbat">sysprep.bat</h2>
+
+<pre><code class="language-sysprep.bat">@ECHO OFF
+CLS
+ECHO System Preparation Tool
+ECHO.
+ECHO Before continuing please:
+ECHO 1. Be sure that the pre-sysprep steps were followed.
+ECHO 2. Image the computer previous to this, as the sysprep
+ECHO process may fail and this would corrupt the installation
+ECHO you have prepared.
+ECHO 3. Restart the computer before attempting this so that
+ECHO system buffers are cleared.
+ECHO 4. Close all open windows before continuing.
+ECHO.
+pause
+
+ECHO.
+ECHO Flushing data to disks (preliminary):
+sync -r -e /accepteula
+
+ECHO.
+ECHO Cleaning up old driver caches:
+del /s /q c:\sysprep\drivers\infcache.1
+
+ECHO.
+ECHO Creating driver path (SysPrep Driver Scanner):
+spdrvscn /p c:\sysprep\drivers /e inf /d C:\windows\inf /m "Image: ~month/~day/~year" /o "Image created at ~hour:~minute:~second on ~month/~day/~year (~weekday)." /a /s /q
+
+ECHO.
+ECHO Closing open SMB connections:
+net use * /delete /yes
+
+ECHO.
+ECHO Terminating unneeded processes:
+kill /f vptray
+kill /f ccapp
+kill /f explorer
+kill /f alg
+kill /f ati2evxx
+kill /f ccevtmgr
+kill /f ccsetmgr
+kill /f defwatch
+kill /f lucoms~1
+kill /f mdm
+
+ECHO.
+ECHO Stopping unnessary services:
+net stop alerter /yes
+net stop wuauserv /yes
+net stop browser /yes
+net stop cryptsvc /yes
+net stop dhcp /yes
+net stop mdm /yes
+net stop trkwks /yes
+net stop protectedstorage /yes
+net stop remoteregistry /yes
+net stop seclogon /yes
+net stop samss /yes
+net stop wscsvc /yes
+net stop lanmanagerserver /yes
+net stop "symantec antivirus" /yes
+net stop defwatch /yes
+net stop ccevtmgr /yes
+net stop sndsrvc /yes
+net stop ccpwdsvc /yes
+net stop ccsetmgr /yes
+net stop sens /yes
+net stop srservice /yes
+net stop schedule /yes
+net stop lmhosts /yes
+net stop ups /yes
+net stop uphclean /yes
+net stop webclient /yes
+net stop audiosrv /yes
+net stop sharedaccess /yes
+net stop msiserver /yes
+net stop w32time /yes
+net stop wzcsvc /yes
+net stop lanmanworkstation /yes
+net stop spooler /yes
+
+ECHO.
+ECHO Flushing data to disks (finalization):
+sync -r -e
+
+ECHO.
+ECHO Executing system preparation tool (reseal / minisetup)...
+start sysprep -reseal -mini -quiet
+</code></pre>
+
+<p>To successfully execute the provided sysprep.bat script during a System Preparation (Sysprep) process on Windows Server 2003 Standard R2 x64, specific external software, utilities, and directory structures must be correctly configured and accessible. This document provides a detailed outline of these essential requirements. Sysprep itself is used to generalize a Windows installation, removing unique identifiers like the Security Identifier (SID) and configuring the OS to run an initial setup wizard (Mini-Setup) on the next boot, making the image suitable for deployment onto multiple machines. The process often involves external tools, like those in this script, to ensure data integrity by flushing disk caches, manage device drivers effectively for hardware independence across different target machines, and terminate potentially problematic background processes before sealing the final image. Failing to meet these prerequisites by having missing components or incorrect configurations will likely cause script execution errors, prevent the Sysprep process from completing successfully, or lead to deployment failures and unstable systems on target computers.</p>
+
+<p><strong>Important Note on Privileges:</strong> Executing this script requires Administrator privileges. Many actions performed, such as stopping system services, deleting files in protected locations (implicitly, via infcache.1), potentially placing tools in C:\Windows\System32, and running sysprep.exe itself, necessitate elevated rights. Ensure you are running the script from an administrative command prompt.</p>
+
+<p>Standard Windows commands (ECHO, CLS, pause, del, net, start), which are integral parts of the Windows command-line environment, are assumed to be present in their default system locations (typically C:\Windows\System32) and are therefore not detailed as separate requirements below.</p>
+
+<h3 id="1-sysinternals-sync-syncexe"><strong>1. Sysinternals Sync (sync.exe)</strong></h3>
+
+<ul>
+  <li><strong>Purpose in Script:</strong> The script utilizes sync.exe (sync -r -e /accepteula and sync -r -e) to force the operating system to flush all modified file system data held in memory (cached data) to the physical disk drives. This is a critical step before finalizing system changes or shutting down, especially before the Sysprep reseal operation, as it ensures data consistency and minimizes the risk of data loss or corruption if the system were to shut down unexpectedly. The /accepteula flag is used once to automatically accept the Sysinternals End User License Agreement, preventing the script from pausing for user input. The -r flag ensures it flushes files in subdirectories, and -e attempts to flush and eject removable media.</li>
+  <li><strong>Required Software:</strong> The specific executable sync.exe from the widely recognized Microsoft Sysinternals Suite. Using other utilities named ‘sync’ may not provide the same functionality or accept the same command-line arguments.
+    <ul>
+      <li><em>Acquisition:</em> This tool is typically downloaded directly from the official Microsoft Sysinternals documentation pages or website. For older operating systems like Windows Server 2003, ensure you obtain a version of the tool known to be compatible; archives of older Sysinternals suites may be necessary.</li>
+    </ul>
+  </li>
+  <li><strong>Required Location:</strong> For the script to run sync.exe, the executable must be located where the command processor can find it. This means placing sync.exe either in a directory listed in the system’s PATH environment variable (like C:\Windows\System32) or directly in the same directory where the sysprep.bat script is being executed.</li>
+  <li><strong>Common Placement:</strong> Placing sync.exe in C:\Windows\System32 is a frequent practice as it makes the tool available system-wide for various administrative scripts and tasks.</li>
+</ul>
+
+<h3 id="2-driver-scanner-spdrvscnexe"><strong>2. Driver Scanner (spdrvscn.exe)</strong></h3>
+
+<ul>
+  <li><strong>Purpose in Script:</strong> The command spdrvscn /p c:\sysprep\drivers … strongly suggests this executable performs a specialized role related to device driver management during the Sysprep process. Its function is likely crucial for ensuring the prepared image can boot and correctly install devices when deployed onto potentially diverse hardware configurations. This might involve tasks such as scanning the system for installed drivers, comparing them against a repository, injecting necessary Plug-and-Play (PnP) drivers into the image from the specified path (c:\sysprep\drivers), or perhaps pre-indexing drivers to accelerate PnP detection during Mini-Setup. Effective driver management is fundamental to Sysprep’s goal of hardware independence.</li>
+  <li><strong>Required Software:</strong> An executable file specifically named spdrvscn.exe (or whatever tool this command actually invokes).
+    <ul>
+      <li><em>Note:</em> It is vital to understand that this is <strong>not</strong> a standard component of Windows Server 2003, nor is it part of common toolsets like Sysinternals or the Resource Kit Tools. It most likely represents a third-party utility or, quite possibly, a custom in-house tool developed specifically for the organization’s unique imaging workflow. Crucially, you must identify this <em>exact</em> spdrvscn.exe tool from your organization’s original imaging process and obtain it. Its specific function is unknown based solely on the script; attempting to substitute it with any other tool is impossible without knowing precisely what it does and will likely result in incorrect driver handling, deployment failures, or system instability (e.g., BSODs) on target machines.</li>
+    </ul>
+  </li>
+  <li><strong>Required Location:</strong> Similar to other external tools, spdrvscn.exe must be placed where the script can execute it: either in a directory included within the system’s PATH environment variable or in the same directory from which the sysprep.bat script is being run.</li>
+  <li><strong>Common Placement:</strong> Given its specialized nature and connection to Sysprep, it might logically reside within the C:\Sysprep folder structure itself (e.g., in a subfolder like C:\Sysprep\Tools). Alternatively, it could be placed in C:\Windows\System32 or a centrally managed custom tools directory that’s part of the system PATH. The script’s reference to c:\sysprep\drivers might hint that related tools are also kept under C:\Sysprep.</li>
+</ul>
+
+<h3 id="3-kill-process-utility-killexe"><strong>3. Kill Process Utility (kill.exe)</strong></h3>
+
+<ul>
+  <li><strong>Purpose in Script:</strong> The script uses kill.exe (with the /f flag for forceful termination) to stop specific background processes (vptray, ccapp, explorer, etc.) before proceeding with Sysprep. This is important to ensure a clean system state, prevent applications from interfering with the Sysprep operations (which modify many system files and registry settings), remove user-specific application states or running agents, and avoid potential conflicts during the resealing phase. The processes listed appear to include components of Symantec Antivirus (vptray, ccapp, ccevtmgr, ccsetmgr), the Windows shell (explorer), and various system or utility services.</li>
+  <li><strong>Required Software:</strong> An executable named kill.exe. While Windows Server 2003 includes the native taskkill.exe command for terminating processes, this script explicitly relies on kill.exe. This specific utility often provided a simpler syntax or slightly different behavior compared to taskkill.
+    <ul>
+      <li><em>Acquisition:</em> kill.exe was a standard utility included in the freely downloadable Microsoft Windows Server 2003 Resource Kit Tools package. This package contained numerous helpful administrative utilities not included with the base OS.</li>
+    </ul>
+  </li>
+  <li><strong>Required Location:</strong> The kill.exe executable must be found by the command interpreter. Place the file either in a directory that is part of the system’s PATH environment variable or directly in the same directory where the sysprep.bat script resides and is executed.</li>
+  <li><strong>Common Placement:</strong> If the full Windows Server 2003 Resource Kit Tools package is installed, its installation directory is typically added to the system PATH automatically, making kill.exe accessible. A common alternative for deploying specific tools is to copy kill.exe directly into the C:\Windows\System32 folder.</li>
+</ul>
+
+<h3 id="4-system-preparation-tool-sysprepexe"><strong>4. System Preparation Tool (sysprep.exe)</strong></h3>
+
+<ul>
+  <li><strong>Purpose in Script:</strong> This is the core Microsoft utility essential for the entire image preparation process. The command start sysprep -reseal -mini -quiet initiates the final phase. Specifically, -reseal configures the system to run the Mini-Setup wizard (also known as Windows Welcome or OOBE - Out-Of-Box Experience) upon the next boot, clearing system-specific information like the SID. The -mini option specifies that the Mini-Setup wizard should run, allowing for customization during deployment (like setting computer name, joining a domain, etc.). The -quiet flag suppresses any graphical user interface or prompts from Sysprep itself, making it suitable for automated scripting.</li>
+  <li><strong>Required Software:</strong> The main sysprep.exe executable and all its necessary supporting files (such as setupcl.exe, factory.exe, and various .inf or .dll files). These components work together; simply having sysprep.exe alone is insufficient. These files are specific to the operating system version, architecture (x64 in this case), and potentially the service pack level. Using mismatched versions can lead to unpredictable failures.
+    <ul>
+      <li><em>Acquisition:</em> The correct Sysprep files for Windows Server 2003 are typically located within the Deploy.cab compressed archive file found in the \Support\Tools\ directory on the official Windows Server 2003 installation media (CD or ISO). You must extract the <em>entire contents</em> of Deploy.cab to the designated Sysprep location using a tool capable of handling CAB archives (like expand.exe or built-in Windows functionality).</li>
+    </ul>
+  </li>
+  <li><strong>Required Location:</strong> Sysprep files must be placed precisely where the operating system and the start sysprep command expect to find them. While Sysprep <em>might</em> be found if placed in the system PATH, this is not the standard or recommended practice for Windows Server 2003.</li>
+  <li><strong>Standard Location:</strong> For Windows Server 2003, the universally accepted and expected location is the C:\Sysprep folder at the root of the system drive. You should manually create this folder if it doesn’t exist and then extract all files from the Deploy.cab archive directly into C:\Sysprep.</li>
+</ul>
+
+<h3 id="5-directory-structure-csysprepdrivers"><strong>5. Directory Structure (C:\Sysprep\drivers)</strong></h3>
+
+<ul>
+  <li><strong>Purpose in Script:</strong> The script explicitly interacts with this directory in two ways: first, by deleting c:\sysprep\drivers\infcache.1, and second, by passing the path c:\sysprep\drivers as a parameter to spdrvscn.exe. The deletion of infcache.1 (a file Windows uses to cache information about discovered INF files) is likely intended to force a complete rebuild of the driver cache during Mini-Setup, ensuring that only explicitly provided or newly detected drivers are considered, rather than relying on potentially outdated cached information. The spdrvscn.exe tool, as discussed, likely uses this directory either as a source repository from which to inject necessary drivers into the image or as a target location to store information about the drivers it has processed for use during deployment.</li>
+  <li><strong>Required:</strong> The directory path C:\Sysprep\drivers must physically exist on the file system <em>before</em> the sysprep.bat script is executed. If the directory is missing, the del command might simply report an error, but the spdrvscn.exe tool would likely fail catastrophically if it expects to read from or write to this specific location. The contents required within this directory depend entirely on the function of the custom spdrvscn.exe tool.</li>
+</ul>
+
+<p>Note on Services:<br />
+The script includes a lengthy section dedicated to stopping numerous Windows services using net stop. Examples include security software (symantec antivirus, defwatch), Windows Update (wuauserv), networking services (dhcp, lanmanserver, lanmanworkstation), and various others. While the script attempts to stop these, their actual presence on the system isn’t strictly required for the net stop command itself to run (it will simply report an error like “The service name is invalid” or “The service has not been started” if the service doesn’t exist or isn’t running). However, the explicit inclusion of these commands strongly implies that the script was carefully crafted for a specific baseline system configuration where these services were typically installed and running. Stopping them is considered best practice before Sysprep to prevent interference with the generalization process (e.g., AV scanning/blocking file changes, Windows Update trying to install updates, DHCP client renewing leases during cloning, remote registry service allowing unwanted access). Failure to stop necessary services, especially those performing background file modifications or network communications, could compromise the integrity and stability of the sealed image.<br />
+<strong>Verification Note:</strong> The information provided regarding sync.exe and kill.exe assumes the use of standard, compatible distributions from Microsoft Sysinternals and the Windows Server 2003 Resource Kit Tools, respectively. Given the significant age of the Windows Server 2003 operating system, it is absolutely crucial to verify that you are using tool versions explicitly stated as compatible with this OS and architecture (R2 x64). Using incompatible or newer versions not designed for WS2003 could lead to subtle errors or outright failures. Furthermore, the identity, specific function, and correct method for obtaining and implementing the non-standard spdrvscn.exe utility must be determined entirely from the documentation or institutional knowledge surrounding your organization’s specific, established imaging process. This document can only highlight its likely role based on the script’s commands.</p>
+
+<p>Ensuring these prerequisites are met is essential for the successful execution of the sysprep.bat script and the creation of a reliable Windows Server 2003 image.</p>]]></content><author><name></name></author><category term="aid&gt;software&gt;windows" /></entry><entry><title type="html">Starting a Windows Server 2003 VM on Sbnb Linux (QEMU CLI)</title><link href="https://ib.bsb.br/starting-a-windows-server-2003-vm-on-sbnb-linux-qemu-cli/" rel="alternate" type="text/html" title="Starting a Windows Server 2003 VM on Sbnb Linux (QEMU CLI)" /><published>2025-04-14T00:00:00+00:00</published><updated>2025-04-14T21:07:11+00:00</updated><id>https://ib.bsb.br/starting-a-windows-server-2003-vm-on-sbnb-linux-qemu-cli</id><content type="html" xml:base="https://ib.bsb.br/starting-a-windows-server-2003-vm-on-sbnb-linux-qemu-cli/"><![CDATA[<p>This guide provides detailed, step-by-step instructions to install and run the legacy Microsoft Windows Server 2003 x64 operating system within a virtual machine (VM) on your Sbnb Linux system. We will utilize the powerful qemu-system-x86_64 command-line interface for fine-grained control over the VM’s configuration and execution.</p>
 
 <p>Running such an outdated operating system might be necessary for specific use cases, such as maintaining legacy applications, performing specific software testing, security research, or purely for educational or nostalgic purposes. However, it comes with significant security risks outlined later in this guide.</p>
 
@@ -36472,110 +36632,4 @@ sudo </span>umount /mnt/sbnb-mount
 
 <h2 id="final-recommendation">Final Recommendation</h2>
 
-<p>This guide details a complex, non-standard configuration fraught with performance and reliability risks. While it provides a technically feasible path for single-drive boot and persistence under specific constraints, users should strongly prefer the standard Sbnb architecture using reliable internal server storage whenever possible. Evaluate the trade-offs carefully before committing to this approach.</p>]]></content><author><name></name></author><category term="scratchpad" /></entry><entry><title type="html">AoT 3</title><link href="https://ib.bsb.br/aot-3/" rel="alternate" type="text/html" title="AoT 3" /><published>2025-04-04T00:00:00+00:00</published><updated>2025-04-04T10:08:12+00:00</updated><id>https://ib.bsb.br/aot-3</id><content type="html" xml:base="https://ib.bsb.br/aot-3/"><![CDATA[<p><em>(Note: This process is inherently iterative. Insights from later steps, particularly Step 6: Evaluate and Refine, frequently necessitate revisiting and adjusting earlier steps like Step 2: Provide Context or Step 3: Identify XML Components.)</em>
-<strong>1. <code class="language-plaintext highlighter-rouge">Problem Statement (AoT - Define Goal &amp; ):</code></strong></p>
-<ul>
-  <li><strong>Elaboration:</strong> This foundational step establishes unambiguous direction, scope, and success criteria. It requires transforming vague ideas into a precise, measurable articulation of the prompt’s core function. A weak purpose hinders the entire process.</li>
-  <li><em>Pitfall:</em> Overly broad or ambiguous purpose (e.g., “Improve text”).</li>
-  <li><em>Tip:</em> Apply SMART criteria where feasible (Specific, Measurable, Achievable, Relevant, Time-bound) to the intended outcome. Clearly define the primary action verb (Generate, Analyze, Convert, etc.) and the expected output’s nature/format. Ask: How will we know if the prompt is successful?</li>
-  <li><em>Evolution Example:</em> Vague: “Make code better.” -&gt; Initial: “Review code.” -&gt; Refined: “Analyze Python code snippets for PEP 8 violations.” -&gt; Final XML: <code class="language-plaintext highlighter-rouge">You are an expert code reviewer specializing in identifying PEP 8 style guide violations in Python code snippets provided in [[code-snippet]].</code></li>
-  <li><strong>Task:</strong> Clearly define the primary goal. Consider LLM capabilities and fine-tuning.</li>
-  <li>Examples: “Generate valid Mermaid sequence diagrams…”, “Analyze Python code snippets for OWASP Top 10 vulnerabilities…”, “Convert natural language math in <code class="language-plaintext highlighter-rouge">[[user-input]]</code> to MathML…”, “Summarize articles from <code class="language-plaintext highlighter-rouge">[[article-text]]</code> into a three-bullet executive summary…”</li>
-  <li><strong>Output:</strong> The distilled, specific goal populates the `` tag, setting the LLM’s role and objective.
-<strong>2. Provide Context:</strong></li>
-  <li><strong>Elaboration:</strong> Context grounds the prompt, providing background, constraints, assumptions, and implicit knowledge needed for correct interpretation. Omitting context forces risky LLM assumptions. Eliciting context involves understanding users, systems, and the domain.</li>
-  <li><strong>2a. Types of Contextual Information:</strong></li>
-  <li><em>Technical Constraints:</em> Language versions, libraries, output formats (JSON schema validation, specific XML DTD), performance needs (latency limits), system integrations.</li>
-  <li><em>Audience Assumptions:</em> User’s expertise (novice/expert), role, language, cultural background impacting interpretation or desired output style.</li>
-  <li><em>Stylistic Requirements:</em> Tone (formal/informal), voice (active/passive), length limits, formatting rules (Markdown, specific list styles), branding.</li>
-  <li><em>Ethical Guardrails:</em> Content prohibitions (harmful, biased, illegal), privacy rules (PII handling), fairness considerations.</li>
-  <li><em>Domain-Specific Knowledge:</em> Subject matter standards, implicit field conventions, required ontologies or terminologies.</li>
-  <li><strong>2b. Eliciting Context:</strong></li>
-  <li><em>Techniques:</em> Stakeholder interviews, reviewing system requirements documents, analyzing user personas, examining existing workflows, consulting domain experts. Ask “What implicit assumptions are we making?”</li>
-  <li><strong>Task:</strong> Gather and document all relevant context.</li>
-  <li>Examples: “<code class="language-plaintext highlighter-rouge">[[user_description]]</code> is informal, expect errors,” “Output Mermaid must render in GitLab markdown (v16.x),” “Prioritize code review: 1st=Security, 2nd=Bugs…”, “Summary must be factual, cite sections from <code class="language-plaintext highlighter-rouge">[[article-text]]</code>, avoid external info,” “Generated code needs error handling (FileNotFound, ValueError) and standard logging.”</li>
-  <li><strong>Output:</strong> A clear understanding of the operational environment. This critical input informs subsequent steps, especially <code class="language-plaintext highlighter-rouge">and</code>, ensuring the prompt is situationally aware. It might populate a dedicated <code class="language-plaintext highlighter-rouge">or</code> section in the XML.
-<strong>3. Identify XML Components:</strong></li>
-  <li><strong>Elaboration:</strong> This core phase maps the abstract task, purpose, and context onto the concrete structural elements required by the <code class="language-plaintext highlighter-rouge">raw_data</code> XML specification. It requires meticulous planning of <em>what</em> information the LLM needs and <em>how</em> it should be structured.</li>
-  <li><strong><code class="language-plaintext highlighter-rouge">3a. Identifying Variables ([[variable-name]]):</code></strong></li>
-  <li><em>Task:</em> Identify all dynamic inputs. Use clear, consistent names (e.g., <code class="language-plaintext highlighter-rouge">customer_query</code>, <code class="language-plaintext highlighter-rouge">product_database_json</code>). Consider data types/formats. Plan for nested data representation if needed/supported (e.g., <code class="language-plaintext highlighter-rouge">[[user.profile.id]]</code>).</li>
-  <li><em>Tip:</em> Look for nouns or data entities mentioned in the purpose or context that will change with each execution.</li>
-  <li><strong><code class="language-plaintext highlighter-rouge">3b. Crafting Instructions ():</code></strong></li>
-  <li><em>Task:</em> Decompose the task into the smallest logical, actionable steps. Use clear, imperative verbs. Reference variables explicitly (<code class="language-plaintext highlighter-rouge">Analyze [[user_query]]</code>). Frame positively where possible, but use negative constraints for clarity (“Do not hallucinate information”). Consider <em>meta-instructions</em> (“Process instructions sequentially,” “Refer to constraints in ``”). Handle conditionality explicitly (“If [[input_type]] is ‘A’, do X; if ‘B’, do Y”).</li>
-  <li><em>Pitfall:</em> Ambiguous or overly complex instructions. Instructions assuming knowledge not provided in context.</li>
-  <li><em>Tip:</em> Write instructions as if explaining the process to a literal-minded junior assistant. Test clarity by having someone else read them.</li>
-  <li><strong><code class="language-plaintext highlighter-rouge">3c. Determining Sections ():</code></strong></li>
-  <li><em>Task:</em> Group related information logically using tags allowed/defined by <code class="language-plaintext highlighter-rouge">raw_data</code>. Common sections: <code class="language-plaintext highlighter-rouge">,</code>/<code class="language-plaintext highlighter-rouge">,</code>, <code class="language-plaintext highlighter-rouge">,</code>, ``. Evaluate trade-offs between specific semantic tags vs. generic ones.</li>
-  <li><em>Goal:</em> Readability, logical separation, clear roles for information.</li>
-  <li><strong><code class="language-plaintext highlighter-rouge">3d. Curating Examples ():</code></strong></li>
-  <li><em>Task:</em> Create high-quality, diverse examples (3-5+) demonstrating the desired input-to-output transformation. Select examples covering:</li>
-  <li><em>Representativeness:</em> Typical use cases.</li>
-  <li><em>Diversity:</em> Different valid inputs/outputs.</li>
-  <li><em>Clarity:</em> Easy to understand illustration of instructions.</li>
-  <li><em>Edge Cases:</em> Handling boundaries, ambiguities, less common scenarios.</li>
-  <li><em>(Optional) Contrasting/Negative Examples:</em> Show common errors to avoid.</li>
-  <li><em>Pitfall:</em> Examples that are too simple, not diverse enough, or inconsistent with instructions.</li>
-  <li><em>Tip:</em> Develop examples in parallel with instructions, ensuring they align perfectly.</li>
-  <li><strong>Output:</strong> A detailed inventory: list of variables, sequence of instructions, chosen section structure, and curated input/output example pairs.
-<strong>4. Structure as XML:</strong></li>
-  <li><strong>Elaboration:</strong> Assemble the components into the formal XML structure per <code class="language-plaintext highlighter-rouge">raw_data</code>. Precision is key; syntax errors break the prompt. Use XML editors/linters. Consider XML comments (``) for maintainability if appropriate, mindful of token cost.</li>
-  <li><strong>Task:</strong></li>
-  <li>Map variables to <code class="language-plaintext highlighter-rouge">[[placeholders]]</code> in correct sections.</li>
-  <li>Place <code class="language-plaintext highlighter-rouge">tags sequentially under</code>.</li>
-  <li>Format `` correctly with consistent nested tags.</li>
-  <li>Perform rigorous consistency/validity check:</li>
-  <li><em>XML Validity:</em> Adheres to <code class="language-plaintext highlighter-rouge">raw_data</code> schema? Use validator (<code class="language-plaintext highlighter-rouge">xmllint</code>, IDE plugins). Well-formed?</li>
-  <li><em>Placeholder Check:</em> Placeholders match variable list? Correctly placed?</li>
-  <li><em>Instruction-Example Alignment:</em> Examples reflect <em>all</em> relevant instructions? Output matches expected result?</li>
-  <li><em>Purpose Alignment:</em> Instructions/examples fulfill ``?</li>
-  <li><em>Tip:</em> Validate the XML structure frequently during construction.</li>
-  <li><strong>Output:</strong> A well-formed, syntactically valid draft XML prompt. Example (with context/comments):
-```xml</li>
-</ul>
-
-<p>Generate extensive, factual summaries of technical articles for a managerial audience.</p>
-
-<p>Non-technical managers
-Summary must not exceed 100 words.
-Avoid technical jargon where possible; explain if unavoidable.
-Focus on key findings and business implications.
-Output format must be plain text.</p>
-
-<p>Read the input [[article-text]] carefully.
-Identify the main topic, key findings, and potential business implications based <em>only</em> on the text.
-Synthesize these points into a extensive summary, adhering to all constraints in the  section.&lt;/instruction&gt;
-Prioritize clarity and directness suitable for the specified audience.
-Output <em>only</em> the summary text.
-&lt;/instructions&gt;
-[[article-text]]</p>
-
-<p>&lt;/prompt&gt;
-```
-<strong>5. Propose Final XML:</strong></p>
-<ul>
-  <li><strong>Elaboration:</strong> A formal checkpoint. Consolidate the structured components into the complete candidate XML. This is the testable hypothesis. Documenting the design rationale here aids future understanding.</li>
-  <li><strong>Task:</strong> Formally propose the complete XML structure based on analysis and structuring. Hypothesize its effectiveness.</li>
-  <li><strong>Output:</strong> The complete candidate XML prompt structure, ready for formal review and evaluation.
-<strong>6. Evaluate and Refine:</strong></li>
-  <li><strong>Elaboration:</strong> The critical, iterative empirical validation phase. Systematically test to uncover weaknesses before deployment. Expect multiple cycles.</li>
-  <li><strong>6a. Evaluation Methodologies:</strong></li>
-  <li><em>Peer Review:</em> Essential for catching blind spots in logic, clarity, completeness.</li>
-  <li><em>Mental Simulation:</em> Walk through logic with diverse hypothetical inputs (valid, invalid, edge cases).</li>
-  <li><em>LLM Testing (Systematic):</em> Design a test suite (unit tests for prompts). Execute against target LLM(s) with varied inputs. Analyze outputs for correctness, consistency, robustness, adherence to format/constraints. Automate testing where feasible (e.g., using frameworks like <code class="language-plaintext highlighter-rouge">pytest</code> to wrap LLM calls and assert outputs).</li>
-  <li><em>Checklist Comparison:</em> Use prompt quality checklists (clarity, specificity, bias, safety, etc.).</li>
-  <li><em>Metrics:</em> Define relevant metrics (e.g., ROUGE/BLEU for summarization/translation, F1/Accuracy for classification, code quality scores, task success rate, factual consistency checks).</li>
-  <li><strong>6b. Common Refinement Strategies:</strong></li>
-  <li><em>Instruction Tuning:</em> Rephrasing, adding/removing/reordering steps, adding explicit positive/negative constraints (e.g., <code class="language-plaintext highlighter-rouge">Output MUST be valid JSON.</code>).</li>
-  <li><em>Example Curation:</em> Adding/improving/removing examples, especially targeting observed failure modes or edge cases. Few-shot example quality is often critical.</li>
-  <li><em>Constraint Addition/Modification:</em> Adjusting rules in <code class="language-plaintext highlighter-rouge">or</code> based on test results.</li>
-  <li><em>Structural Reorganization:</em> Modifying XML structure (if spec allows) for potentially better LLM interpretation.</li>
-  <li><em>Persona/Role Adjustment:</em> Refining <code class="language-plaintext highlighter-rouge">or adding/tuning</code> tags.</li>
-  <li><strong>Task:</strong> Evaluate against criteria (Clarity, Completeness, Correctness, Effectiveness, Robustness, Efficiency, Safety). Refine iteratively based on findings. Document changes.</li>
-  <li><em>Pitfall:</em> Confirmation bias during testing; inadequate test coverage.</li>
-  <li><em>Tip:</em> Design test cases <em>before</em> starting refinement to avoid bias. Aim for diverse test coverage. Be prepared for multiple Evaluate-&gt;Refine cycles.</li>
-  <li><strong>Output:</strong> An evaluated, rigorously tested, iterated, and refined XML prompt structure with high confidence in its operational effectiveness.
-<strong>7. Finalize XML Prompt:</strong></li>
-  <li><strong>Elaboration:</strong> Conclude the design/refinement phase. Lock down the validated structure. Establish version control and documentation.</li>
-  <li><strong>Task:</strong> Finalize the XML based on successful testing. Implement version control (e.g., Git). Tag a stable version (e.g., v1.0). Create associated documentation (purpose, inputs, outputs, constraints, usage guide, known limitations).</li>
-  <li><strong>Output:</strong> The final, validated, version-controlled, production-ready XML prompt, accompanied by essential documentation.</li>
-</ul>]]></content><author><name></name></author><category term="scratchpad" /></entry></feed>
+<p>This guide details a complex, non-standard configuration fraught with performance and reliability risks. While it provides a technically feasible path for single-drive boot and persistence under specific constraints, users should strongly prefer the standard Sbnb architecture using reliable internal server storage whenever possible. Evaluate the trade-offs carefully before committing to this approach.</p>]]></content><author><name></name></author><category term="scratchpad" /></entry></feed>
