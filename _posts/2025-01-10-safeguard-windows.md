@@ -1,6 +1,5 @@
 ---
-
-tags: [scratchpad]
+tags: [aid>software>windows]
 info: aberto.
 date: 2025-01-10
 type: post
@@ -10,8 +9,6 @@ slug: safeguard-windows
 title: 'Safeguard Windows 11 customization'
 ---
 ### **1. Creating a Complete System Backup**
-
-**a) Using Windows Built-in System Image Backup**
 
 Windows 11 includes the "Backup and Restore (Windows 7)" feature, which allows you to create a system image.
 
@@ -38,45 +35,6 @@ Windows 11 includes the "Backup and Restore (Windows 7)" feature, which allows y
 
 - This method creates a full image of your system, allowing for complete restoration.
 - It's suitable for personal use and doesn't require additional software.
-
----
-
-**b) Using Third-Party Imaging Software**
-
-Third-party tools often provide more features and flexibility.
-
-**Recommended Tools:**
-
-- **Macrium Reflect Free/Paid**
-- **Acronis Cyber Protect Home Office**
-- **EaseUS Todo Backup**
-- **Clonezilla** (Open-source)
-- **Veeam Agent for Microsoft Windows**
-
-**Benefits:**
-
-- **Incremental Backups:** Save time and storage by backing up only changes since the last backup.
-- **Advanced Features:** Options like disk cloning, scheduling, and encryption.
-- **Hardware Independence:** Some tools support restoration to different hardware.
-
-**Basic Steps:**
-
-1. **Install the Software:**
-
-   - Download and install your chosen backup tool.
-
-2. **Create a Bootable Recovery Media:**
-
-   - Use the software to create a bootable USB or DVD for recovery purposes.
-
-3. **Perform a Full System Backup:**
-
-   - Follow the software's instructions to create a system image.
-   - Choose an external drive or network location for storage.
-
-4. **Verify the Backup:**
-
-   - Use the verification feature to ensure the integrity of the backup.
 
 ---
 
@@ -180,77 +138,4 @@ Migrate user accounts, data, and settings.
 
 For deploying a standardized environment across multiple machines.
 
-**Steps:**
-
-1. **Prepare the Reference Machine:**
-
-   - Install Windows and customize settings.
-   - Do not connect to the internet after installation to prevent updates that might interfere with Sysprep.
-
-2. **Run Sysprep:**
-
-   - Open Command Prompt as administrator.
-   - Navigate to `C:\Windows\System32\Sysprep`.
-   - Run:
-
-     ```cmd
-     sysprep /oobe /generalize /shutdown
-     ```
-
-3. **Capture the Image:**
-
-   - Boot into Windows PE using a bootable USB.
-   - Use DISM or third-party tools to capture the system image.
-
-4. **Deploy the Image to Target Machines:**
-
-   - Apply the image using deployment tools or bootable media.
-
-**Considerations:**
-
-- Advanced method requiring technical expertise.
-- Ensure hardware compatibility.
-- Be aware of licensing implications.
-
----
-
-### **3. Best Practices**
-
-- **Regular Backups:**
-
-  - Schedule backups to keep your data safe and up-to-date.
-
-- **Testing:**
-
-  - Verify backup integrity and practice the restoration process.
-
-- **Documentation:**
-
-  - Keep records of customizations and configurations for reference.
-
-- **Security:**
-
-  - Encrypt backups and secure storage locations to protect sensitive data.
-
-- **Licensing Compliance:**
-
-  - Ensure you comply with Microsoft's licensing terms, especially when cloning systems.
-
----
-
-### **Additional Options**
-
-**Cloud Backup Solutions:**
-
-- Utilize services like **OneDrive** or third-party cloud storage for backing up personal files and some settings.
-
-**Virtualization:**
-
-- **Virtual Machine Snapshots:**
-
-  - Use Hyper-V or VirtualBox to create a virtual machine of your customized setup.
-  - Take snapshots to preserve states at different points in time.
-
-**Note:**
-
-- These methods may not be suitable for deploying configurations to physical machines but can be useful for testing and backup purposes.
+Steps: `https://ib.bsb.br/sysprep`
