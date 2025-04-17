@@ -1,17 +1,14 @@
 ---
-
 tags: [software>windows, scripts>powershell]
 info: aberto.
 date: 2025-01-18
 type: post
 layout: post
 published: true
-slug: windows-11-switch-workspaces-via-virtualdesktop-module-with-custom-shortcuts
+slug: windows-workspaces
 title: 'Windows 11: Switch Workspaces via VirtualDesktop Module with custom shortcuts'
 ---
-# Creating Batch Files to Switch to Specific Virtual Desktops Using PowerShell and the VirtualDesktop Tool
-
-## **Overview**
+## Creating Batch Files to Switch to Specific Virtual Desktops Using PowerShell and the VirtualDesktop Tool
 
 This guide will help you create a PowerShell script that generates batch files (`1.bat` to `8.bat`) to switch directly to any of your eight virtual desktops (workspaces) on Windows 11. We will use the **VirtualDesktop** command-line tool by Markus Scholtes to manage virtual desktops via command-line commands.
 
@@ -248,3 +245,74 @@ You can now switch to any workspace by running the corresponding batch file.
 - **From Command Prompt or PowerShell:**
 
   - Simply type the number (which corresponds to the batch file's name) and press **Enter**: `C:\Users\YourUsername> 3`
+
+# CODE
+
+.\00-QuickAccess\0.bat
+```
+start "" "C:\Program Files\PowerShell\7\pwsh.exe"
+```
+.\00-QuickAccess\1.bat
+```
+@echo off
+"G:\05-portable\VirtualDesktop11-24H2.exe" /Switch:0
+```
+.\00-QuickAccess\2.bat
+```
+@echo off
+"G:\05-portable\VirtualDesktop11-24H2.exe" /Switch:1
+
+```
+.\00-QuickAccess\3.bat
+```
+@echo off
+"G:\05-portable\VirtualDesktop11-24H2.exe" /Switch:2
+
+```
+.\00-QuickAccess\4.bat
+```
+@echo off
+"G:\05-portable\VirtualDesktop11-24H2.exe" /Switch:3
+
+```
+.\00-QuickAccess\5.bat
+```
+@echo off
+"G:\05-portable\VirtualDesktop11-24H2.exe" /Switch:4
+
+```
+.\00-QuickAccess\6.bat
+```
+@echo off
+"G:\05-portable\VirtualDesktop11-24H2.exe" /Switch:5
+
+```
+.\00-QuickAccess\7.bat
+```
+@echo off
+"G:\05-portable\VirtualDesktop11-24H2.exe" /Switch:6
+
+```
+.\00-QuickAccess\8.bat
+```
+@echo off
+"G:\05-portable\VirtualDesktop11-24H2.exe" /Switch:7
+
+```
+.\00-QuickAccess\9.bat
+```
+@echo off
+"G:\05-portable\VirtualDesktop11-24H2.exe" /Switch:8
+
+```
+.\00-QuickAccess\b.bat
+```
+@echo off
+pushd "G:\05-portable\ungoogled"
+start "" "C:\Program Files\PowerShell\7\pwsh.exe" -NoProfile -ExecutionPolicy Bypass -File "un-script.ps1"
+exit
+```
+.\00-QuickAccess\t.bat
+```
+start "" "G:\05-portable\ExplorerPlusPlus\Explorer++.exe"
+```
