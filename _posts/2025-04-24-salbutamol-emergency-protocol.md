@@ -70,6 +70,7 @@ Seek emergency care if the child presents:
 ---
 
 ### 5. **Simplified Action Plan (Example)**
+
 | Situation                | What to do                                                    | When to seek emergency care              |
 |--------------------------|---------------------------------------------------------------|------------------------------------------|
 | Mild/Moderate symptoms   | 2 puffs of salbutamol with spacer, repeat after 20 min if needed (max 3 times in 1st hour). | If no improvement after 3 doses.         |
