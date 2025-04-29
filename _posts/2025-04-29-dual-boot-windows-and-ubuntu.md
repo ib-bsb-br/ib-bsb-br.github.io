@@ -1,14 +1,16 @@
 ---
-tags: [scratchpad]
+tags:
+- scratchpad
 info: aberto.
 date: 2025-04-29
 type: post
 layout: post
 published: true
 slug: dual-boot-windows-and-ubuntu
-title: 'Dual Boot Windows and Ubuntu'
+title: Dual Boot Windows and Ubuntu
+comment: https://merox.dev/blog/windows-11-ubuntu-25-04-dual-boot-guide/
 ---
-bibref https://merox.dev/blog/windows-11-ubuntu-25-04-dual-boot-guide/
+
 
 ![Image 1: Ubuntu 25 installer](https://merox.dev/blog/windows-11-ubuntu-25-04-dual-boot-guide/ubuntu25install_hu_a1a6c5b5a0a2c31f.webp)
 
