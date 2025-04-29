@@ -1,14 +1,16 @@
 ---
-tags: [scratchpad]
+tags:
+- scratchpad
 info: aberto.
 date: 2025-04-29
 type: post
 layout: post
 published: true
 slug: ocis-storj
-title: 'Storj integration to ownCloud Infinite Scale (oCIS)'
+title: Storj integration to ownCloud Infinite Scale (oCIS)
+comment: https://storj.dev/dcs/third-party-tools/ocis
 ---
-bibref https://storj.dev/dcs/third-party-tools/ocis
+
 
 Markdown Content:
 oCIS, or ownCloud Infinite Scale, is a cutting-edge technology platform for building cloud-native file sync and share applications. oCIS is designed with modularity, scalability, and extensibility in mind, providing the foundation for reliable, enterprise-ready digital workspaces.
