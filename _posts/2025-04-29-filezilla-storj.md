@@ -1,14 +1,16 @@
 ---
-tags: [scratchpad]
+tags:
+- scratchpad
 info: aberto.
 date: 2025-04-29
 type: post
 layout: post
 published: true
 slug: filezilla-storj
-title: 'FileZilla Native Integration to Storj'
+title: FileZilla Native Integration to Storj
+comment: https://storj.dev/dcs/third-party-tools/filezilla/filezilla-native
 ---
-bibref https://storj.dev/dcs/third-party-tools/filezilla/filezilla-native
+
 
 Markdown Content:
 This guide walks users through the process of setting up FileZilla to transfer files over Storj.
