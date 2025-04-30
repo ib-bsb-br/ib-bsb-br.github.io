@@ -1,4 +1,160 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2025-04-30T10:24:07+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">sbnb/scripts/install-linux.sh</title><link href="https://ib.bsb.br/sbnbscriptsinstall-linuxsh/" rel="alternate" type="text/html" title="sbnb/scripts/install-linux.sh" /><published>2025-04-30T00:00:00+00:00</published><updated>2025-04-30T08:32:47+00:00</updated><id>https://ib.bsb.br/sbnbscriptsinstall-linuxsh</id><content type="html" xml:base="https://ib.bsb.br/sbnbscriptsinstall-linuxsh/"><![CDATA[<section class="code-block-container" role="group" aria-label="Bash Code Block" data-filename="bash_code_block.sh" data-code="#!/bin/bash
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2025-04-30T10:37:17+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">4-node NethServer 8 homelab</title><link href="https://ib.bsb.br/4-node-nethserver-8-homelab/" rel="alternate" type="text/html" title="4-node NethServer 8 homelab" /><published>2025-04-30T00:00:00+00:00</published><updated>2025-04-30T10:34:34+00:00</updated><id>https://ib.bsb.br/4-node-nethserver-8-homelab</id><content type="html" xml:base="https://ib.bsb.br/4-node-nethserver-8-homelab/"><![CDATA[<p>NethServer 8 (NS8) marks a significant evolution from its predecessors, embracing a modern <strong>Container Orchestrator</strong> architecture. Instead of a monolithic system, NS8 focuses on managing containerized Apps, offering flexibility but requiring a different deployment mindset compared to NethServer 7 (NS7).</p>
+
+<p>This guide provides a practical example of deploying a multi-node NS8 environment based on community discussions and official documentation (particularly the NS7 vs NS8 comparison [1], which users should note was marked “Work In Progress” and details may evolve). It outlines a 4-node setup designed to separate core services for clarity and potential scalability, using only features and concepts described in the source material.</p>
+
+<p><strong>Key Architectural Concepts &amp; Assumptions (Based on Provided Sources):</strong></p>
+
+<ul>
+  <li><strong>NS8 Architecture:</strong> NethServer 8 operates primarily as a <strong>Container Orchestrator</strong>. Most core services and third-party applications run as containerized <strong>Apps</strong>. NS8’s main role is managing the lifecycle and configuration of these Apps [1].</li>
+  <li><strong>NethSecurity Role:</strong> Advanced gateway and firewall features (like complex rules, Quality of Service (QoS), network zones, integrated VPN servers with account provider integration, Multi-WAN) are <em>not</em> part of NS8’s core. These functions are handled by the separate <strong>NethSecurity</strong> project (<a href="https://nethsecurity.org/">https://nethsecurity.org/</a>) [1]. This guide assumes NethSecurity is <strong>not</strong> deployed unless explicitly mentioned.</li>
+  <li><strong>Operating System:</strong> This guide assumes <strong>Rocky Linux 9</strong> (or a similar RHEL 9 derivative or Debian 12) as the base OS for all nodes.</li>
+  <li><strong>Network:</strong> We assume a simple, flat network topology (e.g., <code class="language-plaintext highlighter-rouge">192.168.1.0/24</code>).</li>
+</ul>
+
+<hr />
+
+<h2 id="node-1-reverse-proxy--host-firewall">Node 1: Reverse Proxy &amp; Host Firewall</h2>
+
+<ul>
+  <li><strong>IP Example:</strong> <code class="language-plaintext highlighter-rouge">192.168.1.10</code></li>
+  <li><strong>Goal:</strong> Act as the entry point for web traffic using the built-in Traefik reverse proxy, manage basic host-level firewall rules, and potentially host a simple VPN solution.</li>
+</ul>
+
+<ol>
+  <li><strong>Install Base OS:</strong> Start with a minimal installation of Rocky Linux 9.</li>
+  <li><strong>Set Static IP:</strong> Configure a static IP address using <code class="language-plaintext highlighter-rouge">nmtui</code> or <code class="language-plaintext highlighter-rouge">nmcli</code>.
+    <ul>
+      <li>Example: IP <code class="language-plaintext highlighter-rouge">192.168.1.10/24</code>, Gateway <code class="language-plaintext highlighter-rouge">192.168.1.1</code>, DNS <code class="language-plaintext highlighter-rouge">192.168.1.11</code> (pointing to Node 2 once it’s up) [2].</li>
+    </ul>
+  </li>
+  <li><strong>Install NS8 Core:</strong> Download and run the official installation script. <strong>Always obtain the current script URL from the official NS8 documentation [3]</strong>. The command format is generally:
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Example format - get current URL from docs!</span>
+curl &lt;official-install-script-url&gt; | <span class="nb">sudo </span>bash
+</code></pre></div>    </div>
+  </li>
+  <li><strong>Initial Cluster Creation:</strong> Access the web UI at <code class="language-plaintext highlighter-rouge">https://192.168.1.10/cluster-admin/</code>. Follow the prompts to <strong>create the initial cluster</strong>. Set the cluster FQDN (e.g., <code class="language-plaintext highlighter-rouge">cluster.lab.local</code>), confirm the network CIDR, and set the administrator password [3]. This node becomes the first member of the cluster.</li>
+  <li><strong>Configure Host Firewall (Basic):</strong> NS8 uses a <strong>“Minimal: Firewalld”</strong> approach for host protection [1]. Open necessary ports using <code class="language-plaintext highlighter-rouge">firewall-cmd</code> or the Cockpit interface (usually accessible via <code class="language-plaintext highlighter-rouge">https://&lt;IP&gt;:9090</code>). For web traffic proxied through this node:
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>firewall-cmd <span class="nt">--add-service</span><span class="o">=</span>http <span class="nt">--permanent</span>
+<span class="nb">sudo </span>firewall-cmd <span class="nt">--add-service</span><span class="o">=</span>https <span class="nt">--permanent</span>
+<span class="nb">sudo </span>firewall-cmd <span class="nt">--reload</span>
+</code></pre></div>    </div>
+    <p><em>Note:</em> Remember, complex firewalling requires <strong>NethSecurity</strong> [1].</p>
+  </li>
+  <li><strong>Configure Reverse Proxy (Traefik):</strong> NS8 utilizes Traefik, configured primarily via <strong>“HTTP Routes”</strong> defined within the NS8 UI, typically under App settings or a dedicated Proxy section [1, 4]. Routes are automatically managed for most installed NS8 Apps.
+<em>Note:</em> Proxying external services (e.g., custom containers, services on other machines) typically requires manual Traefik configuration files (e.g., <code class="language-plaintext highlighter-rouge">.yaml</code> or <code class="language-plaintext highlighter-rouge">.toml</code> placed in a designated directory), bypassing the standard NS8 UI management [1]. This is considered an advanced topic.</li>
+  <li><strong>Configure VPN (Limited Options):</strong> NS8 Core does not include integrated VPN servers like OpenVPN or WireGuard out-of-the-box. Manual OS-level VPN setups are generally unsupported via the UI [1]. Based on the NS7/NS8 comparison [1], options include:
+    <ul>
+      <li><strong><code class="language-plaintext highlighter-rouge">wg-easy</code> App:</strong> Install this third-party WireGuard App from the Software Center. <em>Limitation:</em> It lacks integration with NS8 Account Providers (users must be managed separately within the app).</li>
+      <li><strong>NethSecurity:</strong> Deploying NethSecurity provides robust <strong>OpenVPN Roadwarrior</strong> capabilities fully integrated with account providers.</li>
+      <li><strong>(Manual Container):</strong> Advanced users could deploy and manage their own VPN solution in a container, but this falls outside standard NS8 App management.</li>
+    </ul>
+  </li>
+</ol>
+
+<p>—</p>
+
+<h2 id="node-2-active-directory-dns--dhcp">Node 2: Active Directory, DNS &amp; DHCP</h2>
+
+<ul>
+  <li><strong>IP Example:</strong> <code class="language-plaintext highlighter-rouge">192.168.1.11</code></li>
+  <li><strong>Goal:</strong> Provide Active Directory (AD) authentication services, internal DNS resolution, and optionally DHCP services using NS8 Apps.</li>
+</ul>
+
+<ol>
+  <li><strong>Install Base OS &amp; Set Static IP:</strong> Follow the same steps as Node 1 (Steps 1 &amp; 2). Set a static IP (e.g., <code class="language-plaintext highlighter-rouge">192.168.1.11/24</code>). Initially, point its DNS to your router (e.g., <code class="language-plaintext highlighter-rouge">192.168.1.1</code>) or an external resolver.</li>
+  <li><strong>Install NS8 Core:</strong> Follow the same step as Node 1 (Step 3) to install the core components.</li>
+  <li><strong>Join Existing Cluster:</strong> Access this node’s web UI at <code class="language-plaintext highlighter-rouge">https://192.168.1.11/</code>. Instead of creating a new cluster, choose the option to <strong>join an existing cluster</strong>. You will likely need to provide the address of an existing cluster member (e.g., Node 1’s IP or FQDN) and the cluster administrator credentials set during Node 1’s setup [3].</li>
+  <li><strong>Install Account Provider (Active Directory):</strong> From the NS8 Software Center, install the <strong>”Samba Active Directory”</strong> App. During setup, configure your AD domain name (e.g., <code class="language-plaintext highlighter-rouge">ad.lab.local</code>) and administrator password [5].
+    <ul>
+      <li><em>Important Limitations [1]:</em>
+        <ul>
+          <li>AD Replication: Joining multiple instances of this App for replication <strong>does not automatically synchronize SysVol or Group Policies (GPOs)</strong> between them. This is a significant limitation compared to traditional AD replication and impacts high availability strategies for GPOs and logon scripts. Manual procedures might be required for full redundancy.</li>
+          <li>Local OpenLDAP Alternative: If you choose the local OpenLDAP provider instead of AD, be aware it’s typically <strong>not accessible to services outside the NS8 cluster</strong> [1].</li>
+        </ul>
+      </li>
+    </ul>
+  </li>
+  <li><strong>Configure DNS:</strong> DNS resolution for your internal network can be provided by:
+    <ul>
+      <li>The <strong>”AD Account Provider” App</strong> itself (integrates AD zones automatically).</li>
+      <li>A separate <strong>”DNSMasq” App</strong> [1].
+Configure clients and other NS8 nodes to use this node’s IP (<code class="language-plaintext highlighter-rouge">192.168.1.11</code>) for DNS. (Alternatively, NethSecurity also offers DNS services [1]).</li>
+    </ul>
+  </li>
+  <li><strong>Configure DHCP:</strong> If needed, install the <strong>”DNSMasq” App</strong> [1] to provide DHCP services. Configure the DHCP scope, lease times, default gateway (e.g., <code class="language-plaintext highlighter-rouge">192.168.1.1</code>), and DNS server (this node’s IP, <code class="language-plaintext highlighter-rouge">192.168.1.11</code>) within the App’s UI. Remember to disable any other DHCP server (like on your router) on the network segment. (Alternatively, NethSecurity also offers DHCP services [1]). Consult the specific App’s documentation for detailed configuration steps.</li>
+</ol>
+
+<p>—</p>
+
+<h2 id="node-3-file-sharing--collaboration">Node 3: File Sharing &amp; Collaboration</h2>
+
+<ul>
+  <li><strong>IP Example:</strong> <code class="language-plaintext highlighter-rouge">192.168.1.12</code></li>
+  <li><strong>Goal:</strong> Host Nextcloud for collaboration and standard SMB/CIFS file shares, integrating with the AD on Node 2.</li>
+</ul>
+
+<ol>
+  <li><strong>Install Base OS &amp; Set Static IP:</strong> Follow Steps 1 &amp; 2 from Node 1. Set a static IP (e.g., <code class="language-plaintext highlighter-rouge">192.168.1.12/24</code>). Configure its DNS to point to Node 2 (<code class="language-plaintext highlighter-rouge">192.168.1.11</code>).</li>
+  <li><strong>Install NS8 Core:</strong> Follow Step 3 from Node 1.</li>
+  <li><strong>Join Existing Cluster:</strong> Follow Step 3 from Node 2 to join this node to the cluster.</li>
+  <li><strong>Install Nextcloud App:</strong> Install the official <strong>”Nextcloud”</strong> App from the Software Center. During configuration, connect it to the external Active Directory account provider running on Node 2 [6]. In the App’s Proxy settings [4, 6], define the FQDN for accessing Nextcloud (e.g., <code class="language-plaintext highlighter-rouge">cloud.lab.local</code>). Ensure a DNS A record exists (on Node 2) pointing <code class="language-plaintext highlighter-rouge">cloud.lab.local</code> to the IP of the Reverse Proxy (Node 1: <code class="language-plaintext highlighter-rouge">192.168.1.10</code>).
+<em>Note:</em> Automatic configuration/discovery for CalDAV and CardDAV clients <strong>is unconfirmed</strong> in the NS8 context according to the comparison document [1]; manual client configuration might be necessary. Consult the Nextcloud App’s documentation for specifics.</li>
+  <li><strong>Install File Server App (SMB):</strong> Install the <strong>”File Server”</strong> App to provide SMBv2/v3 shares integrated with the AD account provider [1]. Configure shared folders and permissions through the App’s UI. Consult the specific App’s documentation for detailed configuration steps.
+    <ul>
+      <li><em>Limitations [1]:</em>
+        <ul>
+          <li><strong>Recycle Bin:</strong> Enabling the recycle bin feature for shares requires <strong>Command Line Interface (CLI)</strong> configuration. Refer to community guides linked in the source comparison [1].</li>
+          <li><strong>Access Control Lists (ACLs):</strong> UI-based permission management is primarily <strong>”limited to a group”</strong>. Applying fine-grained ACLs typically requires using <strong>”3rd-party tools”</strong> on the command line (e.g., <code class="language-plaintext highlighter-rouge">setfacl</code>) [1].</li>
+        </ul>
+      </li>
+    </ul>
+  </li>
+</ol>
+
+<p>—</p>
+
+<h2 id="node-4-business-applications-platform">Node 4: Business Applications Platform</h2>
+
+<ul>
+  <li><strong>IP Example:</strong> <code class="language-plaintext highlighter-rouge">192.168.1.13</code></li>
+  <li><strong>Goal:</strong> Host various web-based business applications (e.g., Typo3 CMS, Redmine project management) leveraging NS8’s container orchestration capabilities.</li>
+</ul>
+
+<ol>
+  <li><strong>Install Base OS &amp; Set Static IP:</strong> Follow Steps 1 &amp; 2 from Node 1. Set a static IP (e.g., <code class="language-plaintext highlighter-rouge">192.168.1.13/24</code>). Configure its DNS to point to Node 2 (<code class="language-plaintext highlighter-rouge">192.168.1.11</code>).</li>
+  <li><strong>Install NS8 Core:</strong> Follow Step 3 from Node 1.</li>
+  <li><strong>Join Existing Cluster:</strong> Follow Step 3 from Node 2 to join this node to the cluster.</li>
+  <li><strong>Install Web Server (LEMP App):</strong> Since NS8 is a <strong>”Container Orchestrator”</strong> [1], you install a containerized web stack as an App. Look for a suitable <strong>”LEMP” App</strong> (Linux, Nginx, MariaDB/MySQL, PHP) or similar stack in the Software Center (this might be from NethForge or other third-party repositories) [1]. <strong>Verify availability and specific features in the Software Center</strong>. Install the chosen App and configure PHP versions, Nginx virtual hosts, database settings, etc., <em>within</em> this App according to its specific documentation [1].</li>
+  <li><strong>Deploy Applications:</strong>
+    <ul>
+      <li>Place your application code (Typo3, Redmine) into the appropriate web root directory exposed as a volume by the LEMP App.</li>
+      <li>Configure databases for your applications within the MariaDB/MySQL instance running inside the LEMP App container.</li>
+      <li>Follow the specific documentation for the chosen LEMP App and your applications [1].</li>
+      <li><em>Container Focus [1]:</em> For complex applications, deploying them using their official Docker images might be preferable. However, integrating and managing custom containers seamlessly within the NS8 UI/API framework isn’t explicitly detailed in the source material [1] and may require manual Docker/Podman commands or custom orchestration configurations.</li>
+    </ul>
+  </li>
+  <li><strong>Configure SFTP Access (SFTPGo App):</strong> For secure file transfers, install the <strong><code class="language-plaintext highlighter-rouge">SFTPGo</code> App</strong> [1]. Configure users, permissions, storage backends, and restrictions within the SFTPGo App’s interface for granular control [1]. Consult the specific App’s documentation for detailed configuration steps.</li>
+  <li><strong>Configure Firewall (Host):</strong> Only open ports directly on Node 4’s host firewall (<code class="language-plaintext highlighter-rouge">firewall-cmd</code> or Cockpit) if services need direct external access <em>not</em> going through the Node 1 reverse proxy. Most web traffic should be directed to Node 1.</li>
+  <li><strong>Integrate with AD (Manual/App-Specific):</strong> Configure individual applications (e.g., within Typo3’s backend or Redmine’s administration settings) to use LDAP authentication against the Active Directory server on Node 2, if the application supports it. This typically requires providing the LDAP server address (<code class="language-plaintext highlighter-rouge">192.168.1.11</code>), base DN, and potentially installing LDAP client tools within the application’s container environment.</li>
+  <li><strong>Reverse Proxy Access (Configure on Node 1):</strong> On Node 1 (the Reverse Proxy), configure <strong>”HTTP Routes”</strong> [4] via the NS8 UI. Point specific FQDNs (e.g., <code class="language-plaintext highlighter-rouge">typo3.lab.local</code>, <code class="language-plaintext highlighter-rouge">redmine.lab.local</code>) to the internal services running on Node 4 (e.g., <code class="language-plaintext highlighter-rouge">http://192.168.1.13:&lt;LEMP_App_Port&gt;</code>). As noted earlier, managing routes for non-NS8 managed containers/services might require manual Traefik configuration [1]. Ensure DNS A records exist (on Node 2) pointing these FQDNs to the IP of Node 1 (<code class="language-plaintext highlighter-rouge">192.168.1.10</code>).</li>
+</ol>
+
+<p>—</p>
+
+<h2 id="summary">Summary</h2>
+
+<p>This multi-node setup illustrates how NethServer 8’s container-based, App-centric architecture can be used to build a modular server environment based on the provided scenario. It leverages specific Apps for core functionalities, relies on Traefik (via HTTP Routes) for proxied access, utilizes minimal host firewalls, and clearly distinguishes its role from the more comprehensive network security features offered by the NethSecurity project. Understanding these architectural differences [1] and the specific limitations noted is key to successfully deploying and managing NS8.</p>
+
+<p>Always refer to the official NethServer 8 documentation and community resources for the latest information, detailed App configurations, and potential updates to features and limitations, especially considering that some source information [1] was marked as work-in-progress.</p>
+
+<p><strong>References:</strong></p>
+
+<p>[1] NS7 vs NS8 Feature Comparison (Work In Progress): <a href="https://community.nethserver.org/t/wip-ns7-vs-ns8-feature-comparison/23258">https://community.nethserver.org/t/wip-ns7-vs-ns8-feature-comparison/23258</a> <br />
+[2] OS Network Setup Documentation: <a href="https://docs.nethserver.org/projects/ns8/en/latest/os_network.html">https://docs.nethserver.org/projects/ns8/en/latest/os_network.html</a> <br />
+[3] NS8 Installation Guide: <a href="https://docs.nethserver.org/projects/ns8/en/latest/install.html">https://docs.nethserver.org/projects/ns8/en/latest/install.html</a> <br />
+[4] NS8 Proxy App Documentation: <a href="https://docs.nethserver.org/projects/ns8/en/latest/proxy.html">https://docs.nethserver.org/projects/ns8/en/latest/proxy.html</a> <br />
+[5] NS8 User Domains Documentation: <a href="https://docs.nethserver.org/projects/ns8/en/latest/user_domains.html">https://docs.nethserver.org/projects/ns8/en/latest/user_domains.html</a> <br />
+[6] NS8 Nextcloud App Documentation: <a href="https://docs.nethserver.org/projects/ns8/en/latest/nextcloud.html">https://docs.nethserver.org/projects/ns8/en/latest/nextcloud.html</a></p>]]></content><author><name></name></author><category term="scratchpad" /></entry><entry><title type="html">sbnb/scripts/install-linux.sh</title><link href="https://ib.bsb.br/sbnbscriptsinstall-linuxsh/" rel="alternate" type="text/html" title="sbnb/scripts/install-linux.sh" /><published>2025-04-30T00:00:00+00:00</published><updated>2025-04-30T08:32:47+00:00</updated><id>https://ib.bsb.br/sbnbscriptsinstall-linuxsh</id><content type="html" xml:base="https://ib.bsb.br/sbnbscriptsinstall-linuxsh/"><![CDATA[<section class="code-block-container" role="group" aria-label="Bash Code Block" data-filename="bash_code_block.sh" data-code="#!/bin/bash
 
 # ==============================================================================
 # Sbnb Linux Bootable USB/Disk Creation Script (Local Mode)
@@ -2816,135 +2972,4 @@ As emphasized previously, avoid running sudo apt-get upgrade or sudo apt full-up
   <li><strong>Seek Further Information:</strong> If the issue persists, consult the board’s full technical manual, search online forums specific to the board or operating system, or check the manufacturer’s support resources.</li>
 </ul>
 
-<p>For more advanced features, specific hardware details, or application development, refer to the board’s full technical manual, component datasheets, and relevant Linux/distribution documentation. Mastering these resources will help you fully leverage the capabilities of your device.</p>]]></content><author><name></name></author><category term="scratchpad" /></entry><entry><title type="html">Salbutamol Emergency Protocol</title><link href="https://ib.bsb.br/salbutamol-emergency-protocol/" rel="alternate" type="text/html" title="Salbutamol Emergency Protocol" /><published>2025-04-24T00:00:00+00:00</published><updated>2025-04-24T17:03:19+00:00</updated><id>https://ib.bsb.br/salbutamol-emergency-protocol</id><content type="html" xml:base="https://ib.bsb.br/salbutamol-emergency-protocol/"><![CDATA[<h1 id="emergency-salbutamol-application-protocol-for-a-30-month-old-child-with-asthmabronchitis-and-acute-respiratory-infection">Emergency Salbutamol Application Protocol for a 30-Month-Old Child with Asthma/Bronchitis and Acute Respiratory Infection</h1>
-
-<p><strong>Attention:</strong><br />
-This information is for educational purposes only and does not replace medical evaluation and prescription. Children with severe respiratory distress, oxygen saturation drop (&lt;92%), or previous need for nebulized adrenaline must be evaluated at an emergency service immediately. Home use of salbutamol should always follow individualized medical guidance.</p>
-
-<hr />
-
-<h3 id="1-situation-summary">1. <strong>Situation Summary</strong></h3>
-<ul>
-  <li>30-month-old child (2.5 years) with chronic asthma/bronchitis.</li>
-  <li>Presents with acute respiratory infection, severe cough, signs of upper airway inflammation, episodes of desaturation (&lt;90%), and has previously required nebulized adrenaline for glottic edema.</li>
-  <li>High-risk situation, with potential for respiratory failure.</li>
-</ul>
-
-<hr />
-
-<h3 id="2-emergency-salbutamol-use-protocol-at-home-under-medical-guidance">2. <strong>Emergency Salbutamol Use Protocol (At Home, Under Medical Guidance)</strong></h3>
-
-<p><strong>A. Indication</strong></p>
-<ul>
-  <li>Symptoms of bronchospasm: wheezing, severe cough, difficulty breathing, increased respiratory effort.</li>
-  <li>NOT indicated for glottic edema/laryngitis (where adrenaline and corticosteroids are the treatments of choice).</li>
-</ul>
-
-<p><strong>B. Administration</strong></p>
-<ul>
-  <li><strong>Preferred:</strong> Metered-dose inhaler (MDI) with spacer and face mask.</li>
-  <li><strong>Alternative:</strong> Nebulization, if prescribed and available.</li>
-</ul>
-
-<p><strong>C. Dosage and Frequency (References: GINA 2023, SBP, BTS/SIGN)</strong></p>
-<ul>
-  <li><strong>MDI with spacer:</strong>
-    <ul>
-      <li><strong>Dose:</strong> 2 puffs (100 mcg/puff) for children &lt;5 years.</li>
-      <li><strong>Frequency:</strong> Every 20 minutes, up to 3 times in the first hour (total of 3 doses), if needed.</li>
-      <li><strong>After the first hour:</strong> If improved, may space out to every 4–6 hours, as per medical advice.</li>
-    </ul>
-  </li>
-  <li><strong>Nebulization:</strong>
-    <ul>
-      <li><strong>Dose:</strong> 2.5 mg salbutamol (0.5 mL of 5 mg/mL solution) diluted in 2–3 mL of saline.</li>
-      <li><strong>Frequency:</strong> Every 20 minutes, up to 3 times in the first hour, if needed.</li>
-      <li><strong>After the first hour:</strong> Space out as improvement occurs and per medical advice.</li>
-    </ul>
-  </li>
-</ul>
-
-<p><strong>D. Monitoring</strong></p>
-<ul>
-  <li>Observe for symptom improvement: reduced respiratory effort, less coughing, improved skin/lip color.</li>
-  <li>Monitor oxygen saturation, if possible (ideal &gt;94%).</li>
-  <li>Watch for side effects: tremors, tachycardia, agitation.</li>
-</ul>
-
-<hr />
-
-<h3 id="3-criteria-for-immediate-emergency-care">3. <strong>Criteria for Immediate Emergency Care</strong></h3>
-<p>Seek emergency care if the child presents:</p>
-<ul>
-  <li>Oxygen saturation &lt;92% (or &lt;94% persistently).</li>
-  <li>Severe respiratory distress: very rapid breathing, marked retractions, nasal flaring, grunting.</li>
-  <li>Excessive sleepiness, difficulty waking, lethargy.</li>
-  <li>Inability to speak, cry, or feed due to shortness of breath.</li>
-  <li>Bluish lips, tongue, or nails (cyanosis).</li>
-  <li>Stridor (harsh sound when inhaling) at rest.</li>
-  <li>No significant response after 3 doses of salbutamol.</li>
-  <li>Need for salbutamol every 1–2 hours after the initial phase.</li>
-</ul>
-
-<hr />
-
-<h3 id="4-limits-of-salbutamol-use">4. <strong>Limits of Salbutamol Use</strong></h3>
-<ul>
-  <li>Salbutamol is a rescue medication, not for long-term control. Frequent use (&gt;2 times per week outside of attacks) indicates the need to adjust maintenance therapy (inhaled corticosteroids).</li>
-  <li>Emergency use for up to 30 days should only occur under medical supervision, with frequent reassessment.</li>
-  <li>If the child needs salbutamol for more than 24–48 hours, or requires frequent doses, consult the pediatrician.</li>
-</ul>
-
-<hr />
-
-<h3 id="5-simplified-action-plan-example">5. <strong>Simplified Action Plan (Example)</strong></h3>
-
-<table>
-  <thead>
-    <tr>
-      <th>Situation</th>
-      <th>What to do</th>
-      <th>When to seek emergency care</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>Mild/Moderate symptoms</td>
-      <td>2 puffs of salbutamol with spacer, repeat after 20 min if needed (max 3 times in 1st hour).</td>
-      <td>If no improvement after 3 doses.</td>
-    </tr>
-    <tr>
-      <td>Severe symptoms</td>
-      <td>2 puffs of salbutamol, seek emergency care immediately.</td>
-      <td>If signs of severity (see above).</td>
-    </tr>
-    <tr>
-      <td>Controlled symptoms</td>
-      <td>Maintain maintenance therapy, monitor.</td>
-      <td>If symptoms return or worsen.</td>
-    </tr>
-  </tbody>
-</table>
-
-<hr />
-
-<h3 id="6-references">6. <strong>References</strong></h3>
-<ul>
-  <li>Global Initiative for Asthma (GINA) 2023. <a href="https://ginasthma.org/">https://ginasthma.org/</a></li>
-  <li>Brazilian Society of Pediatrics (SBP) – Asthma Guidelines in Children.</li>
-  <li>BTS/SIGN British Guideline on the Management of Asthma 2019.</li>
-  <li>NIH/NHLBI Asthma Guidelines.</li>
-</ul>
-
-<hr />
-
-<h3 id="7-final-considerations">7. <strong>Final Considerations</strong></h3>
-<ul>
-  <li>Children with a history of desaturation (&lt;90%), need for nebulized adrenaline, or signs of upper airway obstruction should be evaluated in a hospital.</li>
-  <li>The above protocol is a general guide and does not replace in-person medical follow-up.</li>
-  <li>Ask your pediatrician for a written asthma action plan tailored to your child.</li>
-</ul>
-
-<hr />
-
-<p><strong>If in doubt or if symptoms worsen, seek medical attention immediately.</strong></p>]]></content><author><name></name></author><category term="scratchpad" /></entry></feed>
+<p>For more advanced features, specific hardware details, or application development, refer to the board’s full technical manual, component datasheets, and relevant Linux/distribution documentation. Mastering these resources will help you fully leverage the capabilities of your device.</p>]]></content><author><name></name></author><category term="scratchpad" /></entry></feed>
