@@ -1,12 +1,11 @@
 ---
-
 tags: [linux]
 info: aberto.
 date: 2024-08-02
 type: post
 layout: post
 published: true
-slug: how-to-use-the-dd-command-to-create-a-bootable-usb-drive-from-an-iso-file-on-a-linux-based-system
+slug: linux-dd2boot
 title: 'How to use the `dd` command to create a bootable USB drive from an ISO file on a Linux-based system'
 ---
 
