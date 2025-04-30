@@ -1,12 +1,11 @@
 ---
-
-tags: [linux, iphone]
+tags: [scratchpad]
 info: aberto.
 date: 2024-10-26
 type: post
 layout: post
 published: true
-slug: ssh-between-linux-and-iphone-via-a-shell
+slug: ssh-linux-iphone
 title: 'SSH between Linux and iPhone via a-Shell'
 ---
 # analysis
