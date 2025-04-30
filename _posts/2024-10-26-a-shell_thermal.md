@@ -1,15 +1,12 @@
 ---
-
-
-tags: [iphone>shortcuts, linux]
-info: aberto.  
-date: 2024-10-27  
-type: post  
-layout: post  
-published: true  
-slug: a-shell_thermal  
+tags: [scratchpad, iphone>shortcuts, linux]
+info: aberto.
+date: 2024-10-26
+type: post
+layout: post
+published: true
+slug: a-shell_thermal
 title: 'iOS Shortcut for Linux Thermal Printing'
-
 ---
 
 ## Introduction
@@ -253,4 +250,3 @@ Create the `remote_control.sh` script on your iPhone to pass the text directly t
 3. The shortcut will open a-Shell, execute the script, and then return to Shortcuts.
 4. Observe any notifications for success or error messages.
 5. Verify that the text has been printed correctly by the thermal printer connected to your Debian server.
-
