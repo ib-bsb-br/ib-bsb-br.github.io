@@ -67,8 +67,8 @@
         
           <span class="post-updated">
             ↣
-            <time datetime="2025-04-19T20:27:26+00:00">
-              19 Apr 2025
+            <time datetime="2025-05-01T19:49:12+00:00">
+              01 May 2025
             </time>
           </span>
         
@@ -90,11 +90,11 @@
         <div class="page-stats mt-3" role="status" aria-label="Page statistics">
       
       <span class="badge bg-primary">
-        52960 characters
+        83581 characters
       </span>
         <span class="separator mx-2" aria-hidden="true">•</span>
         <span class="badge bg-primary">
-        6716 words
+        10036 words
       </span>
       </div>
         <div class="action-buttons d-flex flex-wrap gap-2">
@@ -603,126 +603,2092 @@ lsblk <span class="nt">-o</span> NAME,SIZE,TYPE,FSTYPE,LABEL,PARTLABEL,MOUNTPOIN
 <span class="nb">sudo cp</span> /path/to/your/sbnb.efi /mnt/sbnb-mount/EFI/BOOT/BOOTX64.EFI
 </code></section></div>    </div>
   </li>
-  <li><strong>(Recommended) Create Sbnb Configuration File:</strong> Place <code class="language-plaintext highlighter-rouge">sbnb-tskey.txt</code> in ESP root (<code class="language-plaintext highlighter-rouge">/mnt/sbnb-mount/</code>). The <code class="language-plaintext highlighter-rouge">boot-sbnb.sh</code> script reads this to configure Tailscale. Replace <code class="language-plaintext highlighter-rouge">tskey-auth-...</code> with your actual Tailscale auth key.
-    <div class="language-bash highlighter-rouge"><div class="highlight"><section><code><span class="nb">echo</span> <span class="s2">"--- Creating Sbnb configuration file (sbnb-tskey.txt) ---"</span>
-<span class="nb">echo</span> <span class="s2">"tskey-auth-..."</span> | <span class="nb">sudo tee</span> /mnt/sbnb-mount/sbnb-tskey.txt <span class="o">&gt;</span> /dev/null
-</code></section></div>    </div>
-  </li>
-  <li><strong>(Crucial) Handle Data Partition Mounting via <code class="language-plaintext highlighter-rouge">sbnb-cmds.sh</code>:</strong>
-    <ul>
-      <li><strong>Context &amp; Goal:</strong> Sbnb boots -&gt; systemd -&gt; <code class="language-plaintext highlighter-rouge">sbnb.service</code> -&gt; <code class="language-plaintext highlighter-rouge">boot-sbnb.sh</code> -&gt; mounts ESP to <code class="language-plaintext highlighter-rouge">/mnt/sbnb</code> -&gt; executes <code class="language-plaintext highlighter-rouge">/mnt/sbnb/sbnb-cmds.sh</code>. This script mounts the data partition (labeled <code class="language-plaintext highlighter-rouge">SBNB_DATA</code>) to <code class="language-plaintext highlighter-rouge">/mnt/sbnb-data</code>.</li>
-      <li><strong>Device Detection Timing:</strong> There’s a potential race: the kernel/udev might not have created the <code class="language-plaintext highlighter-rouge">/dev/disk/by-label/SBNB_DATA</code> symlink or the <code class="language-plaintext highlighter-rouge">/dev/sdX2</code> node exactly when the script runs. The wait loop mitigates this.</li>
-      <li><strong>Default Script Conflict Uncertainty:</strong> The <code class="language-plaintext highlighter-rouge">boot-sbnb.sh</code> excerpt doesn’t show conflicting actions at its execution point. However, other early boot mechanisms could exist in Sbnb. If <code class="language-plaintext highlighter-rouge">/mnt/sbnb-data</code> behaves unexpectedly, investigate potential early boot scripts/services related to storage in your Sbnb version (advanced).</li>
-      <li><strong><code class="language-plaintext highlighter-rouge">sbnb-cmds.sh</code> Script (Wait Loop &amp; Logging):</strong> Create this file in the ESP root (<code class="language-plaintext highlighter-rouge">/mnt/sbnb-mount/</code> during prep). Save the following content to <code class="language-plaintext highlighter-rouge">/mnt/sbnb-mount/sbnb-cmds.sh</code>:</li>
-    </ul>
+  <li><strong>Run Sbnb Configuration python script:</strong> Mount <code class="language-plaintext highlighter-rouge">/dev/sdX1</code> to <code class="language-plaintext highlighter-rouge">/mnt/sbnb</code> and <code class="language-plaintext highlighter-rouge">/dev/sdX2</code> to <code class="language-plaintext highlighter-rouge">/mnt/sbnb-data</code>. Replace <code class="language-plaintext highlighter-rouge">tskey-auth-...</code> with your actual Tailscale auth key on this python script:</li>
+</ol>
 
-    <div class="language-sh highlighter-rouge"><div class="highlight"><section><code><span class="c">#!/bin/sh</span>
-<span class="c"># Custom sbnb-cmds.sh for USB Persistent Partition setup (No LVM)</span>
-<span class="c"># Mounts partition labeled DATA_LABEL to MOUNT_POINT after waiting for device.</span>
-<span class="c"># For debugging, uncomment 'set -x' to trace command execution.</span>
-<span class="c"># set -x</span>
+<p>{% codeblock python %}
+#!/usr/bin/env python3
+“””
+Unified SBNB Configuration Deployment Script (Version 2.1 - BusyBox cp focus).</p>
 
-<span class="c"># Function to log messages consistently to kernel buffer (dmesg) and console (tty)</span>
-log_msg<span class="o">()</span> <span class="o">{</span>
-  <span class="nb">echo</span> <span class="s2">"sbnb-cmds.sh: </span><span class="nv">$1</span><span class="s2">"</span> | <span class="nb">tee</span> /dev/kmsg
-<span class="o">}</span>
+<p>Generates configuration files and scripts to:</p>
+<ul>
+  <li>Mount a persistent data partition.</li>
+  <li>Configure Docker to use a persistent data-root on that partition.</li>
+  <li>Optionally migrate existing Docker data from /var/lib/docker robustly using busybox cp.</li>
+  <li>Set up backup/purge routines for the persistent Docker data.</li>
+  <li>Set up health and volume monitoring for Docker (with safer defaults).</li>
+  <li>Deploy a Tailscale authentication key.</li>
+  <li>Deploy an optional development environment script.</li>
+</ul>
 
-log_msg <span class="s2">"--- Running Custom USB Partition Mount Script ---"</span>
+<p>Core components generated:</p>
+<ul>
+  <li>/mnt/sbnb/sbnb-cmds.sh: Main boot script executed by the system.</li>
+  <li>/mnt/sbnb/sbnb-tskey.txt: Tailscale authentication key.</li>
+  <li>/mnt/sbnb-data/scripts/*: Helper scripts for backup, purge, health checks.</li>
+  <li>/mnt/sbnb-data/systemd/*: Systemd units to automate helper scripts.</li>
+</ul>
 
-<span class="c"># --- Configuration ---</span>
-<span class="nv">MOUNT_POINT</span><span class="o">=</span><span class="s2">"/mnt/sbnb-data"</span>  <span class="c"># Target directory for persistent data</span>
-<span class="nv">DATA_LABEL</span><span class="o">=</span><span class="s2">"SBNB_DATA"</span> <span class="c"># Filesystem label of the data partition (MUST match mkfs.ext4 -L)</span>
-<span class="c"># Alternative: Use UUID for potentially more stable identification if labels change/conflict</span>
-<span class="c"># Get UUID using 'sudo blkid /dev/sdX2' on prep machine, then set:</span>
-<span class="c"># DATA_UUID="YOUR-UUID-HERE"</span>
-<span class="nv">MAX_WAIT_SECONDS</span><span class="o">=</span>15    <span class="c"># Max time (seconds) to wait for the device node/label</span>
-<span class="nv">WAIT_INTERVAL</span><span class="o">=</span>1   <span class="c"># Check frequency (seconds)</span>
-<span class="nv">MOUNT_OPTS</span><span class="o">=</span><span class="s2">"defaults,noatime,nodiratime"</span> <span class="c"># Mount options (noatime/nodiratime reduce writes on flash)</span>
-<span class="c"># --- End Configuration ---</span>
+<p>Prerequisites:</p>
+<ul>
+  <li>Run as root.</li>
+  <li>ESP partition mounted at /mnt/sbnb (writable).</li>
+  <li>Data partition mounted at /mnt/sbnb-data (writable).</li>
+  <li>Required: Standard Linux utilities (coreutils including ‘cp’, systemd, grep, sed, etc.).</li>
+  <li>Recommended: <code class="language-plaintext highlighter-rouge">jq</code> installed on the target system for robust JSON handling.
+“””</li>
+</ul>
 
-<span class="nv">DATA_DEVICE</span><span class="o">=</span><span class="s2">""</span> <span class="c"># Will hold the found device path</span>
+<p>import os
+import stat
+import sys
+import pathlib
+import json
+import shutil
+from datetime import datetime</p>
+  <h1 id="-configuration-file-paths-">
+    
+    
+     <a href="#-configuration-file-paths-">#</a><a href="#" aria-label="Back to top">— Configuration: File Paths —</a>
+        
+    
+  </h1>
+      
+  <h1 id="base-mount-points---script-will-check-if-these-exist-and-are-writable">
+    
+    
+     <a href="#base-mount-points---script-will-check-if-these-exist-and-are-writable">#</a><a href="#" aria-label="Back to top">Base mount points - Script will check if these exist and are writable</a>
+        
+    
+  </h1>
+      
+<p>ESP_MOUNT = “/mnt/sbnb”
+DATA_MOUNT = “/mnt/sbnb-data”</p>
+  <h1 id="docker-configuration">
+    
+    
+     <a href="#docker-configuration">#</a><a href="#" aria-label="Back to top">Docker configuration</a>
+        
+    
+  </h1>
+      
+<p>PERSISTENT_DOCKER_ROOT = f”{DATA_MOUNT}/docker-root”
+DOCKER_CONFIG_DIR = “/etc/docker”
+DOCKER_CONFIG_FILE = f”{DOCKER_CONFIG_DIR}/daemon.json”
+DOCKER_CONFIG_BACKUP_SUFFIX = “.sbnb-orig-backup” # Suffix for one-time backup
+DOCKER_DATA_EPHEMERAL = “/var/lib/docker” # Default path for migration check</p>
+  <h1 id="permissions-for-docker-root-dir-rwxxx-ownergroup-should-be-rootroot">
+    
+    
+     <a href="#permissions-for-docker-root-dir-rwxxx-ownergroup-should-be-rootroot">#</a><a href="#" aria-label="Back to top">Permissions for Docker root dir (rwx–x–x). Owner/Group should be root:root.</a>
+        
+    
+  </h1>
+      
+  <h1 id="use-standard-integer-representation-for-octal-in-python">
+    
+    
+     <a href="#use-standard-integer-representation-for-octal-in-python">#</a><a href="#" aria-label="Back to top">Use standard integer representation for octal in Python</a>
+        
+    
+  </h1>
+      
+<p>DOCKER_ROOT_PERMISSIONS = 0o711</p>
+  <h1 id="permissions-for-daemonjson-rw-rr">
+    
+    
+     <a href="#permissions-for-daemonjson-rw-rr">#</a><a href="#" aria-label="Back to top">Permissions for daemon.json (rw-r–r–)</a>
+        
+    
+  </h1>
+      
+<p>DOCKER_CONFIG_PERMISSIONS = 0o644</p>
+  <h1 id="backup-configuration">
+    
+    
+     <a href="#backup-configuration">#</a><a href="#" aria-label="Back to top">Backup configuration</a>
+        
+    
+  </h1>
+      
+<p>BACKUP_BASE_DIR = f”{DATA_MOUNT}/backups/docker”
+BACKUP_KEEP_COUNT = 3 # Number of backups to retain
+STOP_DOCKER_FOR_BACKUP = 1 # 1 = Stop Docker during backup (safer), 0 = Attempt live backup</p>
+  <h1 id="permissions-for-backup-base-directory-rwxr-x">
+    
+    
+     <a href="#permissions-for-backup-base-directory-rwxr-x">#</a><a href="#" aria-label="Back to top">Permissions for backup base directory (rwxr-x—)</a>
+        
+    
+  </h1>
+      
+<p>BACKUP_DIR_PERMISSIONS = 0o750</p>
+  <h1 id="health-check-configuration">
+    
+    
+     <a href="#health-check-configuration">#</a><a href="#" aria-label="Back to top">Health Check configuration</a>
+        
+    
+  </h1>
+      
+<p>VOLUME_CHECK_THRESHOLD_PERCENT = 10 # Warn if free space drops below this %</p>
+  <h1 id="pruning-level-in-volume-check-0none-1containersdangling-images-2all-unused-imagescontainers-volumes-still-excluded">
+    
+    
+     <a href="#pruning-level-in-volume-check-0none-1containersdangling-images-2all-unused-imagescontainers-volumes-still-excluded">#</a><a href="#" aria-label="Back to top">Pruning level in volume check: 0=None, 1=Containers/Dangling Images, 2=All Unused Images+Containers (–volumes still excluded)</a>
+        
+    
+  </h1>
+      
+<p>VOLUME_CHECK_PRUNE_LEVEL = 1</p>
+  <h1 id="-content-definitions-">
+    
+    
+     <a href="#-content-definitions-">#</a><a href="#" aria-label="Back to top">— Content Definitions —</a>
+        
+    
+  </h1>
+      
+  <h1 id="-sbnb-cmdssh-content-">
+    
+    
+     <a href="#-sbnb-cmdssh-content-">#</a><a href="#" aria-label="Back to top">— sbnb-cmds.sh Content —</a>
+        
+    
+  </h1>
+      
+  <h1 id="refactor-removed-rsync-checks-and-usage-standardized-on-cp--a--u-for-migration">
+    
+    
+     <a href="#refactor-removed-rsync-checks-and-usage-standardized-on-cp--a--u-for-migration">#</a><a href="#" aria-label="Back to top">REFACTOR: Removed rsync checks and usage, standardized on cp -a -u for migration.</a>
+        
+    
+  </h1>
+      
+  <h1 id="refactor-use-correct-octal-format-specifier-o-for-mkdir--m-and-chmod">
+    
+    
+     <a href="#refactor-use-correct-octal-format-specifier-o-for-mkdir--m-and-chmod">#</a><a href="#" aria-label="Back to top">REFACTOR: Use correct octal format specifier (:o) for mkdir -m and chmod.</a>
+        
+    
+  </h1>
+      
+<p>SBNB_CMDS_SH_CONTENT = f”””#!/bin/sh</p>
+  <h1 id="sbnb-custom-commands-script-unified-persistent-docker-root--features---v21---busybox-cp">
+    
+    
+     <a href="#sbnb-custom-commands-script-unified-persistent-docker-root--features---v21---busybox-cp">#</a><a href="#" aria-label="Back to top">Sbnb Custom Commands Script (Unified Persistent Docker Root + Features - v2.1 - BusyBox cp)</a>
+        
+    
+  </h1>
+      
+  <h1 id="mounts-persistent-data-configures-docker-data-root-migrates-data-if-needed-using-cp">
+    
+    
+     <a href="#mounts-persistent-data-configures-docker-data-root-migrates-data-if-needed-using-cp">#</a><a href="#" aria-label="Back to top">Mounts persistent data, configures Docker data-root, migrates data (if needed using cp),</a>
+        
+    
+  </h1>
+      
+  <h1 id="updates-optional-scripts-enables-systemd-units-for-backup--monitoring">
+    
+    
+     <a href="#updates-optional-scripts-enables-systemd-units-for-backup--monitoring">#</a><a href="#" aria-label="Back to top">updates optional scripts, enables systemd units for backup &amp; monitoring.</a>
+        
+    
+  </h1>
+      
+  <h1 id="strict-error-handling">
+    
+    
+     <a href="#strict-error-handling">#</a><a href="#" aria-label="Back to top">Strict error handling</a>
+        
+    
+  </h1>
+      
+<p>set -e -o pipefail -u</p>
+  <h1 id="-logging-function-">
+    
+    
+     <a href="#-logging-function-">#</a><a href="#" aria-label="Back to top">— Logging Function —</a>
+        
+    
+  </h1>
+      
+<p>log() {{
+    # Log to kernel message buffer
+    echo “[sbnb-cmds.sh] $1” &gt; /dev/kmsg
+}}</p>
 
-<span class="c"># --- Wait Loop for Device ---</span>
-<span class="c"># Attempts to find the device by label or UUID (if configured).</span>
-<span class="c"># Waits because device node creation by kernel/udev might be delayed.</span>
-<span class="nv">elapsed_wait</span><span class="o">=</span>0
-log_msg <span class="s2">"Waiting up to </span><span class="k">${</span><span class="nv">MAX_WAIT_SECONDS</span><span class="k">}</span><span class="s2">s for device (Label: </span><span class="k">${</span><span class="nv">DATA_LABEL</span><span class="k">:-</span><span class="nv">N</span><span class="p">/A</span><span class="k">}</span><span class="s2">)..."</span>
-<span class="k">while</span> <span class="o">[</span> <span class="nt">-z</span> <span class="s2">"</span><span class="nv">$DATA_DEVICE</span><span class="s2">"</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="o">[</span> <span class="nv">$elapsed_wait</span> <span class="nt">-lt</span> <span class="nv">$MAX_WAIT_SECONDS</span> <span class="o">]</span><span class="p">;</span> <span class="k">do</span>
-  <span class="c"># Check for device using the label symlink first (usually faster if udev ran)</span>
-  <span class="nv">label_path</span><span class="o">=</span><span class="s2">"/dev/disk/by-label/</span><span class="k">${</span><span class="nv">DATA_LABEL</span><span class="k">}</span><span class="s2">"</span>
-  <span class="k">if</span> <span class="o">[</span> <span class="nt">-e</span> <span class="s2">"</span><span class="nv">$label_path</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then</span>
-    <span class="c"># Readlink -f resolves the symlink to the actual device path (e.g., /dev/sdb2)</span>
-    <span class="nv">DATA_DEVICE</span><span class="o">=</span><span class="si">$(</span><span class="nb">readlink</span> <span class="nt">-f</span> <span class="s2">"</span><span class="nv">$label_path</span><span class="s2">"</span><span class="si">)</span>
-    log_msg <span class="s2">"Found device via label symlink: </span><span class="nv">$label_path</span><span class="s2"> -&gt; </span><span class="nv">$DATA_DEVICE</span><span class="s2">"</span>
-    <span class="nb">break</span> <span class="c"># Exit loop</span>
-  <span class="k">fi</span>
+<p>log “Starting custom boot commands (Unified Persistent Docker Root v2.1 - BusyBox cp)…”</p>
+  <h1 id="-check-core-commands-">
+    
+    
+     <a href="#-check-core-commands-">#</a><a href="#" aria-label="Back to top">— Check Core Commands —</a>
+        
+    
+  </h1>
+      
+  <h1 id="ensure-essential-commands-for-this-script-are-present">
+    
+    
+     <a href="#ensure-essential-commands-for-this-script-are-present">#</a><a href="#" aria-label="Back to top">Ensure essential commands for this script are present</a>
+        
+    
+  </h1>
+      
+<p>check_cmds() {{
+    local missing_cmd=0
+    log “Checking required commands…”
+    for cmd in “$@”; do
+        if ! command -v “$cmd” &gt;/dev/null 2&gt;&amp;1; then
+            log “ERROR: Required command ‘$cmd’ not found.”
+            missing_cmd=1
+        fi
+    done
+    if [ $missing_cmd -eq 1 ]; then
+        log “ERROR: Missing one or more required commands. Cannot proceed.”
+        exit 1
+    fi
+    log “Required commands found.”
+    # Check optional but recommended commands
+    if ! command -v jq &gt;/dev/null 2&gt;&amp;1; then
+        log “WARNING: ‘jq’ command not found. JSON handling for daemon.json will be less robust and may fail on complex existing files.”
+    else
+        log “OK: ‘jq’ command found (recommended).”
+    fi
+    # Note: rsync check removed as cp -a -u is now the standard method
+}}</p>
+  <h1 id="define-all-commands-potentially-used-in-this-script">
+    
+    
+     <a href="#define-all-commands-potentially-used-in-this-script">#</a><a href="#" aria-label="Back to top">Define all commands potentially used in this script</a>
+        
+    
+  </h1>
+      
+  <h1 id="removed-rsync-from-the-list">
+    
+    
+     <a href="#removed-rsync-from-the-list">#</a><a href="#" aria-label="Back to top">Removed ‘rsync’ from the list.</a>
+        
+    
+  </h1>
+      
+<p>check_cmds mountpoint readlink mkdir mount echo sleep rm find ln systemctl mktemp cp mv chmod chown dirname basename jq grep cat cmp date sed ls</p>
+  <h1 id="-mount-persistent-data-partition-">
+    
+    
+     <a href="#-mount-persistent-data-partition-">#</a><a href="#" aria-label="Back to top">— Mount Persistent Data Partition —</a>
+        
+    
+  </h1>
+      
+<p>DATA_LABEL=”SBNB_DATA”
+DATA_DEVICE_SYMLINK=”/dev/disk/by-label/${{DATA_LABEL}}”
+DATA_MOUNT_POINT=”{DATA_MOUNT}”
+MAX_WAIT_SECONDS=15
+WAIT_INTERVAL=1
+elapsed_time=0</p>
 
-  <span class="c"># Fallback: Use blkid command to scan for the label (can be slower)</span>
-  <span class="nv">blkid_device</span><span class="o">=</span><span class="si">$(</span>blkid <span class="nt">-L</span> <span class="s2">"</span><span class="k">${</span><span class="nv">DATA_LABEL</span><span class="k">}</span><span class="s2">"</span> 2&gt;/dev/null<span class="si">)</span>
-  <span class="k">if</span> <span class="o">[</span> <span class="nt">-n</span> <span class="s2">"</span><span class="nv">$blkid_device</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then
-    </span><span class="nv">DATA_DEVICE</span><span class="o">=</span><span class="s2">"</span><span class="nv">$blkid_device</span><span class="s2">"</span>
-    log_msg <span class="s2">"Found device via blkid label lookup: </span><span class="nv">$DATA_DEVICE</span><span class="s2">"</span>
-    <span class="nb">break</span> <span class="c"># Exit loop</span>
-  <span class="k">fi</span>
+<p>log “Waiting up to ${{MAX_WAIT_SECONDS}}s for data device (Label: ${{DATA_LABEL}})…”
+while [ ! -e “${{DATA_DEVICE_SYMLINK}}” ]; do
+    if [ ${{elapsed_time}} -ge ${{MAX_WAIT_SECONDS}} ]; then
+        log “ERROR: Timeout waiting for device ${{DATA_DEVICE_SYMLINK}}. Persistent data cannot be mounted.”
+        exit 1
+    fi
+    sleep ${{WAIT_INTERVAL}}
+    elapsed_time=$((elapsed_time + WAIT_INTERVAL))
+done
+DATA_DEVICE=$(readlink -f “${{DATA_DEVICE_SYMLINK}}”)
+log “Data partition device resolved to ${{DATA_DEVICE}} after ${{elapsed_time}}s.”</p>
+  <h1 id="ensure-mount-point-directory-exists">
+    
+    
+     <a href="#ensure-mount-point-directory-exists">#</a><a href="#" aria-label="Back to top">Ensure mount point directory exists</a>
+        
+    
+  </h1>
+      
+<p>mkdir -p “${{DATA_MOUNT_POINT}}”</p>
 
-  <span class="c"># (Add similar checks here using DATA_UUID if using UUID instead of Label)</span>
+<p>log “Attempting to mount ${{DATA_DEVICE}} at ${{DATA_MOUNT_POINT}}…”
+if ! mountpoint -q “${{DATA_MOUNT_POINT}}”; then
+    # Attempt to mount read-write, noatime, nodiratime
+    if mount -o rw,noatime,nodiratime “${{DATA_DEVICE}}” “${{DATA_MOUNT_POINT}}”; then
+        log “Successfully mounted persistent partition at ${{DATA_MOUNT_POINT}}.”
+    else
+        log “ERROR: Failed to mount ${{DATA_DEVICE}} at ${{DATA_MOUNT_POINT}}! Check filesystem and device.”
+        exit 1
+    fi
+else
+    log “Persistent partition already mounted at ${{DATA_MOUNT_POINT}}. Ensuring read-write…”
+    # Ensure partition is mounted read-write
+    mount -o remount,rw “${{DATA_MOUNT_POINT}}” || {{
+        log “ERROR: Failed to remount ${{DATA_MOUNT_POINT}} as read-write! Docker requires write access.”
+        exit 1
+    }}
+fi</p>
+  <h1 id="-configure-docker-to-use-persistent-data-directory-">
+    
+    
+     <a href="#-configure-docker-to-use-persistent-data-directory-">#</a><a href="#" aria-label="Back to top">— Configure Docker to use Persistent Data Directory —</a>
+        
+    
+  </h1>
+      
+<p>log “Setting up Docker to use persistent data-root…”</p>
 
-  <span class="c"># Device not found yet, wait before next check</span>
-  <span class="nb">sleep</span> <span class="nv">$WAIT_INTERVAL</span>
-  <span class="nv">elapsed_wait</span><span class="o">=</span><span class="k">$((</span>elapsed_wait <span class="o">+</span> WAIT_INTERVAL<span class="k">))</span>
-<span class="k">done</span>
+<p>PERSISTENT_DOCKER_ROOT=”{PERSISTENT_DOCKER_ROOT}”
+DOCKER_CONFIG_DIR=”{DOCKER_CONFIG_DIR}”
+DOCKER_CONFIG_FILE=”{DOCKER_CONFIG_FILE}”
+DOCKER_CONFIG_BACKUP=”{DOCKER_CONFIG_FILE}{DOCKER_CONFIG_BACKUP_SUFFIX}”
+DOCKER_DATA_EPHEMERAL=”{DOCKER_DATA_EPHEMERAL}” # For migration check
+CONFIG_CHANGED=0 # Flag to track if we need to restart docker</p>
+  <h1 id="1-ensure-the-persistent-docker-data-root-directory-exists-with-correct-ownerpermissions">
+    
+    
+     <a href="#1-ensure-the-persistent-docker-data-root-directory-exists-with-correct-ownerpermissions">#</a><a href="#" aria-label="Back to top">1. Ensure the persistent Docker data-root directory exists with correct owner/permissions</a>
+        
+    
+  </h1>
+      
+<p>log “Ensuring persistent Docker data directory exists: ${{PERSISTENT_DOCKER_ROOT}}”</p>
+  <h1 id="create-with-specific-permissions-rwxxx-using-correct-octal-format-for-command-line">
+    
+    
+     <a href="#create-with-specific-permissions-rwxxx-using-correct-octal-format-for-command-line">#</a><a href="#" aria-label="Back to top">Create with specific permissions (rwx–x–x) using correct octal format for command line</a>
+        
+    
+  </h1>
+      
+<p>mkdir -p -m {DOCKER_ROOT_PERMISSIONS:o} “${{PERSISTENT_DOCKER_ROOT}}”
+if [ ! -d “${{PERSISTENT_DOCKER_ROOT}}” ]; then
+    log “ERROR: Failed to create persistent Docker data directory ${{PERSISTENT_DOCKER_ROOT}}!”
+    exit 1
+fi</p>
+  <h1 id="ensure-ownership-is-rootroot-critical-for-docker">
+    
+    
+     <a href="#ensure-ownership-is-rootroot-critical-for-docker">#</a><a href="#" aria-label="Back to top">Ensure ownership is root:root (critical for Docker)</a>
+        
+    
+  </h1>
+      
+<p>log “Ensuring ownership of ${{PERSISTENT_DOCKER_ROOT}} is root:root…”
+chown root:root “${{PERSISTENT_DOCKER_ROOT}}” || log “WARNING: Failed to set ownership on ${{PERSISTENT_DOCKER_ROOT}}. Docker might have issues.”</p>
+  <h1 id="ensure-permissions-are-correct-mkdir--p-doesnt-always-set-mode-on-existing-dirs-using-correct-octal-format-for-command-line">
+    
+    
+     <a href="#ensure-permissions-are-correct-mkdir--p-doesnt-always-set-mode-on-existing-dirs-using-correct-octal-format-for-command-line">#</a><a href="#" aria-label="Back to top">Ensure permissions are correct (mkdir -p doesn’t always set mode on existing dirs) using correct octal format for command line</a>
+        
+    
+  </h1>
+      
+<p>log “Ensuring permissions of ${{PERSISTENT_DOCKER_ROOT}} are {DOCKER_ROOT_PERMISSIONS:o}…”
+chmod {DOCKER_ROOT_PERMISSIONS:o} “${{PERSISTENT_DOCKER_ROOT}}” || log “WARNING: Failed to set permissions on ${{PERSISTENT_DOCKER_ROOT}}.”</p>
 
-<span class="c"># --- Mount Logic ---</span>
-<span class="c"># Proceed only if a device path was successfully determined</span>
-<span class="k">if</span> <span class="o">[</span> <span class="nt">-n</span> <span class="s2">"</span><span class="nv">$DATA_DEVICE</span><span class="s2">"</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="o">[</span> <span class="nt">-e</span> <span class="s2">"</span><span class="nv">$DATA_DEVICE</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then
-  </span>log_msg <span class="s2">"Data partition device resolved to </span><span class="k">${</span><span class="nv">DATA_DEVICE</span><span class="k">}</span><span class="s2"> after </span><span class="k">${</span><span class="nv">elapsed_wait</span><span class="k">}</span><span class="s2">s."</span>
+<p>log “Persistent Docker data directory ensured.”</p>
+  <h1 id="2-createupdate-docker-daemon-configuration-etcdockerdaemonjson">
+    
+    
+     <a href="#2-createupdate-docker-daemon-configuration-etcdockerdaemonjson">#</a><a href="#" aria-label="Back to top">2. Create/Update Docker daemon configuration (/etc/docker/daemon.json)</a>
+        
+    
+  </h1>
+      
+<p>log “Configuring Docker daemon (${{DOCKER_CONFIG_FILE}}) to use data-root: ${{PERSISTENT_DOCKER_ROOT}}”
+mkdir -p “${{DOCKER_CONFIG_DIR}}” # Ensure config directory exists</p>
+  <h1 id="backup-original-config-once-if-it-exists-and-backup-doesnt">
+    
+    
+     <a href="#backup-original-config-once-if-it-exists-and-backup-doesnt">#</a><a href="#" aria-label="Back to top">Backup original config ONCE if it exists and backup doesn’t</a>
+        
+    
+  </h1>
+      
+<p>if [ -f “${{DOCKER_CONFIG_FILE}}” ] &amp;&amp; [ ! -f “${{DOCKER_CONFIG_BACKUP}}” ]; then
+    log “Backing up original Docker config to ${{DOCKER_CONFIG_BACKUP}}…”
+    cp -a “${{DOCKER_CONFIG_FILE}}” “${{DOCKER_CONFIG_BACKUP}}” || <br />
+        log “WARNING: Failed to create backup of ${{DOCKER_CONFIG_FILE}}.”
+fi</p>
+  <h1 id="-safely-update-daemonjson-">
+    
+    
+     <a href="#-safely-update-daemonjson-">#</a><a href="#" aria-label="Back to top">— Safely update daemon.json —</a>
+        
+    
+  </h1>
+      
+<p>NEEDS_UPDATE=0</p>
+  <h1 id="use-jq-if-available-preferred-method">
+    
+    
+     <a href="#use-jq-if-available-preferred-method">#</a><a href="#" aria-label="Back to top">Use jq if available (preferred method)</a>
+        
+    
+  </h1>
+      
+<p>if command -v jq &gt;/dev/null 2&gt;&amp;1; then
+    log “Using jq to manage daemon.json.”
+    # Ensure file exists with at least {{}} for jq processing
+    [ -f “${{DOCKER_CONFIG_FILE}}” ] || echo “{{}}” &gt; “${{DOCKER_CONFIG_FILE}}”</p>
 
-  <span class="c"># Check if the target directory is already a mount point</span>
-  <span class="k">if</span> <span class="o">!</span> mountpoint <span class="nt">-q</span> <span class="s2">"</span><span class="nv">$MOUNT_POINT</span><span class="s2">"</span><span class="p">;</span> <span class="k">then
-    </span>log_msg <span class="s2">"Attempting to mount </span><span class="nv">$DATA_DEVICE</span><span class="s2"> at </span><span class="nv">$MOUNT_POINT</span><span class="s2"> with options: </span><span class="nv">$MOUNT_OPTS</span><span class="s2">..."</span>
-    <span class="c"># Ensure the target directory exists</span>
-    <span class="nb">mkdir</span> <span class="nt">-p</span> <span class="s2">"</span><span class="nv">$MOUNT_POINT</span><span class="s2">"</span>
-    <span class="c"># Mount the device</span>
-    <span class="k">if </span>mount <span class="nt">-o</span> <span class="s2">"</span><span class="nv">$MOUNT_OPTS</span><span class="s2">"</span> <span class="s2">"</span><span class="nv">$DATA_DEVICE</span><span class="s2">"</span> <span class="s2">"</span><span class="nv">$MOUNT_POINT</span><span class="s2">"</span><span class="p">;</span> <span class="k">then
-      </span>log_msg <span class="s2">"Successfully mounted persistent partition at </span><span class="nv">$MOUNT_POINT</span><span class="s2">."</span>
-    <span class="k">else
-      </span><span class="nv">mount_exit_code</span><span class="o">=</span><span class="nv">$?</span>
-      log_msg <span class="s2">"ERROR: Failed to mount </span><span class="nv">$DATA_DEVICE</span><span class="s2"> at </span><span class="nv">$MOUNT_POINT</span><span class="s2"> (exit code: </span><span class="nv">$mount_exit_code</span><span class="s2">). Check filesystem type/integrity (run fsck?). See dmesg for details."</span> <span class="o">&gt;</span>&amp;2
-    <span class="k">fi
-  else</span>
-    <span class="c"># Mount point exists, verify if it's the correct device</span>
-    log_msg <span class="s2">"</span><span class="nv">$MOUNT_POINT</span><span class="s2"> is already a mount point. Checking device..."</span>
-    <span class="c"># Check /proc/mounts for the currently mounted device at MOUNT_POINT</span>
-    <span class="k">if </span><span class="nb">grep</span> <span class="nt">-qs</span> <span class="s2">"</span><span class="nv">$DATA_DEVICE</span><span class="s2"> </span><span class="nv">$MOUNT_POINT</span><span class="s2">"</span> /proc/mounts<span class="p">;</span> <span class="k">then
-      </span>log_msg <span class="s2">"Persistent partition already correctly mounted at </span><span class="nv">$MOUNT_POINT</span><span class="s2">."</span>
-    <span class="k">else
-      </span><span class="nv">mounted_dev</span><span class="o">=</span><span class="si">$(</span><span class="nb">grep</span> <span class="nt">-s</span> <span class="s2">"</span><span class="nv">$MOUNT_POINT</span><span class="s2">"</span> /proc/mounts | <span class="nb">awk</span> <span class="s1">'{print $1}'</span><span class="si">)</span>
-      log_msg <span class="s2">"ERROR: </span><span class="nv">$MOUNT_POINT</span><span class="s2"> is already mounted, but by '</span><span class="nv">$mounted_dev</span><span class="s2">' NOT '</span><span class="nv">$DATA_DEVICE</span><span class="s2">'! Check system configuration."</span> <span class="o">&gt;</span>&amp;2
-    <span class="k">fi
-  fi
-else</span>
-  <span class="c"># Device wasn't found within the timeout</span>
-  log_msg <span class="s2">"ERROR: Data partition device (Label: </span><span class="k">${</span><span class="nv">DATA_LABEL</span><span class="k">:-</span><span class="nv">N</span><span class="p">/A</span><span class="k">}</span><span class="s2">) not found after waiting </span><span class="k">${</span><span class="nv">MAX_WAIT_SECONDS</span><span class="k">}</span><span class="s2">s. Cannot mount persistent storage."</span> <span class="o">&gt;</span>&amp;2
-<span class="k">fi</span>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><section><code># Read current value safely, defaulting to empty string if null or missing
+current_data_root=$(jq -r '.["data-root"] // ""' "${{DOCKER_CONFIG_FILE}}")
 
-<span class="c"># Example: Copy a template Docker config if needed (adjust path as necessary)</span>
-<span class="c"># if [ -f "/mnt/sbnb-data/docker/docker-daemon.json.template" ]; then</span>
-<span class="c">#   mkdir -p /etc/docker</span>
-<span class="c">#   cp /mnt/sbnb-data/docker/docker-daemon.json.template /etc/docker/daemon.json</span>
-<span class="c">#   log_msg "Copied Docker daemon template."</span>
-<span class="c"># fi</span>
+if [ "$current_data_root" != "${{PERSISTENT_DOCKER_ROOT}}" ]; then
+    log "Data-root needs update (jq check). Preparing changes..."
+    NEEDS_UPDATE=1
+else
+    log "Docker data-root already correctly set in daemon.json (jq check)."
+fi
 
-log_msg <span class="s2">"--- Finished Custom USB Partition Mount Script ---"</span>
-<span class="c"># Exit 0 ensures the rest of the Sbnb boot sequence continues</span>
-<span class="nb">exit </span>0
-</code></section></div>    </div>
-    <ul>
-      <li>Make the script executable:
-        <div class="language-bash highlighter-rouge"><div class="highlight"><section><code><span class="nb">sudo chmod</span> +x /mnt/sbnb-mount/sbnb-cmds.sh
-</code></section></div>        </div>
-      </li>
-    </ul>
-  </li>
+if [ $NEEDS_UPDATE -eq 1 ]; then
+    TMP_JSON=$(mktemp "${{DOCKER_CONFIG_DIR}}/daemon.json.tmp.XXXXXX")
+    log "Attempting to merge data-root setting using jq..."
+    # Merge the new data-root value, preserving other keys
+    if jq --arg path "${{PERSISTENT_DOCKER_ROOT}}" '. + {{"data-root": $path}}' "${{DOCKER_CONFIG_FILE}}" &gt; "${{TMP_JSON}}"; then
+        # Check if jq produced valid JSON
+        if jq -e . "${{TMP_JSON}}" &gt; /dev/null; then
+            # Check if content actually changed before moving
+            if ! cmp -s "${{TMP_JSON}}" "${{DOCKER_CONFIG_FILE}}"; then
+                mv "${{TMP_JSON}}" "${{DOCKER_CONFIG_FILE}}"
+                chmod {DOCKER_CONFIG_PERMISSIONS:o} "${{DOCKER_CONFIG_FILE}}" # Use correct format here too for consistency, though 644 doesn't need '0o' prefix
+                log "Successfully updated daemon.json using jq."
+                CONFIG_CHANGED=1
+            else
+                log "daemon.json content unchanged after jq merge, removing temp file."
+                rm -f "${{TMP_JSON}}"
+            fi
+        else
+            log "ERROR: jq produced invalid JSON output. Config not updated."
+            rm -f "${{TMP_JSON}}" # Clean up temp file
+        fi
+    else
+        jq_exit_code=$?
+        log "ERROR: jq command failed (exit code $jq_exit_code) while updating config. Config not updated."
+        # Optionally capture and log jq stderr here if needed
+        rm -f "${{TMP_JSON}}" # Clean up temp file
+    fi
+fi # Fallback logic if jq is NOT available else
+log "WARNING: jq not found. Using less robust fallback for daemon.json."
+# Define the minimal target content
+TARGET_JSON_CONTENT=$(printf '{{%s\\n  "data-root": "%s"%s\\n}}%s\\n' "" "${{PERSISTENT_DOCKER_ROOT}}" "" "")
+
+if [ ! -f "${{DOCKER_CONFIG_FILE}}" ]; then
+    log "daemon.json does not exist. Creating new file with data-root."
+    NEEDS_UPDATE=1
+else
+    # Check if data-root key exists at all
+    if ! grep -q '"data-root"\\s*:' "${{DOCKER_CONFIG_FILE}}"; then
+         log "Existing daemon.json lacks 'data-root' key."
+        # Check if the file is simple (e.g., just {{}} or empty/whitespace)
+        if ! grep -q '[a-zA-Z0-9]' "${{DOCKER_CONFIG_FILE}}" || grep -q '^\\s*{{\\s*}}\\s*$' "${{DOCKER_CONFIG_FILE}}"; then
+            log "Existing file is simple, overwriting with data-root."
+            NEEDS_UPDATE=1
+        else
+            log "ERROR: Existing daemon.json is complex and lacks 'data-root'. Cannot safely update without jq. Install jq or manually edit."
+            # Do not proceed with overwrite
+            NEEDS_UPDATE=0 # Explicitly prevent update
+        fi
+    # Key exists, check if the value is correct (basic check)
+    elif ! grep -q '"data-root"\\s*:\\s*"${{PERSISTENT_DOCKER_ROOT}}"' "${{DOCKER_CONFIG_FILE}}"; then
+        log "ERROR: Existing daemon.json has 'data-root' but points elsewhere. Cannot safely update without jq. Install jq or manually edit."
+        # Do not proceed with overwrite
+        NEEDS_UPDATE=0 # Explicitly prevent update
+    else
+        log "daemon.json exists and data-root seems correct (grep check)."
+        NEEDS_UPDATE=0
+    fi
+fi
+
+# Perform write only if deemed safe and necessary by the logic above
+if [ $NEEDS_UPDATE -eq 1 ]; then
+    log "Writing daemon.json (simple method)..."
+    TMP_JSON=$(mktemp "${{DOCKER_CONFIG_DIR}}/daemon.json.tmp.XXXXXX")
+    echo "$TARGET_JSON_CONTENT" &gt; "${{TMP_JSON}}"
+    if [ $? -eq 0 ]; then
+        mv "${{TMP_JSON}}" "${{DOCKER_CONFIG_FILE}}"
+        chmod {DOCKER_CONFIG_PERMISSIONS:o} "${{DOCKER_CONFIG_FILE}}" # Use correct format here too
+        log "Successfully wrote simple daemon.json."
+        CONFIG_CHANGED=1
+    else
+        log "ERROR: Failed to write temporary simple daemon.json! Config not updated."
+        rm -f "${{TMP_JSON}}"
+    fi
+fi fi log "Docker daemon configuration check finished."
+</code></section></div></div>
+  <h1 id="3-data-migration-optional-migrate-data-from-ephemeral-location-if-needed">
+    
+    
+     <a href="#3-data-migration-optional-migrate-data-from-ephemeral-location-if-needed">#</a><a href="#" aria-label="Back to top">3. Data Migration (Optional): Migrate data from ephemeral location if needed</a>
+        
+    
+  </h1>
+      
+<p>log “Checking for existing Docker data in ephemeral location (${{DOCKER_DATA_EPHEMERAL}})…”</p>
+  <h1 id="check-if-the-directory-exists-and-contains-anything-other-than-lostfound-or-potential-marker-files">
+    
+    
+     <a href="#check-if-the-directory-exists-and-contains-anything-other-than-lostfound-or-potential-marker-files">#</a><a href="#" aria-label="Back to top">Check if the directory exists and contains anything other than ‘lost+found’ or potential marker files</a>
+        
+    
+  </h1>
+      
+<p>if [ -d “${{DOCKER_DATA_EPHEMERAL}}” ] &amp;&amp; [ -n “$(ls -A “${{DOCKER_DATA_EPHEMERAL}}” | grep -v -e ‘^lost+found$’ -e ‘^\.sbnb_persistent_redirect$’ -e ‘^README_DO_NOT_USE\.txt$’ 2&gt;/dev/null)” ]; then
+    log “Found potentially significant data in ${{DOCKER_DATA_EPHEMERAL}}.”
+    # Check if persistent location is effectively empty (allowing only lost+found)
+    persistent_is_empty=0
+    if [ ! “$(ls -A “${{PERSISTENT_DOCKER_ROOT}}” | grep -v ‘^lost+found$’ 2&gt;/dev/null)” ]; then
+        persistent_is_empty=1
+    fi</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><section><code>if [ $persistent_is_empty -eq 1 ]; then
+    log "Persistent location ${{PERSISTENT_DOCKER_ROOT}} is empty. Migrating data..."
+
+    # Ensure Docker is stopped before migration
+    if systemctl is-active --quiet docker; then
+        log "Stopping Docker service for migration..."
+        systemctl stop docker || log "WARNING: Failed to stop Docker. Migration proceeding, but data might be inconsistent!"
+        sleep 3 # Give it time to release files
+    fi
+
+    log "Starting migration using cp -a -u..."
+    MIGRATION_SUCCESS=0
+    # Use cp -a -u: archive mode (preserve attrs), update mode (copy only if newer/missing).
+    # Source ends with /. to copy contents including hidden files.
+    # This is the recommended busybox alternative to rsync for local mirroring.
+    if cp -a -u "${{DOCKER_DATA_EPHEMERAL}}/." "${{PERSISTENT_DOCKER_ROOT}}/"; then
+         MIGRATION_SUCCESS=1
+    else
+         log "ERROR: cp -a -u migration failed with exit code $? !"
+    fi
+
+    # Handle migration outcome
+    if [ $MIGRATION_SUCCESS -eq 1 ]; then
+        log "Migration completed successfully."
+        # Rename old data directory as backup
+        OLD_DATA_BACKUP="${{DOCKER_DATA_EPHEMERAL}}.migrated.$(date +%Y%m%d_%H%M%S).bak"
+        log "Attempting to rename old data directory to ${{OLD_DATA_BACKUP}}..."
+        # Use mv -T to handle if ephemeral is somehow a symlink
+        if mv -T "${{DOCKER_DATA_EPHEMERAL}}" "${{OLD_DATA_BACKUP}}"; then
+            log "Successfully renamed old data directory."
+        else
+            log "WARNING: Could not rename old data directory ${{DOCKER_DATA_EPHEMERAL}}. It may still contain data."
+            # Consider rm -rf here ONLY if migration verification was very thorough, otherwise leave it.
+        fi
+        # Mark that Docker needs restart due to migration
+        CONFIG_CHANGED=1
+    else
+        log "ERROR: Data migration failed! Docker data may be incomplete or inconsistent in ${{PERSISTENT_DOCKER_ROOT}}."
+        # Exiting is likely the safest option here to force manual review.
+        exit 1
+    fi
+else
+    log "Persistent location ${{PERSISTENT_DOCKER_ROOT}} already contains data. Skipping migration."
+    # Optionally rename the ephemeral data if it still exists and is unwanted
+    OLD_DATA_BACKUP="${{DOCKER_DATA_EPHEMERAL}}.ignored.$(date +%Y%m%d_%H%M%S).bak"
+    log "Attempting to rename unused ephemeral data directory to ${{OLD_DATA_BACKUP}}..."
+    mv -T "${{DOCKER_DATA_EPHEMERAL}}" "${{OLD_DATA_BACKUP}}" || \\
+        log "WARNING: Could not rename ephemeral data directory ${{DOCKER_DATA_EPHEMERAL}}."
+fi else
+log "No significant data found in ephemeral location ${{DOCKER_DATA_EPHEMERAL}}. No migration needed." fi # Ensure the original ephemeral directory path exists but is empty, with a marker log "Ensuring ephemeral path ${{DOCKER_DATA_EPHEMERAL}} exists and is marked as unused." # Remove original path if it still exists (e.g., if rename failed but we continued) if [ -d "${{DOCKER_DATA_EPHEMERAL}}" ]; then
+rm -rf "${{DOCKER_DATA_EPHEMERAL}}" || log "WARNING: Failed to remove original ephemeral directory after processing." fi mkdir -p "${{DOCKER_DATA_EPHEMERAL}}" touch "${{DOCKER_DATA_EPHEMERAL}}/.sbnb_persistent_redirect" echo "Docker data is managed at ${{PERSISTENT_DOCKER_ROOT}}. This directory should remain empty." &gt; "${{DOCKER_DATA_EPHEMERAL}}/README_DO_NOT_USE.txt" chmod 644 "${{DOCKER_DATA_EPHEMERAL}}/README_DO_NOT_USE.txt" # 644 doesn't need :o format chmod 600 "${{DOCKER_DATA_EPHEMERAL}}/.sbnb_persistent_redirect" # 600 doesn't need :o format log "Data migration check finished."
+</code></section></div></div>
+  <h1 id="4-restart-docker-service-if-configuration-was-changed-or-migration-occurred">
+    
+    
+     <a href="#4-restart-docker-service-if-configuration-was-changed-or-migration-occurred">#</a><a href="#" aria-label="Back to top">4. Restart Docker Service <em>if</em> configuration was changed OR migration occurred</a>
+        
+    
+  </h1>
+      
+<p>if [ $CONFIG_CHANGED -eq 1 ]; then
+    log “Configuration or data migration requires Docker restart. Reloading daemon and restarting service…”
+    if ! systemctl daemon-reload; then
+        log “ERROR: Failed to reload systemd daemon! Docker restart might fail or use old config.”
+        exit 1 # Critical failure if daemon cannot reload
+    fi
+    log “Attempting to restart docker.service…”
+    if systemctl restart docker.service; then
+        log “Docker service restarted successfully.”
+    else
+        log “ERROR: Failed to restart Docker service! Check ‘journalctl -u docker.service’.”
+        exit 1 # Critical failure if Docker doesn’t restart after config change/migration
+    fi
+else
+    log “No configuration changes or migration. Docker restart not required by this script.”
+    # Optional: Ensure Docker is running even if no changes occurred
+    # log “Ensuring Docker service is active…”
+    # if ! systemctl is-active –quiet docker.service; then
+    #     log “Docker service is not active. Attempting to start…”
+    #     systemctl start docker.service || log “WARNING: Failed to start inactive Docker service.”
+    # fi
+fi
+log “Docker setup finished.”</p>
+  <h1 id="-update-optional-development-environment-script-">
+    
+    
+     <a href="#-update-optional-development-environment-script-">#</a><a href="#" aria-label="Back to top">— Update Optional Development Environment Script —</a>
+        
+    
+  </h1>
+      
+  <h1 id="using-the-robust-atomic-update-logic">
+    
+    
+     <a href="#using-the-robust-atomic-update-logic">#</a><a href="#" aria-label="Back to top">(Using the robust atomic update logic)</a>
+        
+    
+  </h1>
+      
+<p>TARGET_DEV_ENV_SCRIPT=”/usr/sbin/sbnb-dev-env.sh”
+SOURCE_DEV_ENV_SCRIPT=”${{DATA_MOUNT_POINT}}/scripts/sbnb-dev-env.sh” # Assuming it’s stored persistently</p>
+
+<p>log “Checking for optional development script update: ${{SOURCE_DEV_ENV_SCRIPT}}”
+if [ -f “${{SOURCE_DEV_ENV_SCRIPT}}” ] &amp;&amp; [ -r “${{SOURCE_DEV_ENV_SCRIPT}}” ]; then
+    log “Source script found. Attempting atomic update of ${{TARGET_DEV_ENV_SCRIPT}}…”
+    TARGET_DIR=$(dirname “${{TARGET_DEV_ENV_SCRIPT}}”)
+    TMP_SCRIPT=””</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><section><code># Setup trap for cleanup
+trap 'sbnb_dev_cleanup' EXIT HUP INT QUIT TERM
+sbnb_dev_cleanup() {{
+    if [ -n "${{TMP_SCRIPT:-}}" ] &amp;&amp; [ -f "${{TMP_SCRIPT}}" ]; then
+        rm -f "${{TMP_SCRIPT}}"
+        log "Cleaned up temporary file ${{TMP_SCRIPT}}"
+    fi
+    trap - EXIT HUP INT QUIT TERM # Reset trap
+}}
+
+if [ ! -d "${{TARGET_DIR}}" ] || [ ! -w "${{TARGET_DIR}}" ]; then
+    log "WARNING: Target directory ${{TARGET_DIR}} does not exist or is not writable. Cannot update script."
+# Check required commands exist (already done by check_cmds, but good practice here too)
+elif ! command -v mktemp &gt;/dev/null 2&gt;&amp;1 || ! command -v cp &gt;/dev/null 2&gt;&amp;1 || ! command -v chmod &gt;/dev/null 2&gt;&amp;1 || ! command -v mv &gt;/dev/null 2&gt;&amp;1; then
+    log "WARNING: Required command (mktemp/cp/chmod/mv) not found. Skipping update."
+else
+    TMP_SCRIPT=$(mktemp "${{TARGET_DIR}}/sbnb-dev-env.sh.XXXXXX")
+    if [ -z "${{TMP_SCRIPT}}" ] || [ ! -f "${{TMP_SCRIPT}}" ]; then
+        log "WARNING: Failed to create temporary file in ${{TARGET_DIR}}. Skipping update."
+        TMP_SCRIPT="" # Prevent trap from trying to remove nothing
+    else
+        # Proceed with copy, chmod, move
+        if cp "${{SOURCE_DEV_ENV_SCRIPT}}" "${{TMP_SCRIPT}}"; then
+            if chmod +x "${{TMP_SCRIPT}}"; then
+                # Use mv -T to handle target being a symlink correctly
+                if mv -T "${{TMP_SCRIPT}}" "${{TARGET_DEV_ENV_SCRIPT}}"; then
+                    log "Successfully updated ${{TARGET_DEV_ENV_SCRIPT}}."
+                    TMP_SCRIPT="" # Clear var so trap doesn't remove the final script
+                else log "WARNING: Failed to move temporary file ${{TMP_SCRIPT}} to ${{TARGET_DEV_ENV_SCRIPT}}. Update failed."; fi
+            else log "WARNING: Failed to set execute permissions on temporary file ${{TMP_SCRIPT}}. Update failed."; fi
+        else log "WARNING: Failed to copy content from ${{SOURCE_DEV_ENV_SCRIPT}} to ${{TMP_SCRIPT}}. Update failed."; fi
+    fi
+    # Clean up temp file if it still exists (e.g., on mv failure) and TMP_SCRIPT is set
+    if [ -n "${{TMP_SCRIPT:-}}" ] &amp;&amp; [ -f "${{TMP_SCRIPT}}" ]; then rm -f "${{TMP_SCRIPT}}"; fi
+    TMP_SCRIPT="" # Ensure trap doesn't run again for this
+fi
+trap - EXIT HUP INT QUIT TERM # Clear trap explicitly else
+log "NOTE: Source script ${{SOURCE_DEV_ENV_SCRIPT}} not found or not readable. Skipping update." fi log "Update of optional script finished."
+</code></section></div></div>
+  <h1 id="-enable-systemd-units-backuppurge--healthvolume-checks-">
+    
+    
+     <a href="#-enable-systemd-units-backuppurge--healthvolume-checks-">#</a><a href="#" aria-label="Back to top">— Enable Systemd Units (Backup/Purge + Health/Volume Checks) —</a>
+        
+    
+  </h1>
+      
+<p>SYSTEMD_SOURCE_DIR=”${{DATA_MOUNT_POINT}}/systemd”
+SYSTEMD_TARGET_DIR=”/etc/systemd/system”
+TIMERS_WANTS_DIR=”${{SYSTEMD_TARGET_DIR}}/timers.target.wants”</p>
+
+<p>log “Enabling custom systemd units (Source: ${{SYSTEMD_SOURCE_DIR}})…”
+if [ -d “${{SYSTEMD_SOURCE_DIR}}” ] &amp;&amp; [ -r “${{SYSTEMD_SOURCE_DIR}}” ]; then
+    mkdir -p “${{SYSTEMD_TARGET_DIR}}”
+    mkdir -p “${{TIMERS_WANTS_DIR}}”
+    # Check ln and systemctl exist (already done in check_cmds)</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><section><code>linked_any=0
+log "Linking systemd unit files..."
+# Use find with -print0 and read -d '' for safe filename handling
+find "${{SYSTEMD_SOURCE_DIR}}" -maxdepth 1 -type f \\( -name '*.service' -o -name '*.timer' \\) -print0 | while IFS= read -r -d '' source_unit; do
+    unit_name=$(basename "${{source_unit}}")
+    target_link="${{SYSTEMD_TARGET_DIR}}/${{unit_name}}"
+    log "  Linking ${{unit_name}}..."
+    # Use ln -sf: symbolic, force overwrite if link exists
+    if ln -sf "${{source_unit}}" "${{target_link}}"; then
+        linked_any=1
+    else
+        log "  WARNING: Failed to link ${{unit_name}}."
+    fi
+done
+
+if [ $linked_any -eq 0 ]; then
+    log "No unit files found in ${{SYSTEMD_SOURCE_DIR}} to link."
+else
+    log "Reloading systemd daemon after linking units..."
+    # Reload daemon again (might be redundant if Docker restart already did it, but safe)
+    systemctl daemon-reload || log "WARNING: systemctl daemon-reload failed after linking units."
+
+    log "Enabling systemd timers/services..."
+    enabled_any=0
+    # Define ALL units expected to be enabled by this script
+    UNITS_TO_ENABLE="docker-backup.timer docker-purge.timer docker-shutdown-backup.service docker-health-check.timer docker-volume-check.timer"
+    final_enabled_list=""
+    # Use 'for unit in $UNITS_TO_ENABLE' which relies on word splitting
+    # shellcheck disable=SC2086
+    for unit in $UNITS_TO_ENABLE; do
+        # Check if the link exists and points to a file before enabling
+        if [ -L "${{SYSTEMD_TARGET_DIR}}/${{unit}}" ] &amp;&amp; [ -f "${{SYSTEMD_TARGET_DIR}}/${{unit}}" ]; then
+            log "  Enabling ${{unit}}..."
+            # Use --now to also start timers immediately if desired, otherwise just enable
+            if systemctl enable "${{unit}}"; then
+                enabled_any=1
+                final_enabled_list="${{final_enabled_list}} ${{unit}}"
+            else
+                log "  WARNING: Failed to enable ${{unit}}."
+            fi
+        else
+            log "  Skipping enable for ${{unit}} (link missing or broken)."
+        fi
+    done
+
+    if [ $enabled_any -eq 1 ]; then
+        final_enabled_list=$(echo "${{final_enabled_list}}" | sed 's/^ *//') # Remove leading space
+        log "Systemd units enabled successfully: ${{final_enabled_list}}"
+    else
+        log "No relevant systemd units were successfully enabled."
+    fi
+fi # end if linked_any else
+log "WARNING: Systemd source directory ${{SYSTEMD_SOURCE_DIR}} not found or not readable. Cannot enable units." fi log "Systemd unit setup finished."
+</code></section></div></div>
+  <h1 id="-script-finish-logging-">
+    
+    
+     <a href="#-script-finish-logging-">#</a><a href="#" aria-label="Back to top">— Script Finish Logging —</a>
+        
+    
+  </h1>
+      
+<p>log “Finished custom boot commands successfully.”</p>
+  <h1 id="clear-trap-explicitly">
+    
+    
+     <a href="#clear-trap-explicitly">#</a><a href="#" aria-label="Back to top">Clear trap explicitly</a>
+        
+    
+  </h1>
+      
+<p>trap - EXIT HUP INT QUIT TERM
+exit 0
+“””</p>
+  <h1 id="-tailscale-key-">
+    
+    
+     <a href="#-tailscale-key-">#</a><a href="#" aria-label="Back to top">— Tailscale Key —</a>
+        
+    
+  </h1>
+      
+  <h1 id="-replace-this-with-your-actual-key-">
+    
+    
+     <a href="#-replace-this-with-your-actual-key-">#</a><a href="#" aria-label="Back to top">!!! REPLACE THIS WITH YOUR ACTUAL KEY !!!</a>
+        
+    
+  </h1>
+      
+<p>SBNB_TSKEY_TXT_CONTENT = “tskey-auth-…” # Placeholder</p>
+  <h1 id="-backup-script-">
+    
+    
+     <a href="#-backup-script-">#</a><a href="#" aria-label="Back to top">— Backup Script —</a>
+        
+    
+  </h1>
+      
+<p>BACKUP_DOCKER_SH_CONTENT = f”””#!/bin/sh</p>
+  <h1 id="file-data_mountscriptsbackup-dockersh">
+    
+    
+     <a href="#file-data_mountscriptsbackup-dockersh">#</a><a href="#" aria-label="Back to top">File: {DATA_MOUNT}/scripts/backup-docker.sh</a>
+        
+    
+  </h1>
+      
+  <h1 id="backs-up-the-persistent-docker-data-root-directory">
+    
+    
+     <a href="#backs-up-the-persistent-docker-data-root-directory">#</a><a href="#" aria-label="Back to top">Backs up the persistent Docker data-root directory.</a>
+        
+    
+  </h1>
+      
+
+<p>set -e -u</p>
+  <h1 id="-configuration-">
+    
+    
+     <a href="#-configuration-">#</a><a href="#" aria-label="Back to top">— Configuration —</a>
+        
+    
+  </h1>
+      
+<p>DOCKER_DATA_DIR=”{PERSISTENT_DOCKER_ROOT}” # Source is PERSISTENT root
+BACKUP_DIR=”{BACKUP_BASE_DIR}”
+TIMESTAMP=$(date +”%Y%m%d_%H%M%S”)
+BACKUP_FILE=”${{BACKUP_DIR}}/docker_backup_${{TIMESTAMP}}.tar.gz”
+LATEST_LINK=”${{BACKUP_DIR}}/docker_latest.tar.gz”
+STOP_DOCKER={STOP_DOCKER_FOR_BACKUP} # 1=Stop Docker (safer), 0=Live backup</p>
+
+<p>log() {{ echo “[backup-docker.sh] $1” &gt; /dev/kmsg; }}</p>
+  <h1 id="-check-commands-">
+    
+    
+     <a href="#-check-commands-">#</a><a href="#" aria-label="Back to top">— Check Commands —</a>
+        
+    
+  </h1>
+      
+<p>log “Checking required commands…”
+check_cmds() {{
+    local missing_cmd=0
+    for cmd in “$@”; do
+        if ! command -v “$cmd” &gt;/dev/null 2&gt;&amp;1; then log “ERROR: Command ‘$cmd’ not found.”; missing_cmd=1; fi
+    done
+    # Exit if any command is missing
+    [ $missing_cmd -eq 1 ] &amp;&amp; exit 1
+}}</p>
+  <h1 id="core-commands-needed">
+    
+    
+     <a href="#core-commands-needed">#</a><a href="#" aria-label="Back to top">Core commands needed</a>
+        
+    
+  </h1>
+      
+<p>check_cmds date mkdir tar gzip ln mv sleep dirname basename</p>
+  <h1 id="check-systemctl-only-if-stopping-docker-is-enabled">
+    
+    
+     <a href="#check-systemctl-only-if-stopping-docker-is-enabled">#</a><a href="#" aria-label="Back to top">Check systemctl only if stopping docker is enabled</a>
+        
+    
+  </h1>
+      
+<p>[ $STOP_DOCKER -eq 1 ] &amp;&amp; check_cmds systemctl</p>
+  <h1 id="check-for-optional-nice-command">
+    
+    
+     <a href="#check-for-optional-nice-command">#</a><a href="#" aria-label="Back to top">Check for optional ‘nice’ command</a>
+        
+    
+  </h1>
+      
+<p>NICE_CMD=””
+if command -v nice &gt;/dev/null 2&gt;&amp;1; then NICE_CMD=”nice -n 19”; log “Using nice for lower tar priority.”; fi</p>
+  <h1 id="-main-logic-">
+    
+    
+     <a href="#-main-logic-">#</a><a href="#" aria-label="Back to top">— Main Logic —</a>
+        
+    
+  </h1>
+      
+<p>log “Starting Docker backup process…”
+log “Source:         ${{DOCKER_DATA_DIR}}”
+log “Destination:    ${{BACKUP_FILE}}”</p>
+  <h1 id="ensure-backup-directory-exists-and-is-writable">
+    
+    
+     <a href="#ensure-backup-directory-exists-and-is-writable">#</a><a href="#" aria-label="Back to top">Ensure backup directory exists and is writable</a>
+        
+    
+  </h1>
+      
+<p>log “Ensuring backup directory exists: ${{BACKUP_DIR}}”
+mkdir -p “${{BACKUP_DIR}}”</p>
+  <h1 id="check-write-permissions-specifically">
+    
+    
+     <a href="#check-write-permissions-specifically">#</a><a href="#" aria-label="Back to top">Check write permissions specifically</a>
+        
+    
+  </h1>
+      
+<p>if [ ! -w “${{BACKUP_DIR}}” ]; then log “ERROR: Backup directory not writable: ${{BACKUP_DIR}}”; exit 1; fi</p>
+  <h1 id="stop-docker-if-configured">
+    
+    
+     <a href="#stop-docker-if-configured">#</a><a href="#" aria-label="Back to top">Stop Docker if configured</a>
+        
+    
+  </h1>
+      
+<p>DOCKER_WAS_RUNNING=0
+if [ $STOP_DOCKER -eq 1 ]; then
+    log “Attempting to stop Docker service…”
+    if systemctl is-active –quiet docker.service; then
+        DOCKER_WAS_RUNNING=1
+        log “Docker service is active, stopping…”
+        if systemctl stop docker.service; then
+            log “Docker service stopped. Waiting 5s for files to release…”; sleep 5
+        else
+            # If stop fails, warn but maybe proceed? Or exit? Exiting might be safer.
+            log “ERROR: Failed to stop Docker service gracefully! Backup might be inconsistent or fail. Aborting.”
+            exit 1 # Exit if stop fails, as backup consistency is compromised
+        fi
+    else
+        log “Docker service already stopped.”
+    fi
+fi</p>
+  <h1 id="create-backup">
+    
+    
+     <a href="#create-backup">#</a><a href="#" aria-label="Back to top">Create backup</a>
+        
+    
+  </h1>
+      
+<p>log “Creating backup archive…”
+if [ -d “${{DOCKER_DATA_DIR}}” ] &amp;&amp; [ -r “${{DOCKER_DATA_DIR}}” ]; then
+    PARENT_DIR=$(dirname “${{DOCKER_DATA_DIR}}”)
+    SOURCE_BASENAME=$(basename “${{DOCKER_DATA_DIR}}”)
+    log “Archiving ‘${{SOURCE_BASENAME}}’ from parent ‘${{PARENT_DIR}}’…”
+    # Use -C to change directory, archive relative path ‘docker-root/…’
+    # Add –warning=no-file-changed to suppress warnings about files changing during read
+    # shellcheck disable=SC2086 # Allow word splitting for $NICE_CMD
+    if ${{NICE_CMD}} tar –warning=no-file-changed -czf “${{BACKUP_FILE}}” -C “${{PARENT_DIR}}” “${{SOURCE_BASENAME}}”; then
+        log “Backup archive created successfully.”
+        # Verify backup file exists and is not empty
+        if [ -s “${{BACKUP_FILE}}” ]; then
+            log “Updating latest backup link…”
+            # Atomic symlink update: create temp link, then rename over old one
+            ln -sfT “${{BACKUP_FILE}}” “${{LATEST_LINK}}.tmp” &amp;&amp; mv -Tf “${{LATEST_LINK}}.tmp” “${{LATEST_LINK}}”
+            if [ $? -eq 0 ]; then
+                log “Updated latest link to point to ${{BACKUP_FILE}}.”
+            else
+                log “WARNING: Failed to update latest backup link.”
+                rm -f “${{LATEST_LINK}}.tmp” # Clean up temp link if mv failed
+            fi
+        else
+            log “WARNING: Backup file seems invalid (empty/missing): ${{BACKUP_FILE}}. Removing.”
+            rm -f “${{BACKUP_FILE}}”
+        fi
+    else
+        tar_exit_code=$?
+        log “ERROR: tar command failed with exit code ${{tar_exit_code}}! Backup failed.”
+        rm -f “${{BACKUP_FILE}}” # Clean up partial archive if tar failed
+    fi
+else
+    log “WARNING: Docker data directory not found or not readable: ${{DOCKER_DATA_DIR}}. Skipping backup.”
+fi</p>
+  <h1 id="restart-docker-if-it-was-running-and-we-stopped-it-successfully">
+    
+    
+     <a href="#restart-docker-if-it-was-running-and-we-stopped-it-successfully">#</a><a href="#" aria-label="Back to top">Restart Docker if it was running and we stopped it successfully</a>
+        
+    
+  </h1>
+      
+<p>if [ $DOCKER_WAS_RUNNING -eq 1 ]; then
+    log “Restarting Docker service…”
+    if ! systemctl start docker.service; then
+        log “WARNING: Failed to restart Docker service after backup.”
+    else
+        log “Docker service restarted.”
+    fi
+fi</p>
+
+<p>log “Docker backup process finished.”
+exit 0
+“””</p>
+  <h1 id="-purge-script-">
+    
+    
+     <a href="#-purge-script-">#</a><a href="#" aria-label="Back to top">— Purge Script —</a>
+        
+    
+  </h1>
+      
+<p>PURGE_DOCKER_BACKUPS_SH_CONTENT = f”””#!/bin/sh</p>
+  <h1 id="file-data_mountscriptspurge-docker-backupssh">
+    
+    
+     <a href="#file-data_mountscriptspurge-docker-backupssh">#</a><a href="#" aria-label="Back to top">File: {DATA_MOUNT}/scripts/purge-docker-backups.sh</a>
+        
+    
+  </h1>
+      
+  <h1 id="removes-old-docker-backups-keeping-the-last-n">
+    
+    
+     <a href="#removes-old-docker-backups-keeping-the-last-n">#</a><a href="#" aria-label="Back to top">Removes old Docker backups, keeping the last N.</a>
+        
+    
+  </h1>
+      
+
+<p>set -e -u</p>
+
+<p>BACKUP_DIR=”{BACKUP_BASE_DIR}”
+KEEP_COUNT={BACKUP_KEEP_COUNT}</p>
+
+<p>log() {{ echo “[purge-docker-backups.sh] $1” &gt; /dev/kmsg; }}</p>
+  <h1 id="check-commands">
+    
+    
+     <a href="#check-commands">#</a><a href="#" aria-label="Back to top">Check commands</a>
+        
+    
+  </h1>
+      
+<p>check_cmds() {{
+    local missing_cmd=0
+    for cmd in “$@”; do if ! command -v “$cmd” &gt;/dev/null 2&gt;&amp;1; then log “ERROR: Command ‘$cmd’ not found.”; missing_cmd=1; fi; done
+    [ $missing_cmd -eq 1 ] &amp;&amp; exit 1
+}}
+check_cmds find wc sort head cut xargs rm mkdir date</p>
+
+<p>log “Purging old Docker backups in ${{BACKUP_DIR}}, keeping ${{KEEP_COUNT}}…”</p>
+  <h1 id="validate-keep_count">
+    
+    
+     <a href="#validate-keep_count">#</a><a href="#" aria-label="Back to top">Validate KEEP_COUNT</a>
+        
+    
+  </h1>
+      
+<p>if ! [ “$KEEP_COUNT” -ge 0 ] 2&gt;/dev/null; then log “ERROR: KEEP_COUNT (${{KEEP_COUNT}}) is invalid.”; exit 1; fi</p>
+  <h1 id="ensure-backup-directory-exists-and-is-accessible">
+    
+    
+     <a href="#ensure-backup-directory-exists-and-is-accessible">#</a><a href="#" aria-label="Back to top">Ensure backup directory exists and is accessible</a>
+        
+    
+  </h1>
+      
+<p>if ! mkdir -p “${{BACKUP_DIR}}”; then log “ERROR: Failed to create backup directory ${{BACKUP_DIR}}!”; exit 1; fi
+if [ ! -d “${{BACKUP_DIR}}” ] || [ ! -r “${{BACKUP_DIR}}” ] || [ ! -w “${{BACKUP_DIR}}” ]; then log “ERROR: Cannot access backup directory ${{BACKUP_DIR}}!”; exit 1; fi</p>
+  <h1 id="count-existing-backups-safely">
+    
+    
+     <a href="#count-existing-backups-safely">#</a><a href="#" aria-label="Back to top">Count existing backups safely</a>
+        
+    
+  </h1>
+      
+<p>log “Counting existing backup files…”
+backup_count=$(find “${{BACKUP_DIR}}” -maxdepth 1 -name ‘docker_backup_*.tar.gz’ -type f -print 2&gt;/dev/null | wc -l)
+find_exit_code=$?</p>
+
+<p>if [ $find_exit_code -ne 0 ]; then log “WARNING: find command failed (${{find_exit_code}}) while counting backups. Skipping purge.”; exit 0; fi
+log “Found ${{backup_count}} backup files.”</p>
+
+<p>if [ “$backup_count” -gt “$KEEP_COUNT” ]; then
+    to_delete_count=$(( backup_count - KEEP_COUNT ))
+    log “Need to delete ${{to_delete_count}} oldest backup(s).”</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><section><code># Use find -printf with null terminators for safe filename handling
+log "Identifying oldest backups to delete..."
+delete_output=$(find "${{BACKUP_DIR}}" -maxdepth 1 -name 'docker_backup_*.tar.gz' -type f -printf '%T@ %p\\0' 2&gt;/dev/null | \\
+    sort -zn | \\
+    head -zn "${{to_delete_count}}" | \\
+    cut -z -d' ' -f2- | \\
+    xargs -0 -r rm -v -- 2&gt;&amp;1) # Capture rm output (stdout+stderr)
+rm_exit_code=$?
+
+if [ $rm_exit_code -eq 0 ]; then
+    log "Purge completed successfully."
+    if [ -n "$delete_output" ]; then
+        log "Deleted files:"
+        # Log multi-line output safely
+        echo "$delete_output" | while IFS= read -r line || [ -n "$line" ]; do log "  $line"; done
+    fi
+else
+    log "WARNING: Purge command (rm) failed (exit code ${{rm_exit_code}}). Check output below."
+    log "rm output:"
+    echo "$delete_output" | while IFS= read -r line || [ -n "$line" ]; do log "  $line"; done
+fi else
+log "${{backup_count}} backups found &lt;= ${{KEEP_COUNT}}. No backups purged." fi
+</code></section></div></div>
+
+<p>log “Backup purge process finished.”
+exit 0
+“””</p>
+  <h1 id="-health-check-script-">
+    
+    
+     <a href="#-health-check-script-">#</a><a href="#" aria-label="Back to top">— Health Check Script —</a>
+        
+    
+  </h1>
+      
+<p>DOCKER_HEALTH_CHECK_SH_CONTENT = f”””#!/bin/sh</p>
+  <h1 id="file-data_mountscriptsdocker-health-checksh">
+    
+    
+     <a href="#file-data_mountscriptsdocker-health-checksh">#</a><a href="#" aria-label="Back to top">File: {DATA_MOUNT}/scripts/docker-health-check.sh</a>
+        
+    
+  </h1>
+      
+  <h1 id="checks-docker-daemon-health-responsiveness-and-data-root-configuration">
+    
+    
+     <a href="#checks-docker-daemon-health-responsiveness-and-data-root-configuration">#</a><a href="#" aria-label="Back to top">Checks Docker daemon health, responsiveness, and data-root configuration.</a>
+        
+    
+  </h1>
+      
+
+<p>set -e -u</p>
+
+<p>PERSISTENT_ROOT=”{PERSISTENT_DOCKER_ROOT}”
+DOCKER_CONFIG_FILE=”{DOCKER_CONFIG_FILE}”</p>
+
+<table>
+  <tbody>
+    <tr>
+      <td>log() {{ echo “[docker-health-check] $1”</td>
+      <td>tee /dev/kmsg; }} # Log to kmsg and stdout/stderr</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>log “Starting Docker health check…”</p>
+  <h1 id="check-required-commands">
+    
+    
+     <a href="#check-required-commands">#</a><a href="#" aria-label="Back to top">Check required commands</a>
+        
+    
+  </h1>
+      
+<p>check_cmds() {{ for cmd in “$@”; do if ! command -v “$cmd” &gt;/dev/null 2&gt;&amp;1; then log “ERROR: Command ‘$cmd’ not found.”; exit 1; fi; done }}
+check_cmds systemctl docker</p>
+  <h1 id="check-if-docker-daemon-service-is-running">
+    
+    
+     <a href="#check-if-docker-daemon-service-is-running">#</a><a href="#" aria-label="Back to top">Check if Docker daemon service is running</a>
+        
+    
+  </h1>
+      
+<p>log “Checking if docker.service is active…”
+if ! systemctl is-active –quiet docker.service; then
+    log “WARNING: Docker service is not running. Attempting restart…”
+    if systemctl restart docker.service; then
+        log “Docker service restarted successfully.”
+        sleep 5 # Give it time to fully start
+    else
+        log “ERROR: Failed to restart inactive Docker service!”
+        exit 1 # Critical failure if it should be running but can’t be started
+    fi
+fi</p>
+  <h1 id="verify-docker-daemon-is-responding-to-commands">
+    
+    
+     <a href="#verify-docker-daemon-is-responding-to-commands">#</a><a href="#" aria-label="Back to top">Verify Docker daemon is responding to commands</a>
+        
+    
+  </h1>
+      
+<p>log “Checking Docker daemon responsiveness via ‘docker info’…”
+if ! docker info &gt; /dev/null 2&gt;&amp;1; then
+    log “WARNING: Docker service is running but ‘docker info’ command failed. Attempting restart…”
+    if systemctl restart docker.service; then
+        log “Docker service restarted successfully.”
+        sleep 5 # Give it time
+        # Re-check responsiveness after restart
+        if ! docker info &gt; /dev/null 2&gt;&amp;1; then
+            log “ERROR: Docker daemon still not responding after restart! Requires manual investigation.”
+            exit 1 # Critical failure
+        else
+            log “Docker daemon is now responsive after restart.”
+        fi
+    else
+        log “ERROR: Failed to restart unresponsive Docker service!”
+        exit 1 # Critical failure
+    fi
+else
+    log “Docker daemon is responsive.”
+fi</p>
+  <h1 id="check-if-docker-is-using-the-correct-data-root-directory">
+    
+    
+     <a href="#check-if-docker-is-using-the-correct-data-root-directory">#</a><a href="#" aria-label="Back to top">Check if Docker is using the correct data-root directory</a>
+        
+    
+  </h1>
+      
+<p>log “Checking configured Docker data-root directory…”</p>
+  <h1 id="use-docker-info-with-go-template-for-precise-extraction">
+    
+    
+     <a href="#use-docker-info-with-go-template-for-precise-extraction">#</a><a href="#" aria-label="Back to top">Use docker info with Go template for precise extraction</a>
+        
+    
+  </h1>
+      
+<p>CURRENT_ROOT=$(docker info –format ‘{{{{.DockerRootDir}}}}’ 2&gt;/dev/null || echo “ERROR_GETTING_INFO”)</p>
+
+<p>if [ “$CURRENT_ROOT” = “ERROR_GETTING_INFO” ]; then
+    log “ERROR: Could not determine Docker’s current data-root using ‘docker info’. Health check incomplete.”
+    exit 1 # Exit as this is a significant issue
+elif [ “$CURRENT_ROOT” != “$PERSISTENT_ROOT” ]; then
+    log “CRITICAL ERROR: Docker is using incorrect data-root!”
+    log “  Expected: $PERSISTENT_ROOT”
+    log “  Actual:   $CURRENT_ROOT”
+    log “This indicates a configuration problem in $DOCKER_CONFIG_FILE or Docker failed to apply it. Manual intervention required.”
+    exit 1 # Critical configuration error
+else
+    log “Docker is correctly using the persistent data-root: $PERSISTENT_ROOT”
+fi</p>
+
+<p>log “Docker health check completed successfully.”
+exit 0
+“””</p>
+  <h1 id="-volume-check-script-">
+    
+    
+     <a href="#-volume-check-script-">#</a><a href="#" aria-label="Back to top">— Volume Check Script —</a>
+        
+    
+  </h1>
+      
+  <h1 id="define-prune-command-based-on-configuration">
+    
+    
+     <a href="#define-prune-command-based-on-configuration">#</a><a href="#" aria-label="Back to top">Define prune command based on configuration</a>
+        
+    
+  </h1>
+      
+<p>if VOLUME_CHECK_PRUNE_LEVEL == 0:
+    PRUNE_COMMAND = “echo ‘Automatic pruning disabled.’” # No-op
+elif VOLUME_CHECK_PRUNE_LEVEL == 1:
+    # Prune stopped containers and dangling images only
+    PRUNE_COMMAND = “docker container prune -f &amp;&amp; docker image prune -f”
+elif VOLUME_CHECK_PRUNE_LEVEL &gt;= 2:
+    # Prune stopped containers and <em>all</em> unused images (more aggressive)
+    PRUNE_COMMAND = “docker container prune -f &amp;&amp; docker image prune -a -f”
+else: # Default to level 1 if invalid config
+    PRUNE_COMMAND = “docker container prune -f &amp;&amp; docker image prune -f”</p>
+
+<p>DOCKER_VOLUME_CHECK_SH_CONTENT = f”””#!/bin/sh</p>
+  <h1 id="file-data_mountscriptsdocker-volume-checksh">
+    
+    
+     <a href="#file-data_mountscriptsdocker-volume-checksh">#</a><a href="#" aria-label="Back to top">File: {DATA_MOUNT}/scripts/docker-volume-check.sh</a>
+        
+    
+  </h1>
+      
+  <h1 id="checks-free-space-on-the-docker-persistent-volume-and-optionally-prunes-resources">
+    
+    
+     <a href="#checks-free-space-on-the-docker-persistent-volume-and-optionally-prunes-resources">#</a><a href="#" aria-label="Back to top">Checks free space on the Docker persistent volume and optionally prunes resources.</a>
+        
+    
+  </h1>
+      
+
+<p>set -e -u</p>
+
+<p>DOCKER_ROOT=”{PERSISTENT_DOCKER_ROOT}”
+MIN_FREE_PERCENT={VOLUME_CHECK_THRESHOLD_PERCENT}</p>
+  <h1 id="prune-command-determined-by-python-script-configuration-level-volume_check_prune_level">
+    
+    
+     <a href="#prune-command-determined-by-python-script-configuration-level-volume_check_prune_level">#</a><a href="#" aria-label="Back to top">Prune command determined by Python script configuration (Level: {VOLUME_CHECK_PRUNE_LEVEL})</a>
+        
+    
+  </h1>
+      
+<p>PRUNE_CMD=”{PRUNE_COMMAND}”</p>
+
+<table>
+  <tbody>
+    <tr>
+      <td>log() {{ echo “[docker-volume-check] $1”</td>
+      <td>tee /dev/kmsg; }}</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>log “Checking Docker volume free space: ${{DOCKER_ROOT}}”</p>
+  <h1 id="check-required-commands-1">
+    
+    
+     <a href="#check-required-commands-1">#</a><a href="#" aria-label="Back to top">Check required commands</a>
+        
+    
+  </h1>
+      
+<p>check_cmds() {{ for cmd in “$@”; do if ! command -v “$cmd” &gt;/dev/null 2&gt;&amp;1; then log “ERROR: Command ‘$cmd’ not found.”; exit 1; fi; done }}
+check_cmds df awk sed docker # Need docker if pruning is enabled</p>
+  <h1 id="check-if-the-docker-root-directory-exists">
+    
+    
+     <a href="#check-if-the-docker-root-directory-exists">#</a><a href="#" aria-label="Back to top">Check if the Docker root directory exists</a>
+        
+    
+  </h1>
+      
+<p>if [ ! -d “$DOCKER_ROOT” ]; then log “ERROR: Docker root directory not found: $DOCKER_ROOT”; exit 1; fi</p>
+  <h1 id="get-free-space-percentage-using-df--p-for-posix-compatibility">
+    
+    
+     <a href="#get-free-space-percentage-using-df--p-for-posix-compatibility">#</a><a href="#" aria-label="Back to top">Get free space percentage using df -P for POSIX compatibility</a>
+        
+    
+  </h1>
+      
+<p>log “Calculating free space…”</p>
+  <h1 id="get-available-and-total-blocks-in-1k-blocks-usually">
+    
+    
+     <a href="#get-available-and-total-blocks-in-1k-blocks-usually">#</a><a href="#" aria-label="Back to top">Get Available and Total blocks (in 1K blocks usually)</a>
+        
+    
+  </h1>
+      
+<p>df_output=$(df -P “$DOCKER_ROOT” | awk ‘NR==2 {{print $4, $2}}’ 2&gt;/dev/null)
+if [ -z “$df_output” ]; then log “ERROR: Failed to get disk usage using df for $DOCKER_ROOT”; exit 1; fi</p>
+
+<table>
+  <tbody>
+    <tr>
+      <td>avail_kb=$(echo “$df_output”</td>
+      <td>awk ‘{{print $1}}’)</td>
+    </tr>
+    <tr>
+      <td>total_kb=$(echo “$df_output”</td>
+      <td>awk ‘{{print $2}}’)</td>
+    </tr>
+  </tbody>
+</table>
+  <h1 id="handle-edge-case-where-total-size-is-0-or-df-failed-weirdly">
+    
+    
+     <a href="#handle-edge-case-where-total-size-is-0-or-df-failed-weirdly">#</a><a href="#" aria-label="Back to top">Handle edge case where total size is 0 or df failed weirdly</a>
+        
+    
+  </h1>
+      
+<p>if [ -z “$total_kb” ] || [ “$total_kb” -le 0 ]; then
+    log “WARNING: Total disk size reported as zero or invalid for $DOCKER_ROOT. Cannot calculate percentage.”
+    exit 0
+fi</p>
+  <h1 id="calculate-free-percentage-using-integer-arithmetic">
+    
+    
+     <a href="#calculate-free-percentage-using-integer-arithmetic">#</a><a href="#" aria-label="Back to top">Calculate free percentage using integer arithmetic</a>
+        
+    
+  </h1>
+      
+<p>free_percent=$(( (avail_kb * 100) / total_kb ))</p>
+  <h1 id="get-human-readable-sizes-for-logging">
+    
+    
+     <a href="#get-human-readable-sizes-for-logging">#</a><a href="#" aria-label="Back to top">Get human-readable sizes for logging</a>
+        
+    
+  </h1>
+      
+<p>total_size_hr=$(df -h “$DOCKER_ROOT” | awk ‘NR==2 {{print $2}}’)
+avail_size_hr=$(df -h “$DOCKER_ROOT” | awk ‘NR==2 {{print $4}}’)</p>
+
+<p>log “Volume Stats: Total=${{total_size_hr}}, Available=${{avail_size_hr}}, Free=${{free_percent}}%”</p>
+  <h1 id="check-against-threshold">
+    
+    
+     <a href="#check-against-threshold">#</a><a href="#" aria-label="Back to top">Check against threshold</a>
+        
+    
+  </h1>
+      
+<p>if [ “$free_percent” -lt “$MIN_FREE_PERCENT” ]; then
+    log “WARNING: Low disk space! Free: ${{free_percent}}% (Threshold: ${{MIN_FREE_PERCENT}}%)”</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><section><code># Attempt to prune based on configured level
+if [ {VOLUME_CHECK_PRUNE_LEVEL} -gt 0 ]; then
+    log "Attempting automatic prune (Level: {VOLUME_CHECK_PRUNE_LEVEL})..."
+    prune_output=$({PRUNE_COMMAND} 2&gt;&amp;1) || prune_exit_code=$?
+    # Check exit code, prune can return non-zero even if it works partially
+    if [ "${{prune_exit_code:-0}}" -eq 0 ]; then
+        log "Docker prune command executed successfully."
+    else
+        log "WARNING: Docker prune command finished with exit code ${{prune_exit_code}}."
+    fi
+    log "Prune output:"
+    echo "$prune_output" | while IFS= read -r line || [ -n "$line" ]; do log "  $line"; done
+
+    # Recalculate free space after pruning
+    log "Recalculating space after cleanup..."
+    df_output=$(df -P "$DOCKER_ROOT" | awk 'NR==2 {{print $4, $2}}' 2&gt;/dev/null)
+    avail_kb=$(echo "$df_output" | awk '{{print $1}}')
+    total_kb=$(echo "$df_output" | awk '{{print $2}}')
+    if [ "$total_kb" -gt 0 ]; then free_percent=$(( (avail_kb * 100) / total_kb )); else free_percent=0; fi
+    avail_size_hr=$(df -h "$DOCKER_ROOT" | awk 'NR==2 {{print $4}}')
+
+    log "Space after cleanup: Available=${{avail_size_hr}}, Free=${{free_percent}}%"
+    if [ "$free_percent" -lt "$MIN_FREE_PERCENT" ]; then
+        log "ERROR: Space still critically low after cleanup! Manual intervention likely required."
+    else
+        log "Space is now above threshold after cleanup."
+    fi
+else
+     log "Automatic pruning is disabled (Level 0). Manual cleanup needed."
+fi else
+log "Sufficient free space available (${{free_percent}}%)." fi
+</code></section></div></div>
+
+<p>log “Docker volume check completed.”
+exit 0
+“””</p>
+  <h1 id="-systemd-units-content-definitions-remain-the-same-as-previous-version-">
+    
+    
+     <a href="#-systemd-units-content-definitions-remain-the-same-as-previous-version-">#</a><a href="#" aria-label="Back to top">— Systemd Units (Content definitions remain the same as previous version) —</a>
+        
+    
+  </h1>
+      
+  <h1 id="backup-service">
+    
+    
+     <a href="#backup-service">#</a><a href="#" aria-label="Back to top">Backup Service</a>
+        
+    
+  </h1>
+      
+<p>DOCKER_BACKUP_SERVICE_CONTENT = f”””# File: {DATA_MOUNT}/systemd/docker-backup.service
+[Unit]
+Description=Backup Docker Data ({PERSISTENT_DOCKER_ROOT})
+Documentation=file://{DATA_MOUNT}/scripts/backup-docker.sh
+Requires=mnt-sbnb-data.mount
+After=mnt-sbnb-data.mount docker.service # Ensure mount and docker are up</p>
+
+<p>[Service]
+Type=oneshot
+ExecStart=/bin/sh {DATA_MOUNT}/scripts/backup-docker.sh
+“””</p>
+  <h1 id="backup-timer">
+    
+    
+     <a href="#backup-timer">#</a><a href="#" aria-label="Back to top">Backup Timer</a>
+        
+    
+  </h1>
+      
+<p>DOCKER_BACKUP_TIMER_CONTENT = f”””# File: {DATA_MOUNT}/systemd/docker-backup.timer
+[Unit]
+Description=Daily Docker Backup Timer ({PERSISTENT_DOCKER_ROOT})
+Requires=docker-backup.service</p>
+
+<p>[Timer]
+OnCalendar=<em>-</em>-* 05:00:00
+AccuracySec=1h
+Persistent=true
+RandomizedDelaySec=600 # 10 minutes
+Unit=docker-backup.service</p>
+
+<p>[Install]
+WantedBy=timers.target
+“””</p>
+  <h1 id="purge-service">
+    
+    
+     <a href="#purge-service">#</a><a href="#" aria-label="Back to top">Purge Service</a>
+        
+    
+  </h1>
+      
+<p>DOCKER_PURGE_SERVICE_CONTENT = f”””# File: {DATA_MOUNT}/systemd/docker-purge.service
+[Unit]
+Description=Purge Old Docker Backups ({BACKUP_BASE_DIR})
+Documentation=file://{DATA_MOUNT}/scripts/purge-docker-backups.sh
+Requires=mnt-sbnb-data.mount
+After=mnt-sbnb-data.mount</p>
+
+<p>[Service]
+Type=oneshot
+ExecStart=/bin/sh {DATA_MOUNT}/scripts/purge-docker-backups.sh
+“””</p>
+  <h1 id="purge-timer">
+    
+    
+     <a href="#purge-timer">#</a><a href="#" aria-label="Back to top">Purge Timer</a>
+        
+    
+  </h1>
+      
+<p>DOCKER_PURGE_TIMER_CONTENT = f”””# File: {DATA_MOUNT}/systemd/docker-purge.timer
+[Unit]
+Description=Daily Docker Backup Purge Timer
+Requires=docker-purge.service</p>
+
+<p>[Timer]
+OnCalendar=<em>-</em>-* 06:00:00
+AccuracySec=1h
+Persistent=true
+RandomizedDelaySec=300 # 5 minutes
+Unit=docker-purge.service</p>
+
+<p>[Install]
+WantedBy=timers.target
+“””</p>
+  <h1 id="shutdown-backup-service">
+    
+    
+     <a href="#shutdown-backup-service">#</a><a href="#" aria-label="Back to top">Shutdown Backup Service</a>
+        
+    
+  </h1>
+      
+<p>DOCKER_SHUTDOWN_BACKUP_SERVICE_CONTENT = f”””# File: {DATA_MOUNT}/systemd/docker-shutdown-backup.service
+[Unit]
+Description=Backup Docker Data ({PERSISTENT_DOCKER_ROOT}) on Shutdown (Best Effort)
+Documentation=file://{DATA_MOUNT}/scripts/backup-docker.sh
+DefaultDependencies=no # Crucial for shutdown units
+Requires=mnt-sbnb-data.mount docker.service
+After=mnt-sbnb-data.mount docker.service network.target
+Before=shutdown.target reboot.target halt.target kexec.target umount.target final.target</p>
+
+<p>[Service]
+Type=oneshot
+RemainAfterExit=true # Important for ExecStop= during shutdown
+TimeoutStopSec=180 # Give backup reasonable time (3 minutes)
+ExecStop=/bin/sh {DATA_MOUNT}/scripts/backup-docker.sh # Run backup on stop</p>
+
+<p>[Install]
+WantedBy=shutdown.target reboot.target halt.target kexec.target
+“””</p>
+  <h1 id="health-check-service">
+    
+    
+     <a href="#health-check-service">#</a><a href="#" aria-label="Back to top">Health Check Service</a>
+        
+    
+  </h1>
+      
+<p>DOCKER_HEALTH_SERVICE_CONTENT = f”””# File: {DATA_MOUNT}/systemd/docker-health-check.service
+[Unit]
+Description=Docker Health Check Service
+Documentation=file://{DATA_MOUNT}/scripts/docker-health-check.sh
+Requires=mnt-sbnb-data.mount docker.service
+After=mnt-sbnb-data.mount docker.service</p>
+
+<p>[Service]
+Type=oneshot
+ExecStart=/bin/sh {DATA_MOUNT}/scripts/docker-health-check.sh</p>
+  <h1 id="optional-resource-limits">
+    
+    
+     <a href="#optional-resource-limits">#</a><a href="#" aria-label="Back to top">Optional resource limits</a>
+        
+    
+  </h1>
+      
+  <h1 id="cpuquota10">
+    
+    
+     <a href="#cpuquota10">#</a><a href="#" aria-label="Back to top">CPUQuota=10%</a>
+        
+    
+  </h1>
+      
+  <h1 id="memorymax128m">
+    
+    
+     <a href="#memorymax128m">#</a><a href="#" aria-label="Back to top">MemoryMax=128M</a>
+        
+    
+  </h1>
+      
+<p>”””</p>
+  <h1 id="health-check-timer">
+    
+    
+     <a href="#health-check-timer">#</a><a href="#" aria-label="Back to top">Health Check Timer</a>
+        
+    
+  </h1>
+      
+<p>DOCKER_HEALTH_TIMER_CONTENT = f”””# File: {DATA_MOUNT}/systemd/docker-health-check.timer
+[Unit]
+Description=Regular Docker Health Check Timer
+Requires=docker-health-check.service</p>
+
+<p>[Timer]</p>
+  <h1 id="run-5-mins-after-boot-then-every-15-mins">
+    
+    
+     <a href="#run-5-mins-after-boot-then-every-15-mins">#</a><a href="#" aria-label="Back to top">Run 5 mins after boot, then every 15 mins</a>
+        
+    
+  </h1>
+      
+<p>OnBootSec=5min
+OnUnitActiveSec=15min
+AccuracySec=1min
+Unit=docker-health-check.service</p>
+
+<p>[Install]
+WantedBy=timers.target
+“””</p>
+  <h1 id="volume-check-service">
+    
+    
+     <a href="#volume-check-service">#</a><a href="#" aria-label="Back to top">Volume Check Service</a>
+        
+    
+  </h1>
+      
+<p>DOCKER_VOLUME_SERVICE_CONTENT = f”””# File: {DATA_MOUNT}/systemd/docker-volume-check.service
+[Unit]
+Description=Docker Volume Space Check Service ({PERSISTENT_DOCKER_ROOT})
+Documentation=file://{DATA_MOUNT}/scripts/docker-volume-check.sh
+Requires=mnt-sbnb-data.mount docker.service
+After=mnt-sbnb-data.mount docker.service</p>
+
+<p>[Service]
+Type=oneshot
+ExecStart=/bin/sh {DATA_MOUNT}/scripts/docker-volume-check.sh</p>
+  <h1 id="optional-resource-limits-1">
+    
+    
+     <a href="#optional-resource-limits-1">#</a><a href="#" aria-label="Back to top">Optional resource limits</a>
+        
+    
+  </h1>
+      
+  <h1 id="cpuquota10-1">
+    
+    
+     <a href="#cpuquota10-1">#</a><a href="#" aria-label="Back to top">CPUQuota=10%</a>
+        
+    
+  </h1>
+      
+  <h1 id="memorymax64m">
+    
+    
+     <a href="#memorymax64m">#</a><a href="#" aria-label="Back to top">MemoryMax=64M</a>
+        
+    
+  </h1>
+      
+<p>”””</p>
+  <h1 id="volume-check-timer">
+    
+    
+     <a href="#volume-check-timer">#</a><a href="#" aria-label="Back to top">Volume Check Timer</a>
+        
+    
+  </h1>
+      
+<p>DOCKER_VOLUME_TIMER_CONTENT = f”””# File: {DATA_MOUNT}/systemd/docker-volume-check.timer
+[Unit]
+Description=Regular Docker Volume Check Timer
+Requires=docker-volume-check.service</p>
+
+<p>[Timer]</p>
+  <h1 id="run-10-mins-after-boot-then-every-hour">
+    
+    
+     <a href="#run-10-mins-after-boot-then-every-hour">#</a><a href="#" aria-label="Back to top">Run 10 mins after boot, then every hour</a>
+        
+    
+  </h1>
+      
+<p>OnBootSec=10min
+OnUnitActiveSec=1h
+AccuracySec=5min
+Unit=docker-volume-check.service</p>
+
+<p>[Install]
+WantedBy=timers.target
+“””</p>
+  <h1 id="-dictionary-of-files-to-create-">
+    
+    
+     <a href="#-dictionary-of-files-to-create-">#</a><a href="#" aria-label="Back to top">— Dictionary of Files to Create —</a>
+        
+    
+  </h1>
+      
+  <h1 id="defines-all-files-to-be-generated-by-this-script">
+    
+    
+     <a href="#defines-all-files-to-be-generated-by-this-script">#</a><a href="#" aria-label="Back to top">Defines all files to be generated by this script</a>
+        
+    
+  </h1>
+      
+<p>FILES_TO_CREATE = {
+    # — ESP Files —
+    f”{ESP_MOUNT}/sbnb-cmds.sh”: {
+        “content”: SBNB_CMDS_SH_CONTENT,
+        “permissions”: 0o755 # rwxr-xr-x
+    },
+    f”{ESP_MOUNT}/sbnb-tskey.txt”: {
+        “content”: SBNB_TSKEY_TXT_CONTENT,
+        “permissions”: 0o600 # rw——- (Restrict access to key)
+    },</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><section><code># --- Data Partition Files ---
+# Helper Scripts
+f"{DATA_MOUNT}/scripts/backup-docker.sh": {
+    "content": BACKUP_DOCKER_SH_CONTENT,
+    "permissions": 0o750 # rwxr-x--- (Owner exec, group read/exec)
+},
+f"{DATA_MOUNT}/scripts/purge-docker-backups.sh": {
+    "content": PURGE_DOCKER_BACKUPS_SH_CONTENT,
+    "permissions": 0o750
+},
+f"{DATA_MOUNT}/scripts/docker-health-check.sh": {
+    "content": DOCKER_HEALTH_CHECK_SH_CONTENT,
+    "permissions": 0o750
+},
+f"{DATA_MOUNT}/scripts/docker-volume-check.sh": {
+    "content": DOCKER_VOLUME_CHECK_SH_CONTENT,
+    "permissions": 0o750
+},
+# Systemd Units
+f"{DATA_MOUNT}/systemd/docker-backup.service": {
+    "content": DOCKER_BACKUP_SERVICE_CONTENT,
+    "permissions": 0o644 # rw-r--r-- (Standard systemd unit permissions)
+},
+f"{DATA_MOUNT}/systemd/docker-backup.timer": {
+    "content": DOCKER_BACKUP_TIMER_CONTENT,
+    "permissions": 0o644
+},
+f"{DATA_MOUNT}/systemd/docker-purge.service": {
+    "content": DOCKER_PURGE_SERVICE_CONTENT,
+    "permissions": 0o644
+},
+f"{DATA_MOUNT}/systemd/docker-purge.timer": {
+    "content": DOCKER_PURGE_TIMER_CONTENT,
+    "permissions": 0o644
+},
+f"{DATA_MOUNT}/systemd/docker-shutdown-backup.service": {
+    "content": DOCKER_SHUTDOWN_BACKUP_SERVICE_CONTENT,
+    "permissions": 0o644
+},
+f"{DATA_MOUNT}/systemd/docker-health-check.service": {
+    "content": DOCKER_HEALTH_SERVICE_CONTENT,
+    "permissions": 0o644
+},
+f"{DATA_MOUNT}/systemd/docker-health-check.timer": {
+    "content": DOCKER_HEALTH_TIMER_CONTENT,
+    "permissions": 0o644
+},
+f"{DATA_MOUNT}/systemd/docker-volume-check.service": {
+    "content": DOCKER_VOLUME_SERVICE_CONTENT,
+    "permissions": 0o644
+},
+f"{DATA_MOUNT}/systemd/docker-volume-check.timer": {
+    "content": DOCKER_VOLUME_TIMER_CONTENT,
+    "permissions": 0o644
+}, }
+</code></section></div></div>
+  <h1 id="-global-counters-for-create_files-status-">
+    
+    
+     <a href="#-global-counters-for-create_files-status-">#</a><a href="#" aria-label="Back to top">— Global counters for create_files status —</a>
+        
+    
+  </h1>
+      
+<p>warning_count = 0
+fail_count = 0</p>
+  <h1 id="-main-script-logic-">
+    
+    
+     <a href="#-main-script-logic-">#</a><a href="#" aria-label="Back to top">— Main Script Logic —</a>
+        
+    
+  </h1>
+      
+
+<p>def check_prerequisites():
+    “"”Verify script prerequisites before attempting file creation.”””
+    print(“— Checking Prerequisites —”)
+    passed = True
+    # 1. Check root privileges
+    if os.geteuid() != 0:
+        print(“ERROR: Script must be run as root (UID 0).”)
+        passed = False
+    else:
+        print(“OK: Running as root.”)</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><section><code># 2. Check base mount points exist and are writable
+base_dirs = {ESP_MOUNT: "ESP", DATA_MOUNT: "Data"}
+for bdir, name in base_dirs.items():
+    bdir_path = pathlib.Path(bdir)
+    print(f"Checking {name} mount point: {bdir}...")
+    if not bdir_path.is_dir():
+        print(f"ERROR: Base {name} directory '{bdir}' does not exist or is not a directory.")
+        print(f"       Please ensure the corresponding partition is mounted correctly before running.")
+        passed = False
+    elif not os.access(bdir_path, os.W_OK):
+        print(f"ERROR: Base {name} directory '{bdir}' is not writable by the current user (root). Check mount options or permissions.")
+        passed = False
+    else:
+        print(f"OK: Base {name} directory '{bdir}' exists and is writable.")
+
+# 3. Check for optional but recommended commands needed by generated scripts
+print("Checking for optional command (jq)...")
+try:
+    if shutil.which("jq"):
+        print("OK: 'jq' command found (recommended for robust daemon.json handling).")
+    else:
+        print("WARNING: 'jq' command not found. Generated sbnb-cmds.sh will use less robust methods for daemon.json, which might fail or overwrite existing settings.")
+    # Removed rsync check as it's no longer used/preferred by the generated script
+except ImportError:
+    print("WARNING: Python 'shutil' module not found, cannot check for optional command (jq).")
+except Exception as e:
+    print(f"WARNING: Error checking for optional commands: {e}")
+
+
+if not passed:
+    print("----------------------------")
+    print("ERROR: Prerequisites not met. Aborting script.")
+    sys.exit(1)
+print("--- Prerequisites OK ---")
+return True
+</code></section></div></div>
+
+<p>def create_files():
+    “"”Creates directories and files as defined in FILES_TO_CREATE.”””
+    global warning_count, fail_count # Declare intent to modify globals
+    print(“\n— Starting File Creation Process —”)
+    success_count = 0
+    warning_count = 0 # Reset global counter
+    fail_count = 0    # Reset global counter</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><section><code># Ensure the base backup directory exists first with correct permissions
+try:
+    print(f"\nEnsuring base backup directory exists: {BACKUP_BASE_DIR}")
+    # Create directory with specific permissions (rwxr-x---)
+    os.makedirs(BACKUP_BASE_DIR, mode=BACKUP_DIR_PERMISSIONS, exist_ok=True)
+    # Explicitly set permissions in case it already existed with different ones
+    current_perm = stat.S_IMODE(os.stat(BACKUP_BASE_DIR).st_mode)
+    if current_perm != BACKUP_DIR_PERMISSIONS:
+        print(f"  Adjusting permissions on {BACKUP_BASE_DIR} to {BACKUP_DIR_PERMISSIONS:o}...") # Use :o format
+        os.chmod(BACKUP_BASE_DIR, BACKUP_DIR_PERMISSIONS)
+    print(f"OK: Backup directory ensured: {BACKUP_BASE_DIR} with permissions {BACKUP_DIR_PERMISSIONS:o}") # Use :o format
+except OSError as e:
+    print(f"ERROR: Failed to create or set permissions on {BACKUP_BASE_DIR}: {e}")
+    sys.exit(f"ERROR: Could not ensure backup directory '{BACKUP_BASE_DIR}'. Exiting.")
+except Exception as e:
+    print(f"ERROR: An unexpected error occurred ensuring backup directory: {e}")
+    sys.exit(f"ERROR: Could not ensure backup directory '{BACKUP_BASE_DIR}'. Exiting.")
+
+
+# Process the files dictionary
+for file_path_str, details in FILES_TO_CREATE.items():
+    file_path = pathlib.Path(file_path_str)
+    write_succeeded = False # Flag to track if write was successful
+
+    try:
+        content = details.get("content") # Use get() as content might be None for dirs
+        permissions = details.get("permissions") # Use .get() for optional permissions
+        # Assign default permissions if not specified
+        if permissions is None:
+            if content is None: # It's meant to be a directory
+                permissions = 0o755 # Default rwxr-xr-x for directories
+            else: # It's a file
+                permissions = 0o644 # Default rw-r--r-- for files
+            print(f"INFO: No specific permission set for {file_path}, using default {permissions:o}.") # Use :o format
+
+    except KeyError as e:
+        print(f"\nERROR: Configuration error - Missing '{e}' key for entry {file_path_str}. Skipping.")
+        fail_count += 1
+        continue
+    except Exception as e:
+        print(f"\nERROR: Configuration error for {file_path_str}: {e}. Skipping.")
+        fail_count += 1
+        continue
+
+    print(f"\nProcessing: {file_path}")
+
+    # 1. Create parent directories robustly
+    try:
+        parent_dir = file_path.parent
+        # Check if parent needs creation (avoid os.makedirs on existing dirs if possible)
+        if not parent_dir.is_dir():
+            print(f"  Creating parent directory: {parent_dir}")
+            # mode=0o755 sets default permissions for newly created dirs (rwxr-xr-x)
+            os.makedirs(parent_dir, mode=0o755, exist_ok=True)
+            # Explicitly set permissions on parent in case it was just created or exist_ok=True skipped it
+            print(f"  Setting parent directory permissions to 755...") # 755 doesn't need 0o prefix
+            os.chmod(parent_dir, 0o755)
+        else:
+            # Parent exists, ensure it's writable and has correct permissions
+            print(f"  Parent directory exists: {parent_dir}")
+            if not os.access(parent_dir, os.W_OK):
+                print(f"  WARNING: Parent directory {parent_dir} is not writable! File write may fail.")
+                warning_count += 1
+            # Ensure existing parent has standard 755 permissions
+            try:
+                current_parent_perm = stat.S_IMODE(os.stat(parent_dir).st_mode)
+                if current_parent_perm != 0o755:
+                    print(f"  Ensuring parent directory permissions are 755 (currently {current_parent_perm:o})...") # Use :o format
+                    os.chmod(parent_dir, 0o755)
+            except OSError as e:
+                print(f"  WARNING: Could not check/set permissions on existing parent {parent_dir}: {e}")
+                warning_count += 1
+
+    except OSError as e:
+        print(f"  ERROR: Failed to create or set permissions on parent directory {parent_dir}: {e}")
+        print(f"  Skipping item: {file_path}")
+        fail_count += 1
+        continue # Skip to the next file
+    except Exception as e:
+        print(f"  ERROR: An unexpected error occurred creating parent directory for {file_path}: {e}")
+        print(f"  Skipping item: {file_path}")
+        fail_count += 1
+        continue
+
+    # 2. Write the file content (or create directory if content is None)
+    if content is not None: # It's a file
+        try:
+            print(f"  Writing content...")
+            # Use write_text for atomic write where possible and UTF-8 encoding
+            file_path.write_text(content, encoding='utf-8')
+            print(f"  Successfully wrote: {file_path}")
+            write_succeeded = True
+        except IOError as e:
+            print(f"  ERROR: Failed to write file {file_path}: {e}")
+            fail_count += 1
+            continue # Skip permissions if write failed
+        except Exception as e:
+            print(f"  ERROR: An unexpected error occurred writing {file_path}: {e}")
+            fail_count += 1
+            continue
+    else: # It's a directory (content is None)
+        try:
+            print(f"  Ensuring directory exists: {file_path}")
+            os.makedirs(file_path, mode=permissions, exist_ok=True)
+            # Explicitly set permissions in case it already existed
+            os.chmod(file_path, permissions)
+            print(f"  Successfully ensured directory: {file_path}")
+            write_succeeded = True # Treat dir success like file write success
+        except OSError as e:
+            print(f"  ERROR: Failed to create/set permissions on directory {file_path}: {e}")
+            fail_count += 1
+            continue
+        except Exception as e:
+            print(f"  ERROR: An unexpected error occurred ensuring directory {file_path}: {e}")
+            fail_count += 1
+            continue
+
+
+    # 3. Set permissions (only if write/dir creation succeeded)
+    if write_succeeded:
+        try:
+            # Check if current permissions match target permissions before attempting chmod
+            current_perm = stat.S_IMODE(os.stat(file_path).st_mode)
+            if current_perm != permissions:
+                print(f"  Setting permissions to {permissions:o} (currently {current_perm:o})...") # Use :o format
+                os.chmod(file_path, permissions)
+                print(f"  Successfully set permissions for: {file_path}")
+            else:
+                print(f"  Permissions already set correctly ({permissions:o}) for: {file_path}") # Use :o format
+            success_count += 1 # Count full success (write/dir + chmod)
+        except OSError as e:
+            print(f"  WARNING: Failed to set permissions on {file_path}: {e}")
+            warning_count += 1 # Item created/written, but permissions failed/check failed
+        except Exception as e:
+            print(f"  WARNING: An unexpected error occurred setting permissions for {file_path}: {e}")
+            warning_count += 1
+
+# --- Summary ---
+print("\n--- File Creation Summary ---")
+print(f"Successfully processed (created/permissioned): {success_count} items")
+print(f"Items processed but with warnings:             {warning_count}")
+print(f"Failed operations (write/dir/parent):          {fail_count}")
+print("-------------------------------\n")
+
+total_issues = fail_count + warning_count
+if total_issues &gt; 0:
+    print("NOTE: Some errors or warnings occurred during file creation.")
+    if fail_count &gt; 0:
+        print("ERROR: Fatal errors occurred. Deployment incomplete.")
+        return False # Fatal errors occurred
+    else:
+        print("Deployment completed, but with warnings. Please review the output above.")
+        return True # Only non-fatal warnings
+else:
+    print("SBNB configuration file deployment completed successfully.")
+    return True
+</code></section></div></div>
+  <h1 id="-script-execution-">
+    
+    
+     <a href="#-script-execution-">#</a><a href="#" aria-label="Back to top">— Script Execution —</a>
+        
+    
+  </h1>
+      
+<p>if <strong>name</strong> == “<strong>main</strong>”:
+    print(“=====================================================================”)
+    print(“ SBNB Unified Configuration Deployment Script (v2.1 - BusyBox cp) “)
+    print(“=====================================================================”)
+    print(f”Timestamp: {datetime.now().strftime(‘%Y-%m-%d %H:%M:%S’)}”)
+    print(f”Configuring Docker persistent root: {PERSISTENT_DOCKER_ROOT}”)
+    print(“Includes Backup/Purge and Health/Volume monitoring.”)
+    print(“Data migration uses ‘cp -a -u’ (BusyBox friendly).”)
+    print(“=====================================================================\n”)</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><section><code># Store counts for final status reporting
+final_warning_count = 0
+final_fail_count = 0
+
+if check_prerequisites():
+    # Capture status from create_files
+    create_files_success = create_files()
+    # Access the global counters updated by create_files
+    final_warning_count = warning_count
+    final_fail_count = fail_count
+
+    if create_files_success or (final_fail_count == 0 and final_warning_count &gt; 0) :
+        # Success or only warnings - print final instructions
+        print("\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+        print("!!! CRITICAL: You MUST replace the placeholder in                         !!!")
+        print(f"!!!           '{ESP_MOUNT}/sbnb-tskey.txt' with your actual Tailscale auth key! !!!")
+        print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+        print("\n--- Next Steps ---")
+        print("1. Review any WARNINGS in the output above.")
+        print("2. Reboot the system for sbnb-cmds.sh to take effect.")
+        print("3. After reboot, verify Docker configuration and status:")
+        print(f"   - Check data root: `docker info | grep 'Docker Root Dir'` (should show '{PERSISTENT_DOCKER_ROOT}')")
+        print(f"   - Check status: `systemctl status docker.service`")
+        print(f"   - Check boot script logs: `journalctl -t sbnb-cmds.sh --no-pager` or check `/dev/kmsg` output during boot")
+        print(f"   - Check timers: `systemctl list-timers --all | grep docker`")
+        print(f"   - Check helper script logs periodically: `journalctl -t backup-docker.sh -t purge-docker-backups.sh -t docker-health-check -t docker-volume-check --no-pager`")
+
+        if final_warning_count &gt; 0:
+            print("\nDeployment finished with WARNINGS.")
+            sys.exit(2) # Exit code 2 for success with warnings
+        else:
+            print("\nDeployment finished successfully.")
+            sys.exit(0) # Exit successfully
+    else:
+        # Fatal errors occurred during file creation
+        print("\n--- Deployment Failed ---")
+        print("Fatal errors occurred during file creation. System configuration may be incomplete or inconsistent.")
+        sys.exit(1) # Exit with error code {% endcodeblock %}
+</code></section></div></div>
+
+<ol>
   <li><strong>Unmount the EFI Partition:</strong>
     <div class="language-bash highlighter-rouge"><div class="highlight"><section><code><span class="nb">echo</span> <span class="s2">"--- Unmounting ESP partition ---"</span>
 <span class="c"># Ensure buffers are flushed before unmounting</span>
@@ -851,508 +2817,7 @@ fi
       <li><strong>Lifespan/Failure:</strong> Monitor <code class="language-plaintext highlighter-rouge">dmesg</code> for I/O errors. Restore from verified backups upon failure. This setup will wear out consumer flash drives with persistent writes.</li>
     </ul>
   </li>
-</ul><hr />
-  <h2 id="additional-files-example-backuprestore-implementation">
-    
-    
-     <a href="#additional-files-example-backuprestore-implementation">#</a><a href="#" aria-label="Back to top">Additional Files (Example Backup/Restore Implementation)</a>
-        
-    
-  </h2>
-      
-
-<p>These files would typically reside on the persistent data partition (<code class="language-plaintext highlighter-rouge">/mnt/sbnb-data</code>) and be managed/executed via <code class="language-plaintext highlighter-rouge">sbnb-cmds.sh</code> or systemd units symlinked from the persistent storage during boot.</p>
-
-<p><strong><code class="language-plaintext highlighter-rouge">sbnb-cmds.sh</code> (Modified for Backup/Restore Logic)</strong></p>
-
-<p>This is an example showing how <code class="language-plaintext highlighter-rouge">sbnb-cmds.sh</code> might be modified to handle Docker data restore and systemd unit enabling. <strong>Integrate this logic carefully into the <code class="language-plaintext highlighter-rouge">sbnb-cmds.sh</code> script created in Phase 3.</strong></p>
-
-<div class="language-sh highlighter-rouge"><div class="highlight"><section><code><span class="c">#!/bin/sh</span>
-<span class="c"># Sbnb Custom Commands Script (Modified Example for Backup/Restore)</span>
-<span class="c"># Mounts persistent data partition, optionally restores Docker data,</span>
-<span class="c"># configures Docker data-root (if needed), enables systemd units.</span>
-
-<span class="c"># Exit immediately if a command exits with a non-zero status. Crucial for boot scripts.</span>
-<span class="c"># Use pipefail to ensure pipeline failure is detected.</span>
-<span class="nb">set</span> <span class="nt">-e</span> <span class="nt">-o</span> pipefail
-
-<span class="c"># --- Script Start Logging ---</span>
-<span class="nb">echo</span> <span class="s2">"[sbnb-cmds.sh] Starting custom boot commands (Backup/Restore Example)..."</span> <span class="o">&gt;</span> /dev/kmsg
-
-<span class="c"># --- Mount Persistent Data Partition (Same as Phase 3) ---</span>
-<span class="nv">DATA_LABEL</span><span class="o">=</span><span class="s2">"SBNB_DATA"</span>
-<span class="nv">DATA_DEVICE_SYMLINK</span><span class="o">=</span><span class="s2">"/dev/disk/by-label/</span><span class="k">${</span><span class="nv">DATA_LABEL</span><span class="k">}</span><span class="s2">"</span>
-<span class="nv">DATA_MOUNT_POINT</span><span class="o">=</span><span class="s2">"/mnt/sbnb-data"</span>
-<span class="nv">MAX_WAIT_SECONDS</span><span class="o">=</span>15
-<span class="nv">WAIT_INTERVAL</span><span class="o">=</span>1
-<span class="nv">elapsed_time</span><span class="o">=</span>0
-
-<span class="nb">echo</span> <span class="s2">"[sbnb-cmds.sh] Waiting up to </span><span class="k">${</span><span class="nv">MAX_WAIT_SECONDS</span><span class="k">}</span><span class="s2">s for data device (Label: </span><span class="k">${</span><span class="nv">DATA_LABEL</span><span class="k">}</span><span class="s2">)..."</span> <span class="o">&gt;</span> /dev/kmsg
-<span class="k">while</span> <span class="o">[</span> <span class="o">!</span> <span class="nt">-e</span> <span class="s2">"</span><span class="k">${</span><span class="nv">DATA_DEVICE_SYMLINK</span><span class="k">}</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span> <span class="k">do
-  if</span> <span class="o">[</span> <span class="k">${</span><span class="nv">elapsed_time</span><span class="k">}</span> <span class="nt">-ge</span> <span class="k">${</span><span class="nv">MAX_WAIT_SECONDS</span><span class="k">}</span> <span class="o">]</span><span class="p">;</span> <span class="k">then
-    </span><span class="nb">echo</span> <span class="s2">"[sbnb-cmds.sh] ERROR: Timeout waiting for device </span><span class="k">${</span><span class="nv">DATA_DEVICE_SYMLINK</span><span class="k">}</span><span class="s2">. Persistent data cannot be mounted."</span> <span class="o">&gt;</span> /dev/kmsg
-    <span class="nb">exit </span>1 <span class="c"># Exit: cannot proceed without data partition</span>
-  <span class="k">fi
-  </span><span class="nb">sleep</span> <span class="k">${</span><span class="nv">WAIT_INTERVAL</span><span class="k">}</span>
-  <span class="nv">elapsed_time</span><span class="o">=</span><span class="k">$((</span>elapsed_time <span class="o">+</span> WAIT_INTERVAL<span class="k">))</span>
-<span class="k">done
-</span><span class="nv">DATA_DEVICE</span><span class="o">=</span><span class="si">$(</span><span class="nb">readlink</span> <span class="nt">-f</span> <span class="s2">"</span><span class="k">${</span><span class="nv">DATA_DEVICE_SYMLINK</span><span class="k">}</span><span class="s2">"</span><span class="si">)</span>
-<span class="nb">echo</span> <span class="s2">"[sbnb-cmds.sh] Data partition device resolved to </span><span class="k">${</span><span class="nv">DATA_DEVICE</span><span class="k">}</span><span class="s2"> after </span><span class="k">${</span><span class="nv">elapsed_time</span><span class="k">}</span><span class="s2">s."</span> <span class="o">&gt;</span> /dev/kmsg
-<span class="nb">mkdir</span> <span class="nt">-p</span> <span class="s2">"</span><span class="k">${</span><span class="nv">DATA_MOUNT_POINT</span><span class="k">}</span><span class="s2">"</span>
-<span class="nb">echo</span> <span class="s2">"[sbnb-cmds.sh] Attempting to mount </span><span class="k">${</span><span class="nv">DATA_DEVICE</span><span class="k">}</span><span class="s2"> at </span><span class="k">${</span><span class="nv">DATA_MOUNT_POINT</span><span class="k">}</span><span class="s2">..."</span> <span class="o">&gt;</span> /dev/kmsg
-<span class="k">if </span>mount <span class="nt">-o</span> rw,noatime,nodiratime <span class="s2">"</span><span class="k">${</span><span class="nv">DATA_DEVICE</span><span class="k">}</span><span class="s2">"</span> <span class="s2">"</span><span class="k">${</span><span class="nv">DATA_MOUNT_POINT</span><span class="k">}</span><span class="s2">"</span><span class="p">;</span> <span class="k">then
-  </span><span class="nb">echo</span> <span class="s2">"[sbnb-cmds.sh] Successfully mounted persistent partition at </span><span class="k">${</span><span class="nv">DATA_MOUNT_POINT</span><span class="k">}</span><span class="s2">."</span> <span class="o">&gt;</span> /dev/kmsg
-<span class="k">else
-  </span><span class="nb">echo</span> <span class="s2">"[sbnb-cmds.sh] ERROR: Failed to mount </span><span class="k">${</span><span class="nv">DATA_DEVICE</span><span class="k">}</span><span class="s2"> at </span><span class="k">${</span><span class="nv">DATA_MOUNT_POINT</span><span class="k">}</span><span class="s2">!"</span> <span class="o">&gt;</span> /dev/kmsg
-  <span class="nb">exit </span>1 <span class="c"># Exit: cannot proceed without data partition mounted</span>
-<span class="k">fi</span>
-
-<span class="c"># --- Configure Docker data-root and Restore Data ---</span>
-<span class="nb">echo</span> <span class="s2">"[sbnb-cmds.sh] Configuring Docker data-root and checking restore..."</span> <span class="o">&gt;</span> /dev/kmsg
-
-<span class="c"># Define the location for Docker's root data directory on the persistent partition</span>
-<span class="nv">DOCKER_DATA_ROOT_PERSISTENT</span><span class="o">=</span><span class="s2">"</span><span class="k">${</span><span class="nv">DATA_MOUNT_POINT</span><span class="k">}</span><span class="s2">/docker-root"</span>
-<span class="c"># Define the standard location for Docker's configuration file</span>
-<span class="nv">DOCKER_CONFIG_DIR</span><span class="o">=</span><span class="s2">"/etc/docker"</span>
-<span class="nv">DOCKER_CONFIG_FILE</span><span class="o">=</span><span class="s2">"</span><span class="k">${</span><span class="nv">DOCKER_CONFIG_DIR</span><span class="k">}</span><span class="s2">/daemon.json"</span>
-<span class="c"># Define backup location on the mounted data partition</span>
-<span class="nv">BACKUP_DIR</span><span class="o">=</span><span class="s2">"</span><span class="k">${</span><span class="nv">DATA_MOUNT_POINT</span><span class="k">}</span><span class="s2">/backups/docker"</span>
-<span class="nv">LATEST_LINK</span><span class="o">=</span><span class="s2">"</span><span class="k">${</span><span class="nv">BACKUP_DIR</span><span class="k">}</span><span class="s2">/docker_latest.tar.gz"</span>
-<span class="c"># --- Target for restore (ephemeral) ---</span>
-<span class="nv">DOCKER_DATA_EPHEMERAL</span><span class="o">=</span><span class="s2">"/var/lib/docker"</span>
-
-<span class="c"># 1. Ensure the persistent Docker data-root directory exists (if using direct persistent data-root)</span>
-<span class="c"># echo "[sbnb-cmds.sh] Ensuring Docker data directory exists: ${DOCKER_DATA_ROOT_PERSISTENT}" &gt; /dev/kmsg</span>
-<span class="c"># mkdir -p "${DOCKER_DATA_ROOT_PERSISTENT}"</span>
-<span class="c"># if [ $? -ne 0 ]; then</span>
-<span class="c">#   echo "[sbnb-cmds.sh] ERROR: Failed to create persistent Docker data directory ${DOCKER_DATA_ROOT_PERSISTENT}!" &gt; /dev/kmsg</span>
-<span class="c">#   exit 1</span>
-<span class="c"># fi</span>
-
-<span class="c"># 2. Create/Update Docker daemon configuration (if needed for data-root or other settings)</span>
-<span class="c"># echo "[sbnb-cmds.sh] Configuring Docker daemon (${DOCKER_CONFIG_FILE}) to use data-root: ${DOCKER_DATA_ROOT_PERSISTENT}" &gt; /dev/kmsg</span>
-<span class="c"># mkdir -p "${DOCKER_CONFIG_DIR}"</span>
-<span class="c"># printf '{\n  "data-root": "%s"\n}\n' "${DOCKER_DATA_ROOT_PERSISTENT}" &gt; "${DOCKER_CONFIG_FILE}"</span>
-<span class="c"># if [ $? -ne 0 ]; then</span>
-<span class="c">#   echo "[sbnb-cmds.sh] ERROR: Failed to write Docker config file ${DOCKER_CONFIG_FILE}!" &gt; /dev/kmsg</span>
-<span class="c">#   exit 1</span>
-<span class="c"># fi</span>
-<span class="c"># echo "[sbnb-cmds.sh] Docker daemon configuration updated." &gt; /dev/kmsg</span>
-
-<span class="c"># 3. Restore Docker data INTO the EPHEMERAL location (if backup exists)</span>
-<span class="nb">echo</span> <span class="s2">"[sbnb-cmds.sh] Checking for Docker backup to restore to </span><span class="k">${</span><span class="nv">DOCKER_DATA_EPHEMERAL</span><span class="k">}</span><span class="s2">..."</span> <span class="o">&gt;</span> /dev/kmsg
-<span class="c"># Ensure ephemeral target directory exists and is empty before restore</span>
-<span class="nb">mkdir</span> <span class="nt">-p</span> <span class="s2">"</span><span class="k">${</span><span class="nv">DOCKER_DATA_EPHEMERAL</span><span class="k">}</span><span class="s2">"</span>
-<span class="nb">rm</span> <span class="nt">-rf</span> <span class="s2">"</span><span class="k">${</span><span class="nv">DOCKER_DATA_EPHEMERAL</span>:?<span class="k">}</span><span class="s2">/"</span><span class="k">*</span> <span class="c"># Safety: ensure var is set before rm -rf *</span>
-
-<span class="k">if</span> <span class="o">[</span> <span class="nt">-L</span> <span class="s2">"</span><span class="k">${</span><span class="nv">LATEST_LINK</span><span class="k">}</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then
-  </span><span class="nv">ACTUAL_BACKUP_FILE</span><span class="o">=</span><span class="si">$(</span><span class="nb">readlink</span> <span class="nt">-f</span> <span class="s2">"</span><span class="k">${</span><span class="nv">LATEST_LINK</span><span class="k">}</span><span class="s2">"</span><span class="si">)</span>
-  <span class="k">if</span> <span class="o">[</span> <span class="nv">$?</span> <span class="nt">-eq</span> 0 <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="o">[</span> <span class="nt">-f</span> <span class="s2">"</span><span class="k">${</span><span class="nv">ACTUAL_BACKUP_FILE</span><span class="k">}</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then
-    </span><span class="nb">echo</span> <span class="s2">"[sbnb-cmds.sh] Found latest backup: </span><span class="k">${</span><span class="nv">ACTUAL_BACKUP_FILE</span><span class="k">}</span><span class="s2">. Restoring to </span><span class="k">${</span><span class="nv">DOCKER_DATA_EPHEMERAL</span><span class="k">}</span><span class="s2">..."</span> <span class="o">&gt;</span> /dev/kmsg
-    <span class="c"># Extract archive directly into the ephemeral data-root directory.</span>
-    <span class="k">if </span><span class="nb">tar</span> <span class="nt">-xzf</span> <span class="s2">"</span><span class="k">${</span><span class="nv">ACTUAL_BACKUP_FILE</span><span class="k">}</span><span class="s2">"</span> <span class="nt">-C</span> <span class="s2">"</span><span class="k">${</span><span class="nv">DOCKER_DATA_EPHEMERAL</span><span class="k">}</span><span class="s2">"</span><span class="p">;</span> <span class="k">then
-      </span><span class="nb">echo</span> <span class="s2">"[sbnb-cmds.sh] Docker data restored successfully to ephemeral storage."</span> <span class="o">&gt;</span> /dev/kmsg
-    <span class="k">else
-      </span><span class="nb">echo</span> <span class="s2">"[sbnb-cmds.sh] ERROR: Failed to extract Docker data from </span><span class="k">${</span><span class="nv">ACTUAL_BACKUP_FILE</span><span class="k">}</span><span class="s2"> to </span><span class="k">${</span><span class="nv">DOCKER_DATA_EPHEMERAL</span><span class="k">}</span><span class="s2">! Docker will start fresh."</span> <span class="o">&gt;</span> /dev/kmsg
-      <span class="nb">rm</span> <span class="nt">-rf</span> <span class="s2">"</span><span class="k">${</span><span class="nv">DOCKER_DATA_EPHEMERAL</span>:?<span class="k">}</span><span class="s2">/"</span><span class="k">*</span> <span class="c"># Clean up partial restore</span>
-    <span class="k">fi
-  else
-    </span><span class="nb">echo</span> <span class="s2">"[sbnb-cmds.sh] WARNING: Latest backup link '</span><span class="k">${</span><span class="nv">LATEST_LINK</span><span class="k">}</span><span class="s2">' exists but is broken or points to non-existent file. Skipping restore."</span> <span class="o">&gt;</span> /dev/kmsg
-  <span class="k">fi
-else
-  </span><span class="nb">echo</span> <span class="s2">"[sbnb-cmds.sh] No latest Docker backup link found (</span><span class="k">${</span><span class="nv">LATEST_LINK</span><span class="k">}</span><span class="s2">). Docker will start fresh in </span><span class="k">${</span><span class="nv">DOCKER_DATA_EPHEMERAL</span><span class="k">}</span><span class="s2">."</span> <span class="o">&gt;</span> /dev/kmsg
-<span class="k">fi
-</span><span class="nb">echo</span> <span class="s2">"[sbnb-cmds.sh] Docker data restore check finished."</span> <span class="o">&gt;</span> /dev/kmsg
-
-<span class="c"># --- Restart Docker Service (if needed, e.g., after config change; not needed for just restore) ---</span>
-<span class="c"># echo "[sbnb-cmds.sh] Reloading systemd daemon and restarting Docker service..." &gt; /dev/kmsg</span>
-<span class="c"># if systemctl daemon-reload &amp;&amp; systemctl restart docker; then</span>
-<span class="c">#   echo "[sbnb-cmds.sh] Docker service restarted successfully." &gt; /dev/kmsg</span>
-<span class="c"># else</span>
-<span class="c">#   echo "[sbnb-cmds.sh] ERROR: Failed to reload systemd or restart Docker service! Halting script." &gt; /dev/kmsg</span>
-<span class="c">#   exit 1</span>
-<span class="c"># fi</span>
-
-<span class="c"># --- Update sbnb-dev-env.sh Script (Atomic Method - Example) ---</span>
-<span class="c"># This part is specific to the user's dev environment script and might not be needed universally.</span>
-<span class="c"># Adjust paths and logic as required.</span>
-<span class="nv">TARGET_DEV_ENV_SCRIPT</span><span class="o">=</span><span class="s2">"/usr/sbin/sbnb-dev-env.sh"</span>
-<span class="nv">SOURCE_DEV_ENV_SCRIPT</span><span class="o">=</span><span class="s2">"</span><span class="k">${</span><span class="nv">DATA_MOUNT_POINT</span><span class="k">}</span><span class="s2">/scripts/sbnb-dev-env.sh"</span> <span class="c"># Assuming it's stored persistently</span>
-<span class="nv">TARGET_DIR</span><span class="o">=</span><span class="si">$(</span><span class="nb">dirname</span> <span class="s2">"</span><span class="k">${</span><span class="nv">TARGET_DEV_ENV_SCRIPT</span><span class="k">}</span><span class="s2">"</span><span class="si">)</span>
-<span class="nv">TMP_SCRIPT</span><span class="o">=</span><span class="s2">""</span>
-
-<span class="nb">trap</span> <span class="s1">'if [ -n "${TMP_SCRIPT}" ] &amp;&amp; [ -f "${TMP_SCRIPT}" ]; then rm -f "${TMP_SCRIPT}"; echo "[sbnb-cmds.sh] Cleaned up temporary file ${TMP_SCRIPT}" &gt; /dev/kmsg; fi'</span> EXIT HUP INT QUIT TERM
-
-<span class="nb">echo</span> <span class="s2">"[sbnb-cmds.sh] Attempting atomic update of </span><span class="k">${</span><span class="nv">TARGET_DEV_ENV_SCRIPT</span><span class="k">}</span><span class="s2"> from </span><span class="k">${</span><span class="nv">SOURCE_DEV_ENV_SCRIPT</span><span class="k">}</span><span class="s2">..."</span> <span class="o">&gt;</span> /dev/kmsg
-<span class="k">if</span> <span class="o">[</span> <span class="nt">-f</span> <span class="s2">"</span><span class="k">${</span><span class="nv">SOURCE_DEV_ENV_SCRIPT</span><span class="k">}</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then
-  if</span> <span class="o">[</span> <span class="o">!</span> <span class="nt">-d</span> <span class="s2">"</span><span class="k">${</span><span class="nv">TARGET_DIR</span><span class="k">}</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then
-    </span><span class="nb">echo</span> <span class="s2">"[sbnb-cmds.sh] ERROR: Target directory </span><span class="k">${</span><span class="nv">TARGET_DIR</span><span class="k">}</span><span class="s2"> does not exist. Cannot update script."</span> <span class="o">&gt;</span> /dev/kmsg
-    <span class="nb">exit </span>1
-  <span class="k">fi
-  </span><span class="nv">TMP_SCRIPT</span><span class="o">=</span><span class="si">$(</span><span class="nb">mktemp</span> <span class="s2">"</span><span class="k">${</span><span class="nv">TARGET_DIR</span><span class="k">}</span><span class="s2">/sbnb-dev-env.sh.XXXXXX"</span><span class="si">)</span>
-  <span class="k">if</span> <span class="o">[</span> <span class="nt">-z</span> <span class="s2">"</span><span class="k">${</span><span class="nv">TMP_SCRIPT</span><span class="k">}</span><span class="s2">"</span> <span class="o">]</span> <span class="o">||</span> <span class="o">[</span> <span class="o">!</span> <span class="nt">-f</span> <span class="s2">"</span><span class="k">${</span><span class="nv">TMP_SCRIPT</span><span class="k">}</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then
-    </span><span class="nb">echo</span> <span class="s2">"[sbnb-cmds.sh] ERROR: Failed to create temporary file in </span><span class="k">${</span><span class="nv">TARGET_DIR</span><span class="k">}</span><span class="s2">."</span> <span class="o">&gt;</span> /dev/kmsg
-    <span class="nb">exit </span>1
-  <span class="k">fi</span>
-  <span class="c"># Copy content from persistent storage to temp file</span>
-  <span class="k">if </span><span class="nb">cp</span> <span class="s2">"</span><span class="k">${</span><span class="nv">SOURCE_DEV_ENV_SCRIPT</span><span class="k">}</span><span class="s2">"</span> <span class="s2">"</span><span class="k">${</span><span class="nv">TMP_SCRIPT</span><span class="k">}</span><span class="s2">"</span><span class="p">;</span> <span class="k">then
-    if </span><span class="nb">chmod</span> +x <span class="s2">"</span><span class="k">${</span><span class="nv">TMP_SCRIPT</span><span class="k">}</span><span class="s2">"</span><span class="p">;</span> <span class="k">then
-      if </span><span class="nb">mv</span> <span class="s2">"</span><span class="k">${</span><span class="nv">TMP_SCRIPT</span><span class="k">}</span><span class="s2">"</span> <span class="s2">"</span><span class="k">${</span><span class="nv">TARGET_DEV_ENV_SCRIPT</span><span class="k">}</span><span class="s2">"</span><span class="p">;</span> <span class="k">then
-        </span><span class="nv">TMP_SCRIPT</span><span class="o">=</span><span class="s2">""</span> <span class="c"># Clear var so trap doesn't remove it</span>
-        <span class="nb">echo</span> <span class="s2">"[sbnb-cmds.sh] Successfully updated </span><span class="k">${</span><span class="nv">TARGET_DEV_ENV_SCRIPT</span><span class="k">}</span><span class="s2">."</span> <span class="o">&gt;</span> /dev/kmsg
-      <span class="k">else
-        </span><span class="nb">echo</span> <span class="s2">"[sbnb-cmds.sh] ERROR: Failed to move temporary file </span><span class="k">${</span><span class="nv">TMP_SCRIPT</span><span class="k">}</span><span class="s2"> to </span><span class="k">${</span><span class="nv">TARGET_DEV_ENV_SCRIPT</span><span class="k">}</span><span class="s2">."</span> <span class="o">&gt;</span> /dev/kmsg
-        <span class="nb">exit </span>1
-      <span class="k">fi
-    else
-      </span><span class="nb">echo</span> <span class="s2">"[sbnb-cmds.sh] ERROR: Failed to set execute permissions on temporary file </span><span class="k">${</span><span class="nv">TMP_SCRIPT</span><span class="k">}</span><span class="s2">."</span> <span class="o">&gt;</span> /dev/kmsg
-      <span class="nb">exit </span>1
-    <span class="k">fi
-  else
-      </span><span class="nb">echo</span> <span class="s2">"[sbnb-cmds.sh] ERROR: Failed to copy content from </span><span class="k">${</span><span class="nv">SOURCE_DEV_ENV_SCRIPT</span><span class="k">}</span><span class="s2"> to </span><span class="k">${</span><span class="nv">TMP_SCRIPT</span><span class="k">}</span><span class="s2">."</span> <span class="o">&gt;</span> /dev/kmsg
-      <span class="nb">exit </span>1
-  <span class="k">fi
-else
-  </span><span class="nb">echo</span> <span class="s2">"[sbnb-cmds.sh] WARNING: Source script </span><span class="k">${</span><span class="nv">SOURCE_DEV_ENV_SCRIPT</span><span class="k">}</span><span class="s2"> not found. Skipping update."</span> <span class="o">&gt;</span> /dev/kmsg
-<span class="k">fi
-</span><span class="nb">echo</span> <span class="s2">"[sbnb-cmds.sh] Update of </span><span class="k">${</span><span class="nv">TARGET_DEV_ENV_SCRIPT</span><span class="k">}</span><span class="s2"> finished."</span> <span class="o">&gt;</span> /dev/kmsg
-
-<span class="c"># --- Enable Systemd Units for Backup/Purge ---</span>
-<span class="nv">SYSTEMD_SOURCE_DIR</span><span class="o">=</span><span class="s2">"</span><span class="k">${</span><span class="nv">DATA_MOUNT_POINT</span><span class="k">}</span><span class="s2">/systemd"</span> <span class="c"># Units stored on data partition</span>
-<span class="nv">SYSTEMD_TARGET_DIR</span><span class="o">=</span><span class="s2">"/etc/systemd/system"</span>
-<span class="nv">TIMERS_WANTS_DIR</span><span class="o">=</span><span class="s2">"</span><span class="k">${</span><span class="nv">SYSTEMD_TARGET_DIR</span><span class="k">}</span><span class="s2">/timers.target.wants"</span>
-<span class="nv">SHUTDOWN_WANTS_DIR</span><span class="o">=</span><span class="s2">"</span><span class="k">${</span><span class="nv">SYSTEMD_TARGET_DIR</span><span class="k">}</span><span class="s2">/shutdown.target.wants"</span> <span class="c"># Adjust if needed</span>
-
-<span class="nb">echo</span> <span class="s2">"[sbnb-cmds.sh] Enabling custom systemd units for Docker backup/purge (Source: </span><span class="k">${</span><span class="nv">SYSTEMD_SOURCE_DIR</span><span class="k">}</span><span class="s2">)..."</span> <span class="o">&gt;</span> /dev/kmsg
-
-<span class="c"># Ensure systemd directories exist in the ephemeral overlay filesystem</span>
-<span class="nb">mkdir</span> <span class="nt">-p</span> <span class="s2">"</span><span class="k">${</span><span class="nv">SYSTEMD_TARGET_DIR</span><span class="k">}</span><span class="s2">"</span>
-<span class="nb">mkdir</span> <span class="nt">-p</span> <span class="s2">"</span><span class="k">${</span><span class="nv">TIMERS_WANTS_DIR</span><span class="k">}</span><span class="s2">"</span>
-<span class="nb">mkdir</span> <span class="nt">-p</span> <span class="s2">"</span><span class="k">${</span><span class="nv">SHUTDOWN_WANTS_DIR</span><span class="k">}</span><span class="s2">"</span> <span class="c"># Create if shutdown service uses Wants=shutdown.target</span>
-
-<span class="c"># Check if source directory with unit files exists on persistent storage</span>
-<span class="k">if</span> <span class="o">[</span> <span class="nt">-d</span> <span class="s2">"</span><span class="k">${</span><span class="nv">SYSTEMD_SOURCE_DIR</span><span class="k">}</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then</span>
-  <span class="c"># Symlink the unit files from persistent storage to the ephemeral systemd directory.</span>
-  <span class="nb">ln</span> <span class="nt">-sf</span> <span class="s2">"</span><span class="k">${</span><span class="nv">SYSTEMD_SOURCE_DIR</span><span class="k">}</span><span class="s2">/docker-backup.service"</span> <span class="s2">"</span><span class="k">${</span><span class="nv">SYSTEMD_TARGET_DIR</span><span class="k">}</span><span class="s2">/"</span>
-  <span class="nb">ln</span> <span class="nt">-sf</span> <span class="s2">"</span><span class="k">${</span><span class="nv">SYSTEMD_SOURCE_DIR</span><span class="k">}</span><span class="s2">/docker-shutdown-backup.service"</span> <span class="s2">"</span><span class="k">${</span><span class="nv">SYSTEMD_TARGET_DIR</span><span class="k">}</span><span class="s2">/"</span>
-  <span class="nb">ln</span> <span class="nt">-sf</span> <span class="s2">"</span><span class="k">${</span><span class="nv">SYSTEMD_SOURCE_DIR</span><span class="k">}</span><span class="s2">/docker-purge.service"</span> <span class="s2">"</span><span class="k">${</span><span class="nv">SYSTEMD_TARGET_DIR</span><span class="k">}</span><span class="s2">/"</span>
-  <span class="nb">ln</span> <span class="nt">-sf</span> <span class="s2">"</span><span class="k">${</span><span class="nv">SYSTEMD_SOURCE_DIR</span><span class="k">}</span><span class="s2">/docker-backup.timer"</span> <span class="s2">"</span><span class="k">${</span><span class="nv">SYSTEMD_TARGET_DIR</span><span class="k">}</span><span class="s2">/"</span>
-  <span class="nb">ln</span> <span class="nt">-sf</span> <span class="s2">"</span><span class="k">${</span><span class="nv">SYSTEMD_SOURCE_DIR</span><span class="k">}</span><span class="s2">/docker-purge.timer"</span> <span class="s2">"</span><span class="k">${</span><span class="nv">SYSTEMD_TARGET_DIR</span><span class="k">}</span><span class="s2">/"</span>
-
-  <span class="c"># Link timer units into timers.target.wants to ensure they are started by systemd</span>
-  <span class="nb">ln</span> <span class="nt">-sf</span> <span class="s2">"</span><span class="k">${</span><span class="nv">SYSTEMD_TARGET_DIR</span><span class="k">}</span><span class="s2">/docker-backup.timer"</span> <span class="s2">"</span><span class="k">${</span><span class="nv">TIMERS_WANTS_DIR</span><span class="k">}</span><span class="s2">/"</span>
-  <span class="nb">ln</span> <span class="nt">-sf</span> <span class="s2">"</span><span class="k">${</span><span class="nv">SYSTEMD_TARGET_DIR</span><span class="k">}</span><span class="s2">/docker-purge.timer"</span> <span class="s2">"</span><span class="k">${</span><span class="nv">TIMERS_WANTS_DIR</span><span class="k">}</span><span class="s2">/"</span>
-  <span class="c"># Link shutdown service if it uses Wants=shutdown.target in [Install]</span>
-  <span class="c"># ln -sf "${SYSTEMD_TARGET_DIR}/docker-shutdown-backup.service" "${SHUTDOWN_WANTS_DIR}/"</span>
-
-  <span class="c"># Reload systemd config AFTER linking units</span>
-  <span class="nb">echo</span> <span class="s2">"[sbnb-cmds.sh] Reloading systemd daemon..."</span> <span class="o">&gt;</span> /dev/kmsg
-  systemctl daemon-reload
-
-  <span class="c"># Explicitly enable the units (creates necessary symlinks based on [Install] section)</span>
-  <span class="nb">echo</span> <span class="s2">"[sbnb-cmds.sh] Enabling systemd units..."</span> <span class="o">&gt;</span> /dev/kmsg
-  systemctl <span class="nb">enable </span>docker-backup.timer docker-purge.timer docker-shutdown-backup.service
-
-  <span class="nb">echo</span> <span class="s2">"[sbnb-cmds.sh] Systemd units for backup linked and enabled."</span> <span class="o">&gt;</span> /dev/kmsg
-<span class="k">else
-  </span><span class="nb">echo</span> <span class="s2">"[sbnb-cmds.sh] WARNING: Systemd source directory </span><span class="k">${</span><span class="nv">SYSTEMD_SOURCE_DIR</span><span class="k">}</span><span class="s2"> not found. Cannot enable backup units."</span> <span class="o">&gt;</span> /dev/kmsg
-<span class="k">fi</span>
-
-<span class="c"># --- Script Finish Logging ---</span>
-<span class="nb">echo</span> <span class="s2">"[sbnb-cmds.sh] Finished custom boot commands."</span> <span class="o">&gt;</span> /dev/kmsg
-
-<span class="c"># Clear trap on successful exit to prevent it from running unnecessarily.</span>
-<span class="nb">trap</span> - EXIT HUP INT QUIT TERM
-<span class="nb">exit </span>0
-</code></section></div></div>
-
-<p><strong><code class="language-plaintext highlighter-rouge">sbnb-tskey.txt</code> (ESP Root)</strong></p>
-
-<div class="language-text highlighter-rouge"><div class="highlight"><section><code>tskey-auth-...
-</code></section></div></div>
-
-<p><strong><code class="language-plaintext highlighter-rouge">/mnt/sbnb-data/scripts/backup-docker.sh</code></strong></p>
-
-<div class="language-bash highlighter-rouge"><div class="highlight"><section><code><span class="c">#!/bin/sh</span>
-<span class="c"># File: /mnt/sbnb-data/scripts/backup-docker.sh</span>
-<span class="c"># Script to stop docker, create a backup, and restart docker.</span>
-<span class="c"># Assumes tools like tar, gzip, systemctl, ln, mv, date, sleep, mkdir, nice are available.</span>
-
-<span class="nb">set</span> <span class="nt">-e</span> <span class="c"># Exit on error</span>
-
-<span class="nv">BACKUP_DIR</span><span class="o">=</span><span class="s2">"/mnt/sbnb-data/backups/docker"</span>
-<span class="nv">DOCKER_DATA_DIR</span><span class="o">=</span><span class="s2">"/var/lib/docker"</span> <span class="c"># Source is ephemeral</span>
-<span class="nv">TIMESTAMP</span><span class="o">=</span><span class="si">$(</span><span class="nb">date</span> +<span class="s2">"%Y%m%d_%H%M%S"</span><span class="si">)</span>
-<span class="nv">BACKUP_FILE</span><span class="o">=</span><span class="s2">"</span><span class="k">${</span><span class="nv">BACKUP_DIR</span><span class="k">}</span><span class="s2">/docker_backup_</span><span class="k">${</span><span class="nv">TIMESTAMP</span><span class="k">}</span><span class="s2">.tar.gz"</span>
-<span class="nv">LATEST_LINK</span><span class="o">=</span><span class="s2">"</span><span class="k">${</span><span class="nv">BACKUP_DIR</span><span class="k">}</span><span class="s2">/docker_latest.tar.gz"</span> <span class="c"># Symlink to the latest backup</span>
-
-<span class="nb">echo</span> <span class="s2">"[backup-docker.sh] Starting Docker backup process..."</span> <span class="o">&gt;</span> /dev/kmsg
-
-<span class="c"># Ensure backup directory exists</span>
-<span class="nb">mkdir</span> <span class="nt">-p</span> <span class="s2">"</span><span class="k">${</span><span class="nv">BACKUP_DIR</span><span class="k">}</span><span class="s2">"</span>
-<span class="k">if</span> <span class="o">[</span> <span class="nv">$?</span> <span class="nt">-ne</span> 0 <span class="o">]</span><span class="p">;</span> <span class="k">then
-  </span><span class="nb">echo</span> <span class="s2">"[backup-docker.sh] ERROR: Failed to create backup directory </span><span class="k">${</span><span class="nv">BACKUP_DIR</span><span class="k">}</span><span class="s2">!"</span> <span class="o">&gt;</span> /dev/kmsg
-  <span class="nb">exit </span>1
-<span class="k">fi</span>
-
-<span class="c"># Stop Docker gracefully</span>
-<span class="nb">echo</span> <span class="s2">"[backup-docker.sh] Stopping Docker service..."</span> <span class="o">&gt;</span> /dev/kmsg
-<span class="k">if </span>systemctl is-active <span class="nt">--quiet</span> docker.service<span class="p">;</span> <span class="k">then
-  if</span> <span class="o">!</span> systemctl stop docker.service<span class="p">;</span> <span class="k">then
-    </span><span class="nb">echo</span> <span class="s2">"[backup-docker.sh] WARNING: Failed to stop Docker service gracefully. Proceeding with backup cautiously."</span> <span class="o">&gt;</span> /dev/kmsg
-  <span class="k">else</span>
-    <span class="c"># Add a small delay to ensure Docker processes have terminated</span>
-    <span class="nb">sleep </span>5
-  <span class="k">fi
-else
-  </span><span class="nb">echo</span> <span class="s2">"[backup-docker.sh] Docker service already stopped."</span> <span class="o">&gt;</span> /dev/kmsg
-<span class="k">fi</span>
-
-<span class="c"># Create the compressed backup</span>
-<span class="nb">echo</span> <span class="s2">"[backup-docker.sh] Creating backup archive: </span><span class="k">${</span><span class="nv">BACKUP_FILE</span><span class="k">}</span><span class="s2">"</span> <span class="o">&gt;</span> /dev/kmsg
-<span class="k">if</span> <span class="o">[</span> <span class="nt">-d</span> <span class="s2">"</span><span class="k">${</span><span class="nv">DOCKER_DATA_DIR</span><span class="k">}</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then</span>
-  <span class="c"># Create archive containing paths relative to /var/lib (e.g., 'docker/...')</span>
-  <span class="c"># Use nice to lower CPU priority (if available, remove 'nice -n 19' if command is missing)</span>
-  <span class="k">if </span><span class="nb">nice</span> <span class="nt">-n</span> 19 <span class="nb">tar</span> <span class="nt">-czf</span> <span class="s2">"</span><span class="k">${</span><span class="nv">BACKUP_FILE</span><span class="k">}</span><span class="s2">"</span> <span class="nt">-C</span> /var/lib docker<span class="p">;</span> <span class="k">then
-    </span><span class="nb">echo</span> <span class="s2">"[backup-docker.sh] Backup created successfully: </span><span class="k">${</span><span class="nv">BACKUP_FILE</span><span class="k">}</span><span class="s2">"</span> <span class="o">&gt;</span> /dev/kmsg
-    <span class="c"># Update the 'latest' symlink atomically</span>
-    <span class="nb">ln</span> <span class="nt">-sfT</span> <span class="s2">"</span><span class="k">${</span><span class="nv">BACKUP_FILE</span><span class="k">}</span><span class="s2">"</span> <span class="s2">"</span><span class="k">${</span><span class="nv">LATEST_LINK</span><span class="k">}</span><span class="s2">.tmp"</span> <span class="o">&amp;&amp;</span> <span class="nb">mv</span> <span class="nt">-Tf</span> <span class="s2">"</span><span class="k">${</span><span class="nv">LATEST_LINK</span><span class="k">}</span><span class="s2">.tmp"</span> <span class="s2">"</span><span class="k">${</span><span class="nv">LATEST_LINK</span><span class="k">}</span><span class="s2">"</span>
-    <span class="k">if</span> <span class="o">[</span> <span class="nv">$?</span> <span class="nt">-eq</span> 0 <span class="o">]</span><span class="p">;</span> <span class="k">then
-      </span><span class="nb">echo</span> <span class="s2">"[backup-docker.sh] Updated latest backup link to point to </span><span class="k">${</span><span class="nv">BACKUP_FILE</span><span class="k">}</span><span class="s2">"</span> <span class="o">&gt;</span> /dev/kmsg
-    <span class="k">else
-      </span><span class="nb">echo</span> <span class="s2">"[backup-docker.sh] WARNING: Failed to update latest backup link."</span> <span class="o">&gt;</span> /dev/kmsg
-    <span class="k">fi
-  else
-    </span><span class="nb">echo</span> <span class="s2">"[backup-docker.sh] ERROR: tar command failed! Backup not created."</span> <span class="o">&gt;</span> /dev/kmsg
-    <span class="c"># Attempt to restart docker even if backup failed</span>
-  <span class="k">fi
-else
-  </span><span class="nb">echo</span> <span class="s2">"[backup-docker.sh] WARNING: Docker data directory </span><span class="k">${</span><span class="nv">DOCKER_DATA_DIR</span><span class="k">}</span><span class="s2"> not found. Skipping backup."</span> <span class="o">&gt;</span> /dev/kmsg
-<span class="k">fi</span>
-
-<span class="c"># Restart Docker</span>
-<span class="nb">echo</span> <span class="s2">"[backup-docker.sh] Starting Docker service..."</span> <span class="o">&gt;</span> /dev/kmsg
-<span class="k">if</span> <span class="o">!</span> systemctl start docker.service<span class="p">;</span> <span class="k">then
-  </span><span class="nb">echo</span> <span class="s2">"[backup-docker.sh] WARNING: Failed to start Docker service after backup attempt."</span> <span class="o">&gt;</span> /dev/kmsg
-<span class="k">fi
-
-</span><span class="nb">echo</span> <span class="s2">"[backup-docker.sh] Docker backup process finished."</span> <span class="o">&gt;</span> /dev/kmsg
-
-<span class="nb">exit </span>0
-</code></section></div></div>
-
-<p><strong><code class="language-plaintext highlighter-rouge">/mnt/sbnb-data/scripts/purge-docker-backups.sh</code></strong></p>
-
-<div class="language-bash highlighter-rouge"><div class="highlight"><section><code><span class="c">#!/bin/sh</span>
-<span class="c"># File: /mnt/sbnb-data/scripts/purge-docker-backups.sh</span>
-<span class="c"># Script to remove old Docker backups, keeping the last N.</span>
-<span class="c"># Assumes tools like find, sort, head, cut, xargs, rm, wc, mkdir, echo are available.</span>
-
-<span class="nb">set</span> <span class="nt">-e</span> <span class="c"># Exit on error</span>
-
-<span class="nv">BACKUP_DIR</span><span class="o">=</span><span class="s2">"/mnt/sbnb-data/backups/docker"</span>
-<span class="nv">KEEP_COUNT</span><span class="o">=</span>3 <span class="c"># Number of backups to keep (adjust as needed)</span>
-
-<span class="nb">echo</span> <span class="s2">"[purge-docker-backups.sh] Purging old Docker backups in </span><span class="k">${</span><span class="nv">BACKUP_DIR</span><span class="k">}</span><span class="s2">, keeping </span><span class="k">${</span><span class="nv">KEEP_COUNT</span><span class="k">}</span><span class="s2">..."</span> <span class="o">&gt;</span> /dev/kmsg
-
-<span class="c"># Ensure backup directory exists</span>
-<span class="nb">mkdir</span> <span class="nt">-p</span> <span class="s2">"</span><span class="k">${</span><span class="nv">BACKUP_DIR</span><span class="k">}</span><span class="s2">"</span>
-<span class="k">if</span> <span class="o">[</span> <span class="nv">$?</span> <span class="nt">-ne</span> 0 <span class="o">]</span><span class="p">;</span> <span class="k">then
-  </span><span class="nb">echo</span> <span class="s2">"[purge-docker-backups.sh] ERROR: Failed to ensure backup directory </span><span class="k">${</span><span class="nv">BACKUP_DIR</span><span class="k">}</span><span class="s2"> exists!"</span> <span class="o">&gt;</span> /dev/kmsg
-  <span class="nb">exit </span>1
-<span class="k">fi</span>
-
-
-<span class="c"># Count existing backups (only files matching the pattern)</span>
-<span class="c"># Use find ... -print | wc -l which is safer than parsing ls output</span>
-<span class="nv">backup_count</span><span class="o">=</span><span class="si">$(</span>find <span class="s2">"</span><span class="k">${</span><span class="nv">BACKUP_DIR</span><span class="k">}</span><span class="s2">"</span> <span class="nt">-maxdepth</span> 1 <span class="nt">-name</span> <span class="s1">'docker_backup_*.tar.gz'</span> <span class="nt">-type</span> f <span class="nt">-print</span> | <span class="nb">wc</span> <span class="nt">-l</span><span class="si">)</span>
-
-<span class="k">if</span> <span class="o">[</span> <span class="s2">"</span><span class="k">${</span><span class="nv">backup_count</span><span class="k">}</span><span class="s2">"</span> <span class="nt">-gt</span> <span class="s2">"</span><span class="k">${</span><span class="nv">KEEP_COUNT</span><span class="k">}</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then</span>
-  <span class="c"># List all backup files by modification time (oldest first),</span>
-  <span class="c"># calculate how many to delete, and delete them.</span>
-  <span class="nv">to_delete_count</span><span class="o">=</span><span class="k">$((</span> backup_count <span class="o">-</span> KEEP_COUNT <span class="k">))</span>
-  <span class="nb">echo</span> <span class="s2">"[purge-docker-backups.sh] Found </span><span class="k">${</span><span class="nv">backup_count</span><span class="k">}</span><span class="s2"> backups. Deleting </span><span class="k">${</span><span class="nv">to_delete_count</span><span class="k">}</span><span class="s2"> oldest ones."</span> <span class="o">&gt;</span> /dev/kmsg
-  <span class="c"># Use -print0 and xargs -0 for safety with filenames containing special characters</span>
-  find <span class="s2">"</span><span class="k">${</span><span class="nv">BACKUP_DIR</span><span class="k">}</span><span class="s2">"</span> <span class="nt">-maxdepth</span> 1 <span class="nt">-name</span> <span class="s1">'docker_backup_*.tar.gz'</span> <span class="nt">-type</span> f <span class="nt">-printf</span> <span class="s1">'%T@ %p\0'</span> | <span class="se">\</span>
-    <span class="nb">sort</span> <span class="nt">-zn</span> | <span class="se">\</span>
-    <span class="nb">head</span> <span class="nt">-zn</span> <span class="s2">"</span><span class="k">${</span><span class="nv">to_delete_count</span><span class="k">}</span><span class="s2">"</span> | <span class="se">\</span>
-    <span class="nb">cut</span> <span class="nt">-z</span> <span class="nt">-d</span><span class="s1">' '</span> <span class="nt">-f2-</span> | <span class="se">\</span>
-    xargs <span class="nt">-0</span> <span class="nt">-r</span> <span class="nb">rm</span> <span class="nt">-v</span> <span class="nt">--</span> <span class="c"># Use -r to avoid running rm if head outputs nothing</span>
-  <span class="k">if</span> <span class="o">[</span> <span class="nv">$?</span> <span class="nt">-eq</span> 0 <span class="o">]</span><span class="p">;</span> <span class="k">then
-    </span><span class="nb">echo</span> <span class="s2">"[purge-docker-backups.sh] Purge completed."</span> <span class="o">&gt;</span> /dev/kmsg
-  <span class="k">else</span>
-    <span class="c"># Log error but don't exit, as failure isn't critical for system operation</span>
-    <span class="nb">echo</span> <span class="s2">"[purge-docker-backups.sh] WARNING: Purge command finished with errors (check rm output above)."</span> <span class="o">&gt;</span> /dev/kmsg
-  <span class="k">fi
-else
-  </span><span class="nb">echo</span> <span class="s2">"[purge-docker-backups.sh] </span><span class="k">${</span><span class="nv">backup_count</span><span class="k">}</span><span class="s2"> backups found, which is less than or equal to </span><span class="k">${</span><span class="nv">KEEP_COUNT</span><span class="k">}</span><span class="s2">. No backups purged."</span> <span class="o">&gt;</span> /dev/kmsg
-<span class="k">fi
-
-</span><span class="nb">exit </span>0
-</code></section></div></div>
-
-<p><strong><code class="language-plaintext highlighter-rouge">/mnt/sbnb-data/System Volume Information/IndexerVolumeGuid</code> (Example - Often auto-generated)</strong></p>
-
-<div class="language-text highlighter-rouge"><div class="highlight"><section><code>{ A A A 9 C D 4 5 - 2 E 9 1 - 4 F 7 9 - B 1 4 F - 2 0 9 9 6 F 9 C F 1 C A }
-</code></section></div></div>
-
-<p><strong><code class="language-plaintext highlighter-rouge">/mnt/sbnb-data/systemd/docker-backup.service</code></strong></p>
-
-<div class="language-ini highlighter-rouge"><div class="highlight"><section><code><span class="c"># File: /mnt/sbnb-data/systemd/docker-backup.service
-# Service unit to run the backup script
-</span>
-<span class="nn">[Unit]</span>
-<span class="py">Description</span><span class="p">=</span><span class="s">Backup Docker Data to Persistent Storage</span>
-<span class="c"># Requires persistent data mount and Docker service (to stop/start it)
-</span><span class="py">Requires</span><span class="p">=</span><span class="s">mnt-sbnb-data.mount docker.service</span>
-<span class="py">After</span><span class="p">=</span><span class="s">mnt-sbnb-data.mount docker.service</span>
-
-<span class="nn">[Service]</span>
-<span class="py">Type</span><span class="p">=</span><span class="s">oneshot</span>
-<span class="c"># Run the backup script stored on the persistent drive
-# Note: Path assumes ESP is mounted at /mnt/sbnb during script execution
-# If sbnb-cmds.sh mounts data partition at /mnt/sbnb-data, use that path:
-</span><span class="py">ExecStart</span><span class="p">=</span><span class="s">/mnt/sbnb-data/scripts/backup-docker.sh</span>
-</code></section></div></div>
-
-<p><strong><code class="language-plaintext highlighter-rouge">/mnt/sbnb-data/systemd/docker-backup.timer</code></strong></p>
-
-<div class="language-ini highlighter-rouge"><div class="highlight"><section><code><span class="c"># File: /mnt/sbnb-data/systemd/docker-backup.timer
-# Timer unit to trigger the backup service daily at 5 AM
-</span>
-<span class="nn">[Unit]</span>
-<span class="py">Description</span><span class="p">=</span><span class="s">Daily Docker Backup Timer</span>
-
-<span class="nn">[Timer]</span>
-<span class="c"># Run daily at 5 AM system time
-</span><span class="py">OnCalendar</span><span class="p">=</span><span class="s">*-*-* 05:00:00</span>
-<span class="py">AccuracySec</span><span class="p">=</span><span class="s">1h</span>
-<span class="py">Persistent</span><span class="p">=</span><span class="s">true # Run once on boot if missed due to downtime</span>
-
-<span class="nn">[Install]</span>
-<span class="py">WantedBy</span><span class="p">=</span><span class="s">timers.target</span>
-</code></section></div></div>
-
-<p><strong><code class="language-plaintext highlighter-rouge">/mnt/sbnb-data/systemd/docker-purge.service</code></strong></p>
-
-<div class="language-ini highlighter-rouge"><div class="highlight"><section><code><span class="c"># File: /mnt/sbnb-data/systemd/docker-purge.service
-# Service unit to run the purge script
-</span>
-<span class="nn">[Unit]</span>
-<span class="py">Description</span><span class="p">=</span><span class="s">Purge Old Docker Backups</span>
-<span class="py">Requires</span><span class="p">=</span><span class="s">mnt-sbnb-data.mount</span>
-<span class="py">After</span><span class="p">=</span><span class="s">mnt-sbnb-data.mount</span>
-
-<span class="nn">[Service]</span>
-<span class="py">Type</span><span class="p">=</span><span class="s">oneshot</span>
-<span class="c"># Adjust path if needed based on where data partition is mounted
-</span><span class="py">ExecStart</span><span class="p">=</span><span class="s">/mnt/sbnb-data/scripts/purge-docker-backups.sh</span>
-</code></section></div></div>
-
-<p><strong><code class="language-plaintext highlighter-rouge">/mnt/sbnb-data/systemd/docker-purge.timer</code></strong></p>
-
-<div class="language-ini highlighter-rouge"><div class="highlight"><section><code><span class="c"># File: /mnt/sbnb-data/systemd/docker-purge.timer
-# Timer unit to trigger the purge service daily (e.g., at 6 AM)
-</span>
-<span class="nn">[Unit]</span>
-<span class="py">Description</span><span class="p">=</span><span class="s">Daily Docker Backup Purge Timer</span>
-
-<span class="nn">[Timer]</span>
-<span class="py">OnCalendar</span><span class="p">=</span><span class="s">*-*-* 06:00:00</span>
-<span class="py">AccuracySec</span><span class="p">=</span><span class="s">1h</span>
-<span class="py">Persistent</span><span class="p">=</span><span class="s">true</span>
-
-<span class="nn">[Install]</span>
-<span class="py">WantedBy</span><span class="p">=</span><span class="s">timers.target</span>
-</code></section></div></div>
-
-<p><strong><code class="language-plaintext highlighter-rouge">/mnt/sbnb-data/systemd/docker-shutdown-backup.service</code></strong></p>
-
-<div class="language-ini highlighter-rouge"><div class="highlight"><section><code><span class="c"># File: /mnt/sbnb-data/systemd/docker-shutdown-backup.service
-# Service unit to attempt a backup on clean shutdown
-</span>
-<span class="nn">[Unit]</span>
-<span class="py">Description</span><span class="p">=</span><span class="s">Backup Docker Data on Shutdown (Best Effort)</span>
-<span class="c"># Run late in shutdown, requires persistent storage &amp; docker (to stop it)
-</span><span class="py">DefaultDependencies</span><span class="p">=</span><span class="s">no</span>
-<span class="py">Requires</span><span class="p">=</span><span class="s">mnt-sbnb-data.mount docker.service</span>
-<span class="py">After</span><span class="p">=</span><span class="s">mnt-sbnb-data.mount docker.service</span>
-<span class="py">Before</span><span class="p">=</span><span class="s">shutdown.target reboot.target halt.target kexec.target umount.target final.target</span>
-
-<span class="nn">[Service]</span>
-<span class="py">Type</span><span class="p">=</span><span class="s">oneshot</span>
-<span class="py">RemainAfterExit</span><span class="p">=</span><span class="s">true # Allows ExecStop to run</span>
-<span class="c"># Run the backup script when the service is stopped during shutdown
-# Adjust path if needed
-</span><span class="py">ExecStop</span><span class="p">=</span><span class="s">/mnt/sbnb-data/scripts/backup-docker.sh</span>
-
-<span class="nn">[Install]</span>
-<span class="c"># Ensure this service is wanted by relevant shutdown targets
-</span><span class="py">WantedBy</span><span class="p">=</span><span class="s">shutdown.target reboot.target halt.target kexec.target</span>
-</code></section></div></div><hr />
-
-<p><strong>Data Summary</strong></p>
-
-<ul>
-  <li><strong>Project:</strong> Custom Sbnb Linux setup using a single USB drive for boot and persistent data storage.</li>
-  <li><strong>Hardware Context:</strong> x86-64 machine, single USB drive partitioned into ESP (FAT32, PARTLABEL=sbnb) and Data (Ext4, LABEL=SBNB_DATA).</li>
-  <li><strong>Software Context:</strong> Sbnb Linux (Buildroot-based, Systemd init, ephemeral overlayfs root), Docker.</li>
-  <li><strong>Initial Issue:</strong> Boot stall after <code class="language-plaintext highlighter-rouge">systemd[1]: Started Journal Service.</code>.</li>
-  <li><strong>Initial Issue Root Cause:</strong> Mismatch between <code class="language-plaintext highlighter-rouge">sbnb.service</code> dependency (<code class="language-plaintext highlighter-rouge">Wants=dev-disk-by-partlabel-sbnb.device</code>) and USB ESP partition setup (missing partition label <code class="language-plaintext highlighter-rouge">sbnb</code>).</li>
-  <li><strong>Initial Issue Solution:</strong> Set partition label <code class="language-plaintext highlighter-rouge">sbnb</code> on ESP partition (<code class="language-plaintext highlighter-rouge">/dev/sdx1</code>) using <code class="language-plaintext highlighter-rouge">parted name 1 sbnb</code>.</li>
-  <li><strong>Docker Persistence Strategy:</strong> Keep Docker data ephemeral (<code class="language-plaintext highlighter-rouge">/var/lib/docker</code> in RAM overlay) and use a backup/restore mechanism with persistent storage (<code class="language-plaintext highlighter-rouge">/mnt/sbnb-data</code>).</li>
-  <li><strong>Implementation Files (Persistent Storage - <code class="language-plaintext highlighter-rouge">/mnt/sbnb-data</code>):</strong>
-    <ul>
-      <li><code class="language-plaintext highlighter-rouge">/mnt/sbnb-data/scripts/backup-docker.sh</code> (Executable Shell Script)</li>
-      <li><code class="language-plaintext highlighter-rouge">/mnt/sbnb-data/scripts/purge-docker-backups.sh</code> (Executable Shell Script)</li>
-      <li><code class="language-plaintext highlighter-rouge">/mnt/sbnb-data/systemd/docker-backup.service</code> (Systemd Unit)</li>
-      <li><code class="language-plaintext highlighter-rouge">/mnt/sbnb-data/systemd/docker-backup.timer</code> (Systemd Unit)</li>
-      <li><code class="language-plaintext highlighter-rouge">/mnt/sbnb-data/systemd/docker-shutdown-backup.service</code> (Systemd Unit)</li>
-      <li><code class="language-plaintext highlighter-rouge">/mnt/sbnb-data/systemd/docker-purge.service</code> (Systemd Unit)</li>
-      <li><code class="language-plaintext highlighter-rouge">/mnt/sbnb-data/systemd/docker-purge.timer</code> (Systemd Unit)</li>
-      <li><code class="language-plaintext highlighter-rouge">/mnt/sbnb-data/backups/docker/</code> (Directory for backup archives)</li>
-    </ul>
-  </li>
-  <li><strong>Implementation File (ESP - mounted at <code class="language-plaintext highlighter-rouge">/mnt/sbnb</code> during boot):</strong>
-    <ul>
-      <li><code class="language-plaintext highlighter-rouge">/mnt/sbnb/sbnb-cmds.sh</code> (Executable Shell Script, modified for restore and unit enabling)</li>
-    </ul>
-  </li>
-  <li><strong>Key Script Logic (<code class="language-plaintext highlighter-rouge">sbnb-cmds.sh</code>):</strong> Mounts data partition, restores latest backup from data partition to ephemeral <code class="language-plaintext highlighter-rouge">/var/lib/docker</code>, creates symlinks for systemd units from data partition to ephemeral <code class="language-plaintext highlighter-rouge">/etc/systemd/system</code>, reloads systemd, enables units.</li>
-  <li><strong>Key Script Logic (<code class="language-plaintext highlighter-rouge">backup-docker.sh</code>):</strong> Stops Docker, creates compressed tar archive of <code class="language-plaintext highlighter-rouge">/var/lib/docker</code> onto data partition backup dir, updates <code class="language-plaintext highlighter-rouge">_latest</code> symlink, restarts Docker.</li>
-  <li><strong>Key Script Logic (<code class="language-plaintext highlighter-rouge">purge-docker-backups.sh</code>):</strong> Finds backups matching pattern, keeps the latest <code class="language-plaintext highlighter-rouge">N</code> (default 3), deletes older ones.</li>
-  <li><strong>Systemd Units:</strong> Define services to run scripts and timers to trigger them periodically (<code class="language-plaintext highlighter-rouge">OnCalendar</code>) or on shutdown (<code class="language-plaintext highlighter-rouge">ExecStop=</code> in shutdown service).</li>
-  <li><strong>Verification:</strong> Use <code class="language-plaintext highlighter-rouge">systemctl list-timers</code>, <code class="language-plaintext highlighter-rouge">systemctl status</code>, <code class="language-plaintext highlighter-rouge">journalctl -u</code>, <code class="language-plaintext highlighter-rouge">journalctl -b | grep ...</code>, and practical tests.</li>
 </ul>
-
-<p><strong>Documentation Summary</strong></p>
-
-<ul>
-  <li><strong>Project:</strong> Sbnb Single-USB Boot and Persistent Docker Data via Backup/Restore.</li>
-  <li><strong>Background:</strong> Sbnb Linux (minimalist, RAM-based) configured for single USB boot and persistent Docker data, deviating from standard internal LVM usage.</li>
-  <li><strong>Initial Problem:</strong> Boot stall due to missing ESP <em>partition label</em> (<code class="language-plaintext highlighter-rouge">sbnb</code>) required by <code class="language-plaintext highlighter-rouge">sbnb.service</code>. Resolved by setting the label with <code class="language-plaintext highlighter-rouge">parted</code>.</li>
-  <li><strong>Docker Persistence Strategy:</strong> Backup/Restore chosen over direct persistent <code class="language-plaintext highlighter-rouge">data-root</code> due to ephemeral <code class="language-plaintext highlighter-rouge">/etc</code>. Data restored from <code class="language-plaintext highlighter-rouge">/mnt/sbnb-data</code> to <code class="language-plaintext highlighter-rouge">/var/lib/docker</code> on boot via <code class="language-plaintext highlighter-rouge">sbnb-cmds.sh</code>. Backups created periodically/on shutdown to <code class="language-plaintext highlighter-rouge">/mnt/sbnb-data</code> via systemd-triggered scripts. Old backups purged.</li>
-  <li><strong>Implementation:</strong> Details locations and key logic of <code class="language-plaintext highlighter-rouge">sbnb-cmds.sh</code>, backup/purge scripts, and systemd units stored on the persistent data partition and linked/enabled during boot.</li>
-  <li><strong>Verification:</strong> Outlines steps using <code class="language-plaintext highlighter-rouge">journalctl</code>, <code class="language-plaintext highlighter-rouge">systemctl</code>, and practical reboot tests to confirm functionality.</li>
-</ul>
-
-<p><strong>Paper Trail Summary</strong></p>
-
-<ol>
-  <li><strong>Goal:</strong> Single-USB Sbnb boot + persistent storage (tutorial-based).</li>
-  <li><strong>Problem:</strong> Boot stall (<code class="language-plaintext highlighter-rouge">Started Journal Service</code>).</li>
-  <li><strong>Analysis:</strong> Device dependency issue (<code class="language-plaintext highlighter-rouge">dev-disk-by-partlabel-sbnb</code>).</li>
-  <li><strong>Refined Analysis:</strong> Tutorial set <em>filesystem</em> label, Sbnb needed <em>partition</em> label.</li>
-  <li><strong>Solution 1:</strong> Set ESP partition label <code class="language-plaintext highlighter-rouge">sbnb</code> via <code class="language-plaintext highlighter-rouge">parted</code>. <strong>Result:</strong> Boot success.</li>
-  <li><strong>New Goal:</strong> Docker data persistence on <code class="language-plaintext highlighter-rouge">/mnt/sbnb-data</code>.</li>
-  <li><strong>Strategy 1 (Rejected):</strong> Persistent <code class="language-plaintext highlighter-rouge">data-root</code> via <code class="language-plaintext highlighter-rouge">/etc/docker/daemon.json</code>. <strong>Problem:</strong> <code class="language-plaintext highlighter-rouge">/etc</code> is ephemeral.</li>
-  <li><strong>Strategy 2 (Chosen):</strong> Backup/Restore using <code class="language-plaintext highlighter-rouge">/mnt/sbnb-data</code>.</li>
-  <li><strong>Implementation 1:</strong> User attempt failed.</li>
-  <li><strong>Analysis of Failure:</strong> <code class="language-plaintext highlighter-rouge">log_message: not found</code>, bad <code class="language-plaintext highlighter-rouge">systemctl reload</code> in <code class="language-plaintext highlighter-rouge">sbnb-cmds.sh</code>, preventing restore/config.</li>
-  <li><strong>Decision:</strong> Stick with Backup/Restore.</li>
-  <li><strong>Solution 2:</strong> Provided corrected <code class="language-plaintext highlighter-rouge">sbnb-cmds.sh</code> for Backup/Restore, plus persistent scripts/units.</li>
-  <li><strong>Current Status:</strong> User has necessary files/instructions for Backup/Restore implementation. Verification steps provided.</li>
-</ol>
 
         </div>
         
@@ -1449,7 +2914,7 @@ else
         
         
         <a href="https://ib.bsb.br/404" aria-label="404">
-          2025-05-01 11:27:03
+          2025-05-01 16:51:46
         </a>
         &#x23;
     
@@ -1517,7 +2982,7 @@ else
         "headline": "Portable linux via Sbnb distro with persistence",
         "description": "",
         "datePublished": "2025-04-07T00:00:00+00:00",
-        "dateModified": "2025-04-19T20:27:26+00:00",
+        "dateModified": "2025-05-01T19:49:12+00:00",
         "author": {
           "@type": "Person",
           "name": "Author"
