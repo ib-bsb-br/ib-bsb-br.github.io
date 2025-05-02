@@ -153,3 +153,183 @@ esac
 exit $?
 
 {% endcodeblock %}
+
+***
+
+–––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+1) Bash Script: `/usr/local/bin/performance_governors.sh`  
+–––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+```bash
+#!/usr/bin/env bash
+# -----------------------------------------------------------------------------
+# performance_governors.sh
+# Manage CPU/GPU/NPU/DMC frequency governors on RK3588 (Debian Bullseye arm64)
+# - Requires root (CAP_SYS_ADMIN)
+# - Depends on 'util-linux' (logger) and systemd
+# -----------------------------------------------------------------------------
+set -euo pipefail
+IFS=$'\n\t'
+
+### Verify running as root
+if [ "$(id -u)" -ne 0 ]; then
+  echo "ERROR: Must be run as root." >&2
+  exit 1
+fi
+
+# Location to save/restore default governors
+STATE_DIR="/var/lib/performance_governors"
+STATE_FILE="$STATE_DIR/default_gov.txt"
+
+# Patterns covering cpufreq and devfreq governors
+readonly GOV_PATTERNS=(
+  "/sys/devices/system/cpu/cpufreq/policy*/scaling_governor"
+  "/sys/class/devfreq/*/governor"
+)
+
+# Log function: prefer systemd-cat, else fallback to logger
+log() {
+  local level="$1"; shift
+  local msg="$*"
+  if command -v systemd-cat &>/dev/null; then
+    printf '%s\n' "$msg" | systemd-cat -t performance_governors -p "$level"
+  else
+    logger -t performance_governors -p "user.$level" -- "$msg"
+  fi
+}
+
+# Discover all existing governor file paths
+discover_paths() {
+  for patt in "${GOV_PATTERNS[@]}"; do
+    for f in $patt; do
+      [ -f "$f" ] && printf '%s\n' "$f"
+    done
+  done
+}
+
+cmd_start() {
+  log info "START: Saving defaults & forcing performance"
+  mkdir -p "$STATE_DIR"
+  : > "$STATE_FILE"  # truncate
+
+  while IFS= read -r path; do
+    current=$(<"$path")
+    printf '%s\t%s\n' "$path" "$current" >>"$STATE_FILE"
+    if echo performance >"$path"; then
+      log info "Set 'performance' → $path"
+    else
+      log err  "FAILED to set performance → $path"
+    fi
+  done < <(discover_paths)
+
+  log info "START complete."
+}
+
+cmd_stop() {
+  log info "STOP: Restoring saved governors"
+  if [ ! -r "$STATE_FILE" ]; then
+    log warning "No state file; skipping restore"
+    return 1
+  fi
+  while IFS=$'\t' read -r path old; do
+    if [ -f "$path" ]; then
+      if echo "$old" >"$path"; then
+        log info "Restored '$old' → $path"
+      else
+        log err  "FAILED restore '$old' → $path"
+      fi
+    else
+      log warning "Path missing; skip $path"
+    fi
+  done <"$STATE_FILE"
+  log info "STOP complete."
+}
+
+cmd_status() {
+  echo "Governor status (current → saved):"
+  declare -A saved
+  [ -r "$STATE_FILE" ] && while IFS=$'\t' read -r p o; do saved["$p"]="$o"; done <"$STATE_FILE"
+
+  while IFS= read -r path; do
+    cur=$(<"$path")
+    def="${saved[$path]:-<undef>}"
+    printf '%-60s : %s → %s\n' "$path" "$cur" "$def"
+  done < <(discover_paths)
+}
+
+usage() {
+  cat <<EOF
+Usage: $0 {start|stop|restart|status}
+  start      Save defaults and set all governors to 'performance'
+  stop       Restore saved defaults
+  restart    Run 'stop' then 'start'
+  status     Display current vs saved governors
+EOF
+  exit 1
+}
+
+# Main dispatcher
+[ $# -ge 1 ] || usage
+case "$1" in
+  start)   cmd_start   ;;
+  stop)    cmd_stop    ;;
+  restart) cmd_stop; cmd_start ;;
+  status)  cmd_status  ;;
+  *)       usage       ;;
+esac
+```
+
+References:  
+– Kernel devfreq docs: https://www.kernel.org/doc/html/latest/driver-api/devfreq.html  
+– `systemd.service` manual: https://www.freedesktop.org/software/systemd/man/systemd.service.html
+
+–––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+2) systemd Service Unit: `/etc/systemd/system/performance_governors.service`  
+–––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+```ini
+[Unit]
+Description=Performance Governors for CPU/GPU/NPU/DMC (RK3588)
+After=multi-user.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/performance_governors.sh start
+ExecStop=/usr/local/bin/performance_governors.sh stop
+ExecReload=/usr/local/bin/performance_governors.sh restart
+RemainAfterExit=yes
+# On failure, log and stay failed (use 'systemctl reset-failed' to clear)
+Restart=no
+
+[Install]
+WantedBy=multi-user.target
+```
+
+–––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+3) Installation Steps  
+–––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+1. Install prerequisites:
+   ```bash
+   sudo apt update
+   sudo apt install -y util-linux systemd
+   ```
+2. Copy script & set permissions:
+   ```bash
+   sudo cp performance_governors.sh /usr/local/bin/
+   sudo chmod 755 /usr/local/bin/performance_governors.sh
+   ```
+3. Copy unit file:
+   ```bash
+   sudo cp performance_governors.service /etc/systemd/system/
+   ```
+4. Reload systemd, enable & start:
+   ```bash
+   sudo systemctl daemon-reload
+   sudo systemctl enable performance_governors.service
+   sudo systemctl start  performance_governors.service
+   ```
+5. Verify:
+   ```bash
+   sudo systemctl status performance_governors.service
+   sudo /usr/local/bin/performance_governors.sh status
+   ```
+–––––––––––––––––––––––––––––––––––––––––––––––––––––––––
