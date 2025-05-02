@@ -67,8 +67,8 @@
         
           <span class="post-updated">
             ↣
-            <time datetime="2025-02-22T19:15:57+00:00">
-              22 Feb 2025
+            <time datetime="2025-05-02T22:53:58+00:00">
+              02 May 2025
             </time>
           </span>
         
@@ -90,11 +90,11 @@
         <div class="page-stats mt-3" role="status" aria-label="Page statistics">
       
       <span class="badge bg-primary">
-        3794 characters
+        8793 characters
       </span>
         <span class="separator mx-2" aria-hidden="true">•</span>
         <span class="badge bg-primary">
-        365 words
+        875 words
       </span>
       </div>
         <div class="action-buttons d-flex flex-wrap gap-2">
@@ -389,7 +389,185 @@ case &quot;$1&quot; in
 esac
 
 exit $?</code>
-</section>
+</section><hr />
+
+<p>–––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+1) Bash Script: <code class="language-plaintext highlighter-rouge">/usr/local/bin/performance_governors.sh</code><br />
+–––––––––––––––––––––––––––––––––––––––––––––––––––––––––</p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><section><code><span class="c">#!/usr/bin/env bash</span>
+<span class="c"># -----------------------------------------------------------------------------</span>
+<span class="c"># performance_governors.sh</span>
+<span class="c"># Manage CPU/GPU/NPU/DMC frequency governors on RK3588 (Debian Bullseye arm64)</span>
+<span class="c"># - Requires root (CAP_SYS_ADMIN)</span>
+<span class="c"># - Depends on 'util-linux' (logger) and systemd</span>
+<span class="c"># -----------------------------------------------------------------------------</span>
+<span class="nb">set</span> <span class="nt">-euo</span> pipefail
+<span class="nv">IFS</span><span class="o">=</span><span class="s1">$'</span><span class="se">\n\t</span><span class="s1">'</span>
+
+<span class="c">### Verify running as root</span>
+<span class="k">if</span> <span class="o">[</span> <span class="s2">"</span><span class="si">$(</span><span class="nb">id</span> <span class="nt">-u</span><span class="si">)</span><span class="s2">"</span> <span class="nt">-ne</span> 0 <span class="o">]</span><span class="p">;</span> <span class="k">then
+  </span><span class="nb">echo</span> <span class="s2">"ERROR: Must be run as root."</span> <span class="o">&gt;</span>&amp;2
+  <span class="nb">exit </span>1
+<span class="k">fi</span>
+
+<span class="c"># Location to save/restore default governors</span>
+<span class="nv">STATE_DIR</span><span class="o">=</span><span class="s2">"/var/lib/performance_governors"</span>
+<span class="nv">STATE_FILE</span><span class="o">=</span><span class="s2">"</span><span class="nv">$STATE_DIR</span><span class="s2">/default_gov.txt"</span>
+
+<span class="c"># Patterns covering cpufreq and devfreq governors</span>
+<span class="nb">readonly </span><span class="nv">GOV_PATTERNS</span><span class="o">=(</span>
+  <span class="s2">"/sys/devices/system/cpu/cpufreq/policy*/scaling_governor"</span>
+  <span class="s2">"/sys/class/devfreq/*/governor"</span>
+<span class="o">)</span>
+
+<span class="c"># Log function: prefer systemd-cat, else fallback to logger</span>
+log<span class="o">()</span> <span class="o">{</span>
+  <span class="nb">local </span><span class="nv">level</span><span class="o">=</span><span class="s2">"</span><span class="nv">$1</span><span class="s2">"</span><span class="p">;</span> <span class="nb">shift
+  local </span><span class="nv">msg</span><span class="o">=</span><span class="s2">"</span><span class="nv">$*</span><span class="s2">"</span>
+  <span class="k">if </span><span class="nb">command</span> <span class="nt">-v</span> systemd-cat &amp;&gt;/dev/null<span class="p">;</span> <span class="k">then
+    </span><span class="nb">printf</span> <span class="s1">'%s\n'</span> <span class="s2">"</span><span class="nv">$msg</span><span class="s2">"</span> | systemd-cat <span class="nt">-t</span> performance_governors <span class="nt">-p</span> <span class="s2">"</span><span class="nv">$level</span><span class="s2">"</span>
+  <span class="k">else
+    </span>logger <span class="nt">-t</span> performance_governors <span class="nt">-p</span> <span class="s2">"user.</span><span class="nv">$level</span><span class="s2">"</span> <span class="nt">--</span> <span class="s2">"</span><span class="nv">$msg</span><span class="s2">"</span>
+  <span class="k">fi</span>
+<span class="o">}</span>
+
+<span class="c"># Discover all existing governor file paths</span>
+discover_paths<span class="o">()</span> <span class="o">{</span>
+  <span class="k">for </span>patt <span class="k">in</span> <span class="s2">"</span><span class="k">${</span><span class="nv">GOV_PATTERNS</span><span class="p">[@]</span><span class="k">}</span><span class="s2">"</span><span class="p">;</span> <span class="k">do
+    for </span>f <span class="k">in</span> <span class="nv">$patt</span><span class="p">;</span> <span class="k">do</span>
+      <span class="o">[</span> <span class="nt">-f</span> <span class="s2">"</span><span class="nv">$f</span><span class="s2">"</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="nb">printf</span> <span class="s1">'%s\n'</span> <span class="s2">"</span><span class="nv">$f</span><span class="s2">"</span>
+    <span class="k">done
+  done</span>
+<span class="o">}</span>
+
+cmd_start<span class="o">()</span> <span class="o">{</span>
+  log info <span class="s2">"START: Saving defaults &amp; forcing performance"</span>
+  <span class="nb">mkdir</span> <span class="nt">-p</span> <span class="s2">"</span><span class="nv">$STATE_DIR</span><span class="s2">"</span>
+  : <span class="o">&gt;</span> <span class="s2">"</span><span class="nv">$STATE_FILE</span><span class="s2">"</span>  <span class="c"># truncate</span>
+
+  <span class="k">while </span><span class="nv">IFS</span><span class="o">=</span> <span class="nb">read</span> <span class="nt">-r</span> path<span class="p">;</span> <span class="k">do
+    </span><span class="nv">current</span><span class="o">=</span><span class="si">$(</span>&lt;<span class="s2">"</span><span class="nv">$path</span><span class="s2">"</span><span class="si">)</span>
+    <span class="nb">printf</span> <span class="s1">'%s\t%s\n'</span> <span class="s2">"</span><span class="nv">$path</span><span class="s2">"</span> <span class="s2">"</span><span class="nv">$current</span><span class="s2">"</span> <span class="o">&gt;&gt;</span><span class="s2">"</span><span class="nv">$STATE_FILE</span><span class="s2">"</span>
+    <span class="k">if </span><span class="nb">echo </span>performance <span class="o">&gt;</span><span class="s2">"</span><span class="nv">$path</span><span class="s2">"</span><span class="p">;</span> <span class="k">then
+      </span>log info <span class="s2">"Set 'performance' → </span><span class="nv">$path</span><span class="s2">"</span>
+    <span class="k">else
+      </span>log err  <span class="s2">"FAILED to set performance → </span><span class="nv">$path</span><span class="s2">"</span>
+    <span class="k">fi
+  done</span> &lt; &lt;<span class="o">(</span>discover_paths<span class="o">)</span>
+
+  log info <span class="s2">"START complete."</span>
+<span class="o">}</span>
+
+cmd_stop<span class="o">()</span> <span class="o">{</span>
+  log info <span class="s2">"STOP: Restoring saved governors"</span>
+  <span class="k">if</span> <span class="o">[</span> <span class="o">!</span> <span class="nt">-r</span> <span class="s2">"</span><span class="nv">$STATE_FILE</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then
+    </span>log warning <span class="s2">"No state file; skipping restore"</span>
+    <span class="k">return </span>1
+  <span class="k">fi
+  while </span><span class="nv">IFS</span><span class="o">=</span><span class="s1">$'</span><span class="se">\t</span><span class="s1">'</span> <span class="nb">read</span> <span class="nt">-r</span> path old<span class="p">;</span> <span class="k">do
+    if</span> <span class="o">[</span> <span class="nt">-f</span> <span class="s2">"</span><span class="nv">$path</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then
+      if </span><span class="nb">echo</span> <span class="s2">"</span><span class="nv">$old</span><span class="s2">"</span> <span class="o">&gt;</span><span class="s2">"</span><span class="nv">$path</span><span class="s2">"</span><span class="p">;</span> <span class="k">then
+        </span>log info <span class="s2">"Restored '</span><span class="nv">$old</span><span class="s2">' → </span><span class="nv">$path</span><span class="s2">"</span>
+      <span class="k">else
+        </span>log err  <span class="s2">"FAILED restore '</span><span class="nv">$old</span><span class="s2">' → </span><span class="nv">$path</span><span class="s2">"</span>
+      <span class="k">fi
+    else
+      </span>log warning <span class="s2">"Path missing; skip </span><span class="nv">$path</span><span class="s2">"</span>
+    <span class="k">fi
+  done</span> &lt;<span class="s2">"</span><span class="nv">$STATE_FILE</span><span class="s2">"</span>
+  log info <span class="s2">"STOP complete."</span>
+<span class="o">}</span>
+
+cmd_status<span class="o">()</span> <span class="o">{</span>
+  <span class="nb">echo</span> <span class="s2">"Governor status (current → saved):"</span>
+  <span class="nb">declare</span> <span class="nt">-A</span> saved
+  <span class="o">[</span> <span class="nt">-r</span> <span class="s2">"</span><span class="nv">$STATE_FILE</span><span class="s2">"</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="k">while </span><span class="nv">IFS</span><span class="o">=</span><span class="s1">$'</span><span class="se">\t</span><span class="s1">'</span> <span class="nb">read</span> <span class="nt">-r</span> p o<span class="p">;</span> <span class="k">do </span>saved[<span class="s2">"</span><span class="nv">$p</span><span class="s2">"</span><span class="o">]=</span><span class="s2">"</span><span class="nv">$o</span><span class="s2">"</span><span class="p">;</span> <span class="k">done</span> &lt;<span class="s2">"</span><span class="nv">$STATE_FILE</span><span class="s2">"</span>
+
+  <span class="k">while </span><span class="nv">IFS</span><span class="o">=</span> <span class="nb">read</span> <span class="nt">-r</span> path<span class="p">;</span> <span class="k">do
+    </span><span class="nv">cur</span><span class="o">=</span><span class="si">$(</span>&lt;<span class="s2">"</span><span class="nv">$path</span><span class="s2">"</span><span class="si">)</span>
+    <span class="nv">def</span><span class="o">=</span><span class="s2">"</span><span class="k">${</span><span class="nv">saved</span><span class="p">[</span><span class="nv">$path</span><span class="p">]</span><span class="k">:-</span><span class="p">&lt;undef&gt;</span><span class="k">}</span><span class="s2">"</span>
+    <span class="nb">printf</span> <span class="s1">'%-60s : %s → %s\n'</span> <span class="s2">"</span><span class="nv">$path</span><span class="s2">"</span> <span class="s2">"</span><span class="nv">$cur</span><span class="s2">"</span> <span class="s2">"</span><span class="nv">$def</span><span class="s2">"</span>
+  <span class="k">done</span> &lt; &lt;<span class="o">(</span>discover_paths<span class="o">)</span>
+<span class="o">}</span>
+
+usage<span class="o">()</span> <span class="o">{</span>
+  <span class="nb">cat</span> <span class="o">&lt;&lt;</span><span class="no">EOF</span><span class="sh">
+Usage: </span><span class="nv">$0</span><span class="sh"> {start|stop|restart|status}
+  start      Save defaults and set all governors to 'performance'
+  stop       Restore saved defaults
+  restart    Run 'stop' then 'start'
+  status     Display current vs saved governors
+</span><span class="no">EOF
+</span>  <span class="nb">exit </span>1
+<span class="o">}</span>
+
+<span class="c"># Main dispatcher</span>
+<span class="o">[</span> <span class="nv">$# </span><span class="nt">-ge</span> 1 <span class="o">]</span> <span class="o">||</span> usage
+<span class="k">case</span> <span class="s2">"</span><span class="nv">$1</span><span class="s2">"</span> <span class="k">in
+  </span>start<span class="p">)</span>   cmd_start   <span class="p">;;</span>
+  stop<span class="p">)</span>    cmd_stop    <span class="p">;;</span>
+  restart<span class="p">)</span> cmd_stop<span class="p">;</span> cmd_start <span class="p">;;</span>
+  status<span class="p">)</span>  cmd_status  <span class="p">;;</span>
+  <span class="k">*</span><span class="p">)</span>       usage       <span class="p">;;</span>
+<span class="k">esac</span>
+</code></section></div></div>
+
+<p>References:<br />
+– Kernel devfreq docs: https://www.kernel.org/doc/html/latest/driver-api/devfreq.html<br />
+– <code class="language-plaintext highlighter-rouge">systemd.service</code> manual: https://www.freedesktop.org/software/systemd/man/systemd.service.html</p>
+
+<p>–––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+2) systemd Service Unit: <code class="language-plaintext highlighter-rouge">/etc/systemd/system/performance_governors.service</code><br />
+–––––––––––––––––––––––––––––––––––––––––––––––––––––––––</p>
+<div class="language-ini highlighter-rouge"><div class="highlight"><section><code><span class="nn">[Unit]</span>
+<span class="py">Description</span><span class="p">=</span><span class="s">Performance Governors for CPU/GPU/NPU/DMC (RK3588)</span>
+<span class="py">After</span><span class="p">=</span><span class="s">multi-user.target</span>
+<span class="py">Wants</span><span class="p">=</span><span class="s">network-online.target</span>
+
+<span class="nn">[Service]</span>
+<span class="py">Type</span><span class="p">=</span><span class="s">oneshot</span>
+<span class="py">ExecStart</span><span class="p">=</span><span class="s">/usr/local/bin/performance_governors.sh start</span>
+<span class="py">ExecStop</span><span class="p">=</span><span class="s">/usr/local/bin/performance_governors.sh stop</span>
+<span class="py">ExecReload</span><span class="p">=</span><span class="s">/usr/local/bin/performance_governors.sh restart</span>
+<span class="py">RemainAfterExit</span><span class="p">=</span><span class="s">yes</span>
+<span class="c"># On failure, log and stay failed (use 'systemctl reset-failed' to clear)
+</span><span class="py">Restart</span><span class="p">=</span><span class="s">no</span>
+
+<span class="nn">[Install]</span>
+<span class="py">WantedBy</span><span class="p">=</span><span class="s">multi-user.target</span>
+</code></section></div></div>
+
+<p>–––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+3) Installation Steps<br />
+–––––––––––––––––––––––––––––––––––––––––––––––––––––––––</p>
+<ol>
+  <li>Install prerequisites:
+    <div class="language-bash highlighter-rouge"><div class="highlight"><section><code><span class="nb">sudo </span>apt update
+<span class="nb">sudo </span>apt <span class="nb">install</span> <span class="nt">-y</span> util-linux systemd
+</code></section></div>    </div>
+  </li>
+  <li>Copy script &amp; set permissions:
+    <div class="language-bash highlighter-rouge"><div class="highlight"><section><code><span class="nb">sudo cp </span>performance_governors.sh /usr/local/bin/
+<span class="nb">sudo chmod </span>755 /usr/local/bin/performance_governors.sh
+</code></section></div>    </div>
+  </li>
+  <li>Copy unit file:
+    <div class="language-bash highlighter-rouge"><div class="highlight"><section><code><span class="nb">sudo cp </span>performance_governors.service /etc/systemd/system/
+</code></section></div>    </div>
+  </li>
+  <li>Reload systemd, enable &amp; start:
+    <div class="language-bash highlighter-rouge"><div class="highlight"><section><code><span class="nb">sudo </span>systemctl daemon-reload
+<span class="nb">sudo </span>systemctl <span class="nb">enable </span>performance_governors.service
+<span class="nb">sudo </span>systemctl start  performance_governors.service
+</code></section></div>    </div>
+  </li>
+  <li>Verify:
+    <div class="language-bash highlighter-rouge"><div class="highlight"><section><code><span class="nb">sudo </span>systemctl status performance_governors.service
+<span class="nb">sudo</span> /usr/local/bin/performance_governors.sh status
+</code></section></div>    </div>
+    <p>–––––––––––––––––––––––––––––––––––––––––––––––––––––––––</p>
+  </li>
+</ol>
 
         </div>
         
@@ -507,7 +685,7 @@ exit $?</code>
         
         
         <a href="https://ib.bsb.br/404" aria-label="404">
-          2025-05-01 21:55:14
+          2025-05-02 19:56:37
         </a>
         &#x23;
     
@@ -575,7 +753,7 @@ exit $?</code>
         "headline": "performance_governors.sh",
         "description": "",
         "datePublished": "2024-11-05T00:00:00+00:00",
-        "dateModified": "2025-02-22T19:15:57+00:00",
+        "dateModified": "2025-05-02T22:53:58+00:00",
         "author": {
           "@type": "Person",
           "name": "Author"
