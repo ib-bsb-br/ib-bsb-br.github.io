@@ -1,4 +1,227 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2025-05-01T19:51:46+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">Code Fixer</title><link href="https://ib.bsb.br/code-fixer/" rel="alternate" type="text/html" title="Code Fixer" /><published>2025-05-01T00:00:00+00:00</published><updated>2025-05-01T14:24:29+00:00</updated><id>https://ib.bsb.br/code-fixer</id><content type="html" xml:base="https://ib.bsb.br/code-fixer/"><![CDATA[<section class="code-block-container" role="group" aria-label=" Code Block" data-filename="_code_block.txt" data-code="&lt;prompt&gt;
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2025-05-02T00:55:14+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">Bind Mounting /home/user to /userdata</title><link href="https://ib.bsb.br/bind-mounting-homeuser-to-userdata/" rel="alternate" type="text/html" title="Bind Mounting /home/user to /userdata" /><published>2025-05-02T00:00:00+00:00</published><updated>2025-05-02T00:13:17+00:00</updated><id>https://ib.bsb.br/bind-mounting-homeuser-to-userdata</id><content type="html" xml:base="https://ib.bsb.br/bind-mounting-homeuser-to-userdata/"><![CDATA[<p>This guide explains how to use mount --bind to make your user’s home directory (/home/user) utilize the storage space on a larger partition mounted at /userdata. This method is transparent to most applications.</p>
+
+<p>While mount --bind is effective, other methods like symbolic links (ln -s /userdata /home/user) or changing the home directory path directly in /etc/passwd (usermod -d /userdata user) exist, each with different implications (e.g., symlinks might not be followed by all applications, usermod -d changes the canonical path). This guide focuses on the mount --bind approach.</p>
+
+<p><strong>Assumptions:</strong></p>
+
+<ul>
+  <li>Your username is user. <strong>Replace user with your actual username throughout.</strong></li>
+  <li>Your large partition is mounted at /userdata.</li>
+  <li>You want the actual home directory data to reside in a directory named /userdata.</li>
+</ul>
+
+<p><strong>🛑 IMPORTANT PREREQUISITES 🛑</strong></p>
+
+<ul>
+  <li><strong>BACKUP:</strong> <strong>Before starting, create a complete and verified backup of your /home/user directory.</strong> Mistakes can lead to data loss.</li>
+  <li><strong>LOG OUT USER:</strong> The user whose home directory is being moved (user) <strong>must be completely logged out</strong> from all graphical sessions and terminal logins.</li>
+  <li><strong>USE TTY / DIFFERENT USER:</strong> Perform these steps from a text console (TTY) or by logging in as a different administrative user (or root). <strong>Do not perform these steps while logged into the graphical session of the user being modified.</strong>
+    <ul>
+      <li>Press Ctrl+Alt+F3 (or F1-F6) to switch to a TTY and log in there as root or another admin user.</li>
+    </ul>
+  </li>
+</ul>
+
+<p><strong>Steps:</strong></p>
+
+<p><strong>1. Create the Target Directory on /userdata</strong></p>
+
+<ul>
+  <li>Create the directory on the large partition where the home directory data will actually live.<br />
+sudo mkdir -p /userdata</li>
+</ul>
+
+<p><strong>2. Set Correct Ownership and Permissions</strong></p>
+
+<ul>
+  <li>Ensure the new directory belongs to the correct user and group and has standard home directory permissions (700 allows read/write/execute only for the owner).<br />
+# Replace user:user with your actual username and primary groupname<br />
+sudo chown user:user /userdata<br />
+sudo chmod 700 /userdata</li>
+</ul>
+
+<p><strong>3. Copy Data from Old Home to New Location</strong></p>
+
+<ul>
+  <li>
+    <p>Use rsync to copy all files. -a preserves permissions, ownership, timestamps, etc. -X preserves extended attributes, -A preserves ACLs (if used). --info=progress2 shows overall progress. The trailing slashes on the paths are important.<br />
+# Replace paths if your username or target dir name is different<br />
+sudo rsync -aXA --info=progress2 /home/user/ /userdata/</p>
+  </li>
+  <li>
+    <p>This might take time depending on the amount of data.</p>
+  </li>
+</ul>
+
+<p><strong>4. Verify Copy Integrity (Recommended)</strong></p>
+
+<ul>
+  <li><strong>Crucial:</strong> Before modifying the original directory, verify the copy is complete and accurate. Choose one method:
+    <ul>
+      <li>
+        <p><strong>Method A: diff (Checks for differences)</strong><br />
+# This command should ideally produce no output if the copy is identical.<br />
+# It might list minor differences in temporary files if run immediately after rsync.<br />
+sudo diff -qr /home/user/ /userdata/</p>
+      </li>
+      <li>
+        <p><strong>Method B: rsync Dry Run (Checks what <em>would</em> be copied)</strong><br />
+# -n: dry run, -i: itemize changes, -c: checksum (slower but thorough)<br />
+# This should ideally report “sending incremental file list” and nothing else.<br />
+sudo rsync -naic /home/user/ /userdata/</p>
+      </li>
+    </ul>
+  </li>
+  <li>Investigate any significant reported differences before proceeding.</li>
+</ul>
+
+<p><strong>5. Rename the Original Home Directory (Safety Backup)</strong></p>
+
+<ul>
+  <li>
+    <p>Rename the original directory. This acts as a temporary backup and frees up the /home/user path for the mount point.<br />
+sudo mv /home/user /home/user.bak</p>
+  </li>
+  <li>
+    <p><strong>Troubleshooting “Device or resource busy”:</strong> If you get this error, ensure user is fully logged out. Use these commands to find processes still using the old directory:<br />
+# Option 1: List open files in the directory<br />
+sudo lsof /home/user.bak<br />
+# Option 2: List processes using the filesystem/directory<br />
+sudo fuser -vm /home/user.bak<br />
+# Option 3: General process check for the user<br />
+ps aux | grep user</p>
+
+    <p>Identify and terminate any remaining processes belonging to user (e.g., sudo kill &lt;PID&gt;).</p>
+  </li>
+</ul>
+
+<p><strong>6. Create the Empty Mount Point</strong></p>
+
+<ul>
+  <li>Recreate the original directory path. This empty directory will serve as the mount point.<br />
+sudo mkdir /home/user</li>
+</ul>
+
+<p><strong>7. Set Ownership of the Empty Mount Point</strong></p>
+
+<ul>
+  <li><strong>Crucial:</strong> Ensure this <em>new, empty</em> /home/user directory has the correct ownership <em>before</em> mounting.<br />
+sudo chown user:user /home/user</li>
+</ul>
+
+<p><strong>8. Test the Bind Mount Manually</strong></p>
+
+<ul>
+  <li>Perform the bind mount temporarily to check if it works.<br />
+sudo mount --bind /userdata /home/user</li>
+</ul>
+
+<p><strong>9. Verify the Manual Mount</strong></p>
+
+<ul>
+  <li>
+    <p>Check the contents of /home/user. It should now show the files from /userdata.<br />
+ls -la /home/user</p>
+  </li>
+  <li>
+    <p>Check the system’s mount list to confirm the bind mount is active.<br />
+mount | grep /home/user</p>
+
+    <p>You should see a line like /userdata on /home/user type none (rw,bind).</p>
+  </li>
+</ul>
+
+<p><strong>10. Make the Bind Mount Persistent (Choose ONE method)</strong></p>
+
+<ul>
+  <li><strong>Method A: Using /etc/fstab (Traditional)</strong>
+    <ul>
+      <li>
+        <p>Edit /etc/fstab with a text editor like nano:<br />
+sudo nano /etc/fstab</p>
+      </li>
+      <li>
+        <p>Add the following line at the end. Use tabs or spaces consistently.<br />
+# Bind mount user home directory to userdata partition<br />
+/userdata  /home/user  none  bind  0  0</p>
+      </li>
+      <li><strong>Warning:</strong> If /userdata is not available early during boot (e.g., requires drivers/services not yet started), this /etc/fstab entry might cause boot delays or failures. Systemd mount units (Method B) handle dependencies better. Adding the nofail option (bind,nofail) allows booting even if the mount fails, but /home/user might be empty, potentially preventing login or causing application issues. Use nofail with caution for home directories.</li>
+      <li>Save and close the file (Ctrl+O, Enter, Ctrl+X in nano).</li>
+      <li>
+        <p><strong>Test fstab Entry:</strong><br />
+sudo umount /home/user  # Unmount the temporary manual mount<br />
+sudo mount -a           # Mount all entries in fstab<br />
+mount | grep /home/user # Verify it mounted correctly via fstab</p>
+
+        <p>If mount -a gives errors, double-check your /etc/fstab syntax.</p>
+      </li>
+    </ul>
+  </li>
+  <li><strong>Method B: Using Systemd Mount Unit (Modern, Recommended)</strong>
+    <ul>
+      <li>Systemd handles dependencies better, ensuring /userdata is likely ready before attempting the bind mount.</li>
+      <li>
+        <p>Create a systemd mount unit file. The filename should reflect the mount point path. Convert slashes (/) to dashes (-) and escape dashes properly. For /home/user, a good name is home-user.mount.<br />
+sudo nano /etc/systemd/system/home-user.mount</p>
+      </li>
+      <li>
+        <p>Paste the following content into the file, adjusting paths if needed:<br />
+[Unit]<br />
+Description=Bind mount /home/user to /userdata<br />
+RequiresMountsFor=/userdata<br />
+After=local-fs.target</p>
+
+        <p>[Mount]<br />
+What=/userdata<br />
+Where=/home/user<br />
+Type=none<br />
+Options=bind</p>
+
+        <p>[Install]<br />
+WantedBy=local-fs.target</p>
+
+        <ul>
+          <li>RequiresMountsFor= helps ensure the source is ready.</li>
+          <li>After= and WantedBy= integrate it into the boot process.</li>
+        </ul>
+      </li>
+      <li>Save and close the file.</li>
+      <li>
+        <p><strong>Enable and Test the Systemd Unit:</strong><br />
+sudo umount /home/user  # Unmount the temporary manual mount if still active<br />
+# Enable the unit to start on boot and start it now<br />
+sudo systemctl enable --now home-user.mount<br />
+# Check the status<br />
+systemctl status home-user.mount<br />
+mount | grep /home/user # Verify it mounted correctly</p>
+
+        <p>If there are errors, check the unit file syntax (systemctl status or journalctl -u home-user.mount might give clues).</p>
+      </li>
+    </ul>
+  </li>
+</ul>
+
+<p><strong>11. Log In and Test Thoroughly</strong></p>
+
+<ul>
+  <li>Log out from the TTY (exit or logout).</li>
+  <li>Switch back to the graphical login screen (e.g., Ctrl+Alt+F1 or Ctrl+Alt+F7).</li>
+  <li>Log in as the user user.</li>
+  <li>Test various applications (browser, file manager, terminal), check file access, create/delete test files, and ensure everything works as expected.</li>
+  <li>Open a terminal within the user’s session and run df -h /home/user. The output should show the disk space statistics for the /userdata partition, confirming the redirection is working.</li>
+  <li><strong>Reboot the system</strong> and log in again to ensure the persistent mount (fstab or systemd) works correctly after a full restart.</li>
+</ul>
+
+<p><strong>12. Clean Up (Optional - Use Caution!)</strong></p>
+
+<ul>
+  <li><strong>Only after extensive testing (including reboots)</strong> and confirming everything works perfectly, you can remove the backup directory.</li>
+  <li><strong>🛑 Double-check you are deleting the correct directory (.bak)! 🛑</strong><br />
+# Perform this from a TTY logged in as root or another admin user<br />
+sudo rm -rf /home/user.bak</li>
+</ul>
+
+<p>You have now successfully redirected your /home/user directory to use the storage space on /userdata using a persistent bind mount.</p>]]></content><author><name></name></author><category term="aid&gt;linux" /></entry><entry><title type="html">Code Fixer</title><link href="https://ib.bsb.br/code-fixer/" rel="alternate" type="text/html" title="Code Fixer" /><published>2025-05-01T00:00:00+00:00</published><updated>2025-05-01T14:24:29+00:00</updated><id>https://ib.bsb.br/code-fixer</id><content type="html" xml:base="https://ib.bsb.br/code-fixer/"><![CDATA[<section class="code-block-container" role="group" aria-label=" Code Block" data-filename="_code_block.txt" data-code="&lt;prompt&gt;
   &lt;purpose&gt;
     You are a specialized code validator and fixer. Your task is to transform code with errors into fully functional, compliant scripts. Success means identifying and correcting 100% of syntax errors, indentation problems, and formatting issues without changing the intended functionality. You will output only the complete, corrected code with no explanatory text.
   &lt;/purpose&gt;
@@ -2707,36 +2930,4 @@ oCIS, or ownCloud Infinite Scale, is a cutting-edge technology platform for buil
   <p>Inovar artificiosamente, no curso de diligência, de investigação ou de processo, o estado de lugar, de coisa ou de pessoa, com o fim de eximir-se de responsabilidade ou de responsabilizar criminalmente alguém ou agravar-lhe a responsabilidade:</p>
 </blockquote>
 
-<p><strong>Pena</strong> - detenção, de 1 (um) a 4 (quatro) anos, e multa.</p>]]></content><author><name></name></author><category term="scratchpad" /></entry><entry><title type="html">NethServer 8 computer nodes ranking</title><link href="https://ib.bsb.br/nethserver-8-computer-nodes-ranking/" rel="alternate" type="text/html" title="NethServer 8 computer nodes ranking" /><published>2025-04-28T00:00:00+00:00</published><updated>2025-04-28T18:40:06+00:00</updated><id>https://ib.bsb.br/nethserver-8-computer-nodes-ranking</id><content type="html" xml:base="https://ib.bsb.br/nethserver-8-computer-nodes-ranking/"><![CDATA[<p>Here is the order, starting with the machine needing the most resources:</p>
-
-<ol>
-  <li><strong>Node 3: File Sharing &amp; Collaboration (Nextcloud + File Server App)</strong>
-    <ul>
-      <li><strong>Reasoning:</strong> Nextcloud is often the most resource-hungry application in such setups. It involves a web server, PHP processing, a database, file indexing, potentially real-time services, thumbnail generation, and significant file I/O. Running background jobs and handling many concurrent users heavily utilizes CPU and RAM. The underlying File Server App also adds demand, especially for Disk I/O during file transfers and potential caching (RAM). This node will likely require the most <strong>RAM</strong>, <strong>CPU</strong> power (especially multi-core), high <strong>Disk I/O</strong> performance (SSDs recommended for Nextcloud data/database), and significant <strong>Disk Space</strong>.</li>
-    </ul>
-  </li>
-  <li><strong>Node 4: Business Applications Platform (LEMP App + Typo3, Redmine, etc.)</strong>
-    <ul>
-      <li><strong>Reasoning:</strong> Hosting multiple web applications like Typo3 (CMS) and Redmine (Project Management), each with its own database needs, application logic (PHP, potentially Ruby for Redmine), and web server processes (Nginx + PHP-FPM), creates substantial demand. The resource usage is highly dependent on the specific applications and user traffic but can easily rival or exceed Node 3 under heavy load. It requires significant <strong>RAM</strong> (for databases, application caching, PHP processes), <strong>CPU</strong> power, and good <strong>Disk I/O</strong> performance. Disk space depends on the application data.</li>
-    </ul>
-  </li>
-  <li><strong>Node 2: Active Directory, DNS &amp; DHCP (Samba AD + DNSMasq App)</strong>
-    <ul>
-      <li><strong>Reasoning:</strong> Samba Active Directory requires a moderate amount of <strong>RAM</strong> to operate efficiently, especially as the user/object count grows. CPU usage spikes during authentication and searches but is often lower during idle periods compared to busy web applications. Disk I/O is important for the AD database, but typically less demanding than a heavily used file server or application database. DNS and DHCP services (via DNSMasq App) are very lightweight. This node needs a solid RAM baseline and reasonable CPU/Disk I/O.</li>
-    </ul>
-  </li>
-  <li><strong>Node 1: Reverse Proxy &amp; Host Firewall (Traefik + firewalld + Optional VPN)</strong>
-    <ul>
-      <li><strong>Reasoning:</strong> In its planned configuration using <em>minimal</em> <code class="language-plaintext highlighter-rouge">firewalld</code> and Traefik primarily for routing web traffic, this node is generally the least demanding. Traefik is efficient, and basic firewalling adds little overhead. CPU/RAM usage scales primarily with network traffic volume and the complexity of proxy rules. Disk I/O is minimal unless heavy caching is enabled. <strong>However</strong>, if you were to run a more demanding VPN (like many concurrent OpenVPN sessions via NethSecurity/manual setup) or implement very complex Traefik middleware/caching, its resource needs would increase significantly. Based <em>only</em> on the revised plan using <code class="language-plaintext highlighter-rouge">firewalld</code> and potentially <code class="language-plaintext highlighter-rouge">wg-easy</code>, it should be the lightest.</li>
-    </ul>
-  </li>
-</ol>
-
-<p><strong>Summary for Allocation:</strong></p>
-
-<ul>
-  <li><strong>Most Powerful Machine:</strong> Assign to <strong>Node 3 (Nextcloud/File Sharing)</strong>. Prioritize RAM, CPU cores, and fast Disk I/O (SSD).</li>
-  <li><strong>Second Most Powerful Machine:</strong> Assign to <strong>Node 4 (Business Apps)</strong>. Prioritize RAM, CPU, and good Disk I/O.</li>
-  <li><strong>Moderate Machine:</strong> Assign to <strong>Node 2 (Active Directory)</strong>. Ensure sufficient RAM baseline.</li>
-  <li><strong>Least Powerful Machine:</strong> Assign to <strong>Node 1 (Reverse Proxy/Firewall)</strong>. Standard resources should suffice unless high traffic/heavy VPN load is expected.</li>
-</ul>]]></content><author><name></name></author><category term="scratchpad" /></entry></feed>
+<p><strong>Pena</strong> - detenção, de 1 (um) a 4 (quatro) anos, e multa.</p>]]></content><author><name></name></author><category term="scratchpad" /></entry></feed>
