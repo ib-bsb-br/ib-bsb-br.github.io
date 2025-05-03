@@ -1,4 +1,58 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2025-05-02T22:56:37+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">Bind Mounting /home/user to /userdata</title><link href="https://ib.bsb.br/bind-mounting-homeuser-to-userdata/" rel="alternate" type="text/html" title="Bind Mounting /home/user to /userdata" /><published>2025-05-02T00:00:00+00:00</published><updated>2025-05-02T00:13:17+00:00</updated><id>https://ib.bsb.br/bind-mounting-homeuser-to-userdata</id><content type="html" xml:base="https://ib.bsb.br/bind-mounting-homeuser-to-userdata/"><![CDATA[<p>This guide explains how to use mount --bind to make your user’s home directory (/home/user) utilize the storage space on a larger partition mounted at /userdata. This method is transparent to most applications.</p>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2025-05-03T01:34:17+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">Building and deploying a custom site using GitHub Actions and GitHub Pages</title><link href="https://ib.bsb.br/building-and-deploying-a-custom-site-using-github-actions-and-github-pages/" rel="alternate" type="text/html" title="Building and deploying a custom site using GitHub Actions and GitHub Pages" /><published>2025-05-03T00:00:00+00:00</published><updated>2025-05-03T01:31:37+00:00</updated><id>https://ib.bsb.br/building-and-deploying-a-custom-site-using-github-actions-and-github-pages</id><content type="html" xml:base="https://ib.bsb.br/building-and-deploying-a-custom-site-using-github-actions-and-github-pages/"><![CDATA[<p>bibref https://til.simonwillison.net/github-actions/github-pages</p>
+
+<p>I figured out a minimal pattern for building a completely custom website using GitHub Actions and deploying the result to GitHub Pages.</p>
+
+<p>First you need to enable GitHub Pages for the repository. Navigate to Settings -&gt; Pages (or visit <code class="language-plaintext highlighter-rouge">$repo/settings/pages</code>) and set the build source to “GitHub Actions”.</p>
+
+<p>Here’s my minimal YAML recipe - save this in a <code class="language-plaintext highlighter-rouge">.github/workflows/publish.yml</code> file:</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">name</span><span class="pi">:</span> <span class="s">Publish site</span>
+
+<span class="na">on</span><span class="pi">:</span>
+  <span class="na">push</span><span class="pi">:</span>
+  <span class="na">workflow_dispatch</span><span class="pi">:</span>
+
+<span class="na">permissions</span><span class="pi">:</span>
+  <span class="na">pages</span><span class="pi">:</span> <span class="s">write</span>
+  <span class="na">id-token</span><span class="pi">:</span> <span class="s">write</span>
+
+<span class="na">jobs</span><span class="pi">:</span>
+  <span class="na">build</span><span class="pi">:</span>
+    <span class="na">runs-on</span><span class="pi">:</span> <span class="s">ubuntu-latest</span>
+    <span class="na">steps</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">uses</span><span class="pi">:</span> <span class="s">actions/checkout@v4</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">Build the site</span>
+      <span class="na">run</span><span class="pi">:</span> <span class="pi">|</span>
+        <span class="s">mkdir _site</span>
+        <span class="s">echo '&lt;h1&gt;Hello, world!&lt;/h1&gt;' &gt; _site/index.html</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">Upload artifact</span>
+      <span class="na">uses</span><span class="pi">:</span> <span class="s">actions/upload-pages-artifact@v3</span>
+  <span class="na">deploy</span><span class="pi">:</span>
+    <span class="na">environment</span><span class="pi">:</span>
+      <span class="na">name</span><span class="pi">:</span> <span class="s">github-pages</span>
+      <span class="na">url</span><span class="pi">:</span> <span class="s">$</span>
+    <span class="na">runs-on</span><span class="pi">:</span> <span class="s">ubuntu-latest</span>
+    <span class="na">needs</span><span class="pi">:</span> <span class="s">build</span>
+    <span class="na">steps</span><span class="pi">:</span>
+      <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">Deploy to GitHub Pages</span>
+        <span class="na">id</span><span class="pi">:</span> <span class="s">deployment</span>
+        <span class="na">uses</span><span class="pi">:</span> <span class="s">actions/deploy-pages@v4</span>
+</code></pre></div></div>
+<p>Anything that goes in that <code class="language-plaintext highlighter-rouge">_site/</code> directory will be published to the GitHub Pages site.</p>
+
+<p>The <code class="language-plaintext highlighter-rouge">permissions</code> are required - the <code class="language-plaintext highlighter-rouge">pages: write</code> one enables writes to pages and for some reason the <code class="language-plaintext highlighter-rouge">id-token: write</code> one is needed by the <a href="https://github.com/actions/deploy-pages">actions/deploy-pages</a> action.</p>
+
+<p>The default URL for the site will be <code class="language-plaintext highlighter-rouge">https://$GITHUB_USERNAME.github.io/$REPO_NAME/</code>. You can set this to <a href="https://docs.github.com/en/pages/configuring-a-custom-domain-for-your-github-pages-site">custom domain</a> if you want.</p>
+
+<p><a href="https://github.com/simonw/minimal-github-pages-from-actions/">github.com/simonw/minimal-github-pages-from-actions</a> is an example repository that uses this exact YAML configuration. It publishes a site to <a href="https://simonw.github.io/minimal-github-pages-from-actions/">https://simonw.github.io/minimal-github-pages-from-actions/</a>.</p>
+
+<h2 id="next-steps">Next steps</h2>
+
+<p>You can combine this trick with scheduled workflows and <a href="https://simonwillison.net/2020/Oct/9/git-scraping/">Git scraping</a> to create all sorts of interesting and useful things.</p>
+
+<p>I’m using it to publish <a href="https://simonw.github.io/recent-california-brown-pelicans/atom.xml">an Atom feed</a> of recent California Brown Pelicans sightings on <a href="https://www.inaturalist.org/">iNaturalist</a> in my <a href="https://github.com/simonw/recent-california-brown-pelicans">simonw/recent-california-brown-pelicans</a> repository.</p>
+
+<p>I also use it to publish my <a href="https://tools.simonwillison.net/">tools.simonwillison.net</a> site with a custom <a href="https://tools.simonwillison.net/colophon">colophon</a> page - see <a href="https://simonwillison.net/2025/Mar/11/using-llms-for-code/#a-detailed-example">this post</a> for details.</p>]]></content><author><name></name></author><category term="scratchpad" /></entry><entry><title type="html">Bind Mounting /home/user to /userdata</title><link href="https://ib.bsb.br/bind-mounting-homeuser-to-userdata/" rel="alternate" type="text/html" title="Bind Mounting /home/user to /userdata" /><published>2025-05-02T00:00:00+00:00</published><updated>2025-05-02T00:13:17+00:00</updated><id>https://ib.bsb.br/bind-mounting-homeuser-to-userdata</id><content type="html" xml:base="https://ib.bsb.br/bind-mounting-homeuser-to-userdata/"><![CDATA[<p>This guide explains how to use mount --bind to make your user’s home directory (/home/user) utilize the storage space on a larger partition mounted at /userdata. This method is transparent to most applications.</p>
 
 <p>While mount --bind is effective, other methods like symbolic links (ln -s /userdata /home/user) or changing the home directory path directly in /etc/passwd (usermod -d /userdata user) exist, each with different implications (e.g., symlinks might not be followed by all applications, usermod -d changes the canonical path). This guide focuses on the mount --bind approach.</p>
 
@@ -2533,401 +2587,4 @@ oCIS, or ownCloud Infinite Scale, is a cutting-edge technology platform for buil
 <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code># activate s3ng storage driverSTORAGE_USERS_DRIVER=s3ngSTORAGE_SYSTEM_DRIVER=ocis # keep system data on ocis storage since this are only small files atm# s3ng specific settingsSTORAGE_USERS_S3NG_ENDPOINT=https://gateway.storjshare.ioSTORAGE_USERS_S3NG_REGION=globalSTORAGE_USERS_S3NG_ACCESS_KEY=access_key # REPLACE MESTORAGE_USERS_S3NG_SECRET_KEY=secret_key # REPLACE MESTORAGE_USERS_S3NG_BUCKET=my-bucket # REPLACE ME
 </code></pre></div></div>
 
-<p>For more information visit <a href="https://owncloud.dev/services/storage-users/configuration/">https://owncloud.dev/services/storage-users/configuration/</a></p>]]></content><author><name></name></author><category term="scratchpad" /></entry><entry><title type="html">Códigos e Leis Penais Brasileiras</title><link href="https://ib.bsb.br/cdigos-e-leis-penais-brasileiras/" rel="alternate" type="text/html" title="Códigos e Leis Penais Brasileiras" /><published>2025-04-28T00:00:00+00:00</published><updated>2025-04-28T00:35:20+00:00</updated><id>https://ib.bsb.br/cdigos-e-leis-penais-brasileiras</id><content type="html" xml:base="https://ib.bsb.br/cdigos-e-leis-penais-brasileiras/"><![CDATA[<h2 id="código-penal-decreto-lei-nº-2848">Código Penal (Decreto-Lei nº 2.848)</h2>
-
-<h3 id="principles-and-classifications">Principles and Classifications</h3>
-
-<h4 id="art-18---crime-classifications">Art. 18 - Crime Classifications</h4>
-<blockquote>
-  <p>Art. 18 - Diz-se o crime: <em>(Redação dada pela Lei nº 7.209, de 11.7.1984)</em></p>
-</blockquote>
-
-<p><strong>Intentional Crime (Crime doloso)</strong> <em>(Incluído pela Lei nº 7.209, de 11.7.1984)</em></p>
-<ul>
-  <li>I - doloso, quando o agente quis o resultado ou assumiu o risco de produzi-lo; <em>(Incluído pela Lei nº 7.209, de 11.7.1984)</em></li>
-</ul>
-
-<p><strong>Negligent Crime (Crime culposo)</strong> <em>(Incluído pela Lei nº 7.209, de 11.7.1984)</em></p>
-<ul>
-  <li>II - culposo, quando o agente deu causa ao resultado por imprudência, negligência ou imperícia. <em>(Incluído pela Lei nº 7.209, de 11.7.1984)</em></li>
-</ul>
-
-<p><strong>Parágrafo único</strong> - Salvo os casos expressos em lei, ninguém pode ser punido por fato previsto como crime, senão quando o pratica dolosamente. <em>(Incluído pela Lei nº 7.209, de 11.7.1984)</em></p>
-
-<blockquote>
-  <p><em>Note: This article establishes the basic classification of crimes as either intentional (doloso) or negligent (culposo), with intentional crimes being the default unless specifically stated otherwise in law.</em></p>
-</blockquote>
-
-<h3 id="criminal-liability-exclusions">Criminal Liability Exclusions</h3>
-
-<h4 id="art-23---exclusion-of-unlawfulness">Art. 23 - Exclusion of Unlawfulness</h4>
-<blockquote>
-  <p>Art. 23 - Não há crime quando o agente pratica o fato: <em>(Redação dada pela Lei nº 7.209, de 11.7.1984)</em></p>
-</blockquote>
-
-<ul>
-  <li>I - em estado de necessidade; <em>(Incluído pela Lei nº 7.209, de 11.7.1984)</em></li>
-  <li>II - em legítima defesa; <em>(Incluído pela Lei nº 7.209, de 11.7.1984)</em> <em>(Vide ADPF 779)</em></li>
-  <li>III - em estrito cumprimento de dever legal ou no exercício regular de direito. <em>(Incluído pela Lei nº 7.209, de 11.7.1984)</em></li>
-</ul>
-
-<p><strong>Excesso punível</strong> <em>(Incluído pela Lei nº 7.209, de 11.7.1984)</em><br />
-<strong>Parágrafo único</strong> - O agente, em qualquer das hipóteses deste artigo, responderá pelo excesso doloso ou culposo. <em>(Incluído pela Lei nº 7.209, de 11.7.1984)</em></p>
-
-<h4 id="art-24---state-of-necessity">Art. 24 - State of Necessity</h4>
-<blockquote>
-  <p>Art. 24 - Considera-se em estado de necessidade quem pratica o fato para salvar de perigo atual, que não provocou por sua vontade, nem podia de outro modo evitar, direito próprio ou alheio, cujo sacrifício, nas circunstâncias, não era razoável exigir-se. <em>(Redação dada pela Lei nº 7.209, de 11.7.1984)</em></p>
-</blockquote>
-
-<p><strong>§ 1º</strong> - Não pode alegar estado de necessidade quem tinha o dever legal de enfrentar o perigo. <em>(Redação dada pela Lei nº 7.209, de 11.7.1984)</em></p>
-
-<p><strong>§ 2º</strong> - Embora seja razoável exigir-se o sacrifício do direito ameaçado, a pena poderá ser reduzida de um a dois terços. <em>(Redação dada pela Lei nº 7.209, de 11.7.1984)</em></p>
-
-<h4 id="art-25---self-defense">Art. 25 - Self-Defense</h4>
-<blockquote>
-  <p>Art. 25 - Entende-se em legítima defesa quem, usando moderadamente dos meios necessários, repele injusta agressão, atual ou iminente, a direito seu ou de outrem. <em>(Redação dada pela Lei nº 7.209, de 11.7.1984)</em> <em>(Vide ADPF 779)</em></p>
-</blockquote>
-
-<p><strong>Parágrafo único.</strong> Observados os requisitos previstos no caput deste artigo, considera-se também em legítima defesa o agente de segurança pública que repele agressão ou risco de agressão a vítima mantida refém durante a prática de crimes. <em>(Incluído pela Lei nº 13.964, de 2019)</em> <em>(Vide ADPF 779)</em></p>
-
-<h3 id="crimes-against-person">Crimes Against Person</h3>
-
-<h4 id="art-121---homicide">Art. 121 - Homicide</h4>
-<blockquote>
-  <p>Art. 121. Matar alguem:</p>
-</blockquote>
-
-<p><strong>Pena</strong> - reclusão, de seis a vinte anos.</p>
-
-<h4 id="art-129---bodily-harm">Art. 129 - Bodily Harm</h4>
-<blockquote>
-  <p>Art. 129. Ofender a integridade corporal ou a saúde de outrem:</p>
-</blockquote>
-
-<p><strong>Pena</strong> - detenção, de três meses a um ano.</p>
-
-<h3 id="crimes-against-honor">Crimes Against Honor</h3>
-
-<h4 id="art-138---calumny">Art. 138 - Calumny</h4>
-<blockquote>
-  <p>Art. 138 - Caluniar alguém, imputando-lhe falsamente fato definido como crime:</p>
-</blockquote>
-
-<p><strong>Pena</strong> - detenção, de seis meses a dois anos, e multa.</p>
-
-<h4 id="art-139---defamation">Art. 139 - Defamation</h4>
-<blockquote>
-  <p>Art. 139 - Difamar alguém, imputando-lhe fato ofensivo à sua reputação:</p>
-</blockquote>
-
-<p><strong>Pena</strong> - detenção, de três meses a um ano, e multa.</p>
-
-<h4 id="art-140---insult">Art. 140 - Insult</h4>
-<blockquote>
-  <p>Art. 140 - Injuriar alguém, ofendendo-lhe a dignidade ou o decoro:</p>
-</blockquote>
-
-<p><strong>Pena</strong> - detenção, de um a seis meses, ou multa.</p>
-
-<h3 id="crimes-against-personal-liberty">Crimes Against Personal Liberty</h3>
-
-<h4 id="art-147---threat">Art. 147 - Threat</h4>
-<blockquote>
-  <p>Art. 147 - Ameaçar alguém, por palavra, escrito ou gesto, ou qualquer outro meio simbólico, de causar-lhe mal injusto e grave:</p>
-</blockquote>
-
-<p><strong>Pena</strong> - detenção, de um a seis meses, ou multa.</p>
-
-<h4 id="art-148---kidnapping-and-false-imprisonment">Art. 148 - Kidnapping and False Imprisonment</h4>
-<blockquote>
-  <p>Art. 148 - Privar alguém de sua liberdade, mediante seqüestro ou cárcere privado: <em>(Redação dada pela Lei nº 11.106, de 2005)</em></p>
-</blockquote>
-
-<p><strong>Pena</strong> - reclusão, de um a três anos.</p>
-
-<h4 id="art-150---home-invasion">Art. 150 - Home Invasion</h4>
-<blockquote>
-  <p>Art. 150 - Entrar ou permanecer, clandestina ou astuciosamente, ou contra a vontade expressa ou tácita de quem de direito, em casa alheia ou em suas dependências:</p>
-</blockquote>
-
-<p><strong>Pena</strong> - detenção, de um a três meses, ou multa.</p>
-
-<h3 id="crimes-against-property">Crimes Against Property</h3>
-
-<h4 id="art-155---theft">Art. 155 - Theft</h4>
-<blockquote>
-  <p>Art. 155 - Subtrair, para si ou para outrem, coisa alheia móvel:</p>
-</blockquote>
-
-<p><strong>Pena</strong> - reclusão, de um a quatro anos, e multa.</p>
-
-<h4 id="art-157---robbery">Art. 157 - Robbery</h4>
-<blockquote>
-  <p>Art. 157 - Subtrair coisa móvel alheia, para si ou para outrem, mediante grave ameaça ou violência a pessoa, ou depois de havê-la, por qualquer meio, reduzido à impossibilidade de resistência:</p>
-</blockquote>
-
-<p><strong>Pena</strong> - reclusão, de quatro a dez anos, e multa.</p>
-
-<h4 id="art-158---extortion">Art. 158 - Extortion</h4>
-<blockquote>
-  <p>Art. 158 - Constranger alguém, mediante violência ou grave ameaça, e com o intuito de obter para si ou para outrem indevida vantagem econômica, a fazer, tolerar que se faça ou deixar de fazer alguma coisa:</p>
-</blockquote>
-
-<p><strong>Pena</strong> - reclusão, de quatro a dez anos, e multa.</p>
-
-<h4 id="art-159---kidnapping-for-ransom">Art. 159 - Kidnapping for Ransom</h4>
-<blockquote>
-  <p>Art. 159 - Seqüestrar pessoa com o fim de obter, para si ou para outrem, qualquer vantagem, como condição ou preço do resgate: <em>(Redação dada pela Lei nº 8.072, de 25.7.1990)</em></p>
-</blockquote>
-
-<p><strong>Pena</strong> - reclusão, de oito a quinze anos. <em>(Redação dada pela Lei nº 8.072, de 25.7.1990)</em></p>
-
-<h4 id="art-171---fraud">Art. 171 - Fraud</h4>
-<blockquote>
-  <p>Art. 171 - Obter, para si ou para outrem, vantagem ilícita, em prejuízo alheio, induzindo ou mantendo alguém em erro, mediante artifício, ardil, ou qualquer outro meio fraudulento:</p>
-</blockquote>
-
-<p><strong>Pena</strong> - reclusão, de um a cinco anos, e multa, de quinhentos mil réis a dez contos de réis. <em>(Vide Lei nº 7.209, de 1984)</em></p>
-
-<h4 id="art-180---receiving-stolen-goods">Art. 180 - Receiving Stolen Goods</h4>
-<blockquote>
-  <p>Art. 180 - Adquirir, receber, transportar, conduzir ou ocultar, em proveito próprio ou alheio, coisa que sabe ser produto de crime, ou influir para que terceiro, de boa-fé, a adquira, receba ou oculte: <em>(Redação dada pela Lei nº 9.426, de 1996)</em></p>
-</blockquote>
-
-<p><strong>Pena</strong> - reclusão, de um a quatro anos, e multa. <em>(Redação dada pela Lei nº 9.426, de 1996)</em></p>
-
-<h3 id="sexual-crimes">Sexual Crimes</h3>
-
-<h4 id="art-213---rape">Art. 213 - Rape</h4>
-<blockquote>
-  <p>Art. 213. Constranger alguém, mediante violência ou grave ameaça, a ter conjunção carnal ou a praticar ou permitir que com ele se pratique outro ato libidinoso: <em>(Redação dada pela Lei nº 12.015, de 2009)</em></p>
-</blockquote>
-
-<p><strong>Pena</strong> - reclusão, de 6 (seis) a 10 (dez) anos. <em>(Redação dada pela Lei nº 12.015, de 2009)</em></p>
-
-<h4 id="art-215---sexual-violation-by-fraud">Art. 215 - Sexual Violation by Fraud</h4>
-<blockquote>
-  <p>Art. 215. Ter conjunção carnal ou praticar outro ato libidinoso com alguém, mediante fraude ou outro meio que impeça ou dificulte a livre manifestação de vontade da vítima: <em>(Redação dada pela Lei nº 12.015, de 2009)</em></p>
-</blockquote>
-
-<p><strong>Pena</strong> - reclusão, de 2 (dois) a 6 (seis) anos. <em>(Redação dada pela Lei nº 12.015, de 2009)</em></p>
-
-<h4 id="art-216-a---sexual-harassment">Art. 216-A - Sexual Harassment</h4>
-<blockquote>
-  <p>Art. 216-A. Constranger alguém com o intuito de obter vantagem ou favorecimento sexual, prevalecendo-se o agente da sua condição de superior hierárquico ou ascendência inerentes ao exercício de emprego, cargo ou função. <em>(Incluído pela Lei nº 10.224, de 15 de maio de 2001)</em></p>
-</blockquote>
-
-<p><strong>Pena</strong> - detenção, de 1 (um) a 2 (dois) anos. <em>(Incluído pela Lei nº 10.224, de 15 de maio de 2001)</em></p>
-
-<h4 id="art-217-a---statutory-rape">Art. 217-A - Statutory Rape</h4>
-<blockquote>
-  <p>Art. 217-A. Ter conjunção carnal ou praticar outro ato libidinoso com menor de 14 (catorze) anos: <em>(Incluído pela Lei nº 12.015, de 2009)</em></p>
-</blockquote>
-
-<p><strong>Pena</strong> - reclusão, de 8 (oito) a 15 (quinze) anos. <em>(Incluído pela Lei nº 12.015, de 2009)</em></p>
-
-<h4 id="art-218---corruption-of-minors">Art. 218 - Corruption of Minors</h4>
-<blockquote>
-  <p>Art. 218. Induzir alguém menor de 14 (catorze) anos a satisfazer a lascívia de outrem: <em>(Redação dada pela Lei nº 12.015, de 2009)</em></p>
-</blockquote>
-
-<p><strong>Pena</strong> - reclusão, de 2 (dois) a 5 (cinco) anos. <em>(Redação dada pela Lei nº 12.015, de 2009)</em></p>
-
-<h3 id="association-crimes">Association Crimes</h3>
-
-<h4 id="art-288---criminal-association">Art. 288 - Criminal Association</h4>
-<blockquote>
-  <p>Art. 288. Associarem-se 3 (três) ou mais pessoas, para o fim específico de cometer crimes: <em>(Redação dada pela Lei nº 12.850, de 2013)</em></p>
-</blockquote>
-
-<p><strong>Pena</strong> - reclusão, de 1 (um) a 3 (três) anos. <em>(Redação dada pela Lei nº 12.850, de 2013)</em></p>
-
-<h3 id="document-crimes">Document Crimes</h3>
-
-<h4 id="art-304---use-of-forged-documents">Art. 304 - Use of Forged Documents</h4>
-<blockquote>
-  <p>Art. 304 - Fazer uso de qualquer dos papéis falsificados ou alterados, a que se referem os arts. 297 a 302:</p>
-</blockquote>
-
-<p><strong>Pena</strong> - a cominada à falsificação ou à alteração.</p>
-
-<h4 id="art-311---vehicle-identification-tampering">Art. 311 - Vehicle Identification Tampering</h4>
-<blockquote>
-  <p>Art. 311 - Adulterar ou remarcar número de chassi ou qualquer sinal identificador de veículo automotor, de seu componente ou equipamento: <em>(Redação dada pela Lei nº 9.426, de 1996)</em></p>
-</blockquote>
-
-<p><strong>Pena</strong> - reclusão, de três a seis anos, e multa. <em>(Redação dada pela Lei nº 9.426, de 1996)</em></p>
-
-<h3 id="crimes-against-public-administration">Crimes Against Public Administration</h3>
-
-<h4 id="art-329---resistance">Art. 329 - Resistance</h4>
-<blockquote>
-  <p>Art. 329 - Opor-se à execução de ato legal, mediante violência ou ameaça a funcionário competente para executá-lo ou a quem lhe esteja prestando auxílio:</p>
-</blockquote>
-
-<p><strong>Pena</strong> - detenção, de dois meses a dois anos.</p>
-
-<h4 id="art-330---disobedience">Art. 330 - Disobedience</h4>
-<blockquote>
-  <p>Art. 330 - Desobedecer a ordem legal de funcionário público:</p>
-</blockquote>
-
-<p><strong>Pena</strong> - detenção, de quinze dias a seis meses, e multa.</p>
-
-<h4 id="art-331---contempt">Art. 331 - Contempt</h4>
-<blockquote>
-  <p>Art. 331 - Desacatar funcionário público no exercício da função ou em razão dela: <em>(Vide ADPF 496)</em></p>
-</blockquote>
-
-<p><strong>Pena</strong> - detenção, de seis meses a dois anos, ou multa.</p>
-
-<h3 id="customs-and-tax-crimes">Customs and Tax Crimes</h3>
-
-<h4 id="art-334---tax-evasion">Art. 334 - Tax Evasion</h4>
-<blockquote>
-  <p>Art. 334. Iludir, no todo ou em parte, o pagamento de direito ou imposto devido pela entrada, pela saída ou pelo consumo de mercadoria <em>(Redação dada pela Lei nº 13.008, de 26.6.2014)</em></p>
-</blockquote>
-
-<p><strong>Pena</strong> - reclusão, de 1 (um) a 4 (quatro) anos. <em>(Redação dada pela Lei nº 13.008, de 26.6.2014)</em></p>
-
-<h4 id="art-334-a---smuggling">Art. 334-A - Smuggling</h4>
-<blockquote>
-  <p>Art. 334-A. Importar ou exportar mercadoria proibida: <em>(Incluído pela Lei nº 13.008, de 26.6.2014)</em></p>
-</blockquote>
-
-<p><strong>Pena</strong> - reclusão, de 2 (dois) a 5 (cinco) anos. <em>(Incluído pela Lei nº 13.008, de 26.6.2014)</em></p>
-
-<hr />
-
-<h2 id="lei-antidrogas-lei-nº-113432006">Lei Antidrogas (Lei nº 11.343/2006)</h2>
-<p><em>Brazilian Drug Law - Law No. 11,343/2006</em></p>
-
-<h3 id="art-28---drug-possession-for-personal-use">Art. 28 - Drug Possession for Personal Use</h3>
-<blockquote>
-  <p>Art. 28. Quem adquirir, guardar, tiver em depósito, transportar ou trouxer consigo, para consumo pessoal, drogas sem autorização ou em desacordo com determinação legal ou regulamentar será submetido às seguintes penas:</p>
-</blockquote>
-
-<p><strong>Penas/Medidas</strong>:</p>
-<ol>
-  <li>Advertência sobre os efeitos das drogas;</li>
-  <li>Prestação de serviços à comunidade;</li>
-  <li>Medida educativa de comparecimento a programa ou curso educativo.</li>
-</ol>
-
-<p><strong>§ 3º</strong> As penas previstas nos incisos II e III do caput deste artigo serão aplicadas pelo prazo máximo de 5 (cinco) meses.</p>
-
-<p><strong>§ 4º</strong> Em caso de reincidência, as penas previstas nos incisos II e III do caput deste artigo serão aplicadas pelo prazo máximo de 10 (dez) meses.</p>
-
-<p><strong>§ 5º</strong> A prestação de serviços à comunidade será cumprida em programas comunitários, entidades educacionais ou assistenciais, hospitais, estabelecimentos congêneres, públicos ou privados sem fins lucrativos, que se ocupem, preferencialmente, da prevenção do consumo ou da recuperação de usuários e dependentes de drogas.</p>
-
-<p><strong>§ 6º</strong> Para garantia do cumprimento das medidas educativas a que se refere o caput, nos incisos I, II e III, a que injustificadamente se recuse o agente, poderá o juiz submetê-lo, sucessivamente a:</p>
-<ol>
-  <li>Admoestação verbal;</li>
-  <li>Multa.</li>
-</ol>
-
-<p><strong>§ 7º</strong> O juiz determinará ao Poder Público que coloque à disposição do infrator, gratuitamente, estabelecimento de saúde, preferencialmente ambulatorial, para tratamento especializado.</p>
-
-<blockquote>
-  <p><em>Note: Under Brazilian law, possession of drugs for personal use is not punishable by imprisonment but rather by educational and community service measures.</em></p>
-</blockquote>
-
-<h3 id="art-33---drug-trafficking">Art. 33 - Drug Trafficking</h3>
-<blockquote>
-  <p>Art. 33. Importar, exportar, remeter, preparar, produzir, fabricar, adquirir, vender, expor à venda, oferecer, ter em depósito, transportar, trazer consigo, guardar, prescrever, ministrar, entregar a consumo ou fornecer drogas, ainda que gratuitamente, sem autorização ou em desacordo com determinação legal ou regulamentar:</p>
-</blockquote>
-
-<p><strong>Pena</strong> - reclusão de 5 (cinco) a 15 (quinze) anos e pagamento de 500 (quinhentos) a 1.500 (mil e quinhentos) dias-multa.</p>
-
-<h3 id="art-35---association-for-drug-trafficking">Art. 35 - Association for Drug Trafficking</h3>
-<blockquote>
-  <p>Art. 35. Associarem-se duas ou mais pessoas para o fim de praticar, reiteradamente ou não, qualquer dos crimes previstos nos arts. 33, caput e § 1º, e 34 desta Lei:</p>
-</blockquote>
-
-<p><strong>Pena</strong> - reclusão, de 3 (três) a 10 (dez) anos, e pagamento de 700 (setecentos) a 1.200 (mil e duzentos) dias-multa.</p>
-
-<hr />
-
-<h2 id="código-de-processo-penal-decreto-lei-nº-3689">Código de Processo Penal (Decreto-Lei nº 3.689)</h2>
-<p><em>Brazilian Criminal Procedure Code - Decree-Law No. 3,689</em></p>
-
-<h3 id="art-244---personal-search">Art. 244 - Personal Search</h3>
-<blockquote>
-  <p>Art. 244. A busca pessoal independerá de mandado, no caso de prisão ou quando houver fundada suspeita de que a pessoa esteja na posse de arma proibida ou de objetos ou papéis que constituam corpo de delito, ou quando a medida for determinada no curso de busca domiciliar.</p>
-</blockquote>
-
-<blockquote>
-  <p><em>Note: This article establishes when personal searches can be conducted without a warrant.</em></p>
-</blockquote>
-
-<h3 id="art-249---search-of-female-persons">Art. 249 - Search of Female Persons</h3>
-<blockquote>
-  <p>Art. 249. A busca em mulher será feita por outra mulher, se não importar retardamento ou prejuízo da diligência.</p>
-</blockquote>
-
-<hr />
-
-<h2 id="lei-da-tortura-lei-nº-94551997">Lei da Tortura (Lei nº 9.455/1997)</h2>
-<p><em>Brazilian Torture Law - Law No. 9,455/1997</em></p>
-
-<h3 id="art-1-i---torture-for-information-or-confession">Art. 1, I - Torture for Information or Confession</h3>
-<blockquote>
-  <p>Art. 1º Constitui crime de tortura:</p>
-
-  <p>I - constranger alguém com emprego de violência ou grave ameaça, causando-lhe sofrimento físico ou mental:</p>
-
-  <p>a) com o fim de obter informação, declaração ou confissão da vítima ou de terceira pessoa;</p>
-
-  <p>b) para provocar ação ou omissão de natureza criminosa;</p>
-
-  <p>c) em razão de discriminação racial ou religiosa;</p>
-</blockquote>
-
-<p><strong>Pena</strong> - reclusão, de dois a oito anos.</p>
-
-<h3 id="art-1-ii---torture-as-punishment">Art. 1, II - Torture as Punishment</h3>
-<blockquote>
-  <p>II - submeter alguém, sob sua guarda, poder ou autoridade, com emprego de violência ou grave ameaça, a intenso sofrimento físico ou mental, como forma de aplicar castigo pessoal ou medida de caráter preventivo.</p>
-</blockquote>
-
-<p><strong>Pena</strong> - reclusão, de dois a oito anos.</p>
-
-<hr />
-
-<h2 id="lei-de-abuso-de-autoridade-lei-nº-138692019">Lei de Abuso de Autoridade (Lei nº 13.869/2019)</h2>
-<p><em>Brazilian Abuse of Authority Law - Law No. 13,869/2019</em></p>
-
-<h3 id="art-9---illegal-deprivation-of-freedom">Art. 9 - Illegal Deprivation of Freedom</h3>
-<blockquote>
-  <p>Decretar medida de privação da liberdade em manifesta desconformidade com as hipóteses legais:</p>
-</blockquote>
-
-<p><strong>Pena</strong> - detenção, de 1 (um) a 4 (quatro) anos, e multa.</p>
-
-<h3 id="art-10---illegal-coercive-conduction">Art. 10 - Illegal Coercive Conduction</h3>
-<blockquote>
-  <p>Decretar a condução coercitiva de testemunha ou investigado manifestamente descabida ou sem prévia intimação de comparecimento ao juízo:</p>
-</blockquote>
-
-<p><strong>Pena</strong> - detenção, de 1 (um) a 4 (quatro) anos, e multa.</p>
-
-<h3 id="art-13---coercion-of-prisoners">Art. 13 - Coercion of Prisoners</h3>
-<blockquote>
-  <p>Constranger o preso ou o detento, mediante violência, grave ameaça ou redução de sua capacidade de resistência, a:</p>
-</blockquote>
-
-<p><strong>Pena</strong> - detenção, de 1 (um) a 4 (quatro) anos, e multa, sem prejuízo da pena cominada à violência.</p>
-
-<h3 id="art-22---illegal-home-invasion">Art. 22 - Illegal Home Invasion</h3>
-<blockquote>
-  <p>Invadir ou adentrar, clandestina ou astuciosamente, ou à revelia da vontade do ocupante, imóvel alheio ou suas dependências, ou nele permanecer nas mesmas condições, sem determinação judicial ou fora das condições estabelecidas em lei:</p>
-</blockquote>
-
-<p><strong>Pena</strong> - detenção, de 1 (um) a 4 (quatro) anos, e multa.</p>
-
-<h3 id="art-23---evidence-tampering">Art. 23 - Evidence Tampering</h3>
-<blockquote>
-  <p>Inovar artificiosamente, no curso de diligência, de investigação ou de processo, o estado de lugar, de coisa ou de pessoa, com o fim de eximir-se de responsabilidade ou de responsabilizar criminalmente alguém ou agravar-lhe a responsabilidade:</p>
-</blockquote>
-
-<p><strong>Pena</strong> - detenção, de 1 (um) a 4 (quatro) anos, e multa.</p>]]></content><author><name></name></author><category term="scratchpad" /></entry></feed>
+<p>For more information visit <a href="https://owncloud.dev/services/storage-users/configuration/">https://owncloud.dev/services/storage-users/configuration/</a></p>]]></content><author><name></name></author><category term="scratchpad" /></entry></feed>
