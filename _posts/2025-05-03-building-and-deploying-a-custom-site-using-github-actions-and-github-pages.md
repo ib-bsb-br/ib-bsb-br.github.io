@@ -1,14 +1,16 @@
 ---
-tags: [scratchpad]
+tags:
+- scratchpad
 info: aberto.
 date: 2025-05-03
 type: post
 layout: post
 published: true
 slug: building-and-deploying-a-custom-site-using-github-actions-and-github-pages
-title: 'Building and deploying a custom site using GitHub Actions and GitHub Pages'
+title: Building and deploying a custom site using GitHub Actions and GitHub Pages
+comment: https://til.simonwillison.net/github-actions/github-pages
 ---
-bibref https://til.simonwillison.net/github-actions/github-pages
+
 
 I figured out a minimal pattern for building a completely custom website using GitHub Actions and deploying the result to GitHub Pages.
 
