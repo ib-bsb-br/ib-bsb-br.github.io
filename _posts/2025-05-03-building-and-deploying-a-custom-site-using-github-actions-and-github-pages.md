@@ -11,6 +11,9 @@ title: Building and deploying a custom site using GitHub Actions and GitHub Page
 comment: https://til.simonwillison.net/github-actions/github-pages
 ---
 
+>also check `https://github.com/simonw/git-scraper-template`
+
+***
 
 I figured out a minimal pattern for building a completely custom website using GitHub Actions and deploying the result to GitHub Pages.
 
