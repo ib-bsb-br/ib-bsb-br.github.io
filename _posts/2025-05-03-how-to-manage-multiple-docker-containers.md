@@ -1,0 +1,143 @@
+---
+tags: [scratchpad]
+info: aberto.
+date: 2025-05-03
+type: post
+layout: post
+published: true
+slug: how-to-manage-multiple-docker-containers
+title: ' how to manage multiple Docker containers'
+---
+**1. Finding Your "Lost" Docker Containers**
+
+When you say you've "lost" containers, it usually means you don't know if they are running, what their names or IDs are, or how to connect to them. The first step is to list *all* containers Docker knows about, including stopped ones:
+
+```bash
+docker ps -a
+```
+
+*   `docker ps`: By itself, this command shows only *currently running* containers.
+*   `-a` (or `--all`): This flag is crucial; it shows *all* containers, running or stopped.
+
+The output will give you columns like:
+
+*   `CONTAINER ID`: A unique identifier. You can use the first few characters.
+*   `IMAGE`: The image the container was created from (e.g., `nginx`, `mysql`).
+*   `COMMAND`: The command the container is running or ran.
+*   `CREATED`: When the container was created.
+*   `STATUS`: Shows if it's `Up` (running) or `Exited` (stopped), along with how long.
+*   `PORTS`: Any port mappings.
+*   `NAMES`: Docker assigns a random two-word name if you don't provide one (e.g., `jolly_wozniak`).
+
+Look through this list to identify the containers you started. Note their `CONTAINER ID` or `NAMES`.
+
+**2. Running Containers Persistently (and Not Losing Them!)**
+
+To avoid losing track and ensure containers keep running after you start them, follow these practices:
+
+*   **Run in Detached Mode (`-d`):** This runs the container in the background, so it doesn't stop when you close your terminal.
+*   **Assign a Name (`--name`):** Give your containers memorable names. This makes them much easier to manage than using random names or long IDs.
+
+Example: Starting an Nginx web server container:
+
+```bash
+# docker run [options] <image_name> [command]
+docker run -d --name my-webserver nginx
+```
+
+*   `-d`: Detach (run in background).
+*   `--name my-webserver`: Assigns the name `my-webserver`.
+*   `nginx`: The image to use.
+
+Now, if you run `docker ps`, you should see `my-webserver` listed as `Up`.
+
+**3. Interacting with Running Containers ("Switching")**
+
+"Switching" between containers means changing which container you are interacting with. Since containers run concurrently in the background (when started with `-d`), you use commands to execute commands *inside* a specific container or attach to its main process.
+
+*   **`docker exec` (Recommended for Interaction):** This command executes a *new* command inside an *already running* container. It's the safest and most common way to get a shell or run utilities inside a container without disturbing its main process.
+
+    ```bash
+    # docker exec [options] <container_name_or_id> <command>
+    docker exec -it my-webserver /bin/bash
+    ```
+
+    *   `-i` (interactive): Keeps STDIN open even if not attached.
+    *   `-t` (tty): Allocates a pseudo-TTY (makes it look like a normal terminal session).
+    *   `my-webserver`: The name of the container you want to enter.
+    *   `/bin/bash`: The command to run inside the container (you might need `/bin/sh` if bash isn't installed in the minimal image).
+
+    You are now "inside" the `my-webserver` container. You can run commands there.
+
+*   **Detaching Safely:** To leave the container's shell (from `docker exec -it`) without stopping it, press the key sequence: `Ctrl + P`, then `Ctrl + Q`. You'll return to your host system's prompt, and the container keeps running.
+
+*   **`docker attach` (Use with Caution):** This command attaches your terminal's standard input, output, and error streams directly to the *main process* running inside the container (the one started by `docker run`).
+    *   **Risk:** If you exit this attached shell (e.g., using `exit` or `Ctrl+D`), and that causes the container's main process to terminate, the container *will stop*.
+    *   Generally, prefer `docker exec` for interactive shells. `attach` is more for seeing the direct output of the main process.
+
+    ```bash
+    # docker attach <container_name_or_id>
+    docker attach my-webserver
+    ```
+    (Again, use `Ctrl+P, Ctrl+Q` to detach without stopping).
+
+**4. Viewing Container Logs**
+
+To see the output (logs) from a container's main process, especially for detached containers:
+
+```bash
+# See all logs
+docker logs <container_name_or_id>
+
+# Follow logs in real-time (like tail -f)
+docker logs -f <container_name_or_id>
+```
+
+Example: `docker logs -f my-webserver`
+
+**5. Managing Container Lifecycle (Stopping and Removing)**
+
+*   **Stopping a Container:**
+    ```bash
+    docker stop <container_name_or_id>
+    ```
+    This sends a SIGTERM signal, then a SIGKILL after a grace period.
+
+*   **Starting a Stopped Container:**
+    ```bash
+    docker start <container_name_or_id>
+    ```
+
+*   **Removing a Stopped Container:** You can only remove stopped containers unless you force it.
+    ```bash
+    docker rm <container_name_or_id>
+    ```
+
+*   **Removing a Running Container (Force):** Use with caution, data may be lost.
+    ```bash
+    docker rm -f <container_name_or_id>
+    ```
+
+*   **Cleaning Up:** To remove all stopped containers:
+    ```bash
+    docker container prune
+    ```
+    (It will ask for confirmation).
+
+**6. Broader Context: KVM/QEMU and Buildroot**
+
+*   **KVM/QEMU:** Managing KVM/QEMU virtual machines is separate from Docker. You'll use different tools, typically `libvirt` (with `virsh` command-line tool) or direct `qemu-system-*` commands. Docker containers share the host kernel; KVM VMs run full separate OS instances with virtualized hardware. They can run concurrently with Docker containers if your system has enough resources (CPU, RAM).
+*   **Buildroot System:** Since you're on a custom Buildroot system, be mindful of resource constraints. It's likely a minimal environment. Running many Docker containers *and* KVM virtual machines simultaneously might strain CPU, RAM, and disk I/O. Ensure Docker Engine and KVM/QEMU packages were correctly included and configured in your Buildroot build.
+
+**Summary of Key Docker Commands for Your Goal:**
+
+*   Find all containers: `docker ps -a`
+*   Start container in background with a name: `docker run -d --name <your_name> <image>`
+*   See running containers: `docker ps`
+*   Interact with a running container: `docker exec -it <name_or_id> /bin/sh` (or `/bin/bash`)
+*   Detach from interaction: `Ctrl+P, Ctrl+Q`
+*   View logs: `docker logs <name_or_id>` (add `-f` to follow)
+*   Stop container: `docker stop <name_or_id>`
+*   Remove stopped container: `docker rm <name_or_id>`
+
+By using detached mode (`-d`) and naming (`--name`) consistently, and utilizing `docker ps -a` to find things, you should be able to manage and "switch" between your Docker containers effectively. Remember that KVM management is a separate task using different tools.
