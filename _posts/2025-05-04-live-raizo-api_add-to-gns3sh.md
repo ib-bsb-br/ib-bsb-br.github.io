@@ -1,14 +1,16 @@
 ---
-tags: [scratchpad]
+tags:
+- scratchpad
 info: aberto.
 date: 2025-05-04
 type: post
 layout: post
 published: true
 slug: live-raizo-api_add-to-gns3sh
-title: 'Live Raizo - API_Add-to-GNS3.sh'
+title: Live Raizo - API_Add-to-GNS3.sh
+comment: https://sourceforge.net/p/live-raizo/wiki/API_Add-to-GNS3.sh/
 ---
-bibref: https://sourceforge.net/p/live-raizo/wiki/API_Add-to-GNS3.sh/
+
 
 Explanations
 ------------
