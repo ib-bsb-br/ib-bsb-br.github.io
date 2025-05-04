@@ -1,14 +1,16 @@
 ---
-tags: [scratchpad]
+tags:
+- scratchpad
 info: aberto.
 date: 2025-05-04
 type: post
 layout: post
 published: true
 slug: live-raizo-commands
-title: 'Live Raizo - Commands'
+title: Live Raizo - Commands
+comment: https://sourceforge.net/p/live-raizo/wiki/Commands/
 ---
-bibref: https://sourceforge.net/p/live-raizo/wiki/Commands/
+
 
 Network
 -------
