@@ -1,4 +1,253 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2025-05-03T23:39:19+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">BIOS settings for improved performance on GMKtec G5 (Intel N97)</title><link href="https://ib.bsb.br/bios-settings-for-improved-performance-on-gmktec-g5-intel-n97/" rel="alternate" type="text/html" title="BIOS settings for improved performance on GMKtec G5 (Intel N97)" /><published>2025-05-03T00:00:00+00:00</published><updated>2025-05-03T16:57:38+00:00</updated><id>https://ib.bsb.br/bios-settings-for-improved-performance-on-gmktec-g5-intel-n97</id><content type="html" xml:base="https://ib.bsb.br/bios-settings-for-improved-performance-on-gmktec-g5-intel-n97/"><![CDATA[<p>Tuning BIOS settings can potentially enhance performance, but it requires careful adjustments and testing, especially on compact systems like the GMKtec G5 with its Intel N97 processor [Intel Alder Lake-N N97 CPU BIOS optimization: organic[1]]. Pushing settings too aggressively can lead to instability, overheating, or reduced component lifespan.</p>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2025-05-04T09:16:55+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">How to integrate WiFi support into the SBNB bridge-based networking setup</title><link href="https://ib.bsb.br/how-to-integrate-wifi-support-into-the-sbnb-bridge-based-networking-setup/" rel="alternate" type="text/html" title="How to integrate WiFi support into the SBNB bridge-based networking setup" /><published>2025-05-04T00:00:00+00:00</published><updated>2025-05-04T09:14:14+00:00</updated><id>https://ib.bsb.br/how-to-integrate-wifi-support-into-the-sbnb-bridge-based-networking-setup</id><content type="html" xml:base="https://ib.bsb.br/how-to-integrate-wifi-support-into-the-sbnb-bridge-based-networking-setup/"><![CDATA[<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c">#!/bin/bash</span>
+
+<span class="c"># sbnb-configure-networking.sh (Revised)</span>
+<span class="c"># Configures host networking for SBNB, dynamically detecting and supporting</span>
+<span class="c"># the first available Ethernet and/or WiFi interface.</span>
+<span class="c"># Creates a bridge interface (br0) and attaches detected interfaces.</span>
+<span class="c"># Includes WPA Supplicant setup for WiFi.</span>
+<span class="c"># Aims for idempotency and provides informative output.</span>
+<span class="c">#</span>
+<span class="c"># To integrate with SBNB, this script can be added to the ESP partition</span>
+<span class="c"># as sbnb-cmds.sh during the SBNB installation process.</span>
+
+<span class="c"># --- Configuration Variables ---</span>
+<span class="c"># Adjust if wpa_supplicant is elsewhere or a different group is needed</span>
+<span class="nv">WPA_SUPPLICANT_PATH</span><span class="o">=</span><span class="si">$(</span><span class="nb">command</span> <span class="nt">-v</span> wpa_supplicant<span class="si">)</span>
+<span class="nv">WPA_CTRL_GROUP</span><span class="o">=</span><span class="s2">"wheel"</span> <span class="c"># Common groups: wheel, netdev. Verify for your system.</span>
+<span class="nv">WPA_CONF_DIR</span><span class="o">=</span><span class="s2">"/etc/wpa_supplicant"</span>
+<span class="nv">NETWORKD_CONF_DIR</span><span class="o">=</span><span class="s2">"/etc/systemd/network"</span>
+
+<span class="c"># Exit on error, treat unset variables as errors, and ensure pipelines fail on error</span>
+<span class="nb">set</span> <span class="nt">-euo</span> pipefail
+
+<span class="c"># --- Helper Functions ---</span>
+log_info<span class="o">()</span> <span class="o">{</span>
+    <span class="nb">echo</span> <span class="s2">"[INFO] </span><span class="nv">$1</span><span class="s2">"</span>
+<span class="o">}</span>
+
+log_warn<span class="o">()</span> <span class="o">{</span>
+    <span class="nb">echo</span> <span class="s2">"[WARN] </span><span class="nv">$1</span><span class="s2">"</span>
+<span class="o">}</span>
+
+log_error<span class="o">()</span> <span class="o">{</span>
+    <span class="nb">echo</span> <span class="s2">"[ERROR] </span><span class="nv">$1</span><span class="s2">"</span> <span class="o">&gt;</span>&amp;2
+    <span class="nb">exit </span>1
+<span class="o">}</span>
+
+<span class="c"># Function to safely restart or reload systemd services</span>
+manage_service<span class="o">()</span> <span class="o">{</span>
+    <span class="nb">local </span><span class="nv">action</span><span class="o">=</span><span class="s2">"</span><span class="nv">$1</span><span class="s2">"</span> <span class="c"># e.g., restart, reload, enable</span>
+    <span class="nb">local </span><span class="nv">service</span><span class="o">=</span><span class="s2">"</span><span class="nv">$2</span><span class="s2">"</span>
+    log_info <span class="s2">"Attempting to </span><span class="nv">$action</span><span class="s2"> </span><span class="nv">$service</span><span class="s2">..."</span>
+    <span class="nb">set</span> +e <span class="c"># Temporarily disable exit on error</span>
+    systemctl <span class="s2">"</span><span class="nv">$action</span><span class="s2">"</span> <span class="s2">"</span><span class="nv">$service</span><span class="s2">"</span>
+    <span class="nb">local </span><span class="nv">status</span><span class="o">=</span><span class="nv">$?</span>
+    <span class="nb">set</span> <span class="nt">-e</span> <span class="c"># Re-enable exit on error</span>
+    <span class="k">if</span> <span class="o">[</span> <span class="nv">$status</span> <span class="nt">-ne</span> 0 <span class="o">]</span><span class="p">;</span> <span class="k">then
+        </span>log_warn <span class="s2">"Command 'systemctl </span><span class="nv">$action</span><span class="s2"> </span><span class="nv">$service</span><span class="s2">' failed with status </span><span class="nv">$status</span><span class="s2">. Check logs ('journalctl -u </span><span class="nv">$service</span><span class="s2">')."</span>
+    <span class="k">else
+        </span>log_info <span class="s2">"Successfully executed 'systemctl </span><span class="nv">$action</span><span class="s2"> </span><span class="nv">$service</span><span class="s2">'."</span>
+    <span class="k">fi
+    return</span> <span class="nv">$status</span>
+<span class="o">}</span>
+
+<span class="c"># --- Main Configuration Logic ---</span>
+configure_host_networking<span class="o">()</span> <span class="o">{</span>
+    log_info <span class="s2">"Starting SBNB network configuration..."</span>
+
+    <span class="c"># Check prerequisites</span>
+    <span class="k">if</span> <span class="o">[</span> <span class="nt">-z</span> <span class="s2">"</span><span class="nv">$WPA_SUPPLICANT_PATH</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then
+        </span>log_error <span class="s2">"wpa_supplicant command not found. Please install it."</span>
+    <span class="k">fi
+    </span><span class="nb">command</span> <span class="nt">-v</span> ip <span class="o">&gt;</span>/dev/null <span class="o">||</span> log_error <span class="s2">"'ip' command not found (iproute2 package?)."</span>
+    <span class="nb">command</span> <span class="nt">-v</span> <span class="nb">awk</span> <span class="o">&gt;</span>/dev/null <span class="o">||</span> log_error <span class="s2">"'awk' command not found."</span>
+    <span class="nb">command</span> <span class="nt">-v</span> <span class="nb">cut</span> <span class="o">&gt;</span>/dev/null <span class="o">||</span> log_error <span class="s2">"'cut' command not found."</span>
+
+    <span class="c"># Ensure configuration directories exist</span>
+    <span class="nb">mkdir</span> <span class="nt">-p</span> <span class="s2">"</span><span class="nv">$NETWORKD_CONF_DIR</span><span class="s2">"</span>
+    <span class="nb">mkdir</span> <span class="nt">-p</span> <span class="s2">"</span><span class="nv">$WPA_CONF_DIR</span><span class="s2">"</span>
+
+    <span class="c"># --- Bridge Configuration (br0) ---</span>
+    <span class="nb">local </span><span class="nv">bridge_netdev_file</span><span class="o">=</span><span class="s2">"</span><span class="k">${</span><span class="nv">NETWORKD_CONF_DIR</span><span class="k">}</span><span class="s2">/25-br0.netdev"</span>
+    <span class="nb">local </span><span class="nv">bridge_network_file</span><span class="o">=</span><span class="s2">"</span><span class="k">${</span><span class="nv">NETWORKD_CONF_DIR</span><span class="k">}</span><span class="s2">/25-br0.network"</span>
+    <span class="nb">local </span><span class="nv">bridge_link_file</span><span class="o">=</span><span class="s2">"</span><span class="k">${</span><span class="nv">NETWORKD_CONF_DIR</span><span class="k">}</span><span class="s2">/25-br0.link"</span>
+
+    <span class="k">if</span> <span class="o">[</span> <span class="nt">-f</span> <span class="s2">"</span><span class="nv">$bridge_netdev_file</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then
+        </span>log_info <span class="s2">"Bridge br0 configuration files already exist. Skipping bridge creation."</span>
+    <span class="k">else
+        </span>log_info <span class="s2">"Creating bridge br0 configuration files..."</span>
+        <span class="c"># systemd-networkd processes files in lexical order. Prefixes ensure correct ordering.</span>
+        <span class="c"># 25-* files define the bridge device and its network settings.</span>
+        <span class="nb">cat</span> <span class="o">&gt;</span> <span class="s2">"</span><span class="nv">$bridge_netdev_file</span><span class="s2">"</span> <span class="o">&lt;&lt;</span> <span class="no">EOF</span><span class="sh">
+[NetDev]
+Name=br0
+Kind=bridge
+</span><span class="no">EOF
+
+</span>        <span class="nb">cat</span> <span class="o">&gt;</span> <span class="s2">"</span><span class="nv">$bridge_network_file</span><span class="s2">"</span> <span class="o">&lt;&lt;</span> <span class="no">EOF</span><span class="sh">
+[Match]
+Name=br0
+
+[Network]
+DHCP=yes
+# If static IP is needed, comment DHCP=yes and uncomment below:
+# Address=192.168.1.100/24
+# Gateway=192.168.1.1
+# DNS=1.1.1.1
+# DNS=8.8.8.8
+</span><span class="no">EOF
+
+</span>        <span class="nb">cat</span> <span class="o">&gt;</span> <span class="s2">"</span><span class="nv">$bridge_link_file</span><span class="s2">"</span> <span class="o">&lt;&lt;</span> <span class="no">EOF</span><span class="sh">
+[Match]
+# Match based on the interface name generated by the .netdev file
+OriginalName=br0
+
+[Link]
+# MACAddressPolicy=none: Prevent systemd-networkd from assigning a potentially
+# unstable MAC based on the bridge name. The bridge will use the MAC of the
+# first enslaved interface or remain 00:00:00:00:00:00 until an interface joins.
+MACAddressPolicy=none
+</span><span class="no">EOF
+</span>        log_info <span class="s2">"Bridge br0 configuration files created."</span>
+    <span class="k">fi</span>
+
+    <span class="c"># --- Ethernet Interface Configuration ---</span>
+    <span class="c"># Find the first available Ethernet interface</span>
+    <span class="nv">ETH_INTERFACE</span><span class="o">=</span><span class="si">$(</span>ip <span class="nt">-o</span> <span class="nb">link </span>show <span class="nb">type </span>ether | <span class="nb">awk</span> <span class="s1">'NR==1{print $2}'</span> | <span class="nb">cut</span> <span class="nt">-d</span>: <span class="nt">-f1</span> <span class="o">||</span> <span class="nb">true</span><span class="si">)</span>
+
+    <span class="k">if</span> <span class="o">[</span> <span class="nt">-n</span> <span class="s2">"</span><span class="nv">$ETH_INTERFACE</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then
+        </span>log_info <span class="s2">"Ethernet interface '</span><span class="nv">$ETH_INTERFACE</span><span class="s2">' detected."</span>
+        <span class="nb">local </span><span class="nv">eth_network_file</span><span class="o">=</span><span class="s2">"</span><span class="k">${</span><span class="nv">NETWORKD_CONF_DIR</span><span class="k">}</span><span class="s2">/30-</span><span class="k">${</span><span class="nv">ETH_INTERFACE</span><span class="k">}</span><span class="s2">-br0.network"</span>
+        <span class="k">if</span> <span class="o">[</span> <span class="o">!</span> <span class="nt">-f</span> <span class="s2">"</span><span class="nv">$eth_network_file</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then
+            </span>log_info <span class="s2">"Configuring '</span><span class="nv">$ETH_INTERFACE</span><span class="s2">' to join bridge br0..."</span>
+            <span class="c"># 30-* file attaches the physical interface to the bridge.</span>
+            <span class="nb">cat</span> <span class="o">&gt;</span> <span class="s2">"</span><span class="nv">$eth_network_file</span><span class="s2">"</span> <span class="o">&lt;&lt;</span> <span class="no">EOF</span><span class="sh">
+[Match]
+Name=</span><span class="k">${</span><span class="nv">ETH_INTERFACE</span><span class="k">}</span><span class="sh">
+
+[Network]
+Bridge=br0
+</span><span class="no">EOF
+</span>        <span class="k">else
+            </span>log_info <span class="s2">"Configuration for '</span><span class="nv">$ETH_INTERFACE</span><span class="s2">' already exists."</span>
+        <span class="k">fi
+    else
+        </span>log_info <span class="s2">"No active Ethernet interface detected."</span>
+    <span class="k">fi</span>
+
+    <span class="c"># --- WiFi Interface Configuration ---</span>
+    <span class="c"># Find the first available WiFi interface</span>
+    <span class="nv">WIFI_INTERFACE</span><span class="o">=</span><span class="si">$(</span>ip <span class="nt">-o</span> <span class="nb">link </span>show <span class="nb">type </span>wlan | <span class="nb">awk</span> <span class="s1">'NR==1{print $2}'</span> | <span class="nb">cut</span> <span class="nt">-d</span>: <span class="nt">-f1</span> <span class="o">||</span> <span class="nb">true</span><span class="si">)</span>
+
+    <span class="k">if</span> <span class="o">[</span> <span class="nt">-n</span> <span class="s2">"</span><span class="nv">$WIFI_INTERFACE</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then
+        </span>log_info <span class="s2">"WiFi interface '</span><span class="nv">$WIFI_INTERFACE</span><span class="s2">' detected."</span>
+        log_info <span class="s2">"Note: Ensure necessary WiFi drivers and firmware are loaded for '</span><span class="k">${</span><span class="nv">WIFI_INTERFACE</span><span class="k">}</span><span class="s2">'."</span>
+        log_info <span class="s2">"Check 'dmesg | grep -i firmware' or 'lspci/lsusb' output if issues arise."</span>
+
+        <span class="nb">local </span><span class="nv">wpa_conf_file</span><span class="o">=</span><span class="s2">"</span><span class="k">${</span><span class="nv">WPA_CONF_DIR</span><span class="k">}</span><span class="s2">/wpa_supplicant-</span><span class="k">${</span><span class="nv">WIFI_INTERFACE</span><span class="k">}</span><span class="s2">.conf"</span>
+        <span class="nb">local </span><span class="nv">wpa_service_file</span><span class="o">=</span><span class="s2">"/etc/systemd/system/wpa_supplicant@</span><span class="k">${</span><span class="nv">WIFI_INTERFACE</span><span class="k">}</span><span class="s2">.service"</span>
+        <span class="nb">local </span><span class="nv">wifi_network_file</span><span class="o">=</span><span class="s2">"</span><span class="k">${</span><span class="nv">NETWORKD_CONF_DIR</span><span class="k">}</span><span class="s2">/35-</span><span class="k">${</span><span class="nv">WIFI_INTERFACE</span><span class="k">}</span><span class="s2">-br0.network"</span>
+
+        <span class="c"># Create WPA Supplicant configuration template if not present</span>
+        <span class="k">if</span> <span class="o">[</span> <span class="o">!</span> <span class="nt">-f</span> <span class="s2">"</span><span class="nv">$wpa_conf_file</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then
+            </span>log_info <span class="s2">"Creating WPA Supplicant configuration template at </span><span class="k">${</span><span class="nv">wpa_conf_file</span><span class="k">}</span><span class="s2">..."</span>
+            <span class="nb">cat</span> <span class="o">&gt;</span> <span class="s2">"</span><span class="nv">$wpa_conf_file</span><span class="s2">"</span> <span class="o">&lt;&lt;</span> <span class="no">EOF</span><span class="sh">
+# Configuration for </span><span class="k">${</span><span class="nv">WIFI_INTERFACE</span><span class="k">}</span><span class="sh"> managed by wpa_supplicant
+ctrl_interface=/run/wpa_supplicant
+ctrl_interface_group=</span><span class="k">${</span><span class="nv">WPA_CTRL_GROUP</span><span class="k">}</span><span class="sh">
+update_config=1
+
+network={
+    ssid="YOUR_WIFI_SSID"
+    psk="YOUR_WIFI_PASSWORD"
+    key_mgmt=WPA-PSK
+    # --- Example for WPA2/WPA3 Personal (SAE - optional) ---
+    # Adjust key_mgmt as needed, e.g., key_mgmt=WPA-PSK WPA-PSK-SHA256 SAE
+    # psk= can be replaced by a passphrase= for WPA3 SAE if supported
+    # --- Example for WPA Enterprise (EAP-PEAP/MSCHAPv2) ---
+    # For enterprise networks, comment out psk= and key_mgmt= above
+    # and add appropriate settings like below (adjust as needed):
+    # proto=RSN WPA
+    # key_mgmt=WPA-EAP
+    # pairwise=CCMP TKIP
+    # group=CCMP TKIP
+    # eap=PEAP
+    # identity="your_username"
+    # password="your_password"
+    # phase1="peaplabel=0"
+    # phase2="auth=MSCHAPV2"
+}
+</span><span class="no">EOF
+</span>            <span class="nb">chmod </span>600 <span class="s2">"</span><span class="nv">$wpa_conf_file</span><span class="s2">"</span>
+            log_warn <span class="s2">"IMPORTANT: Edit </span><span class="k">${</span><span class="nv">wpa_conf_file</span><span class="k">}</span><span class="s2"> with your actual WiFi credentials."</span>
+        <span class="k">else
+            </span>log_info <span class="s2">"WPA Supplicant configuration already exists at </span><span class="k">${</span><span class="nv">wpa_conf_file</span><span class="k">}</span><span class="s2">."</span>
+        <span class="k">fi</span>
+
+        <span class="c"># Configure wlan interface to join bridge br0</span>
+        <span class="k">if</span> <span class="o">[</span> <span class="o">!</span> <span class="nt">-f</span> <span class="s2">"</span><span class="nv">$wifi_network_file</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then
+            </span>log_info <span class="s2">"Configuring '</span><span class="nv">$WIFI_INTERFACE</span><span class="s2">' to join bridge br0..."</span>
+            <span class="c"># 35-* file attaches the WiFi interface to the bridge.</span>
+            <span class="nb">cat</span> <span class="o">&gt;</span> <span class="s2">"</span><span class="nv">$wifi_network_file</span><span class="s2">"</span> <span class="o">&lt;&lt;</span> <span class="no">EOF</span><span class="sh">
+[Match]
+Name=</span><span class="k">${</span><span class="nv">WIFI_INTERFACE</span><span class="k">}</span><span class="sh">
+
+[Network]
+Bridge=br0
+</span><span class="no">EOF
+</span>        <span class="k">else
+            </span>log_info <span class="s2">"Network configuration for '</span><span class="nv">$WIFI_INTERFACE</span><span class="s2">' already exists."</span>
+        <span class="k">fi</span>
+
+        <span class="c"># Create systemd service for WPA Supplicant if not present</span>
+        <span class="nb">local </span><span class="nv">wpa_service_name</span><span class="o">=</span><span class="s2">"wpa_supplicant@</span><span class="k">${</span><span class="nv">WIFI_INTERFACE</span><span class="k">}</span><span class="s2">.service"</span>
+        <span class="k">if</span> <span class="o">[</span> <span class="o">!</span> <span class="nt">-f</span> <span class="s2">"</span><span class="nv">$wpa_service_file</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then
+            </span>log_info <span class="s2">"Creating systemd service file for </span><span class="k">${</span><span class="nv">wpa_service_name</span><span class="k">}</span><span class="s2">..."</span>
+            <span class="nb">cat</span> <span class="o">&gt;</span> <span class="s2">"</span><span class="nv">$wpa_service_file</span><span class="s2">"</span> <span class="o">&lt;&lt;</span> <span class="no">EOF</span><span class="sh">
+[Unit]
+Description=WPA Supplicant daemon for </span><span class="k">${</span><span class="nv">WIFI_INTERFACE</span><span class="k">}</span><span class="sh">
+Requires=sys-subsystem-net-devices-</span><span class="k">${</span><span class="nv">WIFI_INTERFACE</span><span class="k">}</span><span class="sh">.device
+After=sys-subsystem-net-devices-</span><span class="k">${</span><span class="nv">WIFI_INTERFACE</span><span class="k">}</span><span class="sh">.device
+Before=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+ExecStart=</span><span class="k">${</span><span class="nv">WPA_SUPPLICANT_PATH</span><span class="k">}</span><span class="sh"> -c</span><span class="k">${</span><span class="nv">wpa_conf_file</span><span class="k">}</span><span class="sh"> -i</span><span class="k">${</span><span class="nv">WIFI_INTERFACE</span><span class="k">}</span><span class="sh">
+Restart=on-failure
+RestartSec=1
+
+[Install]
+WantedBy=multi-user.target
+</span><span class="no">EOF
+</span>            systemctl daemon-reload
+            manage_service <span class="s2">"enable"</span> <span class="s2">"</span><span class="nv">$wpa_service_name</span><span class="s2">"</span>
+        <span class="k">else
+            </span>log_info <span class="s2">"Systemd service file for </span><span class="k">${</span><span class="nv">wpa_service_name</span><span class="k">}</span><span class="s2"> already exists."</span>
+        <span class="k">fi</span>
+        <span class="c"># Always try to restart WPA supplicant if WiFi interface is detected and configured</span>
+        manage_service “restart” “<span class="nv">$wpa_service_name</span>”
+
+    <span class="k">else
+        </span>log_info “No active WiFi interface detected.”
+    <span class="k">fi</span>
+
+    <span class="c"># — Apply Network Configuration —</span>
+    log_info “Applying network configuration changes...”
+    <span class="c"># Use ‘networkctl reload’ which is often sufficient and less disruptive than restarting the whole service</span>
+    networkctl reload <span class="o">||</span> manage_service “restart” “systemd-networkd.service”
+
+    log_info “SBNB network configuration script finished.”
+    <span class="k">if</span> <span class="o">[</span> <span class="nt">-n</span> “<span class="nv">$WIFI_INTERFACE</span>” <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="o">[</span> <span class="o">!</span> <span class="nt">-f</span> “<span class="nv">$wpa_conf_file</span>”.edited <span class="o">]</span><span class="p">;</span> <span class="k">then
+         </span>log_warn “Remember to edit ‘<span class="k">${</span><span class="nv">wpa_conf_file</span><span class="k">}</span>’ with your WiFi credentials <span class="k">if </span>you haven’t already.”
+         <span class="c"># Simple flag to avoid repeating the warning on subsequent runs</span>
+         <span class="nb">touch</span> “<span class="nv">$wpa_conf_file</span>”.edited <span class="o">&gt;</span> /dev/null 2&gt;&amp;1 <span class="o">||</span> <span class="nb">true
+    </span><span class="k">fi</span>
+<span class="o">}</span>
+
+<span class="c"># — Execute Main Logic —</span>
+configure_host_networking
+</code></pre></div></div>]]></content><author><name></name></author><category term="scratchpad" /></entry><entry><title type="html">BIOS settings for improved performance on GMKtec G5 (Intel N97)</title><link href="https://ib.bsb.br/bios-settings-for-improved-performance-on-gmktec-g5-intel-n97/" rel="alternate" type="text/html" title="BIOS settings for improved performance on GMKtec G5 (Intel N97)" /><published>2025-05-03T00:00:00+00:00</published><updated>2025-05-03T16:57:38+00:00</updated><id>https://ib.bsb.br/bios-settings-for-improved-performance-on-gmktec-g5-intel-n97</id><content type="html" xml:base="https://ib.bsb.br/bios-settings-for-improved-performance-on-gmktec-g5-intel-n97/"><![CDATA[<p>Tuning BIOS settings can potentially enhance performance, but it requires careful adjustments and testing, especially on compact systems like the GMKtec G5 with its Intel N97 processor [Intel Alder Lake-N N97 CPU BIOS optimization: organic[1]]. Pushing settings too aggressively can lead to instability, overheating, or reduced component lifespan.</p>
 
 <p><strong>Important Disclaimers &amp; Prerequisites:</strong></p>
 
@@ -2198,136 +2447,4 @@ trap - EXIT HUP INT TERM
 cleanup # Perform cleanup explicitly on successful exit
 
 exit 0</code>
-</section>]]></content><author><name></name></author><category term="scratchpad" /></entry><entry><title type="html">WinNTSetup - universal Windows Installer</title><link href="https://ib.bsb.br/winntsetup-universal-windows-installer/" rel="alternate" type="text/html" title="WinNTSetup - universal Windows Installer" /><published>2025-04-30T00:00:00+00:00</published><updated>2025-04-30T10:21:18+00:00</updated><id>https://ib.bsb.br/winntsetup-universal-windows-installer</id><content type="html" xml:base="https://ib.bsb.br/winntsetup-universal-windows-installer/"><![CDATA[<p><strong>Features:</strong></p>
-
-<ul>
-  <li>Install (unattend) Windows 2k/XP/20??/Vista/7/8.x/10/11 x86/x64/arm64</li>
-  <li>Practically runs even on the most minimalistic WinPE</li>
-  <li>selectable drive letter for the new Windows installation</li>
-  <li>Fully automated with save/load setting in ini file and various command line options</li>
-  <li>Install Windows also if nlite/vlite has remove winnt32.exe/setup.exe</li>
-  <li>Integrate Drivers: normal PNP and Textmode Drivers</li>
-  <li>Patch uxtheme to allow unsigned Themes</li>
-  <li>Some common registry tweaks and *.reg file import</li>
-  <li>DISM APPX  removal, feature enable/disable</li>
-  <li>Simple VHD creation and Installation</li>
-  <li>Support “Windows to Go” for Windows 7 and later installs</li>
-  <li>Supports WimBoot and CompactOS option for Windows 7 and later</li>
-  <li>Supports all current WIM files: WIM/SWM/ESD and ISO files</li>
-  <li>WinCapture - capture a Windows installation to WIM or ESD file</li>
-  <li>MinWin - simple trimming WIM in memory before apply</li>
-  <li>WinCopy - copy an existing Windows installation to another partition</li>
-  <li>Offline Hotfix uninstall</li>
-  <li>Offline password reset</li>
-</ul>
-
-<p><strong>Not Supported:</strong></p>
-
-<ul>
-  <li>- No Windows embedded version (this includes WinFLP)</li>
-  <li>- No upgrades of existing installations</li>
-</ul>
-
-<p><strong>About driver installation:</strong></p>
-
-<p>Every driver added in NT6.x windows will be added to the driver store.<br />
-So it’s not recommended to add countless driver, but rather more really required ones.</p>
-
-<p>NT5.x massstorage driver integration is possible thanks to <strong>Mr dUSHA</strong> powerful <strong>MSSTMake.exe</strong> tool</p>
-
-<p><strong>To the Unattend option:</strong>It’s possible to use an <strong>unattend.xml</strong> to run the Setup unattended.<br />
-But as the actual WinPE Setup Phase isn’t effective in that way of install, all Winpe related settings inside the unattend.xml<br />
-won’t be applied.</p>
-
-<p><strong>Ini config file</strong>It’s possible to save all GUI-settings to a ini file:</p>
-
-<p>push <strong>Ctrl + S</strong> to <strong>save</strong> all settings to an ini.<br />
-push <strong>Ctrl + L</strong> to <strong>load</strong> all settings from an ini.</p>
-
-<p>A <strong>WinNTSetup.ini</strong> file in the same dir as the app itself will be loaded automatically at startup.</p>
-
-<p>It also can be selected via command line:</p>
-
-<p>WinNTSetup.exe /cfg:”C:\mysettings.ini”</p>
-
-<p>If you want to modify ini settings yourself, click-click has made a nice <a href="https://www.mediafire.com/file/znuf574scdac94d/WinNTGUI2Ini.pdf/file">PDF</a> for it.</p>
-
-<p>For advanced users there are also hidden settings described in the included WinNTSetup.ini.txt</p>
-
-<p><strong>Command line:</strong></p>
-
-<p>- Press F1 to get list of all options</p>
-
-<p><strong>To install Windows in a VHD file:</strong>- requires Windows 7 as OS and <strong>Windows 7 Ultimate, Enterprise or Server 2008 R2</strong> as Source<br />
-- create a partitioned VHD and assign a drive letter (push Ctrl + Shift + V to use build in diskpart wrapper for this)<br />
-- select the VHD drive as installation drive (make sure you boot drive ist a active primary partition on a physical disk)</p>
-
-<p>If you get an Antivirus warning from your AV software, please report it to them as a false positive and let them check it.</p>
-
-<p><strong>Current Version: 5.4.1</strong></p>
-
-<p>Download: <a href="https://mega.nz/folder/ObATya7C#oR2t79bT-4MGjKxOAYwkbQ">Mega</a> - <a href="https://www.mediafire.com/folder/53um6k2nmhvd5/">MediaFire</a></p>
-
-<p><strong>Edited December 29, 2024 by JFX</strong></p>
-
-<p>21</p>
-
-<p><a href="https://msfn.org/board/profile/25215-jaclaz/" title="Go to jaclaz's profile"><img src="https://msfn.org/board/uploads/monthly_2017_08/Jgray.thumb.jpg.8353b51d429039be7eaa0a7da3fbd3fe.jpg" alt="Image 4: jaclaz" /></a></p>
-
-<p>It looks like a nice tool. <a href="https://msfn.org/board/uploads/emoticons/default_thumbup.gif" title="Enlarge image"><img src="https://msfn.org/board/applications/core/interface/js/spacer.png" alt="Image 5: :thumbup" /></a></p>
-
-<p>And it shouldn’t be dedicated to “USB only”, if I am not mistaken. <a href="https://msfn.org/board/uploads/emoticons/default_unsure.png" title="Enlarge image"><img src="https://msfn.org/board/applications/core/interface/js/spacer.png" alt="Image 6: :unsure:" /></a></p>
-
-<p>Let’s hope that whoever tests it will be so kind as to (please read as “anyone testing it please do”) provide - for the benefit of the less expereinced users - some details on the various available options, and their usage.</p>
-
-<p>Usual bothering request to the developer <a href="https://msfn.org/board/uploads/emoticons/default_blushing.gif" title="Enlarge image"><img src="https://msfn.org/board/applications/core/interface/js/spacer.png" alt="Image 7: :blushing:" /></a> :</p>
-
-<ul>
-  <li>Any chance that it will ever support command line? (or provide a pre-set in the form of a .ini file?) <a href="https://msfn.org/board/uploads/emoticons/default_whistling.gif" title="Enlarge image"><img src="https://msfn.org/board/applications/core/interface/js/spacer.png" alt="Image 8: :whistle:" /></a></li>
-</ul>
-
-<p>jaclaz</p>
-
-<p><a href="https://msfn.org/board/profile/314753-jfx/" title="Go to JFX's profile"><img src="https://msfn.org/board/uploads/monthly_2025_01/avatar_small.thumb.png.54db03064974c08ad6356a340b1173b3.png" alt="Image 9: JFX" /></a></p>
-
-<ul>
-  <li><strong>Author</strong></li>
-</ul>
-
-<blockquote>
-  <p>And it shouldn’t be dedicated to “USB only”, if I am not mistaken. <a href="https://msfn.org/board/uploads/emoticons/default_unsure.png" title="Enlarge image"><img src="https://msfn.org/board/applications/core/interface/js/spacer.png" alt="Image 10: :unsure:" /></a></p>
-</blockquote>
-
-<p>Well, you right, not the most correct forum section</p>
-
-<blockquote>
-  <p>Let’s hope that whoever tests it will be so kind as to (please read as “anyone testing it please do”) provide - for the benefit of the less expereinced users - some details on the various available options, and their usage.</p>
-</blockquote>
-
-<p>hmm, yeah i could add tool tip/balloons for every check box</p>
-
-<p>Thanks for reminding about the ini file <a href="https://msfn.org/board/uploads/emoticons/default_smile.png" title="Enlarge image"><img src="https://msfn.org/board/applications/core/interface/js/spacer.png" alt="Image 11: :)" /></a> Added to first Post</p>
-
-<p>More command line options could be added, if requested.</p>
-
-<ul>
-  <li>2 weeks later…</li>
-</ul>
-
-<p><a href="https://msfn.org/board/profile/125656-lama/" title="Go to lama's profile"><img src="blob:http://localhost/3421ba85060e6030e813683c8ff84905" alt="Image 12: lama" /></a></p>
-
-<p>Thanks for the link @ reboot.pro wonko, but, how come this v 2.0 was not even mentioned by original creator? Excuse me but,…Did i missed the part where JFX became “was_JFX” there? <a href="https://msfn.org/board/uploads/emoticons/default_huh.png" title="Enlarge image"><img src="https://msfn.org/board/applications/core/interface/js/spacer.png" alt="Image 13: :huh:" /></a></p>
-
-<p><a href="https://msfn.org/board/profile/25215-jaclaz/" title="Go to jaclaz's profile"><img src="https://msfn.org/board/uploads/monthly_2017_08/Jgray.thumb.jpg.8353b51d429039be7eaa0a7da3fbd3fe.jpg" alt="Image 14: jaclaz" /></a></p>
-
-<blockquote>
-  <p>Thanks for the link @ reboot.pro wonko, but, how come this v 2.0 was not even mentioned by original creator? Excuse me but,…Did i missed the part where JFX became “was_JFX” there? <a href="https://msfn.org/board/uploads/emoticons/default_huh.png" title="Enlarge image"><img src="https://msfn.org/board/applications/core/interface/js/spacer.png" alt="Image 15: :huh:" /></a></p>
-</blockquote>
-
-<p>Evidently yes.</p>
-
-<p>And however I don’ t think it is part of your business.</p>
-
-<p>jaclaz</p>
-
-<p><a href="https://msfn.org/board/profile/132150-wimb/" title="Go to wimb's profile"><img src="https://msfn.org/board/uploads/av-132150.jpg" alt="Image 16: wimb" /></a></p>]]></content><author><name></name></author><category term="scratchpad" /></entry></feed>
+</section>]]></content><author><name></name></author><category term="scratchpad" /></entry></feed>
