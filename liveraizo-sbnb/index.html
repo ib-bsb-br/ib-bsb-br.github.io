@@ -67,7 +67,7 @@
         
           <span class="post-updated">
             ↣
-            <time datetime="2025-05-04T16:18:06+00:00">
+            <time datetime="2025-05-04T18:04:34+00:00">
               04 May 2025
             </time>
           </span>
@@ -90,11 +90,11 @@
         <div class="page-stats mt-3" role="status" aria-label="Page statistics">
       
       <span class="badge bg-primary">
-        29223 characters
+        34956 characters
       </span>
         <span class="separator mx-2" aria-hidden="true">•</span>
         <span class="badge bg-primary">
-        4073 words
+        4909 words
       </span>
       </div>
         <div class="action-buttons d-flex flex-wrap gap-2">
@@ -128,7 +128,7 @@
       <article class="post-wrapper">
         <div class="post-content-body">
           
-
+<ul><li><a href="#mntsbnb-data-partition">/mnt/sbnb-data partition</a></li></ul>
           <p>This comprehensive guide details how to set up and run the sbnb.vhd virtual machine (VM) on the Live Raizo Linux distribution. Live Raizo is a specialized Debian-based environment optimized for network simulation and system administration training, making it an excellent platform for experimenting with VMs in complex virtual network topologies.<br />
 <strong>Why Live Raizo?</strong> Live Raizo pre-installs GNS3, QEMU/KVM, and various networking tools, simplifying the setup process compared to a standard Linux distribution. Its integration with GNS3 allows you to easily incorporate the SBNB VM into simulated networks alongside virtual routers, switches, and other devices.<br />
 <strong>Recommendation:</strong> Using <strong>GNS3 (Method 1)</strong> is the strongly recommended approach on Live Raizo. It aligns with the distribution’s purpose, offers graphical management, and facilitates network integration. Direct QEMU/KVM provides the lowest overhead but requires command-line proficiency, while Virt-Manager offers a more traditional VM management GUI but is less integrated with Live Raizo’s specific networking tools.<br />
@@ -574,7 +574,127 @@ Integrating SBNB into Live Raizo/GNS3 unlocks powerful testing capabilities:</p>
   </li>
   <li><strong>Revert VM Disk Changes:</strong> The fast-reset-vm &lt;VM_NAME_in_GNS3&gt; command (run while the relevant GNS3 project is open) can discard changes made to the VM’s disk image since it was started or last reset, effectively reverting it to its initial state within that project instance. <strong>Warning:</strong> This is a destructive action for the VM’s internal state. Use it carefully, primarily when you want a clean slate for testing, and be aware it erases any work done inside the VM. It does not affect the base VHD/QCOW2 file outside the project.</li>
   <li><strong>Improve Readability:</strong> Take advantage of Live Raizo’s pre-configured Zsh shell with colorized command output, which can make navigating directories, reading logs (fast-syslog), and interpreting network tool output (ip, ping, traceroute) easier during setup and troubleshooting.</li>
+</ul><hr />
+  <h1 id="mntsbnb-data-partition">
+    
+    
+     <a href="#mntsbnb-data-partition">#</a><a href="#" aria-label="Back to top">/mnt/sbnb-data partition</a>
+        
+    
+  </h1>
+      
+
+<p><strong>Step 1: Create the Virtual Disk File on Live Raizo Host</strong></p>
+
+<p>You need a file to act as the persistent storage. The QCOW2 format is recommended because it’s space-efficient (grows as needed) and supports snapshots.</p>
+
+<ol>
+  <li><strong>Choose Location:</strong> Decide where to store the disk file. Good options include a dedicated VM storage directory (e.g., <code class="language-plaintext highlighter-rouge">/home/user/GNS3_VMs/SBNB/</code>) or within the specific GNS3 project directory if you prefer (e.g., <code class="language-plaintext highlighter-rouge">/home/user/projects/SBNB/images/</code>). Ensure the location has sufficient free space.</li>
+  <li><strong>Open Terminal:</strong> Launch a terminal on your Live Raizo host.</li>
+  <li>
+    <p><strong>Create Disk Image:</strong> Use the <code class="language-plaintext highlighter-rouge">qemu-img</code> command. Adjust the path and size (<code class="language-plaintext highlighter-rouge">10G</code> in the example) as required.</p>
+
+    <div class="language-bash highlighter-rouge"><div class="highlight"><section><code><span class="c"># Example using a dedicated VM storage directory</span>
+<span class="nb">mkdir</span> <span class="nt">-p</span> /home/user/GNS3_VMs/SBNB/
+qemu-img create <span class="nt">-f</span> qcow2 /home/user/GNS3_VMs/SBNB/persistent_storage.qcow2 10G
+
+<span class="c"># --- OR ---</span>
+
+<span class="c"># Example using a GNS3 project directory (replace 'SBNB' if project name differs)</span>
+<span class="c"># mkdir -p /home/user/projects/SBNB/images/</span>
+<span class="c"># qemu-img create -f qcow2 /home/user/projects/SBNB/images/persistent_storage.qcow2 10G</span>
+</code></section></div>    </div>
+    <p>This creates an empty (but expandable up to 10GB) QCOW2 file. Remember the path you used.</p>
+  </li>
+</ol>
+
+<p><strong>Step 2: Attach the Virtual Disk in GNS3 (Recommended Method)</strong></p>
+
+<p>Modify the SBNB VM <em>template</em> in GNS3 so that all instances based on it will have this extra disk.</p>
+
+<ol>
+  <li><strong>Stop the VM:</strong> Ensure any running SBNB VM instances in your GNS3 project are stopped.</li>
+  <li><strong>Edit GNS3 Template:</strong>
+    <ul>
+      <li>In GNS3, go to <code class="language-plaintext highlighter-rouge">Edit</code> -&gt; <code class="language-plaintext highlighter-rouge">Preferences</code>.</li>
+      <li>Navigate to <code class="language-plaintext highlighter-rouge">QEMU</code> -&gt; <code class="language-plaintext highlighter-rouge">QEMU VMs</code>.</li>
+      <li>Select your <code class="language-plaintext highlighter-rouge">SBNB</code> VM template from the list.</li>
+      <li>Click <code class="language-plaintext highlighter-rouge">Edit</code>.</li>
+    </ul>
+  </li>
+  <li><strong>Go to HDD Tab:</strong>
+    <ul>
+      <li>You will see the primary disk (e.g., <code class="language-plaintext highlighter-rouge">sbnb.vhd</code> or <code class="language-plaintext highlighter-rouge">hda_disk.qcow2</code>) assigned to <code class="language-plaintext highlighter-rouge">hda</code>.</li>
+      <li>Find the next available disk slot, typically <code class="language-plaintext highlighter-rouge">hdb</code> (Hard disk 2).</li>
+      <li><strong>Disk image:</strong> Click <code class="language-plaintext highlighter-rouge">Browse...</code> and navigate to the <code class="language-plaintext highlighter-rouge">persistent_storage.qcow2</code> file you created in Step 1. Select it.</li>
+      <li><strong>Disk interface:</strong> Choose <strong><code class="language-plaintext highlighter-rouge">virtio</code></strong> for the best performance.</li>
+    </ul>
+  </li>
+  <li><strong>Apply Changes:</strong> Click <code class="language-plaintext highlighter-rouge">Apply</code> and then <code class="language-plaintext highlighter-rouge">OK</code> to close the preferences window.</li>
+</ol>
+
+<p><strong>(Alternative Attachment Methods)</strong></p>
+
+<ul>
+  <li><strong>Direct QEMU:</strong> Add another <code class="language-plaintext highlighter-rouge">-drive</code> argument to your <code class="language-plaintext highlighter-rouge">qemu-system-x86_64</code> command:
+<code class="language-plaintext highlighter-rouge">-drive file=/path/to/persistent_storage.qcow2,format=qcow2,if=virtio</code></li>
+  <li><strong>Virt-Manager:</strong> Use the “Add Hardware” -&gt; “Storage” option in the VM’s settings, selecting the <code class="language-plaintext highlighter-rouge">.qcow2</code> file and setting the bus to <code class="language-plaintext highlighter-rouge">VirtIO</code>.</li>
+  <li><strong>GNS3 API:</strong> Adding <em>subsequent</em> disks via the <code class="language-plaintext highlighter-rouge">Add-to-GNS3.sh</code> API is not clearly documented or straightforward. If you initially created the SBNB template using the API, it’s recommended to use the GNS3 GUI (as described above) to add the second disk to the existing template.</li>
 </ul>
+
+<p><strong>Step 3: Initialize and Mount the Disk Inside SBNB VM</strong></p>
+
+<p>Once the disk is attached via the configuration, start the VM and prepare the disk for use within the SBNB operating system.</p>
+
+<ol>
+  <li><strong>Start the SBNB VM</strong> in GNS3 (or via your chosen method).</li>
+  <li><strong>Access the VM:</strong> Connect via SSH or the console.</li>
+  <li><strong>Identify the New Disk:</strong> Use <code class="language-plaintext highlighter-rouge">lsblk</code> to list block devices. The new disk will likely appear as <code class="language-plaintext highlighter-rouge">/dev/vdb</code> (if using VirtIO and the primary is <code class="language-plaintext highlighter-rouge">/dev/vda</code>) or possibly <code class="language-plaintext highlighter-rouge">/dev/sdb</code> (if using SATA). Confirm the size matches what you created (e.g., 10G).
+    <div class="language-bash highlighter-rouge"><div class="highlight"><section><code>lsblk
+<span class="nb">sudo </span>fdisk <span class="nt">-l</span> <span class="c"># Provides more detail</span>
+</code></section></div>    </div>
+    <p><em>Note: Device names can vary. Always use <code class="language-plaintext highlighter-rouge">lsblk</code> or similar tools to confirm the correct device identifier.</em></p>
+  </li>
+  <li><strong>Partition the Disk (Recommended):</strong> Create a partition table and at least one partition. Using <code class="language-plaintext highlighter-rouge">fdisk</code> for a single partition covering the whole disk:
+    <div class="language-bash highlighter-rouge"><div class="highlight"><section><code><span class="nb">sudo </span>fdisk /dev/vdb <span class="c"># Replace /dev/vdb with your identified disk</span>
+</code></section></div>    </div>
+    <p>Inside <code class="language-plaintext highlighter-rouge">fdisk</code>, typically press: <code class="language-plaintext highlighter-rouge">n</code> (new), <code class="language-plaintext highlighter-rouge">p</code> (primary), <code class="language-plaintext highlighter-rouge">1</code> (partition number), <code class="language-plaintext highlighter-rouge">Enter</code> (default first sector), <code class="language-plaintext highlighter-rouge">Enter</code> (default last sector), <code class="language-plaintext highlighter-rouge">w</code> (write and exit). This creates <code class="language-plaintext highlighter-rouge">/dev/vdb1</code>.</p>
+  </li>
+  <li><strong>Format the Partition:</strong> Create a filesystem. <code class="language-plaintext highlighter-rouge">ext4</code> is common for Linux.
+    <div class="language-bash highlighter-rouge"><div class="highlight"><section><code><span class="nb">sudo </span>mkfs.ext4 /dev/vdb1 <span class="c"># Use the partition device, e.g., /dev/vdb1</span>
+</code></section></div>    </div>
+  </li>
+  <li><strong>Create a Mount Point:</strong> Make a directory where the storage will be accessible.
+    <div class="language-bash highlighter-rouge"><div class="highlight"><section><code><span class="nb">sudo mkdir</span> /mnt/persistent_data <span class="c"># Or choose another name like /data</span>
+</code></section></div>    </div>
+  </li>
+  <li><strong>Mount the Partition:</strong>
+    <div class="language-bash highlighter-rouge"><div class="highlight"><section><code><span class="nb">sudo </span>mount /dev/vdb1 /mnt/persistent_data
+</code></section></div>    </div>
+  </li>
+  <li><strong>(Optional) Set Permissions:</strong> If needed, change ownership so your user can write files.
+    <div class="language-bash highlighter-rouge"><div class="highlight"><section><code><span class="c"># Find the correct user/group within SBNB</span>
+<span class="nb">sudo chown</span> <span class="si">$(</span><span class="nb">whoami</span><span class="si">)</span>:<span class="si">$(</span><span class="nb">whoami</span><span class="si">)</span> /mnt/persistent_data
+</code></section></div>    </div>
+  </li>
+</ol>
+
+<p>The storage is now ready to use at <code class="language-plaintext highlighter-rouge">/mnt/persistent_data</code>. Files written here will be saved to the <code class="language-plaintext highlighter-rouge">persistent_storage.qcow2</code> file on your Live Raizo host.</p>
+
+<p><strong>Step 4: Handling Mounts Across Reboots (Crucial for RAM-based SBNB)</strong></p>
+
+<p>Since SBNB runs primarily from RAM, changes made to files like <code class="language-plaintext highlighter-rouge">/etc/fstab</code> <em>within the running VM</em> will likely be lost upon reboot. Therefore, simply adding an fstab entry is often unreliable for automounting.</p>
+
+<ul>
+  <li><strong>Recommended Initial Approach: Manual Mount:</strong> After each boot of the SBNB VM, manually run the mount command:
+    <div class="language-bash highlighter-rouge"><div class="highlight"><section><code><span class="nb">sudo </span>mount /dev/vdb1 /mnt/persistent_data
+</code></section></div>    </div>
+  </li>
+  <li><strong>Investigate SBNB Startup Mechanisms:</strong> Check the SBNB documentation or explore its filesystem (after mounting the persistent disk) for any specific mechanisms designed to run scripts or commands automatically at boot time (e.g., <code class="language-plaintext highlighter-rouge">/etc/rc.local</code>, systemd service loading from a specific path, profile scripts). If you find such a mechanism, add the <code class="language-plaintext highlighter-rouge">mount</code> command there.</li>
+  <li><strong>Avoid Relying Solely on <code class="language-plaintext highlighter-rouge">/etc/fstab</code>:</strong> Do not assume an <code class="language-plaintext highlighter-rouge">/etc/fstab</code> entry inside the VM will work correctly after a reboot unless SBNB has a specific feature to persist or re-apply fstab changes.</li>
+</ul>
+
+<p>You have now successfully added persistent storage to your RAM-based SBNB VM within the Live Raizo/GNS3 environment. Remember to handle the mounting process appropriately for the RAM-based nature of the OS.</p>
 
         </div>
         
@@ -838,7 +958,7 @@ Integrating SBNB into Live Raizo/GNS3 unlocks powerful testing capabilities:</p>
         
         
         <a href="https://ib.bsb.br/404" aria-label="404">
-          2025-05-04 13:25:11
+          2025-05-04 15:07:22
         </a>
         &#x23;
     
@@ -906,7 +1026,7 @@ Integrating SBNB into Live Raizo/GNS3 unlocks powerful testing capabilities:</p>
         "headline": "Live Raizo OS as a hypervisor to run the `sbnb.vhd` VM",
         "description": "",
         "datePublished": "2025-05-03T00:00:00+00:00",
-        "dateModified": "2025-05-04T16:18:06+00:00",
+        "dateModified": "2025-05-04T18:04:34+00:00",
         "author": {
           "@type": "Person",
           "name": "Author"
