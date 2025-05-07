@@ -1,4 +1,221 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2025-05-07T02:54:10+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">How to integrate WiFi support into the SBNB bridge-based networking setup</title><link href="https://ib.bsb.br/how-to-integrate-wifi-support-into-the-sbnb-bridge-based-networking-setup/" rel="alternate" type="text/html" title="How to integrate WiFi support into the SBNB bridge-based networking setup" /><published>2025-05-04T00:00:00+00:00</published><updated>2025-05-04T09:14:14+00:00</updated><id>https://ib.bsb.br/how-to-integrate-wifi-support-into-the-sbnb-bridge-based-networking-setup</id><content type="html" xml:base="https://ib.bsb.br/how-to-integrate-wifi-support-into-the-sbnb-bridge-based-networking-setup/"><![CDATA[<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c">#!/bin/bash</span>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2025-05-07T19:18:45+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">How to run `.qcow2` from Fedora CoreOS + Podman + Incus</title><link href="https://ib.bsb.br/how-to-run-qcow2-from-fedora-coreos-podman-incus/" rel="alternate" type="text/html" title="How to run `.qcow2` from Fedora CoreOS + Podman + Incus" /><published>2025-05-07T00:00:00+00:00</published><updated>2025-05-07T19:14:50+00:00</updated><id>https://ib.bsb.br/how-to-run-qcow2-from-fedora-coreos-podman-incus</id><content type="html" xml:base="https://ib.bsb.br/how-to-run-qcow2-from-fedora-coreos-podman-incus/"><![CDATA[<p><strong>Understanding the Core Technology</strong></p>
+
+<ul>
+  <li><strong>Incus:</strong> Your custom OS includes Incus, a powerful system container and virtual machine manager. For VMs, Incus utilizes QEMU/KVM.</li>
+  <li><strong>QEMU/KVM:</strong>
+    <ul>
+      <li><strong>QEMU:</strong> An open-source machine emulator and virtualizer.</li>
+      <li><strong>KVM (Kernel-based Virtual Machine):</strong> A Linux kernel module that enables QEMU to use hardware virtualization extensions (Intel VT-x or AMD-V), providing near-native performance. Fedora CoreOS includes KVM support.</li>
+    </ul>
+  </li>
+  <li><strong><code class="language-plaintext highlighter-rouge">.qcow2</code>:</strong> This is a disk image format commonly used by QEMU, supporting features like copy-on-write and snapshots.</li>
+</ul>
+
+<p><strong>Methods to Run a <code class="language-plaintext highlighter-rouge">.qcow2</code> Image with Incus</strong></p>
+
+<p>Here are a few methods, ranging from a quick one-off boot to creating a reusable Incus image:</p>
+
+<p><strong>Prerequisites for all methods:</strong></p>
+
+<ol>
+  <li><strong>Hardware Virtualization:</strong> Ensure Intel VT-x or AMD-V is enabled in your machine’s BIOS/UEFI.</li>
+  <li><strong><code class="language-plaintext highlighter-rouge">.qcow2</code> File:</strong> The bootable <code class="language-plaintext highlighter-rouge">.qcow2</code> file must be accessible on your custom OS’s filesystem (e.g., copied to your home directory or another accessible path).</li>
+  <li><strong>Incus Initialization (One-time):</strong> If you haven’t used Incus before, you might need to initialize it. This typically involves setting up a default profile and a storage pool.
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>incus admin init
+</code></pre></div>    </div>
+    <p>Follow the prompts. For simplicity, you can often accept the defaults. This might create a storage pool (e.g., named <code class="language-plaintext highlighter-rouge">default</code>).</p>
+  </li>
+  <li><strong>User Permissions:</strong> While <code class="language-plaintext highlighter-rouge">incus admin init</code> requires <code class="language-plaintext highlighter-rouge">sudo</code>, many subsequent <code class="language-plaintext highlighter-rouge">incus</code> commands can be run by a user added to the <code class="language-plaintext highlighter-rouge">incus-admin</code> group (or <code class="language-plaintext highlighter-rouge">lxd</code> if you had a previous LXD installation and it was migrated). If your user is not in this group, you may need to prefix <code class="language-plaintext highlighter-rouge">incus</code> commands with <code class="language-plaintext highlighter-rouge">sudo</code>.</li>
+</ol>
+
+<hr />
+
+<p><strong>Method 1: Direct Boot by Attaching <code class="language-plaintext highlighter-rouge">.qcow2</code> as a Disk (Recommended for Quick/One-Off Use)</strong></p>
+
+<p>This method is often the most straightforward for booting an existing <code class="language-plaintext highlighter-rouge">.qcow2</code> file without converting it into a formal Incus image, especially if your Incus storage pool is of type <code class="language-plaintext highlighter-rouge">dir</code>.</p>
+
+<ol>
+  <li><strong>Create a VM Instance (without a standard root disk initially):</strong>
+It’s often easiest to launch a minimal VM instance using a placeholder image (like a minimal cloud image if you have one aliased, or even a standard image whose disk you’ll immediately replace).
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Launch a VM; 'images:alpine/edge' is just a small image to create the VM config.</span>
+<span class="c"># We will replace its disk.</span>
+incus launch images:alpine/edge my-qcow-vm <span class="nt">--vm</span> 
+</code></pre></div>    </div>
+    <p><em>Note: If you have a very minimal image alias or a profile designed for “empty” VMs, you can use that instead.</em></p>
+  </li>
+  <li><strong>Stop the VM:</strong>
+The VM will likely start automatically. Stop it to modify its disk configuration.
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>incus stop my-qcow-vm
+</code></pre></div>    </div>
+  </li>
+  <li><strong>Remove the Default Root Disk:</strong>
+The VM was created with a root disk from the placeholder image. Remove it.
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>incus config device remove my-qcow-vm root
+</code></pre></div>    </div>
+  </li>
+  <li><strong>Add Your <code class="language-plaintext highlighter-rouge">.qcow2</code> File as the New Root Disk:</strong>
+This command tells Incus to use your <code class="language-plaintext highlighter-rouge">.qcow2</code> file as the primary bootable disk for the VM.
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>incus config device add my-qcow-vm root disk <span class="nb">source</span><span class="o">=</span>/path/to/your/image.qcow2 boot.priority<span class="o">=</span>1
+</code></pre></div>    </div>
+    <p>Replace <code class="language-plaintext highlighter-rouge">/path/to/your/image.qcow2</code> with the actual path to your file.</p>
+    <ul>
+      <li><strong>Storage Pool Consideration:</strong> This method works best if your Incus storage pool (e.g., <code class="language-plaintext highlighter-rouge">default</code>) is of type <code class="language-plaintext highlighter-rouge">dir</code>. For block-based pools (LVM, ZFS, Ceph), Incus might try to import the <code class="language-plaintext highlighter-rouge">.qcow2</code> content into a new volume in its native format, which is usually fine.</li>
+    </ul>
+  </li>
+  <li><strong>Start the VM:</strong>
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>incus start my-qcow-vm
+</code></pre></div>    </div>
+  </li>
+  <li><strong>Access the VM Console:</strong>
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>incus console my-qcow-vm
+</code></pre></div>    </div>
+    <p>Press <code class="language-plaintext highlighter-rouge">Ctrl+a q</code> (or <code class="language-plaintext highlighter-rouge">Ctrl+a c</code> then <code class="language-plaintext highlighter-rouge">q</code>) to detach from the console.</p>
+  </li>
+</ol>
+
+<hr />
+
+<p><strong>Method 2: Importing <code class="language-plaintext highlighter-rouge">.qcow2</code> into a Custom Storage Volume (More Robust for Block-Based Pools)</strong></p>
+
+<p>If your storage pool is block-based (e.g., LVM, ZFS), or you want Incus to manage the disk image as a distinct volume, this method is more appropriate. It involves converting the <code class="language-plaintext highlighter-rouge">.qcow2</code> to a raw format and importing that.</p>
+
+<ol>
+  <li><strong>Identify Your Storage Pool:</strong>
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>incus storage list
+</code></pre></div>    </div>
+    <p>Note the name of your desired storage pool (e.g., <code class="language-plaintext highlighter-rouge">default</code>).</p>
+  </li>
+  <li><strong>Convert <code class="language-plaintext highlighter-rouge">.qcow2</code> to Raw Format (if needed):</strong>
+Incus’s volume import often works best with raw image files.
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>qemu-img convert <span class="nt">-f</span> qcow2 <span class="nt">-O</span> raw /path/to/your/image.qcow2 /tmp/image.raw
+</code></pre></div>    </div>
+    <p>Replace paths as necessary. Ensure you have enough space in <code class="language-plaintext highlighter-rouge">/tmp</code> or choose another location.</p>
+  </li>
+  <li><strong>Import the Raw Image into an Incus Custom Storage Volume:</strong>
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>incus storage volume import &lt;your-pool-name&gt; /tmp/image.raw &lt;name-for-your-volume&gt;
+</code></pre></div>    </div>
+    <p>For example:</p>
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>incus storage volume import default /tmp/image.raw my-custom-boot-volume
+</code></pre></div>    </div>
+    <p>This creates an Incus storage volume containing the content of your bootable image.</p>
+  </li>
+  <li><strong>Clean up the temporary raw file:</strong>
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">rm</span> /tmp/image.raw
+</code></pre></div>    </div>
+  </li>
+  <li><strong>Launch a VM Using the Custom Volume:</strong>
+You’ll create a VM instance and tell it to use this custom volume as its root disk.
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Create a VM instance (similar to Method 1, using a placeholder)</span>
+incus launch images:alpine/edge my-custom-vol-vm <span class="nt">--vm</span>
+incus stop my-custom-vol-vm
+incus config device remove my-custom-vol-vm root
+
+<span class="c"># Add the custom volume as the root disk</span>
+incus config device add my-custom-vol-vm root disk <span class="nv">pool</span><span class="o">=</span>&lt;your-pool-name&gt; <span class="nb">source</span><span class="o">=</span>&lt;name-for-your-volume&gt; boot.priority<span class="o">=</span>1
+<span class="c"># Example:</span>
+<span class="c"># incus config device add my-custom-vol-vm root disk pool=default source=my-custom-boot-volume boot.priority=1</span>
+
+incus start my-custom-vol-vm
+</code></pre></div>    </div>
+  </li>
+  <li><strong>Access the VM Console:</strong>
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>incus console my-custom-vol-vm
+</code></pre></div>    </div>
+  </li>
+</ol>
+
+<hr />
+
+<p><strong>Method 3: Creating a Reusable Incus Image from <code class="language-plaintext highlighter-rouge">.qcow2</code> (For Frequent Use)</strong></p>
+
+<p>If you plan to launch multiple VMs from this same <code class="language-plaintext highlighter-rouge">.qcow2</code> image, creating a proper Incus image is efficient.</p>
+
+<ol>
+  <li><strong>Prepare a <code class="language-plaintext highlighter-rouge">metadata.yaml</code> File:</strong>
+This file describes your image to Incus. Create a file named <code class="language-plaintext highlighter-rouge">metadata.yaml</code> in the same directory as your <code class="language-plaintext highlighter-rouge">.qcow2</code> file (or a temporary directory where you copy the <code class="language-plaintext highlighter-rouge">.qcow2</code>):
+    <div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">architecture</span><span class="pi">:</span> <span class="s">x86_64</span>  <span class="c1"># Or your image's architecture (e.g., aarch64)</span>
+<span class="na">creation_date</span><span class="pi">:</span> <span class="s">$(date +%s)</span> <span class="c1"># This will be replaced by actual date in next step</span>
+<span class="na">properties</span><span class="pi">:</span>
+  <span class="na">os</span><span class="pi">:</span> <span class="s2">"</span><span class="s">MyQcow2OS"</span> <span class="c1"># A friendly name for the OS</span>
+  <span class="na">description</span><span class="pi">:</span> <span class="s2">"</span><span class="s">Bootable</span><span class="nv"> </span><span class="s">qcow2</span><span class="nv"> </span><span class="s">image"</span>
+  <span class="na">architecture</span><span class="pi">:</span> <span class="s2">"</span><span class="s">x86_64"</span> <span class="c1"># Repeat architecture here</span>
+<span class="c1"># Add other properties if known, like 'release', 'variant', etc.</span>
+</code></pre></div>    </div>
+    <p>You can generate the <code class="language-plaintext highlighter-rouge">creation_date</code> dynamically:</p>
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">cat</span> <span class="o">&lt;&lt;</span><span class="no">EOF</span><span class="sh"> &gt; metadata.yaml
+architecture: </span><span class="si">$(</span><span class="nb">uname</span> <span class="nt">-m</span><span class="si">)</span><span class="sh"> # Or specify explicitly e.g. x86_64
+creation_date: </span><span class="si">$(</span><span class="nb">date</span> +%s<span class="si">)</span><span class="sh">
+properties:
+  os: "MyQcow2OS"
+  description: "My custom bootable qcow2"
+  architecture: "</span><span class="si">$(</span><span class="nb">uname</span> <span class="nt">-m</span><span class="si">)</span><span class="sh">" # Or specify explicitly
+</span><span class="no">EOF
+</span></code></pre></div>    </div>
+  </li>
+  <li><strong>Create a Tarball:</strong>
+Package the <code class="language-plaintext highlighter-rouge">.qcow2</code> file (e.g., <code class="language-plaintext highlighter-rouge">my-image.qcow2</code>) and <code class="language-plaintext highlighter-rouge">metadata.yaml</code> into a <code class="language-plaintext highlighter-rouge">.tar.gz</code> file. The <code class="language-plaintext highlighter-rouge">.qcow2</code> file should be named <code class="language-plaintext highlighter-rouge">root.img</code> or <code class="language-plaintext highlighter-rouge">disk.img</code> inside the tarball for some Incus versions, or more generally, Incus will pick up the largest file as the root disk if it’s a qcow2. For simplicity, let’s assume your qcow2 is <code class="language-plaintext highlighter-rouge">my-os.qcow2</code>. You might need to rename it to <code class="language-plaintext highlighter-rouge">root.qcow2</code> or ensure it’s the clear candidate.
+A common practice is to name the image file <code class="language-plaintext highlighter-rouge">root.qcow2</code> within the tarball.
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Assuming your qcow2 is my-os.qcow2</span>
+<span class="nb">cp</span> /path/to/your/my-os.qcow2 <span class="nb">.</span> <span class="c"># Copy to current directory</span>
+<span class="nb">mv </span>my-os.qcow2 root.qcow2      <span class="c"># Rename for clarity within tarball</span>
+<span class="nb">tar</span> <span class="nt">-czvf</span> my-incus-image.tar.gz root.qcow2 metadata.yaml
+</code></pre></div>    </div>
+  </li>
+  <li><strong>Import the Tarball as an Incus Image:</strong>
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>incus image import my-incus-image.tar.gz <span class="nt">--alias</span> my-bootable-qcow-image
+</code></pre></div>    </div>
+    <p>This makes the image available in your local Incus image store.</p>
+  </li>
+  <li><strong>Clean up Temporary Files:</strong>
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">rm </span>root.qcow2 metadata.yaml my-incus-image.tar.gz
+</code></pre></div>    </div>
+  </li>
+  <li><strong>Launch a VM from the New Incus Image:</strong>
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>incus launch my-bootable-qcow-image my-new-vm <span class="nt">--vm</span>
+</code></pre></div>    </div>
+  </li>
+  <li><strong>Access the VM Console:</strong>
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>incus console my-new-vm
+</code></pre></div>    </div>
+  </li>
+</ol>
+
+<hr />
+
+<p><strong>Alternative: Direct QEMU/KVM (Bypassing Incus Management)</strong></p>
+
+<p>While Incus is the recommended and integrated way on your custom OS, you <em>could</em> use QEMU/KVM directly. This gives raw access but lacks Incus’s management features (networking, storage, snapshots, etc.).</p>
+
+<ol>
+  <li><strong>Ensure QEMU/KVM Utilities are Installed:</strong>
+On Fedora CoreOS, if not already present as a dependency of Incus, you might need to install them:
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>rpm-ostree <span class="nb">install </span>qemu-system-x86 <span class="c"># For x86_64</span>
+<span class="c"># May require a reboot</span>
+<span class="c"># sudo systemctl reboot</span>
+</code></pre></div>    </div>
+    <p>However, <code class="language-plaintext highlighter-rouge">incus</code> typically pulls in <code class="language-plaintext highlighter-rouge">qemu-kvm</code> or similar packages.</p>
+  </li>
+  <li><strong>Run with <code class="language-plaintext highlighter-rouge">qemu-system-x86_64</code>:</strong>
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>qemu-system-x86_64 <span class="se">\</span>
+    <span class="nt">-enable-kvm</span> <span class="se">\</span>
+    <span class="nt">-m</span> 2048 <span class="se">\</span>
+    <span class="nt">-smp</span> 2 <span class="se">\</span>
+    <span class="nt">-hda</span> /path/to/your/image.qcow2 <span class="se">\</span>
+    <span class="nt">-boot</span> d <span class="se">\</span>
+    <span class="nt">-vga</span> std <span class="se">\</span>
+    <span class="nt">-net</span> nic <span class="nt">-net</span> user,hostfwd<span class="o">=</span>tcp::2222-:22 <span class="c"># Example networking</span>
+</code></pre></div>    </div>
+    <p>This is more manual and generally not preferred if Incus is available.</p>
+  </li>
+</ol>
+
+<p><strong>Podman’s Role</strong></p>
+
+<p>Podman is for managing OCI/Docker-compatible <em>containers</em>, not full virtual machines from <code class="language-plaintext highlighter-rouge">.qcow2</code> images. It operates at a different level of virtualization (OS-level virtualization, sharing the host kernel) compared to the hardware virtualization used by Incus for VMs.</p>
+
+<p><strong>Conclusion</strong></p>
+
+<p>Your Fedora CoreOS + Podman + Incus system is well-equipped to run <code class="language-plaintext highlighter-rouge">.qcow2</code> Linux images. <strong>Using Incus (Method 1 or 2 for direct use, Method 3 for reusability) is the most integrated and recommended approach.</strong> It provides a robust management layer over QEMU/KVM, allowing you to easily launch and manage these VMs right after your system boots.</p>]]></content><author><name></name></author><category term="scratchpad" /></entry><entry><title type="html">How to integrate WiFi support into the SBNB bridge-based networking setup</title><link href="https://ib.bsb.br/how-to-integrate-wifi-support-into-the-sbnb-bridge-based-networking-setup/" rel="alternate" type="text/html" title="How to integrate WiFi support into the SBNB bridge-based networking setup" /><published>2025-05-04T00:00:00+00:00</published><updated>2025-05-04T09:14:14+00:00</updated><id>https://ib.bsb.br/how-to-integrate-wifi-support-into-the-sbnb-bridge-based-networking-setup</id><content type="html" xml:base="https://ib.bsb.br/how-to-integrate-wifi-support-into-the-sbnb-bridge-based-networking-setup/"><![CDATA[<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c">#!/bin/bash</span>
 
 <span class="c"># sbnb-configure-networking.sh (Revised)</span>
 <span class="c"># Configures host networking for SBNB, dynamically detecting and supporting</span>
@@ -3813,226 +4030,4 @@ mount | grep /home/user # Verify it mounted correctly</p>
 sudo rm -rf /home/user.bak</li>
 </ul>
 
-<p>You have now successfully redirected your /home/user directory to use the storage space on /userdata using a persistent bind mount.</p>]]></content><author><name></name></author><category term="aid&gt;linux" /></entry><entry><title type="html">Code Fixer</title><link href="https://ib.bsb.br/code-fixer/" rel="alternate" type="text/html" title="Code Fixer" /><published>2025-05-01T00:00:00+00:00</published><updated>2025-05-01T14:24:29+00:00</updated><id>https://ib.bsb.br/code-fixer</id><content type="html" xml:base="https://ib.bsb.br/code-fixer/"><![CDATA[<section class="code-block-container" role="group" aria-label=" Code Block" data-filename="_code_block.txt" data-code="&lt;prompt&gt;
-  &lt;purpose&gt;
-    You are a specialized code validator and fixer. Your task is to transform code with errors into fully functional, compliant scripts. Success means identifying and correcting 100% of syntax errors, indentation problems, and formatting issues without changing the intended functionality. You will output only the complete, corrected code with no explanatory text.
-  &lt;/purpose&gt;
-  
-  &lt;persona&gt;
-    You are a meticulous, efficient code expert who focuses exclusively on code correctness and proper formatting. You prioritize making the code work as intended while adhering to code best practices. You communicate through code only, not explanations.
-  &lt;/persona&gt;
-  
-  &lt;context&gt;
-      &lt;key_guidelines&gt;
-        &lt;guideline&gt;verify indentation level&lt;/guideline&gt;
-        &lt;guideline&gt;UTF-8 file encoding&lt;/guideline&gt;
-      &lt;/key_guidelines&gt;
-    &lt;error_categories&gt;
-      &lt;category&gt;
-        &lt;name&gt;Syntax errors&lt;/name&gt;
-        &lt;examples&gt;
-          &lt;example&gt;Missing colons after function/class declarations or control flow statements&lt;/example&gt;
-          &lt;example&gt;Unclosed parentheses, brackets, quotes&lt;/example&gt;
-          &lt;example&gt;Invalid assignment operators&lt;/example&gt;
-          &lt;example&gt;Incorrect function calls&lt;/example&gt;
-        &lt;/examples&gt;
-      &lt;/category&gt;
-      &lt;category&gt;
-        &lt;name&gt;Indentation errors&lt;/name&gt;
-        &lt;examples&gt;
-          &lt;example&gt;Inconsistent indentation levels&lt;/example&gt;
-          &lt;example&gt;Mixing tabs and spaces&lt;/example&gt;
-          &lt;example&gt;Incorrect block indentation&lt;/example&gt;
-        &lt;/examples&gt;
-      &lt;/category&gt;
-      &lt;category&gt;
-        &lt;name&gt;Format errors&lt;/name&gt;
-        &lt;examples&gt;
-          &lt;example&gt;Improper spacing around operators&lt;/example&gt;
-          &lt;example&gt;Incorrect line breaks&lt;/example&gt;
-          &lt;example&gt;Non-compliant naming conventions&lt;/example&gt;
-        &lt;/examples&gt;
-      &lt;/category&gt;
-      &lt;category&gt;
-        &lt;name&gt;Reference errors&lt;/name&gt;
-        &lt;examples&gt;
-          &lt;example&gt;Undefined variables&lt;/example&gt;
-          &lt;example&gt;Incorrect attribute references&lt;/example&gt;
-          &lt;example&gt;Improper function calls&lt;/example&gt;
-        &lt;/examples&gt;
-      &lt;/category&gt;
-    &lt;/error_categories&gt;
-  &lt;/context&gt;
-  
-  &lt;constraints&gt;
-    &lt;constraint&gt;Preserve the original code&#39;s intended functionality and logic.&lt;/constraint&gt;
-    &lt;constraint&gt;Maintain all meaningful comments from the original code.&lt;/constraint&gt;
-    &lt;constraint&gt;Do not add explanatory comments about fixes made.&lt;/constraint&gt;
-    &lt;constraint&gt;Do not use placeholders in the output.&lt;/constraint&gt;
-    &lt;constraint&gt;Do not include any text before or after the fixed code.&lt;/constraint&gt;
-    &lt;constraint&gt;Do not explain your changes or reasoning; output only the corrected code.&lt;/constraint&gt;
-    &lt;constraint&gt;When multiple valid fixes exist, choose the most codeic approach per PEP 8.&lt;/constraint&gt;
-    &lt;constraint&gt;All syntax errors must be fixed, even if minimal.&lt;/constraint&gt;
-  &lt;/constraints&gt;
-  
-  &lt;instructions&gt;
-    &lt;instruction&gt;Think step-by-step about each part of the code script in [[code_script]].&lt;/instruction&gt;
-    &lt;instruction&gt;First, scan the entire script to identify all error types present.&lt;/instruction&gt;
-    &lt;instruction&gt;Fix syntax errors by adding missing colons, parentheses, quotes, and other required syntax elements.&lt;/instruction&gt;
-    &lt;instruction&gt;Correct indentation by ensuring consistent use of indentation and proper nesting of code blocks.&lt;/instruction&gt;
-    &lt;instruction&gt;Fix variable reference errors by ensuring all variables are properly defined and used.&lt;/instruction&gt;
-    &lt;instruction&gt;Correct import statements by fixing their format and order.&lt;/instruction&gt;
-    &lt;instruction&gt;Verify function calls to ensure they use parentheses correctly.&lt;/instruction&gt;
-    &lt;instruction&gt;Check class definitions for proper syntax and indentation.&lt;/instruction&gt;
-    &lt;instruction&gt;Ensure list, dictionary, and set literals are properly formatted.&lt;/instruction&gt;
-    &lt;instruction&gt;Verify string formatting and concatenation operations.&lt;/instruction&gt;
-    &lt;instruction&gt;After making all corrections, review the entire script once more to ensure no errors remain.&lt;/instruction&gt;
-    &lt;instruction&gt;Return ONLY the complete, corrected code script.&lt;/instruction&gt;
-    &lt;meta_instruction&gt;For each line of code, ask: &quot;Is this correct code syntax?&quot;&lt;/meta_instruction&gt;
-    &lt;meta_instruction&gt;After each fix, mentally verify that the code&#39;s functionality remains unchanged.&lt;/meta_instruction&gt;
-  &lt;/instructions&gt;
-  
-  &lt;input_data&gt;
-    &lt;code_script&gt;
-```
-[[code_script]]
-```
-    &lt;/code_script&gt;
-  &lt;/input_data&gt;
-  
-  &lt;output_format_specification&gt;
-    &lt;format&gt;Complete, working code script with all errors fixed&lt;/format&gt;
-    &lt;rules&gt;
-      &lt;rule&gt;Output must start directly with the code (no introductory text)&lt;/rule&gt;
-      &lt;rule&gt;Output must end with the code code (no concluding remarks)&lt;/rule&gt;
-      &lt;rule&gt;Preserve original docstrings and comments&lt;/rule&gt;
-      &lt;rule&gt;Use consistent quotation marks throughout&lt;/rule&gt;
-    &lt;/rules&gt;
-  &lt;/output_format_specification&gt;
-
-  &lt;evaluation_criteria&gt;
-    &lt;criterion&gt;All syntax errors are fixed (100% required)&lt;/criterion&gt;
-    &lt;criterion&gt;All indentation errors are fixed (100% required)&lt;/criterion&gt;
-    &lt;criterion&gt;Code functionality is preserved&lt;/criterion&gt;
-    &lt;criterion&gt;Output contains only the corrected code&lt;/criterion&gt;
-    &lt;criterion&gt;No explanation or commentary is included&lt;/criterion&gt;
-  &lt;/evaluation_criteria&gt;
-  
-  &lt;testing_methodology&gt;
-    &lt;test&gt;Run the corrected script to verify it executes without syntax errors&lt;/test&gt;
-    &lt;test&gt;Compare input/output behavior of original intent with corrected script&lt;/test&gt;
-    &lt;test&gt;Check edge cases (empty functions, complex nested structures)&lt;/test&gt;
-  &lt;/testing_methodology&gt;
-&lt;/prompt&gt;" data-download-link="" data-download-label="Download ">
-  <code class="language-">&lt;prompt&gt;
-  &lt;purpose&gt;
-    You are a specialized code validator and fixer. Your task is to transform code with errors into fully functional, compliant scripts. Success means identifying and correcting 100% of syntax errors, indentation problems, and formatting issues without changing the intended functionality. You will output only the complete, corrected code with no explanatory text.
-  &lt;/purpose&gt;
-  
-  &lt;persona&gt;
-    You are a meticulous, efficient code expert who focuses exclusively on code correctness and proper formatting. You prioritize making the code work as intended while adhering to code best practices. You communicate through code only, not explanations.
-  &lt;/persona&gt;
-  
-  &lt;context&gt;
-      &lt;key_guidelines&gt;
-        &lt;guideline&gt;verify indentation level&lt;/guideline&gt;
-        &lt;guideline&gt;UTF-8 file encoding&lt;/guideline&gt;
-      &lt;/key_guidelines&gt;
-    &lt;error_categories&gt;
-      &lt;category&gt;
-        &lt;name&gt;Syntax errors&lt;/name&gt;
-        &lt;examples&gt;
-          &lt;example&gt;Missing colons after function/class declarations or control flow statements&lt;/example&gt;
-          &lt;example&gt;Unclosed parentheses, brackets, quotes&lt;/example&gt;
-          &lt;example&gt;Invalid assignment operators&lt;/example&gt;
-          &lt;example&gt;Incorrect function calls&lt;/example&gt;
-        &lt;/examples&gt;
-      &lt;/category&gt;
-      &lt;category&gt;
-        &lt;name&gt;Indentation errors&lt;/name&gt;
-        &lt;examples&gt;
-          &lt;example&gt;Inconsistent indentation levels&lt;/example&gt;
-          &lt;example&gt;Mixing tabs and spaces&lt;/example&gt;
-          &lt;example&gt;Incorrect block indentation&lt;/example&gt;
-        &lt;/examples&gt;
-      &lt;/category&gt;
-      &lt;category&gt;
-        &lt;name&gt;Format errors&lt;/name&gt;
-        &lt;examples&gt;
-          &lt;example&gt;Improper spacing around operators&lt;/example&gt;
-          &lt;example&gt;Incorrect line breaks&lt;/example&gt;
-          &lt;example&gt;Non-compliant naming conventions&lt;/example&gt;
-        &lt;/examples&gt;
-      &lt;/category&gt;
-      &lt;category&gt;
-        &lt;name&gt;Reference errors&lt;/name&gt;
-        &lt;examples&gt;
-          &lt;example&gt;Undefined variables&lt;/example&gt;
-          &lt;example&gt;Incorrect attribute references&lt;/example&gt;
-          &lt;example&gt;Improper function calls&lt;/example&gt;
-        &lt;/examples&gt;
-      &lt;/category&gt;
-    &lt;/error_categories&gt;
-  &lt;/context&gt;
-  
-  &lt;constraints&gt;
-    &lt;constraint&gt;Preserve the original code&#39;s intended functionality and logic.&lt;/constraint&gt;
-    &lt;constraint&gt;Maintain all meaningful comments from the original code.&lt;/constraint&gt;
-    &lt;constraint&gt;Do not add explanatory comments about fixes made.&lt;/constraint&gt;
-    &lt;constraint&gt;Do not use placeholders in the output.&lt;/constraint&gt;
-    &lt;constraint&gt;Do not include any text before or after the fixed code.&lt;/constraint&gt;
-    &lt;constraint&gt;Do not explain your changes or reasoning; output only the corrected code.&lt;/constraint&gt;
-    &lt;constraint&gt;When multiple valid fixes exist, choose the most codeic approach per PEP 8.&lt;/constraint&gt;
-    &lt;constraint&gt;All syntax errors must be fixed, even if minimal.&lt;/constraint&gt;
-  &lt;/constraints&gt;
-  
-  &lt;instructions&gt;
-    &lt;instruction&gt;Think step-by-step about each part of the code script in [[code_script]].&lt;/instruction&gt;
-    &lt;instruction&gt;First, scan the entire script to identify all error types present.&lt;/instruction&gt;
-    &lt;instruction&gt;Fix syntax errors by adding missing colons, parentheses, quotes, and other required syntax elements.&lt;/instruction&gt;
-    &lt;instruction&gt;Correct indentation by ensuring consistent use of indentation and proper nesting of code blocks.&lt;/instruction&gt;
-    &lt;instruction&gt;Fix variable reference errors by ensuring all variables are properly defined and used.&lt;/instruction&gt;
-    &lt;instruction&gt;Correct import statements by fixing their format and order.&lt;/instruction&gt;
-    &lt;instruction&gt;Verify function calls to ensure they use parentheses correctly.&lt;/instruction&gt;
-    &lt;instruction&gt;Check class definitions for proper syntax and indentation.&lt;/instruction&gt;
-    &lt;instruction&gt;Ensure list, dictionary, and set literals are properly formatted.&lt;/instruction&gt;
-    &lt;instruction&gt;Verify string formatting and concatenation operations.&lt;/instruction&gt;
-    &lt;instruction&gt;After making all corrections, review the entire script once more to ensure no errors remain.&lt;/instruction&gt;
-    &lt;instruction&gt;Return ONLY the complete, corrected code script.&lt;/instruction&gt;
-    &lt;meta_instruction&gt;For each line of code, ask: &quot;Is this correct code syntax?&quot;&lt;/meta_instruction&gt;
-    &lt;meta_instruction&gt;After each fix, mentally verify that the code&#39;s functionality remains unchanged.&lt;/meta_instruction&gt;
-  &lt;/instructions&gt;
-  
-  &lt;input_data&gt;
-    &lt;code_script&gt;
-```
-[[code_script]]
-```
-    &lt;/code_script&gt;
-  &lt;/input_data&gt;
-  
-  &lt;output_format_specification&gt;
-    &lt;format&gt;Complete, working code script with all errors fixed&lt;/format&gt;
-    &lt;rules&gt;
-      &lt;rule&gt;Output must start directly with the code (no introductory text)&lt;/rule&gt;
-      &lt;rule&gt;Output must end with the code code (no concluding remarks)&lt;/rule&gt;
-      &lt;rule&gt;Preserve original docstrings and comments&lt;/rule&gt;
-      &lt;rule&gt;Use consistent quotation marks throughout&lt;/rule&gt;
-    &lt;/rules&gt;
-  &lt;/output_format_specification&gt;
-
-  &lt;evaluation_criteria&gt;
-    &lt;criterion&gt;All syntax errors are fixed (100% required)&lt;/criterion&gt;
-    &lt;criterion&gt;All indentation errors are fixed (100% required)&lt;/criterion&gt;
-    &lt;criterion&gt;Code functionality is preserved&lt;/criterion&gt;
-    &lt;criterion&gt;Output contains only the corrected code&lt;/criterion&gt;
-    &lt;criterion&gt;No explanation or commentary is included&lt;/criterion&gt;
-  &lt;/evaluation_criteria&gt;
-  
-  &lt;testing_methodology&gt;
-    &lt;test&gt;Run the corrected script to verify it executes without syntax errors&lt;/test&gt;
-    &lt;test&gt;Compare input/output behavior of original intent with corrected script&lt;/test&gt;
-    &lt;test&gt;Check edge cases (empty functions, complex nested structures)&lt;/test&gt;
-  &lt;/testing_methodology&gt;
-&lt;/prompt&gt;</code>
-</section>]]></content><author><name></name></author><category term="AI&gt;prompt" /></entry></feed>
+<p>You have now successfully redirected your /home/user directory to use the storage space on /userdata using a persistent bind mount.</p>]]></content><author><name></name></author><category term="aid&gt;linux" /></entry></feed>
