@@ -1,14 +1,16 @@
 ---
-tags: [scratchpad]
+tags:
+- scratchpad
 info: aberto.
 date: 2025-05-07
 type: post
 layout: post
 published: true
 slug: linux-home-networking
-title: 'Linux Home Networking'
+title: Linux Home Networking
+comment: https://michaelminn.com/linux/home_network/
 ---
-bibref https://michaelminn.com/linux/home_network/
+
 
 This page provides a brief introduction on how to network two Linux computers together so you can share files between machines.
 
