@@ -9,6 +9,25 @@ published: true
 slug: setting-up-gpu-drivers-on-rk3588
 title: 'Setting Up GPU Drivers on RK3588'
 ---
+
+```
+camera_engine_rkaiq_rk3562_arm64.deb
+camera_engine_rkaiq_rk3568_arm64.deb
+camera_engine_rkaiq_rk3588_arm64.deb
+camera_engine_rkisp_v2.3.0_arm64.deb
+libmali-bifrost-g31-g13p0-x11-gbm_1.9-1_arm64.deb
+libmali-bifrost-g31-g13p0-x11-gbm-dbgsym_1.9-1_arm64.deb
+libmali-bifrost-g52-g13p0-x11-gbm_1.9-1_arm64.deb
+libmali-bifrost-g52-g13p0-x11-gbm-dbgsym_1.9-1_arm64.deb
+libmali-midgard-t86x-r18p0-x11-gbm_1.9-1_arm64.deb
+libmali-midgard-t86x-r18p0-x11-gbm-dbgsym_1.9-1_arm64.deb
+libmali-utgard-450-r7p0-x11-gbm_1.9-1_arm64.deb
+libmali-utgard-450-r7p0-x11-gbm-dbgsym_1.9-1_arm64.deb
+libmali-valhall-g610-g13p0-x11-gbm_1.9-1_arm64.deb
+libmali-valhall-g610-g13p0-x11-gbm-dbgsym_1.9-1_arm64.deb
+rknpu2.tar
+```
+
 MLC LLM is a universal deployment solution that allows efficient CPU/GPU code generation without AutoTVM-based performance tuning. This guide focuses on setting up a generic GPU environment and troubleshooting common issues on the RK3588 (RK3588 based SBC).
 
 ## Table of Contents
