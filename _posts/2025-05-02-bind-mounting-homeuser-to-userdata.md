@@ -180,16 +180,41 @@ You have now successfully redirected your /home/user directory to use the storag
 # URL Source: https://ib.bsb.br/bind-mounting-homeuser-to-userdata/
 # Published Time: 2025-05-02T00:00:00+00:00
 
-# --- Configuration ---
-# !!! IMPORTANT: SET THESE VARIABLES BEFORE RUNNING !!!
-TARGET_USERNAME="user"                     # Replace with the actual username
-TARGET_USER_PRIMARY_GROUP="user"           # Replace with the user's primary group
+set -uo pipefail
+
+# --- Configuration (from script arguments and derivations) ---
+if [ "$#" -ne 2 ]; then
+    echo "Usage: $0 <username> <new_data_path_for_home>"
+    echo "  <username>: The username whose home directory is being moved."
+    echo "  <new_data_path_for_home>: The full path on the larger partition where the home directory data will actually live."
+    echo "                            Example: /mnt/data/johndoe_homedata OR /userdata (if /userdata is dedicated to this user's home data)"
+    echo ""
+    echo "Example: $0 johndoe /mnt/data/johndoe_homedata"
+    exit 1
+fi
+
+TARGET_USERNAME="$1"
+NEW_DATA_LOCATION="$2" # This is where the actual data will reside on the larger partition.
+                       # Tutorial example: data lives directly in /userdata.
+                       # For /home/user -> /userdata/user_data_folder, set this to /userdata/user_data_folder
+
+TARGET_USER_PRIMARY_GROUP=$(id -gn "${TARGET_USERNAME}")
+if [ $? -ne 0 ] || [ -z "${TARGET_USER_PRIMARY_GROUP}" ]; then
+    echo "Error: Could not determine primary group for user ${TARGET_USERNAME}."
+    echo "Please ensure the user exists."
+    exit 1
+fi
+
 OLD_HOME_DIR="/home/${TARGET_USERNAME}"
-# This is where the actual data will reside on the larger partition.
-# The tutorial implies /userdata is the mount point of the large partition,
-# and the user's data is copied directly into it.
-NEW_DATA_LOCATION="/userdata" # Tutorial example: data lives directly in /userdata
-                              # For /home/user -> /userdata/user_data_folder, set this to /userdata/user_data_folder
+
+echo "--- Script Configuration ---"
+echo "Target Username:            ${TARGET_USERNAME}"
+echo "Primary Group:              ${TARGET_USER_PRIMARY_GROUP}"
+echo "Old Home Directory Path:    ${OLD_HOME_DIR}"
+echo "New Data Location Path:     ${NEW_DATA_LOCATION}"
+echo "----------------------------"
+echo ""
+
 
 # --- Helper Functions ---
 ask_confirmation() {
@@ -218,7 +243,7 @@ step_0_prerequisites() {
     echo "1. BACKUP: Have you created a COMPLETE AND VERIFIED backup of ${OLD_HOME_DIR}?"
     echo "2. LOG OUT USER: Is the user '${TARGET_USERNAME}' COMPLETELY LOGGED OUT from all graphical and terminal sessions?"
     echo "3. USE TTY / DIFFERENT USER: Are you running this script from a TTY (e.g., Ctrl+Alt+F3) or as a different administrative user (NOT logged into ${TARGET_USERNAME}'s graphical session)?"
-    
+
     if ! ask_confirmation "Have all prerequisites been met?"; then
         echo "Aborting. Please ensure all prerequisites are met."
         exit 1
@@ -256,6 +281,11 @@ step_2_set_ownership_permissions() {
 
 step_3_copy_data() {
     echo "--- Step 3: Copy Data from ${OLD_HOME_DIR} to ${NEW_DATA_LOCATION} ---"
+    if [ ! -d "${OLD_HOME_DIR}" ]; then
+        echo "Error: Original home directory ${OLD_HOME_DIR} does not exist. Cannot copy data."
+        echo "This could happen if the script was run before, or the username is incorrect."
+        exit 1
+    fi
     echo "This might take a while depending on the data size."
     if ! ask_confirmation "Proceed with rsync from ${OLD_HOME_DIR}/ to ${NEW_DATA_LOCATION}/?"; then
         echo "Aborting data copy."
@@ -299,10 +329,15 @@ step_4_verify_copy() {
 
 step_5_rename_original_home() {
     echo "--- Step 5: Rename the Original Home Directory (Safety Backup) ---"
-    ORIGINAL_HOME_BACKUP="${OLD_HOME_DIR}.bak"
+    local ORIGINAL_HOME_BACKUP="${OLD_HOME_DIR}.bak"
     echo "Renaming ${OLD_HOME_DIR} to ${ORIGINAL_HOME_BACKUP}"
     if [ -d "${ORIGINAL_HOME_BACKUP}" ]; then
         echo "Error: ${ORIGINAL_HOME_BACKUP} already exists. Please handle this manually."
+        exit 1
+    fi
+    if [ ! -d "${OLD_HOME_DIR}" ]; then
+        echo "Error: ${OLD_HOME_DIR} does not exist or is not a directory. Cannot rename."
+        echo "This might happen if the script was partially run before. Please check."
         exit 1
     fi
     mv "${OLD_HOME_DIR}" "${ORIGINAL_HOME_BACKUP}"
@@ -310,8 +345,8 @@ step_5_rename_original_home() {
         echo "Error renaming ${OLD_HOME_DIR}. 'Device or resource busy?'"
         echo "Ensure user ${TARGET_USERNAME} is fully logged out."
         echo "You can try to find processes using:"
-        echo "  lsof ${OLD_HOME_DIR}" # Tutorial used .bak here, but at this stage .bak might not exist if mv failed
-        echo "  fuser -vm ${OLD_HOME_DIR}"
+        echo "  sudo lsof ${OLD_HOME_DIR}"
+        echo "  sudo fuser -vm ${OLD_HOME_DIR}"
         echo "  ps aux | grep ${TARGET_USERNAME}"
         echo "Aborting."
         exit 1
@@ -349,23 +384,26 @@ step_9_verify_manual_mount() {
     ls -la "${OLD_HOME_DIR}"
     echo ""
     echo "Checking mount details for target ${OLD_HOME_DIR} using findmnt:"
-    # findmnt -S <source> -T <target>
-    # For a bind mount, <source> is NEW_DATA_LOCATION, <target> is OLD_HOME_DIR
-    # We expect FSTYPE to be 'none' and 'bind' to be in options.
     local mount_info
     mount_info=$(findmnt -n -o FSTYPE,OPTIONS -S "${NEW_DATA_LOCATION}" -T "${OLD_HOME_DIR}")
-    
+
     if [[ -n "$mount_info" && "$mount_info" == *"none"* && "$mount_info" == *"bind"* ]]; then
         echo "Mount verified via findmnt: ${mount_info}"
     else
         echo "Mount verification via findmnt failed or output unexpected."
         echo "findmnt output: '$mount_info'"
         echo "Fallback: Checking 'mount' output:"
-        mount | grep "${OLD_HOME_DIR}"
-        if ! mount | grep -qE "\s${NEW_DATA_LOCATION//\/\//\/}\s+on\s+${OLD_HOME_DIR//\/\//\/}\s+type\s+none\s+\(rw,bind\)"; then
-            echo "Mount verification failed. Expected '${NEW_DATA_LOCATION} on ${OLD_HOME_DIR} type none (rw,bind)' or similar."
+        # Normalize paths for grep by removing potential duplicate slashes, though usually not an issue with these vars
+        local normalized_new_data_location="${NEW_DATA_LOCATION//\/\//\/}"
+        local normalized_old_home_dir="${OLD_HOME_DIR//\/\//\/}"
+        if mount | grep -qE "\s${normalized_new_data_location}\s+on\s+${normalized_old_home_dir}\s+type\s+none\s+\(.*bind.*\)"; then
+            echo "Mount verified via fallback 'mount | grep'."
+        else
+            echo "Mount verification failed with fallback 'mount | grep' as well."
+            echo "Expected something like: '${normalized_new_data_location} on ${normalized_old_home_dir} type none (rw,bind)' or similar."
             echo "Please check manually. Aborting persistent setup."
-            umount "${OLD_HOME_DIR}" 2>/dev/null
+            # Attempt to unmount before exiting if mount failed verification
+            umount "${OLD_HOME_DIR}" 2>/dev/null || true
             exit 1
         fi
     fi
@@ -379,29 +417,36 @@ step_10_make_persistent() {
     echo "  B) Systemd Mount Unit (Modern, Recommended)"
     read -r -p "Persistence method (A/B): " persist_choice
 
-    FSTAB_ENTRY="${NEW_DATA_LOCATION} ${OLD_HOME_DIR} none bind 0 0"
-    SYSTEMD_UNIT_NAME="home-${TARGET_USERNAME}.mount" # As per tutorial suggestion for /home/user
-    SYSTEMD_UNIT_FILE="/etc/systemd/system/${SYSTEMD_UNIT_NAME}"
+    local FSTAB_ENTRY="${NEW_DATA_LOCATION} ${OLD_HOME_DIR} none bind 0 0"
+    local SYSTEMD_UNIT_NAME="home-${TARGET_USERNAME}.mount" # As per tutorial suggestion for /home/user
+    local SYSTEMD_UNIT_FILE="/etc/systemd/system/${SYSTEMD_UNIT_NAME}"
 
     echo "Unmounting temporary manual mount: umount \"${OLD_HOME_DIR}\""
     umount "${OLD_HOME_DIR}"
-    if [ $? -ne 0 ]; then echo "Warning: Could not unmount ${OLD_HOME_DIR}. This might interfere with testing the persistent mount."; fi
+    if [ $? -ne 0 ]; then
+        echo "Warning: Could not unmount ${OLD_HOME_DIR}. This might interfere with testing the persistent mount."
+        echo "If the next step fails, it might be because the mount point is still in use from the manual test."
+    fi
 
     case "$persist_choice" in
         [Aa])
             echo "Adding to /etc/fstab: ${FSTAB_ENTRY}"
-            if grep -qF "${OLD_HOME_DIR} " /etc/fstab; then # Check with space
+            # Check for existing mount point in fstab to avoid duplicates
+            if grep -qE "^\s*[^#].*\s+${OLD_HOME_DIR}\s+" /etc/fstab; then
                 echo "An entry for ${OLD_HOME_DIR} might already exist in /etc/fstab. Please check manually."
+                cat /etc/fstab | grep "${OLD_HOME_DIR}"
                 if ! ask_confirmation "Proceed with adding the new line anyway?"; then
                     echo "Aborting fstab modification."
                     exit 1
                 fi
             fi
-            echo -e "\n# Bind mount ${TARGET_USERNAME} home directory to ${NEW_DATA_LOCATION}\n${FSTAB_ENTRY}" >> /etc/fstab
+            # Ensure there's a newline before adding the entry, if the file doesn't end with one
+            if [ -n "$(tail -c1 /etc/fstab)" ]; then echo "" >> /etc/fstab; fi
+            echo -e "\n# Bind mount ${TARGET_USERNAME} home directory to ${NEW_DATA_LOCATION} (added by script)\n${FSTAB_ENTRY}" >> /etc/fstab
             echo "Testing fstab entry: mount \"${OLD_HOME_DIR}\""
             mount "${OLD_HOME_DIR}" # Test specific mount from fstab
             if [ $? -ne 0 ]; then echo "Error during 'mount \"${OLD_HOME_DIR}\"'. Check /etc/fstab syntax. Aborting."; exit 1; fi
-            
+
             local mount_info_fstab
             mount_info_fstab=$(findmnt -n -o FSTYPE,OPTIONS -S "${NEW_DATA_LOCATION}" -T "${OLD_HOME_DIR}")
             if [[ -n "$mount_info_fstab" && "$mount_info_fstab" == *"none"* && "$mount_info_fstab" == *"bind"* ]]; then
@@ -410,17 +455,30 @@ step_10_make_persistent() {
                  echo "Mount via fstab failed verification with findmnt. Please check /etc/fstab and system logs. Aborting."; exit 1;
             fi
             echo "/etc/fstab method configured and tested."
-            echo "WARNING: If ${NEW_DATA_LOCATION} is not available early during boot, this might cause issues. Consider using 'nofail' option with caution or systemd."
+            echo "WARNING: If ${NEW_DATA_LOCATION} is not available early during boot (e.g., on a LUKS encrypted partition not yet unlocked, or a slow-to-mount network share), this might cause boot delays or failures."
+            echo "Consider using the 'nofail' option in /etc/fstab (e.g., 'bind,nofail') WITH CAUTION for home directories, as it might lead to an empty home if the mount fails."
             ;;
         [Bb])
             echo "Creating systemd mount unit: ${SYSTEMD_UNIT_FILE}"
-            # RequiresMountsFor should ideally be the mountpoint that provides NEW_DATA_LOCATION.
-            # For simplicity here, using NEW_DATA_LOCATION itself, assuming it's either a mountpoint
-            # or on a filesystem that systemd can determine dependencies for.
+            local underlying_mount_for_new_data
+            underlying_mount_for_new_data=$(df --output=target "${NEW_DATA_LOCATION}" 2>/dev/null | tail -n 1)
+
+            if [ -z "${underlying_mount_for_new_data}" ] || [ ! -d "${underlying_mount_for_new_data}" ] || [ "${underlying_mount_for_new_data}" = "-" ]; then
+                echo "Warning: Could not reliably determine the underlying mount point for ${NEW_DATA_LOCATION} using 'df'."
+                echo "Using ${NEW_DATA_LOCATION} directly for RequiresMountsFor in systemd unit. This is usually fine."
+                underlying_mount_for_new_data="${NEW_DATA_LOCATION}"
+            else
+                echo "Determined underlying mount point for ${NEW_DATA_LOCATION} as '${underlying_mount_for_new_data}' for systemd unit."
+            fi
+
             cat > "${SYSTEMD_UNIT_FILE}" << EOF
 [Unit]
 Description=Bind mount ${OLD_HOME_DIR} to ${NEW_DATA_LOCATION}
-RequiresMountsFor=${NEW_DATA_LOCATION}
+# Documentation: man systemd.mount
+# Ensures that the filesystem providing the source directory is mounted.
+RequiresMountsFor=${underlying_mount_for_new_data}
+# After these targets are reached. local-fs.target is for local file systems.
+# remote-fs.target might be relevant if NEW_DATA_LOCATION is on a network filesystem.
 After=local-fs.target remote-fs.target
 
 [Mount]
@@ -434,9 +492,10 @@ WantedBy=local-fs.target remote-fs.target
 EOF
             echo "Reloading systemd daemon, enabling and starting the unit."
             systemctl daemon-reload
+            if [ $? -ne 0 ]; then echo "Error during systemctl daemon-reload. Aborting."; exit 1; fi
             systemctl enable --now "${SYSTEMD_UNIT_NAME}"
-            if [ $? -ne 0 ]; then echo "Error enabling/starting systemd unit. Check status. Aborting."; exit 1; fi
-            
+            if [ $? -ne 0 ]; then echo "Error enabling/starting systemd unit ${SYSTEMD_UNIT_NAME}. Check status. Aborting."; exit 1; fi
+
             echo "Checking status of ${SYSTEMD_UNIT_NAME}:"
             systemctl status "${SYSTEMD_UNIT_NAME}" --no-pager
             local mount_info_systemd
@@ -461,16 +520,16 @@ step_11_test_thoroughly() {
     echo "The script has completed the mount setup."
     echo "NOW, YOU MUST:"
     echo "1. Log out from this TTY/admin session."
-    echo "2. Switch to the graphical login screen (Ctrl+Alt+F1 or F7)."
+    echo "2. Switch to the graphical login screen (e.g., Ctrl+Alt+F1 or F7)."
     echo "3. Log in as the user '${TARGET_USERNAME}'."
     echo "4. Test various applications, file access, create/delete files."
-    echo "5. Open a terminal as '${TARGET_USERNAME}' and run 'df -h ${OLD_HOME_DIR}' - it should show stats for the partition hosting ${NEW_DATA_LOCATION}."
+    echo "5. Open a terminal as '${TARGET_USERNAME}' and run 'df -h \"${OLD_HOME_DIR}\"' - it should show stats for the partition hosting ${NEW_DATA_LOCATION}."
     echo "6. CRITICAL: Reboot the system and log in again as '${TARGET_USERNAME}' to ensure the persistent mount works after a full restart."
 }
 
 step_12_cleanup() {
     echo "--- Step 12: Clean Up (Optional - Use Caution!) ---"
-    ORIGINAL_HOME_BACKUP="${OLD_HOME_DIR}.bak"
+    local ORIGINAL_HOME_BACKUP="${OLD_HOME_DIR}.bak"
     echo "After extensive testing (including reboots) and confirming everything works perfectly,"
     echo "you can remove the backup directory: ${ORIGINAL_HOME_BACKUP}"
     echo "🛑 Double-check you are deleting the correct directory! 🛑"
@@ -481,9 +540,10 @@ step_12_cleanup() {
 check_root
 
 echo "This script will guide you through bind mounting ${OLD_HOME_DIR} to use storage from ${NEW_DATA_LOCATION}."
-echo "Based on the tutorial from https://ib.bsb.br/bind-mounting-homeuser-to-userdata/"
+echo "It is based on the tutorial from https://ib.bsb.br/bind-mounting-homeuser-to-userdata/"
+echo "Please ensure you have read and understood the implications of this operation."
 echo ""
-if ! ask_confirmation "Do you understand the risks and want to proceed?"; then
+if ! ask_confirmation "Do you understand the risks and want to proceed with configuring for user '${TARGET_USERNAME}' and data location '${NEW_DATA_LOCATION}'?"; then
     echo "Aborting."
     exit 0
 fi
@@ -502,5 +562,7 @@ step_10_make_persistent
 step_11_test_thoroughly
 step_12_cleanup
 
+echo ""
 echo "Script finished. PLEASE FOLLOW THE TESTING AND CLEANUP INSTRUCTIONS CAREFULLY."
+echo "Remember to reboot and test thoroughly before considering removal of ${OLD_HOME_DIR}.bak."
 {% endcodeblock %}
