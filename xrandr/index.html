@@ -67,8 +67,8 @@
         
           <span class="post-updated">
             ↣
-            <time datetime="2025-05-07T23:04:56+00:00">
-              07 May 2025
+            <time datetime="2025-05-08T15:04:47+00:00">
+              08 May 2025
             </time>
           </span>
         
@@ -90,11 +90,11 @@
         <div class="page-stats mt-3" role="status" aria-label="Page statistics">
       
       <span class="badge bg-primary">
-        32705 characters
+        68421 characters
       </span>
         <span class="separator mx-2" aria-hidden="true">•</span>
         <span class="badge bg-primary">
-        4214 words
+        8626 words
       </span>
       </div>
         <div class="action-buttons d-flex flex-wrap gap-2">
@@ -128,7 +128,7 @@
       <article class="post-wrapper">
         <div class="post-content-body">
           
-<ul><li><a href="#why-use-autorandr"><strong>Why Use autorandr?</strong></a></li><li><a href="#prerequisites-raspberry-pi-4b-specific"><strong>Prerequisites (Raspberry Pi 4B Specific)</strong></a></li><li><a href="#installation-on-opensuse-tumbleweed"><strong>Installation on openSUSE Tumbleweed</strong></a></li><li><a href="#basic-configuration-creating-and-managing-profiles"><strong>Basic Configuration: Creating and Managing Profiles</strong></a></li><li><a href="#applying-configurations"><strong>Applying Configurations</strong></a></li><li><a href="#automation-recommended"><strong>Automation (Recommended)</strong></a></li><li><a href="#setting-a-default-fallback-profile"><strong>Setting a Default Fallback Profile</strong></a></li><li><a href="#advanced-usage"><strong>Advanced Usage</strong></a></li><li><a href="#troubleshooting"><strong>Troubleshooting</strong></a></li><li><a href="#alternative-hardware-hdmi-edid-emulator"><strong>Alternative: Hardware HDMI EDID Emulator</strong></a></li><li><a href="#resources"><strong>Resources</strong></a></li></ul>
+<ul><li><a href="#why-use-autorandr"><strong>Why Use autorandr?</strong></a></li><li><a href="#prerequisites-raspberry-pi-4b-specific"><strong>Prerequisites (Raspberry Pi 4B Specific)</strong></a></li><li><a href="#installation-on-opensuse-tumbleweed"><strong>Installation on openSUSE Tumbleweed</strong></a></li><li><a href="#basic-configuration-creating-and-managing-profiles"><strong>Basic Configuration: Creating and Managing Profiles</strong></a></li><li><a href="#applying-configurations"><strong>Applying Configurations</strong></a></li><li><a href="#automation-recommended"><strong>Automation (Recommended)</strong></a></li><li><a href="#setting-a-default-fallback-profile"><strong>Setting a Default Fallback Profile</strong></a></li><li><a href="#advanced-usage"><strong>Advanced Usage</strong></a></li><li><a href="#troubleshooting"><strong>Troubleshooting</strong></a></li><li><a href="#alternative-hardware-hdmi-edid-emulator"><strong>Alternative: Hardware HDMI EDID Emulator</strong></a></li><li><a href="#resources"><strong>Resources</strong></a></li><li><a href="#a-monitor-infosh-bash-script-to-collect-monitor-data">A. <code class="language-plaintext highlighter-rouge">monitor-info.sh</code> (Bash script to collect monitor data)</a></li><li><a href="#b-improved-temporary-xrandr-configuration-script">B. “Improved Temporary Xrandr configuration script”</a></li></ul>
           <h3 id="why-use-autorandr">
     
     
@@ -918,8 +918,829 @@ echo “1. Your display output names ($OUTPUT_DP, $OUTPUT_HDMI) are correct (use
 echo “2. Your displays are properly connected and powered on.”
 echo “3. The modelines are compatible with your hardware.”
 echo “4. Review any error messages above from xrandr.”
-echo “5. If DPI was set, verify with ‘xdpyinfo | grep resolution’.”
-```</p>
+echo “5. If DPI was set, verify with ‘xdpyinfo | grep resolution’.”</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><section><code>
+# setting up as a system service
+
+This process involves several stages:
+1.  **One-Time System Preparation:** Installing necessary software and performing initial configurations.
+2.  **Understanding and Using the Provided Scripts:** Detailing the roles of `monitor-info.sh` and the "Improved Temporary Xrandr configuration script."
+3.  **Configuring `autorandr`:** Manually defining display profiles for your different setups, incorporating logic from the provided scripts.
+4.  **Automating `autorandr`:** Ensuring `autorandr` applies these profiles automatically when an X session starts and responds to hardware changes.
+5.  **Advanced `autorandr` Features and Troubleshooting.**
+
+Here's a comprehensive, step-by-step guide:
+
+## Phase 1: One-Time System Preparation
+
+You'll need to run these commands once as root to prepare your system. You can save this as a script (e.g., `debian_display_setup_prep.sh`) and execute it, or run commands individually.
+
+```bash
+#!/bin/bash
+#
+# debian_display_setup_prep.sh
+# One-time preparation script for display management on Debian Bullseye.
+# Run this script as root: sudo bash debian_display_setup_prep.sh
+#
+
+set -euo pipefail
+
+echo "&gt;&gt;&gt; Starting one-time system preparation for display management..."
+
+# Ensure running as root
+if [[ $EUID -ne 0 ]]; then
+  echo "ERROR: This script must be run as root." &gt;&amp;2
+  exit 1
+fi
+
+echo "&gt;&gt;&gt; Updating package lists..."
+apt update
+
+echo "&gt;&gt;&gt; Installing autorandr..."
+# autorandr is in Debian Bullseye repositories.
+# Debian's package typically includes necessary Python dependencies.
+# python3-pip is included as the blog post mentions it and it can be useful.
+apt install -y autorandr python3-pip
+
+echo "&gt;&gt;&gt; Installing tools for display information gathering and configuration..."
+# These tools are used by monitor-info.sh or for manual xrandr setup.
+# 'bc' is needed for DPI calculations if you use that part of the example script.
+apt install -y read-edid ddcutil hwinfo inxi lshw x11-xserver-utils edid-decode bc
+
+echo "&gt;&gt;&gt; System Updates Recommendation..."
+echo "It's highly recommended to keep your system updated."
+echo "You can do this by running: sudo apt update &amp;&amp; sudo apt full-upgrade -y"
+# Consider uncommenting the following to perform a full upgrade now:
+# apt full-upgrade -y
+
+echo "&gt;&gt;&gt; GPU Memory Configuration (Conditional - Primarily for Raspberry Pi or similar SBCs)..."
+# If your Debian Bullseye system is a Raspberry Pi, ensure sufficient GPU memory.
+# Edit /boot/config.txt (NOT /boot/efi/extraconfig.txt).
+# Example: Add or modify 'gpu_mem=256' or 'gpu_mem=512'.
+# A reboot is required for this change.
+# This step is generally not applicable for standard PCs with dedicated GPUs.
+echo "If using a Raspberry Pi, check/adjust GPU memory in /boot/config.txt if needed (e.g., gpu_mem=256)."
+
+echo "&gt;&gt;&gt; Enabling and starting autorandr systemd services..."
+# The Debian autorandr package includes autorandr.service (for udev/DRM events like hotplug)
+# and often autorandr-resume.service (for system resume).
+# Enabling these provides robust, system-level display management.
+if systemctl list-unit-files | grep -q autorandr.service; then
+    systemctl enable --now autorandr.service
+    echo "autorandr.service has been enabled and started."
+    # Also enable the resume service if it exists
+    if systemctl list-unit-files | grep -q autorandr-resume.service; then
+        systemctl enable --now autorandr-resume.service
+        echo "autorandr-resume.service has been enabled and started."
+    fi
+else
+    echo "WARNING: autorandr.service not found. This is unexpected for the Debian Bullseye package."
+    echo "Automatic hotplug detection via systemd might not function as described."
+fi
+
+echo "&gt;&gt;&gt; One-time system preparation script finished."
+echo "Please REBOOT if you made changes like GPU memory configuration."
+echo "Next, understand the provided scripts and then manually configure autorandr profiles."
+</code></section></div></div>
+
+<p><strong>To use this script:</strong></p>
+<ol>
+  <li>Save it as <code class="language-plaintext highlighter-rouge">debian_display_setup_prep.sh</code>.</li>
+  <li>Make it executable: <code class="language-plaintext highlighter-rouge">chmod +x debian_display_setup_prep.sh</code>.</li>
+  <li>Run it as root: <code class="language-plaintext highlighter-rouge">sudo ./debian_display_setup_prep.sh</code>.</li>
+  <li>Reboot if you made changes to critical system configurations like GPU memory.</li>
+</ol>
+  <h2 id="phase-2-understanding-and-using-the-provided-scripts">
+    
+    
+     <a href="#phase-2-understanding-and-using-the-provided-scripts">#</a><a href="#" aria-label="Back to top">Phase 2: Understanding and Using the Provided Scripts</a>
+        
+    
+  </h2>
+      
+
+<p>Your original query included two scripts from a blog post. Here’s how they fit into the setup:</p>
+  <h3 id="a-monitor-infosh-bash-script-to-collect-monitor-data">
+    
+    
+     <a href="#a-monitor-infosh-bash-script-to-collect-monitor-data">#</a><a href="#" aria-label="Back to top">A. <code class="language-plaintext highlighter-rouge">monitor-info.sh</code> (Bash script to collect monitor data)</a>
+        
+    
+  </h3>
+      
+
+<ul>
+  <li><strong>Purpose:</strong> This script is a <strong>diagnostic and information-gathering tool</strong>. It is <strong>not</strong> meant to run automatically every time an X session starts. Its purpose is to help you understand your display hardware, especially when configuring new or problematic monitors. The data it gathers (EDID, timings) is crucial for crafting manual <code class="language-plaintext highlighter-rouge">xrandr</code> commands if needed.</li>
+  <li><strong>“Enclosing” this script:</strong>
+    <ol>
+      <li>The “One-Time System Preparation Script” (Phase 1) already installed all the command-line tools <code class="language-plaintext highlighter-rouge">monitor-info.sh</code> uses.</li>
+      <li>Below is the script content. Save it to a file in your home directory (e.g., <code class="language-plaintext highlighter-rouge">~/monitor-info.sh</code>).</li>
+      <li>Make it executable: <code class="language-plaintext highlighter-rouge">chmod +x ~/monitor-info.sh</code>.</li>
+      <li>Run it manually with <code class="language-plaintext highlighter-rouge">sudo ~/monitor-info.sh</code> <em>when you need to diagnose a display setup before creating an <code class="language-plaintext highlighter-rouge">autorandr</code> profile for it</em>.</li>
+    </ol>
+  </li>
+</ul>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><section><code><span class="c">#!/usr/bin/env bash</span>
+<span class="c">#</span>
+<span class="c"># monitor-info.sh</span>
+<span class="c"># Collect comprehensive monitor info for xrandr configuration on Debian Bullseye+.</span>
+<span class="c"># Usage: sudo bash ~/monitor-info.sh</span>
+<span class="c">#</span>
+
+<span class="nb">set</span> <span class="nt">-euo</span> pipefail
+
+<span class="c"># ------------------------------------------------------------</span>
+<span class="c"># Function: ensure_root</span>
+<span class="c">#   Abort if not running as root.</span>
+<span class="c"># ------------------------------------------------------------</span>
+ensure_root<span class="o">()</span> <span class="o">{</span>
+  <span class="k">if</span> <span class="o">[[</span> <span class="nv">$EUID</span> <span class="nt">-ne</span> 0 <span class="o">]]</span><span class="p">;</span> <span class="k">then
+    </span><span class="nb">echo</span> <span class="s2">"ERROR: Must be run as root."</span> <span class="o">&gt;</span>&amp;2
+    <span class="nb">exit </span>1
+  <span class="k">fi</span>
+<span class="o">}</span>
+
+<span class="c"># ------------------------------------------------------------</span>
+<span class="c"># Function: install_tools_explicit_check</span>
+<span class="c">#   Checks if tools are installed (they should be by the prep script).</span>
+<span class="c"># ------------------------------------------------------------</span>
+install_tools_explicit_check<span class="o">()</span> <span class="o">{</span>
+  <span class="nb">local </span><span class="nv">missing_pkgs</span><span class="o">=</span><span class="s2">""</span>
+  <span class="k">for </span>pkg <span class="k">in </span>read-edid ddcutil hwinfo inxi lshw x11-xserver-utils edid-decode<span class="p">;</span> <span class="k">do
+    if</span> <span class="o">!</span> dpkg <span class="nt">-s</span> <span class="s2">"</span><span class="nv">$pkg</span><span class="s2">"</span> &amp;&gt; /dev/null<span class="p">;</span> <span class="k">then
+      </span><span class="nv">missing_pkgs</span><span class="o">=</span><span class="s2">"</span><span class="nv">$missing_pkgs</span><span class="s2"> </span><span class="nv">$pkg</span><span class="s2">"</span>
+    <span class="k">fi
+  done
+  if</span> <span class="o">[[</span> <span class="nt">-n</span> <span class="s2">"</span><span class="nv">$missing_pkgs</span><span class="s2">"</span> <span class="o">]]</span><span class="p">;</span> <span class="k">then
+    </span><span class="nb">echo</span> <span class="s2">"WARNING: Some required packages are missing: </span><span class="nv">$missing_pkgs</span><span class="s2">"</span> <span class="o">&gt;</span>&amp;2
+    <span class="nb">echo</span> <span class="s2">"Please run the main preparation script or 'sudo apt install </span><span class="nv">$missing_pkgs</span><span class="s2">'"</span> <span class="o">&gt;</span>&amp;2
+    <span class="c"># Optionally, exit here if you want to be strict: exit 1</span>
+  <span class="k">fi</span>
+<span class="o">}</span>
+
+<span class="c"># ------------------------------------------------------------</span>
+<span class="c"># Function: setup_outdir</span>
+<span class="c">#   Creates a timestamped output directory.</span>
+<span class="c"># ------------------------------------------------------------</span>
+setup_outdir<span class="o">()</span> <span class="o">{</span>
+  <span class="c"># Try to create in user's home directory if sudo is used from a user context</span>
+  <span class="nv">REAL_USER</span><span class="o">=</span><span class="si">$(</span><span class="nb">logname </span>2&gt;/dev/null <span class="o">||</span> <span class="nb">echo</span> <span class="s2">"</span><span class="nv">$SUDO_USER</span><span class="s2">"</span><span class="si">)</span>
+  <span class="nv">USER_HOME</span><span class="o">=</span><span class="si">$(</span>getent passwd <span class="s2">"</span><span class="nv">$REAL_USER</span><span class="s2">"</span> | <span class="nb">cut</span> <span class="nt">-d</span>: <span class="nt">-f6</span><span class="si">)</span>
+
+  <span class="k">if</span> <span class="o">[[</span> <span class="nt">-n</span> <span class="s2">"</span><span class="nv">$USER_HOME</span><span class="s2">"</span> <span class="o">&amp;&amp;</span> <span class="nt">-d</span> <span class="s2">"</span><span class="nv">$USER_HOME</span><span class="s2">"</span> <span class="o">]]</span><span class="p">;</span> <span class="k">then
+    </span><span class="nv">OUTDIR_BASE</span><span class="o">=</span><span class="s2">"</span><span class="nv">$USER_HOME</span><span class="s2">"</span>
+  <span class="k">else
+    </span><span class="nv">OUTDIR_BASE</span><span class="o">=</span><span class="s2">"/root"</span> <span class="c"># Fallback to /root if user home not found</span>
+  <span class="k">fi
+
+  </span><span class="nv">OUTDIR</span><span class="o">=</span><span class="s2">"</span><span class="k">${</span><span class="nv">OUTDIR_BASE</span><span class="k">}</span><span class="s2">/monitor-info-</span><span class="si">$(</span><span class="nb">date</span> +%Y%m%d-%H%M%S<span class="si">)</span><span class="s2">"</span>
+  <span class="nb">mkdir</span> <span class="nt">-p</span> <span class="s2">"</span><span class="nv">$OUTDIR</span><span class="s2">"</span>
+  <span class="c"># If run as root, ensure the user can access it if OUTDIR_BASE was user's home</span>
+  <span class="k">if</span> <span class="o">[[</span> <span class="nt">-n</span> <span class="s2">"</span><span class="nv">$SUDO_USER</span><span class="s2">"</span> <span class="o">&amp;&amp;</span> <span class="s2">"</span><span class="nv">$OUTDIR_BASE</span><span class="s2">"</span> <span class="o">==</span> <span class="s2">"</span><span class="nv">$USER_HOME</span><span class="s2">"</span> <span class="o">]]</span><span class="p">;</span> <span class="k">then
+    </span><span class="nb">chown</span> <span class="nt">-R</span> <span class="s2">"</span><span class="nv">$SUDO_USER</span><span class="s2">:</span><span class="nv">$SUDO_USER</span><span class="s2">"</span> <span class="s2">"</span><span class="nv">$OUTDIR</span><span class="s2">"</span> <span class="o">||</span> <span class="nb">true
+  </span><span class="k">fi
+  </span><span class="nb">echo</span> <span class="s2">"Output directory: </span><span class="nv">$OUTDIR</span><span class="s2">"</span>
+<span class="o">}</span>
+
+<span class="c"># ------------------------------------------------------------</span>
+<span class="c"># Function: log_cmd</span>
+<span class="c">#   Runs a command, logs stdout/stderr to a file, does not exit on error.</span>
+<span class="c">#   Usage: log_cmd logfile command [args...]</span>
+<span class="c"># ------------------------------------------------------------</span>
+log_cmd<span class="o">()</span> <span class="o">{</span>
+  <span class="nb">local </span><span class="nv">logfile</span><span class="o">=</span><span class="s2">"</span><span class="nv">$1</span><span class="s2">"</span><span class="p">;</span> <span class="nb">shift</span>
+  <span class="o">{</span>
+    <span class="nb">echo</span> <span class="s2">"===== </span><span class="si">$(</span><span class="nb">date</span> <span class="s1">'+%F %T'</span><span class="si">)</span><span class="s2"> : </span><span class="nv">$*</span><span class="s2"> ====="</span>
+    <span class="s2">"</span><span class="nv">$@</span><span class="s2">"</span> 2&gt;&amp;1 <span class="o">||</span> <span class="nb">echo</span> <span class="s2">"(ERROR: '</span><span class="nv">$*</span><span class="s2">' failed with exit code </span><span class="nv">$?</span><span class="s2">)"</span>
+    <span class="nb">echo</span>
+  <span class="o">}</span> <span class="o">&gt;&gt;</span><span class="s2">"</span><span class="nv">$OUTDIR</span><span class="s2">/</span><span class="nv">$logfile</span><span class="s2">"</span>
+<span class="o">}</span>
+
+<span class="c"># ------------------------------------------------------------</span>
+<span class="c"># Function: detect_connectors</span>
+<span class="c">#   Populates arrays: DRM_ALL (all connectors), DRM_EDID (with edid),</span>
+<span class="c">#   XRANDR_CONNECTED, XRANDR_ALL.</span>
+<span class="c"># ------------------------------------------------------------</span>
+detect_connectors<span class="o">()</span> <span class="o">{</span>
+  <span class="nv">DRM_ALL</span><span class="o">=()</span>
+  <span class="nv">DRM_EDID</span><span class="o">=()</span>
+  <span class="nv">XRANDR_ALL</span><span class="o">=()</span>
+  <span class="nv">XRANDR_CONNECTED</span><span class="o">=()</span>
+
+  <span class="c"># DRM: all dirs under /sys/class/drm matching card*-* (more specific)</span>
+  <span class="k">for </span>card_path <span class="k">in</span> /sys/class/drm/card<span class="k">*</span><span class="p">;</span> <span class="k">do
+    if</span> <span class="o">[[</span> <span class="nt">-d</span> <span class="s2">"</span><span class="nv">$card_path</span><span class="s2">"</span> <span class="o">]]</span><span class="p">;</span> <span class="k">then
+        for </span>path <span class="k">in</span> <span class="s2">"</span><span class="nv">$card_path</span><span class="s2">"</span>/<span class="k">*</span><span class="p">;</span> <span class="k">do
+            if</span> <span class="o">[[</span> <span class="nt">-d</span> <span class="s2">"</span><span class="nv">$path</span><span class="s2">"</span> <span class="o">&amp;&amp;</span> <span class="si">$(</span><span class="nb">basename</span> <span class="s2">"</span><span class="nv">$path</span><span class="s2">"</span><span class="si">)</span> <span class="o">=</span>~ ^[A-Z]+-[0-9]+<span class="nv">$|</span>^[a-z]+-[0-9]+<span class="nv">$ </span><span class="o">]]</span><span class="p">;</span> <span class="k">then</span> <span class="c"># Matches like HDMI-A-1 or DP-1</span>
+                <span class="nb">local </span><span class="nv">name</span><span class="o">=</span><span class="si">$(</span><span class="nb">basename</span> <span class="s2">"</span><span class="nv">$path</span><span class="s2">"</span><span class="si">)</span>
+                DRM_ALL+<span class="o">=(</span><span class="s2">"</span><span class="nv">$name</span><span class="s2">"</span><span class="o">)</span>
+                <span class="o">[[</span> <span class="nt">-r</span> <span class="s2">"</span><span class="nv">$path</span><span class="s2">/edid"</span> <span class="o">&amp;&amp;</span> <span class="nt">-s</span> <span class="s2">"</span><span class="nv">$path</span><span class="s2">/edid"</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> DRM_EDID+<span class="o">=(</span><span class="s2">"</span><span class="nv">$name</span><span class="s2">"</span><span class="o">)</span> <span class="c"># Check if EDID file is readable and not empty</span>
+            <span class="k">fi
+        done
+    fi
+  done</span>
+
+
+  <span class="c"># xrandr: all outputs and connected ones</span>
+  <span class="c"># Ensure X is running for xrandr, otherwise skip</span>
+  <span class="k">if </span><span class="nb">command</span> <span class="nt">-v</span> xrandr &amp;&gt; /dev/null <span class="o">&amp;&amp;</span> xhost <span class="o">&gt;</span>/dev/null 2&gt;&amp;1<span class="p">;</span> <span class="k">then
+    while </span><span class="nv">IFS</span><span class="o">=</span> <span class="nb">read</span> <span class="nt">-r</span> line<span class="p">;</span> <span class="k">do
+      </span><span class="nb">local </span><span class="nv">out</span><span class="o">=</span><span class="si">$(</span><span class="nb">awk</span> <span class="s1">'/ connected/{print $1} / disconnected/{print $1}'</span> <span class="o">&lt;&lt;&lt;</span><span class="s2">"</span><span class="nv">$line</span><span class="s2">"</span><span class="si">)</span>
+      <span class="o">[[</span> <span class="nt">-n</span> <span class="s2">"</span><span class="nv">$out</span><span class="s2">"</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> XRANDR_ALL+<span class="o">=(</span><span class="s2">"</span><span class="nv">$out</span><span class="s2">"</span><span class="o">)</span>
+      <span class="o">[[</span> <span class="nv">$line</span> <span class="o">==</span> <span class="k">*</span><span class="s2">" connected"</span><span class="k">*</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> XRANDR_CONNECTED+<span class="o">=(</span><span class="s2">"</span><span class="nv">$out</span><span class="s2">"</span><span class="o">)</span>
+    <span class="k">done</span> &lt; &lt;<span class="o">(</span>xrandr 2&gt;/dev/null<span class="o">)</span>
+  <span class="k">else
+    </span><span class="nb">echo</span> <span class="s2">"NOTE: xrandr queries skipped (X server not accessible or xrandr not found)."</span> | <span class="nb">tee</span> <span class="nt">-a</span> <span class="s2">"</span><span class="nv">$OUTDIR</span><span class="s2">/summary.txt"</span>
+  <span class="k">fi</span>
+
+  <span class="c"># Summary print</span>
+  <span class="o">{</span>
+    <span class="nb">echo</span> <span class="s2">"All DRM connectors found: </span><span class="k">${</span><span class="nv">DRM_ALL</span><span class="p">[*]</span><span class="k">:-</span><span class="nv">none</span><span class="k">}</span><span class="s2">"</span>
+    <span class="nb">echo</span> <span class="s2">"DRM connectors with readable EDID: </span><span class="k">${</span><span class="nv">DRM_EDID</span><span class="p">[*]</span><span class="k">:-</span><span class="nv">none</span><span class="k">}</span><span class="s2">"</span>
+    <span class="nb">echo</span> <span class="s2">"xrandr outputs (if X session active): </span><span class="k">${</span><span class="nv">XRANDR_ALL</span><span class="p">[*]</span><span class="k">:-</span><span class="nv">none</span><span class="k">}</span><span class="s2">"</span>
+    <span class="nb">echo</span> <span class="s2">"Connected outputs via xrandr (if X session active): </span><span class="k">${</span><span class="nv">XRANDR_CONNECTED</span><span class="p">[*]</span><span class="k">:-</span><span class="nv">none</span><span class="k">}</span><span class="s2">"</span>
+  <span class="o">}</span> | <span class="nb">tee</span> <span class="nt">-a</span> <span class="s2">"</span><span class="nv">$OUTDIR</span><span class="s2">/summary.txt"</span>
+<span class="o">}</span>
+
+<span class="c"># ------------------------------------------------------------</span>
+<span class="c"># Function: collect_sysfs_edid</span>
+<span class="c">#   Parses EDID from sysfs for connectors in DRM_EDID.</span>
+<span class="c"># ------------------------------------------------------------</span>
+collect_sysfs_edid<span class="o">()</span> <span class="o">{</span>
+  <span class="k">if</span> <span class="o">!</span> <span class="nb">command</span> <span class="nt">-v</span> parse-edid &amp;&gt; /dev/null <span class="o">&amp;&amp;</span> <span class="nb">command</span> <span class="nt">-v</span> edid-decode &amp;&gt; /dev/null<span class="p">;</span> <span class="k">then
+    </span><span class="nb">echo</span> <span class="s2">"Skipping sysfs EDID parsing: neither parse-edid nor edid-decode found."</span>
+    <span class="k">return
+  fi
+  </span><span class="nb">local </span>parser_cmd
+  <span class="nv">parser_cmd</span><span class="o">=</span><span class="si">$(</span><span class="nb">command</span> <span class="nt">-v</span> edid-decode <span class="o">||</span> <span class="nb">command</span> <span class="nt">-v</span> parse-edid<span class="si">)</span>
+
+  <span class="k">for </span>CON_BASENAME <span class="k">in</span> <span class="s2">"</span><span class="k">${</span><span class="nv">DRM_EDID</span><span class="p">[@]</span><span class="k">}</span><span class="s2">"</span><span class="p">;</span> <span class="k">do</span>
+    <span class="c"># Find full path for CON_BASENAME under /sys/class/drm/card*</span>
+    <span class="nb">local </span><span class="nv">edid_path</span><span class="o">=</span><span class="s2">""</span>
+    <span class="k">for </span>card_path <span class="k">in</span> /sys/class/drm/card<span class="k">*</span><span class="p">;</span> <span class="k">do
+        if</span> <span class="o">[[</span> <span class="nt">-e</span> <span class="s2">"</span><span class="nv">$card_path</span><span class="s2">/</span><span class="nv">$CON_BASENAME</span><span class="s2">/edid"</span> <span class="o">]]</span><span class="p">;</span> <span class="k">then
+            </span><span class="nv">edid_path</span><span class="o">=</span><span class="s2">"</span><span class="nv">$card_path</span><span class="s2">/</span><span class="nv">$CON_BASENAME</span><span class="s2">/edid"</span>
+            <span class="nb">break
+        </span><span class="k">fi
+    done
+
+    if</span> <span class="o">[[</span> <span class="nt">-n</span> <span class="s2">"</span><span class="nv">$edid_path</span><span class="s2">"</span> <span class="o">&amp;&amp;</span> <span class="nt">-r</span> <span class="s2">"</span><span class="nv">$edid_path</span><span class="s2">"</span> <span class="o">]]</span><span class="p">;</span> <span class="k">then
+        </span>log_cmd <span class="s2">"edid_sysfs_</span><span class="k">${</span><span class="nv">CON_BASENAME</span><span class="k">}</span><span class="s2">.log"</span> <span class="s2">"</span><span class="nv">$parser_cmd</span><span class="s2">"</span> &lt;<span class="s2">"</span><span class="nv">$edid_path</span><span class="s2">"</span>
+    <span class="k">else
+        </span><span class="nb">echo</span> <span class="s2">"Could not read EDID for </span><span class="nv">$CON_BASENAME</span><span class="s2"> from </span><span class="nv">$edid_path</span><span class="s2">"</span> <span class="o">&gt;&gt;</span> <span class="s2">"</span><span class="nv">$OUTDIR</span><span class="s2">/summary.txt"</span>
+    <span class="k">fi
+  done</span>
+<span class="o">}</span>
+
+<span class="c"># ------------------------------------------------------------</span>
+<span class="c"># Function: collect_getedid</span>
+<span class="c">#   Parses EDID via get-edid (ISA bus fallback, part of read-edid package).</span>
+<span class="c"># ------------------------------------------------------------</span>
+collect_getedid<span class="o">()</span> <span class="o">{</span>
+  <span class="k">if</span> <span class="o">!</span> <span class="nb">command</span> <span class="nt">-v</span> get-edid &amp;&gt; /dev/null<span class="p">;</span> <span class="k">then
+    </span><span class="nb">echo</span> <span class="s2">"Skipping get-edid: command not found."</span>
+    <span class="k">return
+  fi
+  if</span> <span class="o">!</span> <span class="nb">command</span> <span class="nt">-v</span> parse-edid &amp;&gt; /dev/null <span class="o">&amp;&amp;</span> <span class="nb">command</span> <span class="nt">-v</span> edid-decode &amp;&gt; /dev/null<span class="p">;</span> <span class="k">then
+    </span><span class="nb">echo</span> <span class="s2">"Skipping get-edid parsing: no EDID parser found."</span>
+    <span class="k">return
+  fi
+  </span><span class="nb">local </span>parser_cmd
+  <span class="nv">parser_cmd</span><span class="o">=</span><span class="si">$(</span><span class="nb">command</span> <span class="nt">-v</span> edid-decode <span class="o">||</span> <span class="nb">command</span> <span class="nt">-v</span> parse-edid<span class="si">)</span>
+
+  <span class="c"># get-edid often needs I2C modules loaded, like i2c-dev</span>
+  <span class="c"># Ensure modules are loaded, if possible (might require reboot or manual modprobe)</span>
+  <span class="k">if</span> <span class="o">!</span> lsmod | <span class="nb">grep</span> <span class="nt">-q</span> <span class="s2">"i2c_dev"</span><span class="p">;</span> <span class="k">then
+    </span><span class="nb">echo</span> <span class="s2">"INFO: i2c_dev module not loaded. get-edid might fail. Consider 'sudo modprobe i2c_dev'."</span>
+  <span class="k">fi
+  </span>log_cmd <span class="s2">"edid_getedid.log"</span> bash <span class="nt">-c</span> <span class="s2">"get-edid 2&gt;/dev/null | </span><span class="nv">$parser_cmd</span><span class="s2">"</span>
+<span class="o">}</span>
+
+<span class="c"># ------------------------------------------------------------</span>
+<span class="c"># Function: collect_ddc</span>
+<span class="c">#   Runs ddcutil detect and other commands.</span>
+<span class="c"># ------------------------------------------------------------</span>
+collect_ddc<span class="o">()</span> <span class="o">{</span>
+  <span class="k">if</span> <span class="o">!</span> <span class="nb">command</span> <span class="nt">-v</span> ddcutil &amp;&gt; /dev/null<span class="p">;</span> <span class="k">then
+    </span><span class="nb">echo</span> <span class="s2">"Skipping ddcutil: command not found."</span>
+    <span class="k">return
+  fi</span>
+  <span class="c"># ddcutil often needs I2C modules loaded, like i2c-dev</span>
+  <span class="k">if</span> <span class="o">!</span> lsmod | <span class="nb">grep</span> <span class="nt">-q</span> <span class="s2">"i2c_dev"</span><span class="p">;</span> <span class="k">then
+    </span><span class="nb">echo</span> <span class="s2">"INFO: i2c_dev module not loaded. ddcutil might fail. Consider 'sudo modprobe i2c_dev'."</span>
+  <span class="k">fi
+  </span>log_cmd <span class="s2">"ddcutil_detect.log"</span> ddcutil detect <span class="nt">--verbose</span>
+  <span class="c"># The following might be too much or redundant if sysfs EDID works well</span>
+  <span class="c"># log_cmd "ddcutil_edid.log"  ddcutil get-edid --verbose | edid-decode # or parse-edid</span>
+  <span class="c"># log_cmd "ddcutil_caps.log"  ddcutil capabilities --verbose</span>
+<span class="o">}</span>
+
+<span class="c"># ------------------------------------------------------------</span>
+<span class="c"># Function: collect_general_info</span>
+<span class="c">#   Captures xrandr verbose, hwinfo, inxi, lshw.</span>
+<span class="c"># ------------------------------------------------------------</span>
+collect_general_info<span class="o">()</span> <span class="o">{</span>
+  <span class="k">if </span><span class="nb">command</span> <span class="nt">-v</span> xrandr &amp;&gt; /dev/null <span class="o">&amp;&amp;</span> xhost <span class="o">&gt;</span>/dev/null 2&gt;&amp;1<span class="p">;</span> <span class="k">then
+    </span>log_cmd <span class="s2">"xrandr_verbose.log"</span> xrandr <span class="nt">--verbose</span>
+  <span class="k">fi
+  </span><span class="nb">command</span> <span class="nt">-v</span> hwinfo &amp;&gt; /dev/null <span class="o">&amp;&amp;</span> log_cmd <span class="s2">"hwinfo_monitor.log"</span> hwinfo <span class="nt">--monitor</span> <span class="nt">--verbose</span>
+  <span class="nb">command</span> <span class="nt">-v</span> inxi &amp;&gt; /dev/null <span class="o">&amp;&amp;</span> log_cmd <span class="s2">"inxi_Gxx.log"</span> inxi <span class="nt">-Gxx</span> <span class="nt">--display</span>
+  <span class="nb">command</span> <span class="nt">-v</span> lshw &amp;&gt; /dev/null <span class="o">&amp;&amp;</span> log_cmd <span class="s2">"lshw_display.log"</span> lshw <span class="nt">-C</span> display <span class="nt">-sanitize</span>
+<span class="o">}</span>
+
+<span class="c"># ------------------------------------------------------------</span>
+<span class="c"># Function: collect_udev</span>
+<span class="c">#   Gathers udevadm info for all DRM_ALL connectors.</span>
+<span class="c"># ------------------------------------------------------------</span>
+collect_udev<span class="o">()</span> <span class="o">{</span>
+  <span class="k">for </span>CON_BASENAME <span class="k">in</span> <span class="s2">"</span><span class="k">${</span><span class="nv">DRM_ALL</span><span class="p">[@]</span><span class="k">}</span><span class="s2">"</span><span class="p">;</span> <span class="k">do
+    </span><span class="nb">local </span><span class="nv">sys_path</span><span class="o">=</span><span class="s2">""</span>
+    <span class="k">for </span>card_path <span class="k">in</span> /sys/class/drm/card<span class="k">*</span><span class="p">;</span> <span class="k">do
+        if</span> <span class="o">[[</span> <span class="nt">-d</span> <span class="s2">"</span><span class="nv">$card_path</span><span class="s2">/</span><span class="nv">$CON_BASENAME</span><span class="s2">"</span> <span class="o">]]</span><span class="p">;</span> <span class="k">then
+            </span><span class="nv">sys_path</span><span class="o">=</span><span class="s2">"</span><span class="nv">$card_path</span><span class="s2">/</span><span class="nv">$CON_BASENAME</span><span class="s2">"</span>
+            <span class="nb">break
+        </span><span class="k">fi
+    done
+
+    if</span> <span class="o">[[</span> <span class="nt">-n</span> <span class="s2">"</span><span class="nv">$sys_path</span><span class="s2">"</span> <span class="o">]]</span><span class="p">;</span> <span class="k">then
+        </span>log_cmd <span class="s2">"udevadm_</span><span class="k">${</span><span class="nv">CON_BASENAME</span><span class="k">}</span><span class="s2">.log"</span> udevadm info <span class="nt">--query</span><span class="o">=</span>all <span class="nt">--path</span><span class="o">=</span><span class="s2">"</span><span class="si">$(</span><span class="nb">readlink</span> <span class="nt">-f</span> <span class="s2">"</span><span class="nv">$sys_path</span><span class="s2">"</span><span class="si">)</span><span class="s2">"</span>
+    <span class="k">fi
+  done</span>
+<span class="o">}</span>
+
+<span class="c"># ------------------------------------------------------------</span>
+<span class="c"># Function: generate_cvt_interactive</span>
+<span class="c">#   Prompts user, generates and optionally applies a CVT modeline.</span>
+<span class="c">#   (Note: applying modes should be done carefully and typically within an X session)</span>
+<span class="c"># ------------------------------------------------------------</span>
+generate_cvt_interactive<span class="o">()</span> <span class="o">{</span>
+  <span class="k">if</span> <span class="o">!</span> <span class="nb">command</span> <span class="nt">-v</span> cvt &amp;&gt; /dev/null<span class="p">;</span> <span class="k">then
+    </span><span class="nb">echo</span> <span class="s2">"Skipping CVT modeline generation: cvt command not found (part of x11-xserver-utils)."</span>
+    <span class="k">return
+  fi
+  if</span> <span class="o">!</span> <span class="nb">command</span> <span class="nt">-v</span> xrandr &amp;&gt; /dev/null <span class="o">||</span> <span class="o">!</span> xhost <span class="o">&gt;</span>/dev/null 2&gt;&amp;1<span class="p">;</span> <span class="k">then
+    </span><span class="nb">echo</span> <span class="s2">"Skipping CVT modeline application: xrandr not available or X session not active."</span>
+    <span class="nb">read</span> <span class="nt">-rp</span> <span class="s2">"Enter width height refresh (e.g. 1920 1080 60) to generate modeline, or ENTER to skip: "</span> W H R
+    <span class="k">if</span> <span class="o">[[</span> <span class="nt">-n</span> <span class="s2">"</span><span class="nv">$W</span><span class="s2">"</span> <span class="o">&amp;&amp;</span> <span class="nt">-n</span> <span class="s2">"</span><span class="nv">$H</span><span class="s2">"</span> <span class="o">&amp;&amp;</span> <span class="nt">-n</span> <span class="s2">"</span><span class="nv">$R</span><span class="s2">"</span> <span class="o">]]</span><span class="p">;</span> <span class="k">then
+        </span><span class="nb">local </span>MODELINE
+        <span class="nv">MODELINE</span><span class="o">=</span><span class="si">$(</span>cvt <span class="s2">"</span><span class="nv">$W</span><span class="s2">"</span> <span class="s2">"</span><span class="nv">$H</span><span class="s2">"</span> <span class="s2">"</span><span class="nv">$R</span><span class="s2">"</span> 2&gt;/dev/null | <span class="nb">grep </span>Modeline | <span class="nb">sed</span> <span class="s1">'s/Modeline //'</span><span class="si">)</span>
+        <span class="k">if</span> <span class="o">[[</span> <span class="nt">-n</span> <span class="s2">"</span><span class="nv">$MODELINE</span><span class="s2">"</span> <span class="o">]]</span><span class="p">;</span> <span class="k">then
+            </span><span class="nb">echo</span> <span class="s2">"Generated Modeline: </span><span class="nv">$MODELINE</span><span class="s2">"</span> | <span class="nb">tee</span> <span class="nt">-a</span> <span class="s2">"</span><span class="nv">$OUTDIR</span><span class="s2">/cvt_modeline.log"</span>
+        <span class="k">else
+            </span><span class="nb">echo</span> <span class="s2">"ERROR: Failed to generate modeline with cvt </span><span class="nv">$W</span><span class="s2"> </span><span class="nv">$H</span><span class="s2"> </span><span class="nv">$R</span><span class="s2">."</span> | <span class="nb">tee</span> <span class="nt">-a</span> <span class="s2">"</span><span class="nv">$OUTDIR</span><span class="s2">/cvt_modeline.log"</span>
+        <span class="k">fi
+    fi
+    return
+  fi
+
+  </span><span class="nb">read</span> <span class="nt">-rp</span> <span class="s2">"Enter width height refresh (e.g. 1920 1080 60), or ENTER to skip CVT modeline generation: "</span> W H R
+  <span class="k">if</span> <span class="o">[[</span> <span class="nt">-n</span> <span class="s2">"</span><span class="nv">$W</span><span class="s2">"</span> <span class="o">&amp;&amp;</span> <span class="nt">-n</span> <span class="s2">"</span><span class="nv">$H</span><span class="s2">"</span> <span class="o">&amp;&amp;</span> <span class="nt">-n</span> <span class="s2">"</span><span class="nv">$R</span><span class="s2">"</span> <span class="o">]]</span><span class="p">;</span> <span class="k">then
+    </span><span class="nb">local </span>MODELINE_FULL MODELINE_PARAMS NAME
+    <span class="nv">MODELINE_FULL</span><span class="o">=</span><span class="si">$(</span>cvt <span class="s2">"</span><span class="nv">$W</span><span class="s2">"</span> <span class="s2">"</span><span class="nv">$H</span><span class="s2">"</span> <span class="s2">"</span><span class="nv">$R</span><span class="s2">"</span> 2&gt;/dev/null | <span class="nb">grep </span>Modeline<span class="si">)</span>
+
+    <span class="k">if</span> <span class="o">[[</span> <span class="nt">-n</span> <span class="s2">"</span><span class="nv">$MODELINE_FULL</span><span class="s2">"</span> <span class="o">]]</span><span class="p">;</span> <span class="k">then
+      </span><span class="nv">MODELINE_PARAMS</span><span class="o">=</span><span class="si">$(</span><span class="nb">echo</span> <span class="s2">"</span><span class="nv">$MODELINE_FULL</span><span class="s2">"</span> | <span class="nb">sed</span> <span class="s1">'s/Modeline //; s/^"[^"]*" //'</span><span class="si">)</span> <span class="c"># Remove "Modeline" and the name part</span>
+      <span class="nv">NAME</span><span class="o">=</span><span class="si">$(</span><span class="nb">echo</span> <span class="s2">"</span><span class="nv">$MODELINE_FULL</span><span class="s2">"</span> | <span class="nb">awk</span> <span class="s1">'{print $2}'</span> | <span class="nb">tr</span> <span class="nt">-d</span> <span class="s1">'"'</span><span class="si">)</span> <span class="c"># Extract the mode name</span>
+
+      <span class="nb">echo</span> <span class="s2">"Generated Modeline: </span><span class="nv">$MODELINE_FULL</span><span class="s2">"</span> | <span class="nb">tee</span> <span class="nt">-a</span> <span class="s2">"</span><span class="nv">$OUTDIR</span><span class="s2">/cvt_modeline.log"</span>
+      <span class="nb">echo</span> <span class="s2">"Parameters for xrandr --newmode: </span><span class="nv">$NAME</span><span class="s2"> </span><span class="nv">$MODELINE_PARAMS</span><span class="s2">"</span> | <span class="nb">tee</span> <span class="nt">-a</span> <span class="s2">"</span><span class="nv">$OUTDIR</span><span class="s2">/cvt_modeline.log"</span>
+
+      <span class="nb">local </span><span class="nv">TARGET</span><span class="o">=</span><span class="k">${</span><span class="nv">XRANDR_CONNECTED</span><span class="p">[0]</span><span class="k">:-}</span> <span class="c"># Use first connected output as example</span>
+      <span class="k">if</span> <span class="o">[[</span> <span class="nt">-n</span> <span class="s2">"</span><span class="nv">$TARGET</span><span class="s2">"</span> <span class="o">]]</span><span class="p">;</span> <span class="k">then
+        </span><span class="nb">read</span> <span class="nt">-rp</span> <span class="s2">"Attempt to apply this to </span><span class="nv">$TARGET</span><span class="s2"> (requires X session)? (y/N): "</span> APPLY_CVT
+        <span class="k">if</span> <span class="o">[[</span> <span class="s2">"</span><span class="nv">$APPLY_CVT</span><span class="s2">"</span> <span class="o">=</span>~ ^[Yy]<span class="nv">$ </span><span class="o">]]</span><span class="p">;</span> <span class="k">then
+          </span><span class="nb">echo</span> <span class="s2">"Applying: xrandr --newmode </span><span class="nv">$NAME</span><span class="s2"> </span><span class="nv">$MODELINE_PARAMS</span><span class="s2">"</span> | <span class="nb">tee</span> <span class="nt">-a</span> <span class="s2">"</span><span class="nv">$OUTDIR</span><span class="s2">/cvt_modeline.log"</span>
+          xrandr <span class="nt">--newmode</span> <span class="s2">"</span><span class="nv">$NAME</span><span class="s2">"</span> <span class="nv">$MODELINE_PARAMS</span>
+          <span class="k">if</span> <span class="o">[[</span> <span class="nv">$?</span> <span class="nt">-eq</span> 0 <span class="o">]]</span><span class="p">;</span> <span class="k">then
+            </span><span class="nb">echo</span> <span class="s2">"Applying: xrandr --addmode </span><span class="nv">$TARGET</span><span class="s2"> </span><span class="nv">$NAME</span><span class="s2">"</span> | <span class="nb">tee</span> <span class="nt">-a</span> <span class="s2">"</span><span class="nv">$OUTDIR</span><span class="s2">/cvt_modeline.log"</span>
+            xrandr <span class="nt">--addmode</span> <span class="s2">"</span><span class="nv">$TARGET</span><span class="s2">"</span> <span class="s2">"</span><span class="nv">$NAME</span><span class="s2">"</span>
+            <span class="k">if</span> <span class="o">[[</span> <span class="nv">$?</span> <span class="nt">-eq</span> 0 <span class="o">]]</span><span class="p">;</span> <span class="k">then
+              </span><span class="nb">echo</span> <span class="s2">"To activate, run: xrandr --output </span><span class="nv">$TARGET</span><span class="s2"> --mode </span><span class="nv">$NAME</span><span class="s2">"</span> | <span class="nb">tee</span> <span class="nt">-a</span> <span class="s2">"</span><span class="nv">$OUTDIR</span><span class="s2">/cvt_modeline.log"</span>
+              <span class="nb">read</span> <span class="nt">-rp</span> <span class="s2">"Attempt to set mode </span><span class="nv">$NAME</span><span class="s2"> on </span><span class="nv">$TARGET</span><span class="s2"> now? (y/N): "</span> SET_MODE
+              <span class="k">if</span> <span class="o">[[</span> <span class="s2">"</span><span class="nv">$SET_MODE</span><span class="s2">"</span> <span class="o">=</span>~ ^[Yy]<span class="nv">$ </span><span class="o">]]</span><span class="p">;</span> <span class="k">then
+                </span>xrandr <span class="nt">--output</span> <span class="s2">"</span><span class="nv">$TARGET</span><span class="s2">"</span> <span class="nt">--mode</span> <span class="s2">"</span><span class="nv">$NAME</span><span class="s2">"</span>
+                <span class="nb">echo</span> <span class="s2">"Mode set attempt completed."</span> | <span class="nb">tee</span> <span class="nt">-a</span> <span class="s2">"</span><span class="nv">$OUTDIR</span><span class="s2">/cvt_modeline.log"</span>
+              <span class="k">fi
+            else
+              </span><span class="nb">echo</span> <span class="s2">"ERROR: xrandr --addmode failed."</span> | <span class="nb">tee</span> <span class="nt">-a</span> <span class="s2">"</span><span class="nv">$OUTDIR</span><span class="s2">/cvt_modeline.log"</span>
+            <span class="k">fi
+          else
+            </span><span class="nb">echo</span> <span class="s2">"ERROR: xrandr --newmode failed (mode might already exist or be invalid)."</span> | <span class="nb">tee</span> <span class="nt">-a</span> <span class="s2">"</span><span class="nv">$OUTDIR</span><span class="s2">/cvt_modeline.log"</span>
+          <span class="k">fi
+        fi
+      else
+        </span><span class="nb">echo</span> <span class="s2">"No connected xrandr output detected to suggest application."</span> | <span class="nb">tee</span> <span class="nt">-a</span> <span class="s2">"</span><span class="nv">$OUTDIR</span><span class="s2">/cvt_modeline.log"</span>
+      <span class="k">fi
+    else
+      </span><span class="nb">echo</span> <span class="s2">"ERROR: Failed to generate modeline with cvt </span><span class="nv">$W</span><span class="s2"> </span><span class="nv">$H</span><span class="s2"> </span><span class="nv">$R</span><span class="s2">."</span> | <span class="nb">tee</span> <span class="nt">-a</span> <span class="s2">"</span><span class="nv">$OUTDIR</span><span class="s2">/cvt_modeline.log"</span>
+    <span class="k">fi
+  fi</span>
+<span class="o">}</span>
+
+<span class="c"># ------------------- Main Execution -------------------</span>
+ensure_root
+install_tools_explicit_check <span class="c"># Verify tools, prep script should have installed them</span>
+
+<span class="c"># Arrays for connectors</span>
+<span class="nb">declare</span> <span class="nt">-a</span> DRM_ALL DRM_EDID XRANDR_ALL XRANDR_CONNECTED
+
+setup_outdir
+detect_connectors <span class="c"># Call this after setup_outdir so summary.txt goes into $OUTDIR</span>
+collect_sysfs_edid
+collect_getedid
+collect_ddc
+collect_general_info
+collect_udev
+generate_cvt_interactive
+
+<span class="nb">echo
+echo</span> <span class="s2">"Done. Review logs and summary.txt in </span><span class="nv">$OUTDIR</span><span class="s2">."</span>
+<span class="nb">echo</span> <span class="s2">"To craft an xrandr modeline manually, inspect 'Detailed Timing Descriptors' or 'Established Timings' in the EDID logs (edid_sysfs_*.log or edid_getedid.log)."</span>
+</code></section></div></div>
+  <h3 id="b-improved-temporary-xrandr-configuration-script">
+    
+    
+     <a href="#b-improved-temporary-xrandr-configuration-script">#</a><a href="#" aria-label="Back to top">B. “Improved Temporary Xrandr configuration script”</a>
+        
+    
+  </h3>
+      
+
+<ul>
+  <li><strong>Purpose:</strong> This script provides a template of <code class="language-plaintext highlighter-rouge">xrandr</code> commands for a specific dual-monitor setup (DP-1 and HDMI-1) including custom modelines and DPI settings.</li>
+  <li><strong>“Enclosing” this script:</strong>
+    <ol>
+      <li>It is <strong>not</strong> meant to be run automatically on every X session start if you are using <code class="language-plaintext highlighter-rouge">autorandr</code> as the primary display manager. Doing so could conflict with <code class="language-plaintext highlighter-rouge">autorandr</code>.</li>
+      <li>Instead, its <strong><code class="language-plaintext highlighter-rouge">xrandr</code> commands and logic</strong> should be used as a reference or template when you are <em>manually configuring your displays once</em> before saving an <code class="language-plaintext highlighter-rouge">autorandr</code> profile (Phase 3, Step 2).</li>
+      <li>The <strong>DPI setting</strong> part is more dynamic and, if desired for a specific <code class="language-plaintext highlighter-rouge">autorandr</code> profile, should be placed into an <code class="language-plaintext highlighter-rouge">autorandr</code> hook script (see Phase 3, Step 7).</li>
+      <li>Below is the script content for your reference during manual configuration:</li>
+    </ol>
+  </li>
+</ul>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><section><code><span class="c">#!/bin/bash</span>
+
+<span class="c"># This is the "Improved Temporary Xrandr configuration script" from the blog post.</span>
+<span class="c"># Use its xrandr commands as a TEMPLATE when manually setting up your displays</span>
+<span class="c"># BEFORE saving an autorandr profile.</span>
+<span class="c"># Do NOT run this script directly on every X startup if using autorandr.</span>
+<span class="c"># The DPI calculation part can be adapted into an autorandr postswitch hook.</span>
+
+<span class="c"># Check if xrandr command is available</span>
+<span class="k">if</span> <span class="o">!</span> <span class="nb">command</span> <span class="nt">-v</span> xrandr &amp;&gt; /dev/null<span class="p">;</span> <span class="k">then
+    </span><span class="nb">echo</span> <span class="s2">"Error: xrandr command not found. Please ensure it is installed and in your PATH."</span>
+    <span class="nb">exit </span>1
+<span class="k">fi</span>
+
+<span class="c"># Check if bc command is available (for DPI calculations)</span>
+<span class="nv">BC_AVAILABLE</span><span class="o">=</span><span class="nb">false
+</span><span class="k">if</span> <span class="o">!</span> <span class="nb">command</span> <span class="nt">-v</span> bc &amp;&gt; /dev/null<span class="p">;</span> <span class="k">then
+    </span><span class="nb">echo</span> <span class="s2">"Warning: bc command not found. DPI calculation for DP-1 will be skipped."</span>
+    <span class="nb">echo</span> <span class="s2">"Please install 'bc' if you want to enable automatic DPI setting."</span>
+<span class="k">else
+    </span><span class="nv">BC_AVAILABLE</span><span class="o">=</span><span class="nb">true
+</span><span class="k">fi
+
+</span><span class="nb">echo</span> <span class="s2">"Applying temporary xrandr settings (REFERENCE SCRIPT)..."</span>
+<span class="nb">echo</span> <span class="s2">"This script will check current display connection statuses."</span>
+<span class="nb">echo</span> <span class="s2">"Verify your display identifiers (e.g., HDMI-1, DP-1) by running 'xrandr' in a terminal."</span>
+
+<span class="c"># Define mode names and modelines</span>
+<span class="nv">MODE_NAME_1</span><span class="o">=</span><span class="s2">"1152x864_60.00"</span> <span class="c"># For DP-1</span>
+<span class="nv">MODELINE_1</span><span class="o">=</span><span class="s2">"81.75  1152 1216 1336 1520  864 867 871 897 -hsync +vsync"</span>
+<span class="nv">MODE_1_WIDTH_PX</span><span class="o">=</span>1152
+<span class="nv">MODE_1_HEIGHT_PX</span><span class="o">=</span>864
+
+<span class="nv">MODE_NAME_2</span><span class="o">=</span><span class="s2">"2560x1080_60.00"</span> <span class="c"># For HDMI-1</span>
+<span class="nv">MODELINE_2</span><span class="o">=</span><span class="s2">"230.00  2560 2720 2992 3424  1080 1083 1093 1120 -hsync +vsync"</span>
+
+<span class="c"># Define output names</span>
+<span class="nv">OUTPUT_DP</span><span class="o">=</span><span class="s2">"DP-1"</span>     <span class="c"># DisplayPort output</span>
+<span class="nv">OUTPUT_HDMI</span><span class="o">=</span><span class="s2">"HDMI-1"</span> <span class="c"># HDMI output</span>
+
+<span class="c"># Physical dimensions for DP-1 (in mm) - FOR DPI CALCULATION</span>
+<span class="nv">DP_WIDTH_MM</span><span class="o">=</span>419
+<span class="nv">DP_HEIGHT_MM</span><span class="o">=</span>236
+
+<span class="c"># --- Define New Modes (always attempt this if using these modes) ---</span>
+<span class="nb">echo</span> <span class="s2">""</span>
+<span class="nb">echo</span> <span class="s2">"Defining new mode: </span><span class="nv">$MODE_NAME_1</span><span class="s2">"</span>
+xrandr <span class="nt">--newmode</span> <span class="s2">"</span><span class="nv">$MODE_NAME_1</span><span class="s2">"</span> <span class="nv">$MODELINE_1</span>
+<span class="k">if</span> <span class="o">[</span> <span class="nv">$?</span> <span class="nt">-ne</span> 0 <span class="o">]</span><span class="p">;</span> <span class="k">then
+    </span><span class="nb">echo</span> <span class="s2">"Warning: Could not define mode </span><span class="nv">$MODE_NAME_1</span><span class="s2">."</span>
+    <span class="nb">echo</span> <span class="s2">"Possible issues: mode already exists (use 'xrandr' to check), incorrect modeline parameters, or xrandr limitations."</span>
+<span class="k">fi
+
+</span><span class="nb">echo</span> <span class="s2">"Defining new mode: </span><span class="nv">$MODE_NAME_2</span><span class="s2">"</span>
+xrandr <span class="nt">--newmode</span> <span class="s2">"</span><span class="nv">$MODE_NAME_2</span><span class="s2">"</span> <span class="nv">$MODELINE_2</span>
+<span class="k">if</span> <span class="o">[</span> <span class="nv">$?</span> <span class="nt">-ne</span> 0 <span class="o">]</span><span class="p">;</span> <span class="k">then
+    </span><span class="nb">echo</span> <span class="s2">"Warning: Could not define mode </span><span class="nv">$MODE_NAME_2</span><span class="s2">."</span>
+<span class="k">fi</span>
+
+<span class="c"># --- Check current connection status of displays ---</span>
+<span class="nb">echo</span> <span class="s2">""</span>
+<span class="nb">echo</span> <span class="s2">"Checking current display connection status..."</span>
+<span class="nv">IS_DP_CONNECTED</span><span class="o">=</span><span class="nb">false
+</span><span class="k">if </span>xrandr | <span class="nb">grep</span> <span class="nt">-q</span> <span class="s2">"^</span><span class="k">${</span><span class="nv">OUTPUT_DP</span><span class="k">}</span><span class="s2"> connected"</span><span class="p">;</span> <span class="k">then
+    </span><span class="nv">IS_DP_CONNECTED</span><span class="o">=</span><span class="nb">true
+    echo</span> <span class="s2">"- </span><span class="nv">$OUTPUT_DP</span><span class="s2"> is detected as connected."</span>
+<span class="k">else
+    </span><span class="nb">echo</span> <span class="s2">"- </span><span class="nv">$OUTPUT_DP</span><span class="s2"> is detected as disconnected."</span>
+<span class="k">fi
+
+</span><span class="nv">IS_HDMI_CONNECTED</span><span class="o">=</span><span class="nb">false
+</span><span class="k">if </span>xrandr | <span class="nb">grep</span> <span class="nt">-q</span> <span class="s2">"^</span><span class="k">${</span><span class="nv">OUTPUT_HDMI</span><span class="k">}</span><span class="s2"> connected"</span><span class="p">;</span> <span class="k">then
+    </span><span class="nv">IS_HDMI_CONNECTED</span><span class="o">=</span><span class="nb">true
+    echo</span> <span class="s2">"- </span><span class="nv">$OUTPUT_HDMI</span><span class="s2"> is detected as connected."</span>
+<span class="k">else
+    </span><span class="nb">echo</span> <span class="s2">"- </span><span class="nv">$OUTPUT_HDMI</span><span class="s2"> is detected as disconnected."</span>
+<span class="k">fi</span>
+
+<span class="c"># --- Initial Positioning Command (if both displays are connected) ---</span>
+<span class="c"># Example: xrandr --output HDMI-1 --auto --above DP-1</span>
+<span class="c"># This needs to be adapted to your desired layout.</span>
+<span class="nb">echo</span> <span class="s2">""</span>
+<span class="k">if</span> <span class="nv">$IS_HDMI_CONNECTED</span> <span class="o">&amp;&amp;</span> <span class="nv">$IS_DP_CONNECTED</span><span class="p">;</span> <span class="k">then
+    </span><span class="nb">echo</span> <span class="s2">"Attempting to set </span><span class="nv">$OUTPUT_HDMI</span><span class="s2"> --auto --above </span><span class="nv">$OUTPUT_DP</span><span class="s2">..."</span>
+    <span class="c"># Replace with your desired layout command, e.g.:</span>
+    <span class="c"># xrandr --output "$OUTPUT_HDMI" --mode "$MODE_NAME_2" --output "$OUTPUT_DP" --mode "$MODE_NAME_1" --primary --right-of "$OUTPUT_HDMI"</span>
+    xrandr <span class="nt">--output</span> <span class="s2">"</span><span class="nv">$OUTPUT_HDMI</span><span class="s2">"</span> <span class="nt">--auto</span> <span class="nt">--above</span> <span class="s2">"</span><span class="nv">$OUTPUT_DP</span><span class="s2">"</span> <span class="c"># Example from script</span>
+    <span class="k">if</span> <span class="o">[</span> <span class="nv">$?</span> <span class="nt">-ne</span> 0 <span class="o">]</span><span class="p">;</span> <span class="k">then
+        </span><span class="nb">echo</span> <span class="s2">"Warning: Could not set initial positioning."</span>
+    <span class="k">else
+        </span><span class="nb">echo</span> <span class="s2">"Successfully attempted to position </span><span class="nv">$OUTPUT_HDMI</span><span class="s2"> above </span><span class="nv">$OUTPUT_DP</span><span class="s2">."</span>
+    <span class="k">fi
+elif</span> <span class="o">!</span> <span class="nv">$IS_HDMI_CONNECTED</span> <span class="o">&amp;&amp;</span> <span class="nv">$IS_DP_CONNECTED</span><span class="p">;</span> <span class="k">then
+    </span><span class="nb">echo</span> <span class="s2">"Skipping initial positioning: </span><span class="nv">$OUTPUT_HDMI</span><span class="s2"> is disconnected. </span><span class="nv">$OUTPUT_DP</span><span class="s2"> is primary."</span>
+    xrandr <span class="nt">--output</span> <span class="s2">"</span><span class="nv">$OUTPUT_DP</span><span class="s2">"</span> <span class="nt">--mode</span> <span class="s2">"</span><span class="nv">$MODE_NAME_1</span><span class="s2">"</span> <span class="nt">--primary</span> <span class="nt">--auto</span>
+<span class="k">elif</span> <span class="nv">$IS_HDMI_CONNECTED</span> <span class="o">&amp;&amp;</span> <span class="o">!</span> <span class="nv">$IS_DP_CONNECTED</span><span class="p">;</span> <span class="k">then
+    </span><span class="nb">echo</span> <span class="s2">"Skipping initial positioning: </span><span class="nv">$OUTPUT_DP</span><span class="s2"> is disconnected. </span><span class="nv">$OUTPUT_HDMI</span><span class="s2"> is primary."</span>
+    xrandr <span class="nt">--output</span> <span class="s2">"</span><span class="nv">$OUTPUT_HDMI</span><span class="s2">"</span> <span class="nt">--mode</span> <span class="s2">"</span><span class="nv">$MODE_NAME_2</span><span class="s2">"</span> <span class="nt">--primary</span> <span class="nt">--auto</span>
+<span class="k">else
+    </span><span class="nb">echo</span> <span class="s2">"Skipping initial positioning: Both </span><span class="nv">$OUTPUT_HDMI</span><span class="s2"> and </span><span class="nv">$OUTPUT_DP</span><span class="s2"> appear to be disconnected."</span>
+<span class="k">fi</span>
+
+
+<span class="c"># --- Configure DP Output ($OUTPUT_DP) ---</span>
+<span class="nb">echo</span> <span class="s2">""</span>
+<span class="k">if</span> <span class="nv">$IS_DP_CONNECTED</span><span class="p">;</span> <span class="k">then
+    </span><span class="nb">echo</span> <span class="s2">"Configuring </span><span class="nv">$OUTPUT_DP</span><span class="s2">..."</span>
+    <span class="nb">echo</span> <span class="s2">"Adding mode </span><span class="nv">$MODE_NAME_1</span><span class="s2"> to </span><span class="nv">$OUTPUT_DP</span><span class="s2">"</span>
+    xrandr <span class="nt">--addmode</span> <span class="s2">"</span><span class="nv">$OUTPUT_DP</span><span class="s2">"</span> <span class="s2">"</span><span class="nv">$MODE_NAME_1</span><span class="s2">"</span>
+    <span class="k">if</span> <span class="o">[</span> <span class="nv">$?</span> <span class="nt">-ne</span> 0 <span class="o">]</span><span class="p">;</span> <span class="k">then
+        </span><span class="nb">echo</span> <span class="s2">"Error adding mode </span><span class="nv">$MODE_NAME_1</span><span class="s2"> to </span><span class="nv">$OUTPUT_DP</span><span class="s2">."</span>
+    <span class="k">else
+        </span><span class="nb">echo</span> <span class="s2">"Setting </span><span class="nv">$OUTPUT_DP</span><span class="s2"> to mode </span><span class="nv">$MODE_NAME_1</span><span class="s2">"</span>
+        <span class="c"># This command would typically be part of the comprehensive layout command above</span>
+        <span class="c"># xrandr --output "$OUTPUT_DP" --mode "$MODE_NAME_1"</span>
+        <span class="c"># (Potentially redundant if already set in positioning)</span>
+        <span class="k">if</span> <span class="o">[</span> <span class="nv">$?</span> <span class="nt">-ne</span> 0 <span class="o">]</span><span class="p">;</span> <span class="k">then
+            </span><span class="nb">echo</span> <span class="s2">"Error setting </span><span class="nv">$OUTPUT_DP</span><span class="s2"> to mode </span><span class="nv">$MODE_NAME_1</span><span class="s2">."</span>
+        <span class="k">else</span>
+            <span class="c"># If DP-1 is the only connected monitor, try to set screen DPI</span>
+            <span class="k">if</span> <span class="o">!</span> <span class="nv">$IS_HDMI_CONNECTED</span> <span class="o">&amp;&amp;</span> <span class="nv">$BC_AVAILABLE</span><span class="p">;</span> <span class="k">then
+                </span><span class="nb">echo</span> <span class="s2">""</span>
+                <span class="nb">echo</span> <span class="s2">"DP-1 (</span><span class="nv">$OUTPUT_DP</span><span class="s2">) appears to be the only connected display and 'bc' is available."</span>
+                <span class="nb">echo</span> <span class="s2">"Calculating DPI for screen based on DP-1 physical dimensions (</span><span class="nv">$DP_WIDTH_MM</span><span class="s2"> mm x </span><span class="nv">$DP_HEIGHT_MM</span><span class="s2"> mm) and mode </span><span class="nv">$MODE_NAME_1</span><span class="s2"> (</span><span class="nv">$MODE_1_WIDTH_PX</span><span class="s2"> x </span><span class="nv">$MODE_1_HEIGHT_PX</span><span class="s2">)."</span>
+
+                <span class="k">if</span> <span class="o">[</span> <span class="s2">"</span><span class="nv">$DP_WIDTH_MM</span><span class="s2">"</span> <span class="nt">-gt</span> 0 <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="o">[</span> <span class="s2">"</span><span class="nv">$DP_HEIGHT_MM</span><span class="s2">"</span> <span class="nt">-gt</span> 0 <span class="o">]</span><span class="p">;</span> <span class="k">then
+                    </span><span class="nv">DPI_H_CALC</span><span class="o">=</span><span class="si">$(</span>bc <span class="nt">-l</span> <span class="o">&lt;&lt;&lt;</span> <span class="s2">"scale=2; </span><span class="nv">$MODE_1_WIDTH_PX</span><span class="s2"> / (</span><span class="nv">$DP_WIDTH_MM</span><span class="s2"> / 25.4)"</span><span class="si">)</span>
+                    <span class="nv">DPI_V_CALC</span><span class="o">=</span><span class="si">$(</span>bc <span class="nt">-l</span> <span class="o">&lt;&lt;&lt;</span> <span class="s2">"scale=2; </span><span class="nv">$MODE_1_HEIGHT_PX</span><span class="s2"> / (</span><span class="nv">$DP_HEIGHT_MM</span><span class="s2"> / 25.4)"</span><span class="si">)</span>
+
+                    <span class="k">if</span> <span class="o">[[</span> <span class="nt">-n</span> <span class="s2">"</span><span class="nv">$DPI_H_CALC</span><span class="s2">"</span> <span class="o">&amp;&amp;</span> <span class="nt">-n</span> <span class="s2">"</span><span class="nv">$DPI_V_CALC</span><span class="s2">"</span> <span class="o">&amp;&amp;</span> <span class="s2">"</span><span class="nv">$DPI_H_CALC</span><span class="s2">"</span> <span class="o">=</span>~ ^[0-9]+<span class="o">([</span>.][0-9]+<span class="o">)</span>?<span class="nv">$ </span><span class="o">&amp;&amp;</span> <span class="s2">"</span><span class="nv">$DPI_V_CALC</span><span class="s2">"</span> <span class="o">=</span>~ ^[0-9]+<span class="o">([</span>.][0-9]+<span class="o">)</span>?<span class="nv">$ </span><span class="o">]]</span><span class="p">;</span> <span class="k">then
+                        </span><span class="nv">AVG_DPI</span><span class="o">=</span><span class="si">$(</span><span class="nb">printf</span> <span class="s2">"%.0f"</span> <span class="s2">"</span><span class="si">$(</span>bc <span class="nt">-l</span> <span class="o">&lt;&lt;&lt;</span> <span class="s2">"(</span><span class="nv">$DPI_H_CALC</span><span class="s2"> + </span><span class="nv">$DPI_V_CALC</span><span class="s2">) / 2"</span><span class="si">)</span><span class="s2">"</span><span class="si">)</span>
+                        <span class="nb">echo</span> <span class="s2">"Calculated average DPI: </span><span class="nv">$AVG_DPI</span><span class="s2"> (H: </span><span class="nv">$DPI_H_CALC</span><span class="s2">, V: </span><span class="nv">$DPI_V_CALC</span><span class="s2">)"</span>
+                        <span class="nb">echo</span> <span class="s2">"Attempting to set screen DPI to </span><span class="nv">$AVG_DPI</span><span class="s2">..."</span>
+                        xrandr <span class="nt">--dpi</span> <span class="s2">"</span><span class="nv">$AVG_DPI</span><span class="s2">"</span>
+                        <span class="k">if</span> <span class="o">[</span> <span class="nv">$?</span> <span class="nt">-ne</span> 0 <span class="o">]</span><span class="p">;</span> <span class="k">then
+                            </span><span class="nb">echo</span> <span class="s2">"Warning: Could not set screen DPI to </span><span class="nv">$AVG_DPI</span><span class="s2">."</span>
+                        <span class="k">else
+                            </span><span class="nb">echo</span> <span class="s2">"Screen DPI successfully set to </span><span class="nv">$AVG_DPI</span><span class="s2">."</span>
+                        <span class="k">fi
+                    else
+                        </span><span class="nb">echo</span> <span class="s2">"Warning: DPI calculation failed or produced non-numeric results."</span>
+                    <span class="k">fi
+                else
+                    </span><span class="nb">echo</span> <span class="s2">"Warning: DP-1 physical dimensions are zero. Cannot calculate DPI."</span>
+                <span class="k">fi
+            elif</span> <span class="o">!</span> <span class="nv">$IS_HDMI_CONNECTED</span> <span class="o">&amp;&amp;</span> <span class="o">!</span> <span class="nv">$BC_AVAILABLE</span><span class="p">;</span> <span class="k">then
+                </span><span class="nb">echo</span> <span class="s2">"DP-1 (</span><span class="nv">$OUTPUT_DP</span><span class="s2">) is the only display, but 'bc' is not available. Skipping DPI calculation."</span>
+            <span class="k">fi
+        fi
+    fi
+else
+    </span><span class="nb">echo</span> <span class="s2">"Skipping configuration for </span><span class="nv">$OUTPUT_DP</span><span class="s2"> as it is disconnected."</span>
+<span class="k">fi</span>
+
+<span class="c"># --- Configure HDMI Output ($OUTPUT_HDMI) ---</span>
+<span class="nb">echo</span> <span class="s2">""</span>
+<span class="k">if</span> <span class="nv">$IS_HDMI_CONNECTED</span><span class="p">;</span> <span class="k">then
+    </span><span class="nb">echo</span> <span class="s2">"Configuring </span><span class="nv">$OUTPUT_HDMI</span><span class="s2">..."</span>
+    <span class="nb">echo</span> <span class="s2">"Adding mode </span><span class="nv">$MODE_NAME_2</span><span class="s2"> to </span><span class="nv">$OUTPUT_HDMI</span><span class="s2">"</span>
+    xrandr <span class="nt">--addmode</span> <span class="s2">"</span><span class="nv">$OUTPUT_HDMI</span><span class="s2">"</span> <span class="s2">"</span><span class="nv">$MODE_NAME_2</span><span class="s2">"</span>
+    <span class="k">if</span> <span class="o">[</span> <span class="nv">$?</span> <span class="nt">-ne</span> 0 <span class="o">]</span><span class="p">;</span> <span class="k">then
+        </span><span class="nb">echo</span> <span class="s2">"Error adding mode </span><span class="nv">$MODE_NAME_2</span><span class="s2"> to </span><span class="nv">$OUTPUT_HDMI</span><span class="s2">."</span>
+    <span class="k">else
+        </span><span class="nb">echo</span> <span class="s2">"Setting </span><span class="nv">$OUTPUT_HDMI</span><span class="s2"> to mode </span><span class="nv">$MODE_NAME_2</span><span class="s2">"</span>
+        <span class="c"># This command would typically be part of the comprehensive layout command above</span>
+        <span class="c"># xrandr --output "$OUTPUT_HDMI" --mode "$MODE_NAME_2"</span>
+        <span class="c"># (Potentially redundant if already set in positioning)</span>
+        <span class="k">if</span> <span class="o">[</span> <span class="nv">$?</span> <span class="nt">-ne</span> 0 <span class="o">]</span><span class="p">;</span> <span class="k">then
+            </span><span class="nb">echo</span> <span class="s2">"Error setting </span><span class="nv">$OUTPUT_HDMI</span><span class="s2"> to mode </span><span class="nv">$MODE_NAME_2</span><span class="s2">."</span>
+        <span class="k">fi
+    fi
+else
+    </span><span class="nb">echo</span> <span class="s2">"Skipping configuration for </span><span class="nv">$OUTPUT_HDMI</span><span class="s2"> as it is disconnected."</span>
+<span class="k">fi
+
+</span><span class="nb">echo</span> <span class="s2">""</span>
+<span class="nb">echo</span> <span class="s2">"Temporary xrandr settings (REFERENCE SCRIPT) applied (or attempted for connected displays)."</span>
+<span class="nb">echo</span> <span class="s2">"Current screen configuration (relevant connected displays):"</span>
+xrandr | <span class="nb">grep</span> <span class="s2">" connected"</span>
+</code></section></div></div>
+  <h2 id="phase-3-configuring-autorandr-manual-steps-for-each-user-and-setup">
+    
+    
+     <a href="#phase-3-configuring-autorandr-manual-steps-for-each-user-and-setup">#</a><a href="#" aria-label="Back to top">Phase 3: Configuring <code class="language-plaintext highlighter-rouge">autorandr</code> (Manual Steps for Each User and Setup)</a>
+        
+    
+  </h2>
+      
+
+<p><code class="language-plaintext highlighter-rouge">autorandr</code> works by saving your current display configuration into a “profile.” This needs to be done by the user (root or normal user) within their own X session for each unique display setup.</p>
+
+<p><strong>Steps to create profiles:</strong></p>
+
+<ol>
+  <li><strong>Connect Displays:</strong> Attach your specific combination of monitors, projectors, etc.</li>
+  <li><strong>Manually Configure Displays:</strong> Use your desktop environment’s display settings tool or manual <code class="language-plaintext highlighter-rouge">xrandr</code> commands in a terminal to arrange your displays <em>exactly</em> as desired.
+    <ul>
+      <li>Refer to the <code class="language-plaintext highlighter-rouge">xrandr</code> commands in the “Improved Temporary Xrandr configuration script” above as a <strong>template</strong> for defining modelines (<code class="language-plaintext highlighter-rouge">xrandr --newmode ...</code>), adding modes (<code class="language-plaintext highlighter-rouge">xrandr --addmode ...</code>), and setting outputs (<code class="language-plaintext highlighter-rouge">xrandr --output &lt;name&gt; --mode &lt;mode&gt; --pos &lt;XxY&gt; --primary --rotate &lt;normal|left|right|inverted&gt; --output &lt;other_name&gt; ...</code>).</li>
+      <li>For example, to set up two monitors, <code class="language-plaintext highlighter-rouge">HDMI-1</code> (2560x1080) to the left of <code class="language-plaintext highlighter-rouge">DP-1</code> (1920x1080, primary):
+        <div class="language-bash highlighter-rouge"><div class="highlight"><section><code>  <span class="c"># (Assuming modelines for these resolutions are already supported or added via --newmode)</span>
+  xrandr <span class="nt">--output</span> HDMI-1 <span class="nt">--mode</span> 2560x1080 <span class="nt">--pos</span> 0x0 <span class="nt">--rotate</span> normal <span class="se">\</span>
+         <span class="nt">--output</span> DP-1 <span class="nt">--mode</span> 1920x1080 <span class="nt">--pos</span> 2560x0 <span class="nt">--rotate</span> normal <span class="nt">--primary</span>
+</code></section></div>        </div>
+      </li>
+    </ul>
+  </li>
+  <li><strong>Save the <code class="language-plaintext highlighter-rouge">autorandr</code> Profile:</strong> Once displays are perfectly configured, save this state:
+    <div class="language-bash highlighter-rouge"><div class="highlight"><section><code>autorandr <span class="nt">--save</span> &lt;profile_name&gt;
+</code></section></div>    </div>
+    <p>Use descriptive names (e.g., <code class="language-plaintext highlighter-rouge">office_dual_monitors</code>, <code class="language-plaintext highlighter-rouge">lecture_projector_1024x768</code>).</p>
+  </li>
+  <li><strong>Profile Locations and User Context:</strong>
+    <ul>
+      <li>Profiles are saved in <code class="language-plaintext highlighter-rouge">~/.config/autorandr/</code> (e.g., <code class="language-plaintext highlighter-rouge">/root/.config/autorandr/</code> for root, <code class="language-plaintext highlighter-rouge">/home/youruser/.config/autorandr/</code> for <code class="language-plaintext highlighter-rouge">youruser</code>).</li>
+      <li><strong>For common profiles accessible by both root and normal users (if no user-specific one matches):</strong> You can manually copy or create profile directories in <code class="language-plaintext highlighter-rouge">/etc/xdg/autorandr/</code>. <code class="language-plaintext highlighter-rouge">autorandr</code> checks user-specific paths first. This is useful if root and a normal user often encounter the same display setups.</li>
+    </ul>
+  </li>
+  <li><strong>Repeat for Other Setups:</strong> Repeat steps 1-3 for every different display configuration.</li>
+  <li><strong>List and Set Default Profile:</strong>
+    <div class="language-bash highlighter-rouge"><div class="highlight"><section><code>autorandr <span class="nt">--list</span> <span class="c"># Review saved profiles</span>
+<span class="c"># Configure a very safe, common display setup (e.g., single monitor 1920x1080)</span>
+<span class="c"># Then save it and set it as default:</span>
+autorandr <span class="nt">--save</span> fallback_safe_1080p
+autorandr <span class="nt">--default</span> fallback_safe_1080p
+</code></section></div>    </div>
+    <p>This default profile is crucial if an unknown display setup is detected.</p>
+  </li>
+  <li><strong>Implementing DPI Settings via Hooks (Optional):</strong>
+If you want the DPI calculation from the “Improved Temporary Xrandr configuration script” to apply when a specific <code class="language-plaintext highlighter-rouge">autorandr</code> profile is loaded, create a <code class="language-plaintext highlighter-rouge">postswitch</code> hook script within that profile’s directory.
+    <ul>
+      <li>
+        <p>For a profile named <code class="language-plaintext highlighter-rouge">my_specific_setup</code> (directory: <code class="language-plaintext highlighter-rouge">~/.config/autorandr/my_specific_setup/</code> or <code class="language-plaintext highlighter-rouge">/etc/xdg/autorandr/my_specific_setup/</code>), create an executable script: <code class="language-plaintext highlighter-rouge">.../my_specific_setup/postswitch</code></p>
+
+        <div class="language-bash highlighter-rouge"><div class="highlight"><section><code>  <span class="c">#!/bin/sh</span>
+  <span class="c">#</span>
+  <span class="c"># postswitch hook for profile 'my_specific_setup' to set DPI.</span>
+  <span class="c"># IMPORTANT: Customize all variables below (OUTPUT_NAME, MODE_WIDTH_PX, etc.)</span>
+  <span class="c"># to match the specifics of THIS 'my_specific_setup' profile.</span>
+  <span class="c">#</span>
+
+  <span class="c"># For debugging hooks, you can use logger or write to a temp file:</span>
+  <span class="c"># echo "Running postswitch for my_specific_setup at $(date)" &gt;&gt; /tmp/autorandr_hook_debug.log</span>
+
+  <span class="k">if</span> <span class="o">!</span> <span class="nb">command</span> <span class="nt">-v</span> bc <span class="o">&gt;</span> /dev/null 2&gt;&amp;1<span class="p">;</span> <span class="k">then</span>
+      <span class="c"># echo "postswitch_dpi: bc command not found, skipping DPI." &gt;&gt; /tmp/autorandr_hook_debug.log</span>
+      <span class="nb">exit </span>0
+  <span class="k">fi</span>
+
+  <span class="c"># --- START CUSTOMIZATION for 'my_specific_setup' profile ---</span>
+  <span class="nv">OUTPUT_NAME</span><span class="o">=</span><span class="s2">"DP-1"</span>        <span class="c"># The actual output name (e.g., DP-1, HDMI-A-0) for this profile's main display</span>
+  <span class="nv">MODE_WIDTH_PX</span><span class="o">=</span>1152        <span class="c"># Horizontal resolution of OUTPUT_NAME in this profile</span>
+  <span class="nv">MODE_HEIGHT_PX</span><span class="o">=</span>864        <span class="c"># Vertical resolution of OUTPUT_NAME in this profile</span>
+  <span class="nv">PHYS_WIDTH_MM</span><span class="o">=</span>419         <span class="c"># Physical width in mm of the monitor connected to OUTPUT_NAME</span>
+  <span class="nv">PHYS_HEIGHT_MM</span><span class="o">=</span>236        <span class="c"># Physical height in mm of the monitor connected to OUTPUT_NAME</span>
+  <span class="c"># --- END CUSTOMIZATION ---</span>
+
+  <span class="c"># Check if the relevant display is configured as expected by autorandr for this profile</span>
+  <span class="c"># This grep is a basic check; more robust checks might be needed for complex setups.</span>
+  <span class="k">if </span>xrandr | <span class="nb">grep</span> <span class="nt">-q</span> <span class="s2">"^</span><span class="k">${</span><span class="nv">OUTPUT_NAME</span><span class="k">}</span><span class="s2"> connected.*</span><span class="k">${</span><span class="nv">MODE_WIDTH_PX</span><span class="k">}</span><span class="s2">x</span><span class="k">${</span><span class="nv">MODE_HEIGHT_PX</span><span class="k">}</span><span class="s2">"</span><span class="p">;</span> <span class="k">then
+      if</span> <span class="o">[</span> <span class="s2">"</span><span class="nv">$PHYS_WIDTH_MM</span><span class="s2">"</span> <span class="nt">-gt</span> 0 <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="o">[</span> <span class="s2">"</span><span class="nv">$PHYS_HEIGHT_MM</span><span class="s2">"</span> <span class="nt">-gt</span> 0 <span class="o">]</span><span class="p">;</span> <span class="k">then
+          </span><span class="nv">DPI_H_CALC</span><span class="o">=</span><span class="si">$(</span>bc <span class="nt">-l</span> <span class="o">&lt;&lt;&lt;</span> <span class="s2">"scale=2; </span><span class="nv">$MODE_WIDTH_PX</span><span class="s2"> / (</span><span class="nv">$PHYS_WIDTH_MM</span><span class="s2"> / 25.4)"</span><span class="si">)</span>
+          <span class="nv">DPI_V_CALC</span><span class="o">=</span><span class="si">$(</span>bc <span class="nt">-l</span> <span class="o">&lt;&lt;&lt;</span> <span class="s2">"scale=2; </span><span class="nv">$MODE_HEIGHT_PX</span><span class="s2"> / (</span><span class="nv">$PHYS_HEIGHT_MM</span><span class="s2"> / 25.4)"</span><span class="si">)</span>
+
+          <span class="k">if</span> <span class="o">[[</span> <span class="nt">-n</span> <span class="s2">"</span><span class="nv">$DPI_H_CALC</span><span class="s2">"</span> <span class="o">&amp;&amp;</span> <span class="nt">-n</span> <span class="s2">"</span><span class="nv">$DPI_V_CALC</span><span class="s2">"</span> <span class="o">&amp;&amp;</span> <span class="s2">"</span><span class="nv">$DPI_H_CALC</span><span class="s2">"</span> <span class="o">=</span>~ ^[0-9]+<span class="o">([</span>.][0-9]+<span class="o">)</span>?<span class="nv">$ </span><span class="o">&amp;&amp;</span> <span class="s2">"</span><span class="nv">$DPI_V_CALC</span><span class="s2">"</span> <span class="o">=</span>~ ^[0-9]+<span class="o">([</span>.][0-9]+<span class="o">)</span>?<span class="nv">$ </span><span class="o">]]</span><span class="p">;</span> <span class="k">then
+              </span><span class="nv">AVG_DPI</span><span class="o">=</span><span class="si">$(</span><span class="nb">printf</span> <span class="s2">"%.0f"</span> <span class="s2">"</span><span class="si">$(</span>bc <span class="nt">-l</span> <span class="o">&lt;&lt;&lt;</span> <span class="s2">"(</span><span class="nv">$DPI_H_CALC</span><span class="s2"> + </span><span class="nv">$DPI_V_CALC</span><span class="s2">) / 2"</span><span class="si">)</span><span class="s2">"</span><span class="si">)</span>
+              <span class="c"># echo "postswitch_dpi: Setting screen DPI to $AVG_DPI for $OUTPUT_NAME." &gt;&gt; /tmp/autorandr_hook_debug.log</span>
+              xrandr <span class="nt">--dpi</span> <span class="s2">"</span><span class="nv">$AVG_DPI</span><span class="s2">"</span>
+          <span class="c"># else</span>
+              <span class="c"># echo "postswitch_dpi: DPI calculation failed." &gt;&gt; /tmp/autorandr_hook_debug.log</span>
+          <span class="k">fi</span>
+      <span class="c"># else</span>
+          <span class="c"># echo "postswitch_dpi: Physical dimensions for $OUTPUT_NAME are zero." &gt;&gt; /tmp/autorandr_hook_debug.log</span>
+      <span class="k">fi</span>
+  <span class="c"># else</span>
+      <span class="c"># echo "postswitch_dpi: Expected display $OUTPUT_NAME not found or not in expected mode." &gt;&gt; /tmp/autorandr_hook_debug.log</span>
+  <span class="k">fi
+  </span><span class="nb">exit </span>0
+</code></section></div>        </div>
+      </li>
+      <li>
+        <p>Make the hook script executable: <code class="language-plaintext highlighter-rouge">chmod +x .../my_specific_setup/postswitch</code>. Repeat for other profiles if needed, customizing variables each time.</p>
+      </li>
+    </ul>
+  </li>
+</ol>
+  <h2 id="phase-4-automating-autorandr">
+    
+    
+     <a href="#phase-4-automating-autorandr">#</a><a href="#" aria-label="Back to top">Phase 4: Automating <code class="language-plaintext highlighter-rouge">autorandr</code></a>
+        
+    
+  </h2>
+      
+
+<p>This ensures <code class="language-plaintext highlighter-rouge">autorandr</code> acts on display changes and at X session startup.</p>
+
+<ol>
+  <li>
+    <p><strong>Systemd Service (for hotplugging and system events):</strong>
+The <code class="language-plaintext highlighter-rouge">autorandr.service</code> (enabled in Phase 1) handles display changes detected by <code class="language-plaintext highlighter-rouge">udev</code> (e.g., plugging/unplugging monitors). This works system-wide, even outside or during an X session. It’s the primary mechanism for dynamic changes.</p>
+  </li>
+  <li>
+    <p><strong>X Session Startup Script (for <code class="language-plaintext highlighter-rouge">startx</code>):</strong>
+To explicitly trigger <code class="language-plaintext highlighter-rouge">autorandr</code> when an X session is initiated via <code class="language-plaintext highlighter-rouge">startx</code> (by root or any normal user), create:
+File: <code class="language-plaintext highlighter-rouge">/etc/X11/Xsession.d/50-autorandr-load-profile</code></p>
+
+    <div class="language-bash highlighter-rouge"><div class="highlight"><section><code><span class="c">#!/bin/sh</span>
+<span class="c">#</span>
+<span class="c"># /etc/X11/Xsession.d/50-autorandr-load-profile</span>
+<span class="c"># Load autorandr profile on X session start (for startx users).</span>
+<span class="c"># This script runs as the user starting the X session.</span>
+<span class="c">#</span>
+
+<span class="k">if </span><span class="nb">command</span> <span class="nt">-v</span> xrandr <span class="o">&gt;</span>/dev/null 2&gt;&amp;1 <span class="o">&amp;&amp;</span> <span class="nb">command</span> <span class="nt">-v</span> autorandr <span class="o">&gt;</span>/dev/null 2&gt;&amp;1<span class="p">;</span> <span class="k">then</span>
+    <span class="c"># --change: detects displays, loads best profile.</span>
+    <span class="c"># --batch: implies --force, suppresses xrandr output unless error. Good for scripts.</span>
+    autorandr <span class="nt">--change</span> <span class="nt">--batch</span>
+
+    <span class="c"># For debugging, you could log:</span>
+    <span class="c"># LOG_DIR="/tmp/autorandr_logs"</span>
+    <span class="c"># mkdir -p "$LOG_DIR"</span>
+    <span class="c"># echo "Xsession autorandr trigger for $(whoami) at $(date)" &gt;&gt; "$LOG_DIR/xsession_trigger.log"</span>
+    <span class="c"># autorandr --change --debug &gt;&gt; "$LOG_DIR/autorandr_xsession_$(whoami)_$(date +%Y%m%d-%H%M%S).log" 2&gt;&amp;1</span>
+<span class="k">fi
+
+</span><span class="nb">exit </span>0
+</code></section></div>    </div>
+    <ul>
+      <li><strong>Activate:</strong> Save and make executable: <code class="language-plaintext highlighter-rouge">sudo chmod +x /etc/X11/Xsession.d/50-autorandr-load-profile</code>.</li>
+      <li><strong>Interplay:</strong> The <code class="language-plaintext highlighter-rouge">autorandr.service</code> provides continuous monitoring. This Xsession script ensures that when <code class="language-plaintext highlighter-rouge">startx</code> is explicitly run, <code class="language-plaintext highlighter-rouge">autorandr</code> evaluates the display situation at that specific moment, respecting the current user’s profiles.</li>
+    </ul>
+  </li>
+</ol>
+  <h2 id="phase-5-advanced-autorandr-features-and-troubleshooting">
+    
+    
+     <a href="#phase-5-advanced-autorandr-features-and-troubleshooting">#</a><a href="#" aria-label="Back to top">Phase 5: Advanced <code class="language-plaintext highlighter-rouge">autorandr</code> Features and Troubleshooting</a>
+        
+    
+  </h2>
+      
+
+<ul>
+  <li><strong>Advanced Features (from blog post):</strong>
+    <ul>
+      <li><strong>Wildcard EDID Matching:</strong> Edit <code class="language-plaintext highlighter-rouge">config</code> file in profile dirs (e.g., <code class="language-plaintext highlighter-rouge">~/.config/autorandr/&lt;profile&gt;/config</code>) to use <code class="language-plaintext highlighter-rouge">*</code> in EDID strings for flexibility with similar monitors.</li>
+      <li><strong>Other Hook Scripts:</strong> <code class="language-plaintext highlighter-rouge">preswitch</code>, <code class="language-plaintext highlighter-rouge">predetect</code>, <code class="language-plaintext highlighter-rouge">postdetect</code> for more automation (e.g., restarting panels, changing audio sinks). Remember <code class="language-plaintext highlighter-rouge">chmod +x</code> for all hook scripts.</li>
+    </ul>
+  </li>
+  <li><strong>Troubleshooting (from blog post):</strong>
+    <ul>
+      <li><code class="language-plaintext highlighter-rouge">autorandr --detected</code>: See current detection and scores.</li>
+      <li><code class="language-plaintext highlighter-rouge">autorandr --change --debug</code>: Verbose output for manual diagnosis in an X session.</li>
+      <li><code class="language-plaintext highlighter-rouge">journalctl -f | grep -i -E "drm|edid|autorandr"</code>: Live system logs.</li>
+      <li><code class="language-plaintext highlighter-rouge">journalctl -b | grep -i -E "drm|edid|autorandr"</code>: Logs from current boot.</li>
+      <li>Ensure system is updated: <code class="language-plaintext highlighter-rouge">sudo apt update &amp;&amp; sudo apt full-upgrade -y</code>.</li>
+      <li>Check physical cable connections.</li>
+    </ul>
+  </li>
+</ul>
+
+<p>By following these phases, you’ll have a robust system where <code class="language-plaintext highlighter-rouge">autorandr</code> manages your display configurations automatically when displays are connected/disconnected or when you start an X session with <code class="language-plaintext highlighter-rouge">startx</code>, leveraging the specific configurations and logic from the provided scripts. Remember to adapt profile names and hook script details to your exact hardware and preferences.</p>
 
         </div>
         
@@ -1123,7 +1944,7 @@ echo “5. If DPI was set, verify with ‘xdpyinfo | grep resolution’.”
         
         
         <a href="https://ib.bsb.br/404" aria-label="404">
-          2025-05-08 09:05:58
+          2025-05-08 12:07:40
         </a>
         &#x23;
     
@@ -1191,7 +2012,7 @@ echo “5. If DPI was set, verify with ‘xdpyinfo | grep resolution’.”
         "headline": "autorandr and bash script to collect and setup monitor data for xrandr",
         "description": "",
         "datePublished": "2025-04-03T00:00:00+00:00",
-        "dateModified": "2025-05-07T23:04:56+00:00",
+        "dateModified": "2025-05-08T15:04:47+00:00",
         "author": {
           "@type": "Person",
           "name": "Author"
