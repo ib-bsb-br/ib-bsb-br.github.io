@@ -67,7 +67,7 @@
         
           <span class="post-updated">
             ↣
-            <time datetime="2025-05-08T22:39:09+00:00">
+            <time datetime="2025-05-08T23:04:53+00:00">
               08 May 2025
             </time>
           </span>
@@ -90,11 +90,11 @@
         <div class="page-stats mt-3" role="status" aria-label="Page statistics">
       
       <span class="badge bg-primary">
-        29667 characters
+        43729 characters
       </span>
         <span class="separator mx-2" aria-hidden="true">•</span>
         <span class="badge bg-primary">
-        3366 words
+        4888 words
       </span>
       </div>
         <div class="action-buttons d-flex flex-wrap gap-2">
@@ -128,7 +128,7 @@
       <article class="post-wrapper">
         <div class="post-content-body">
           
-<ul><li><a href="#bash-script">bash script</a></li></ul>
+<ul><li><a href="#bash-script">bash script</a></li><li><a href="#standalone-bash-script-for-fixing-step-9-issues">standalone bash script for fixing step 9 issues</a></li></ul>
           <p>This guide explains how to use mount --bind to make your user’s home directory (/home/user) utilize the storage space on a larger partition mounted at /userdata. This method is transparent to most applications.</p>
 
 <p>While mount --bind is effective, other methods like symbolic links (ln -s /userdata /home/user) or changing the home directory path directly in /etc/passwd (usermod -d /userdata user) exist, each with different implications (e.g., symlinks might not be followed by all applications, usermod -d changes the canonical path). This guide focuses on the mount --bind approach.</p>
@@ -1145,6 +1145,298 @@ echo &quot;&quot;
 echo &quot;Script finished. PLEASE FOLLOW THE TESTING AND CLEANUP INSTRUCTIONS CAREFULLY.&quot;
 echo &quot;Remember to reboot and test thoroughly before considering removal of ${OLD_HOME_DIR}.bak.&quot;</code>
 </section>
+  <h1 id="standalone-bash-script-for-fixing-step-9-issues">
+    
+    
+     <a href="#standalone-bash-script-for-fixing-step-9-issues">#</a><a href="#" aria-label="Back to top">standalone bash script for fixing step 9 issues</a>
+        
+    
+  </h1>
+      
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><section><code>#!/bin/bash
+
+# --- Configuration Variables ---
+# These values are based on the information provided in the original query.
+OLD_HOME_DIR="/home/linaro"
+NEW_DATA_LOCATION="/mnt/mSATA/linaro"
+TARGET_USERNAME="linaro"
+
+# --- Helper Functions ---
+
+# Function to check if the script is run as root
+check_root() {
+    if [ "$(id -u)" -ne 0 ]; then
+        echo "ERROR: This script must be run as root. Please use sudo." &gt;&amp;2
+        exit 1
+    fi
+}
+
+# Function to ask for user confirmation
+ask_confirmation() {
+    local prompt_message="$1"
+    local response
+    while true; do
+        # Ensure prompt_message is displayed correctly, even if it contains spaces
+        read -r -p "${prompt_message} (yes/no): " response
+        case "$response" in
+            [Yy][Ee][Ss]|[Yy])
+                return 0 # True (success)
+                ;;
+            [Nn][Oo]|[Nn])
+                return 1 # False (failure)
+                ;;
+            *)
+                echo "Please answer yes or no."
+                ;;
+        esac
+    done
+}
+
+# --- Main Function to Make Bind Mount Persistent ---
+step_10_make_persistent() {
+    echo "--- Step 10: Make the Bind Mount Persistent ---"
+    echo "This script will configure the bind mount to be persistent across reboots."
+    echo "It assumes that:"
+    echo "  1. The source data directory ('${NEW_DATA_LOCATION}') exists and contains the data."
+    echo "  2. The target mount point directory ('${OLD_HOME_DIR}') exists and is empty (or ready to be mounted over)."
+    echo ""
+    echo "Target user: ${TARGET_USERNAME}"
+    echo "Old home directory (mount point): ${OLD_HOME_DIR}"
+    echo "New data location (source for bind mount): ${NEW_DATA_LOCATION}"
+    echo ""
+
+    echo "Choose a method for persistence:"
+    echo "  A) /etc/fstab (Traditional)"
+    echo "  B) Systemd Mount Unit (Modern, Recommended for systems using systemd)"
+    read -r -p "Persistence method (A/B): " persist_choice
+
+    # Define systemd unit name and file path locally based on TARGET_USERNAME.
+    # This aligns with common practice for user-specific home directory mounts.
+    local FSTAB_ENTRY="${NEW_DATA_LOCATION} ${OLD_HOME_DIR} none bind 0 0"
+    local SYSTEMD_UNIT_NAME="home-${TARGET_USERNAME}.mount"
+    local SYSTEMD_UNIT_FILE="/etc/systemd/system/${SYSTEMD_UNIT_NAME}"
+
+    echo ""
+    echo "Checking if '${OLD_HOME_DIR}' is currently mounted..."
+    if mountpoint -q "${OLD_HOME_DIR}"; then
+        echo "'${OLD_HOME_DIR}' is currently mounted. Attempting to unmount it..."
+        umount "${OLD_HOME_DIR}"
+        if [ $? -ne 0 ]; then
+            echo "WARNING: Could not unmount ${OLD_HOME_DIR}."
+            echo "This might be because it's in use or due to other issues."
+            echo "Continuing might lead to problems with the persistent mount setup."
+            if ! ask_confirmation "Attempt to proceed with persistence setup anyway?"; then
+                echo "Aborting persistence setup due to unmount failure."
+                exit 1
+            fi
+            echo "Proceeding despite unmount warning. Ensure '${OLD_HOME_DIR}' is not actively used by another process."
+        else
+            echo "'${OLD_HOME_DIR}' unmounted successfully."
+        fi
+    else
+        echo "'${OLD_HOME_DIR}' is not currently a mount point. No unmount needed before setting up persistence."
+    fi
+    echo ""
+
+    case "$persist_choice" in
+        [Aa])
+            echo "--- Configuring persistence via /etc/fstab ---"
+            echo "Proposed fstab entry: ${FSTAB_ENTRY}"
+
+            if grep -qE "^\s*[^#].*\s+${OLD_HOME_DIR}\s+" /etc/fstab; then
+                echo "WARNING: An entry for '${OLD_HOME_DIR}' might already exist in /etc/fstab:"
+                grep --color=always -E "^\s*[^#].*\s+${OLD_HOME_DIR}\s+" /etc/fstab
+                if ! ask_confirmation "Proceed with adding the new line anyway (this could lead to duplicates)?"; then
+                    echo "Aborting fstab modification."
+                    exit 1
+                fi
+            fi
+
+            local FSTAB_BACKUP_FILE="/etc/fstab.bak.$(date +%Y%m%d-%H%M%S)"
+            echo "Backing up /etc/fstab to '${FSTAB_BACKUP_FILE}'..."
+            if cp /etc/fstab "${FSTAB_BACKUP_FILE}"; then
+                echo "Backup successful."
+            else
+                echo "ERROR: Failed to backup /etc/fstab. Aborting."
+                exit 1
+            fi
+
+            echo "Adding entry to /etc/fstab..."
+            # Ensure there's a newline before adding the entry, if the file doesn't end with one
+            if [ -n "$(tail -c1 /etc/fstab)" ]; then printf "\n" &gt;&gt; /etc/fstab; fi
+            printf "# Bind mount for %s home directory (%s to %s) - Added by script on %s\n%s\n" \
+                "${TARGET_USERNAME}" "${NEW_DATA_LOCATION}" "${OLD_HOME_DIR}" "$(date)" "${FSTAB_ENTRY}" &gt;&gt; /etc/fstab
+            echo "Entry added."
+
+            echo "Testing fstab entry by attempting to mount '${OLD_HOME_DIR}'..."
+            mount "${OLD_HOME_DIR}" # This will use /etc/fstab to find the entry
+            if [ $? -ne 0 ]; then
+                echo "ERROR: 'mount \"${OLD_HOME_DIR}\"' failed. Check /etc/fstab syntax and ensure '${NEW_DATA_LOCATION}' is accessible."
+                echo "You may need to restore /etc/fstab from '${FSTAB_BACKUP_FILE}'. Aborting."
+                exit 1
+            fi
+            echo "Mount test successful."
+
+            local mount_info_fstab
+            mount_info_fstab=$(findmnt -n -o FSTYPE,OPTIONS -S "${NEW_DATA_LOCATION}" -T "${OLD_HOME_DIR}")
+            if [[ -n "$mount_info_fstab" &amp;&amp; "$mount_info_fstab" == *"none"* &amp;&amp; "$mount_info_fstab" == *"bind"* ]]; then
+                echo "Mount via fstab verified with findmnt: ${mount_info_fstab}"
+            else
+                 echo "ERROR: Mount via fstab failed verification with findmnt. Output: '${mount_info_fstab}'"
+                 echo "Please check /etc/fstab, system logs, and ensure '${OLD_HOME_DIR}' is correctly mounted."
+                 echo "You may need to restore /etc/fstab from '${FSTAB_BACKUP_FILE}'. Aborting."
+                 exit 1
+            fi
+            echo "/etc/fstab method configured and tested successfully."
+            echo "WARNING: If '${NEW_DATA_LOCATION}' is on a filesystem that is not available early during boot"
+            echo "(e.g., encrypted partition not yet unlocked, network share), this fstab entry might cause boot delays or failures."
+            echo "Consider using the 'nofail' option in /etc/fstab (e.g., 'none bind,nofail 0 0') WITH CAUTION for home directories,"
+            echo "as it might lead to an empty home if the mount fails silently."
+            ;;
+        [Bb])
+            echo "--- Configuring persistence via systemd mount unit ---"
+            echo "Systemd unit name: ${SYSTEMD_UNIT_NAME}"
+            echo "Systemd unit file: ${SYSTEMD_UNIT_FILE}"
+
+            # Determine the mount point that provides NEW_DATA_LOCATION for RequiresMountsFor
+            local actual_mount_path_for_dependency
+            actual_mount_path_for_dependency=$(findmnt -n -o TARGET --target "${NEW_DATA_LOCATION}")
+
+            if [ -z "${actual_mount_path_for_dependency}" ] || [ ! -d "${actual_mount_path_for_dependency}" ]; then
+                echo "WARNING: Could not reliably determine the underlying mount point for '${NEW_DATA_LOCATION}' using 'findmnt'."
+                echo "This can happen if '${NEW_DATA_LOCATION}' is not on a standard mount or is deeply nested."
+                echo "Falling back to using '${NEW_DATA_LOCATION}' itself for 'RequiresMountsFor'."
+                echo "If '${NEW_DATA_LOCATION}' is not the actual mount point of its filesystem (e.g., it's a directory on '/data' which is mounted),"
+                echo "this systemd unit might not have the correct dependency ordering. Manual adjustment may be needed."
+                actual_mount_path_for_dependency="${NEW_DATA_LOCATION}"
+            else
+                echo "Determined underlying mount point for '${NEW_DATA_LOCATION}' as '${actual_mount_path_for_dependency}' for systemd unit's RequiresMountsFor."
+            fi
+
+            # Ensure the target directory for the unit file exists
+            mkdir -p "$(dirname "${SYSTEMD_UNIT_FILE}")"
+
+            if [ -f "${SYSTEMD_UNIT_FILE}" ]; then
+                local SYSTEMD_UNIT_BACKUP_FILE="${SYSTEMD_UNIT_FILE}.bak.$(date +%Y%m%d-%H%M%S)"
+                echo "WARNING: Systemd unit file '${SYSTEMD_UNIT_FILE}' already exists."
+                echo "Backing it up to '${SYSTEMD_UNIT_BACKUP_FILE}' before overwriting..."
+                if cp "${SYSTEMD_UNIT_FILE}" "${SYSTEMD_UNIT_BACKUP_FILE}"; then
+                    echo "Backup successful."
+                else
+                    echo "ERROR: Failed to backup existing systemd unit file. Aborting."
+                    exit 1
+                fi
+            fi
+
+            echo "Creating systemd mount unit file '${SYSTEMD_UNIT_FILE}'..."
+            # Note: For home directories, local-fs.target is usually appropriate.
+            # If NEW_DATA_LOCATION were on a network share, remote-fs.target and network-online.target
+            # would be more relevant for After= and WantedBy=.
+            cat &gt; "${SYSTEMD_UNIT_FILE}" &lt;&lt; EOF
+[Unit]
+Description=Bind mount ${OLD_HOME_DIR} to ${NEW_DATA_LOCATION} for user ${TARGET_USERNAME}
+Documentation=man:systemd.mount(5) man:systemd.special(7)
+# Ensures that the filesystem providing the source directory (${NEW_DATA_LOCATION}) is mounted.
+# This should be the actual mount point path where NEW_DATA_LOCATION resides.
+RequiresMountsFor=${actual_mount_path_for_dependency}
+# Attempt to mount after the underlying filesystem is available.
+After=local-fs.target
+
+[Mount]
+What=${NEW_DATA_LOCATION}
+Where=${OLD_HOME_DIR}
+Type=none
+Options=bind
+
+[Install]
+WantedBy=local-fs.target
+EOF
+            echo "Systemd unit file created."
+
+            echo "Reloading systemd daemon..."
+            systemctl daemon-reload
+            if [ $? -ne 0 ]; then echo "ERROR: systemctl daemon-reload failed. Aborting."; exit 1; fi
+            echo "Daemon reloaded."
+
+            echo "Enabling systemd unit '${SYSTEMD_UNIT_NAME}' (to start on boot)..."
+            systemctl enable "${SYSTEMD_UNIT_NAME}"
+            if [ $? -ne 0 ]; then echo "ERROR: Failed to enable systemd unit '${SYSTEMD_UNIT_NAME}'. Check logs. Aborting."; exit 1; fi
+            echo "Unit enabled."
+
+            echo "Starting systemd unit '${SYSTEMD_UNIT_NAME}' now..."
+            systemctl start "${SYSTEMD_UNIT_NAME}"
+            if [ $? -ne 0 ]; then
+                echo "ERROR: Failed to start systemd unit '${SYSTEMD_UNIT_NAME}'."
+                echo "Check status with: systemctl status '${SYSTEMD_UNIT_NAME}'"
+                echo "Check journal with: journalctl -u '${SYSTEMD_UNIT_NAME}'"
+                echo "Aborting."
+                exit 1
+            fi
+            echo "Unit started."
+
+            echo "Verifying status of '${SYSTEMD_UNIT_NAME}'..."
+            if systemctl is-active -q "${SYSTEMD_UNIT_NAME}"; then
+                echo "Systemd unit '${SYSTEMD_UNIT_NAME}' is active."
+            else
+                echo "ERROR: Systemd unit '${SYSTEMD_UNIT_NAME}' is NOT active after start."
+                echo "Check status with: systemctl status '${SYSTEMD_UNIT_NAME}'"
+                echo "Check journal with: journalctl -u '${SYSTEMD_UNIT_NAME}'"
+                echo "Aborting."
+                exit 1
+            fi
+
+            local mount_info_systemd
+            mount_info_systemd=$(findmnt -n -o FSTYPE,OPTIONS -S "${NEW_DATA_LOCATION}" -T "${OLD_HOME_DIR}")
+            if [[ -n "$mount_info_systemd" &amp;&amp; "$mount_info_systemd" == *"none"* &amp;&amp; "$mount_info_systemd" == *"bind"* ]]; then
+                echo "Systemd mount unit verified with findmnt: ${mount_info_systemd}"
+            else
+                 echo "ERROR: Systemd mount failed verification with findmnt. Output: '${mount_info_systemd}'"
+                 echo "Please check system logs and unit status. Aborting."
+                 exit 1
+            fi
+            echo "Systemd mount unit configured, started, and tested successfully."
+            ;;
+        *)
+            echo "Invalid choice. No persistent method configured."
+            echo "If '${OLD_HOME_DIR}' was unmounted, it remains unmounted."
+            exit 1
+            ;;
+    esac
+}
+
+# --- Main Script Execution ---
+echo "Standalone Script for Making a Bind Mount Persistent"
+echo "===================================================="
+echo "This script configures a persistent bind mount using /etc/fstab or a systemd unit."
+echo "It assumes the source data directory and target mount point directory already exist."
+echo ""
+
+# 1. Check if running as root
+check_root
+echo "Running as root. Proceeding..."
+echo ""
+
+# 2. Execute the persistence setup
+step_10_make_persistent
+
+echo ""
+echo "--- Script Finished Successfully ---"
+echo "The chosen persistence method has been configured and initially tested."
+echo "IMPORTANT: Thorough testing is now required:"
+echo "1. If this is a home directory for '${TARGET_USERNAME}', log out and log back in as that user."
+echo "2. Verify all file access, application functionality, and create/delete test files."
+echo "3. CRITICAL: Reboot the system entirely."
+echo "4. After reboot, log in again as '${TARGET_USERNAME}' (if applicable) and repeat all verifications."
+echo "   Ensure 'df -h \"${OLD_HOME_DIR}\"' shows usage from the filesystem hosting '${NEW_DATA_LOCATION}'."
+echo ""
+echo "If issues arise:"
+echo "  - For fstab: Check '/etc/fstab' and system boot logs. Restore from '${FSTAB_BACKUP_FILE:-/etc/fstab.bak...}' if needed."
+echo "  - For systemd: Check 'systemctl status ${SYSTEMD_UNIT_NAME:-home-$TARGET_USERNAME.mount}' and 'journalctl -u ${SYSTEMD_UNIT_NAME:-home-$TARGET_USERNAME.mount}'."
+echo "    Restore the unit file from '${SYSTEMD_UNIT_FILE:-/etc/systemd/system/home-$TARGET_USERNAME.mount}.bak...' if needed."
+
+exit 0
+</code></section></div></div>
 
         </div>
         
@@ -1236,7 +1528,7 @@ echo &quot;Remember to reboot and test thoroughly before considering removal of 
         
         
         <a href="https://ib.bsb.br/404" aria-label="404">
-          2025-05-08 19:42:01
+          2025-05-08 20:07:39
         </a>
         &#x23;
     
@@ -1304,7 +1596,7 @@ echo &quot;Remember to reboot and test thoroughly before considering removal of 
         "headline": "Bind Mounting /home/user to /userdata",
         "description": "",
         "datePublished": "2025-05-02T00:00:00+00:00",
-        "dateModified": "2025-05-08T22:39:09+00:00",
+        "dateModified": "2025-05-08T23:04:53+00:00",
         "author": {
           "@type": "Person",
           "name": "Author"
