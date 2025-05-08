@@ -1,6 +1,6 @@
 ---
 
-tags: [linux>hardware]
+tags: [scratchpad,linux>hardware]
 info: aberto.
 date: 2024-11-16
 type: post
