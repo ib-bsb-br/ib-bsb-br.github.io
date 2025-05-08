@@ -1,4 +1,358 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2025-05-07T23:07:47+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">How to run `.qcow2` from Fedora CoreOS + Podman + Incus</title><link href="https://ib.bsb.br/how-to-run-qcow2-from-fedora-coreos-podman-incus/" rel="alternate" type="text/html" title="How to run `.qcow2` from Fedora CoreOS + Podman + Incus" /><published>2025-05-07T00:00:00+00:00</published><updated>2025-05-07T19:14:50+00:00</updated><id>https://ib.bsb.br/how-to-run-qcow2-from-fedora-coreos-podman-incus</id><content type="html" xml:base="https://ib.bsb.br/how-to-run-qcow2-from-fedora-coreos-podman-incus/"><![CDATA[<p><strong>Understanding the Core Technology</strong></p>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2025-05-08T10:28:54+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">installing Incus OS</title><link href="https://ib.bsb.br/installing-incus-os/" rel="alternate" type="text/html" title="installing Incus OS" /><published>2025-05-08T00:00:00+00:00</published><updated>2025-05-08T10:26:17+00:00</updated><id>https://ib.bsb.br/installing-incus-os</id><content type="html" xml:base="https://ib.bsb.br/installing-incus-os/"><![CDATA[<p>bibref https://github.com/lxc/incus-os</p>
+
+<p><strong>I. Introduction to Incus OS and Intel N97 Deployment</strong></p>
+
+<p>Incus OS is a minimal, immutable operating system designed specifically for running Incus instances (virtual machines and system containers). It prioritizes security through features like UEFI Secure Boot integration, dm-verity for disk integrity, TPM-based disk encryption, and an A/B update mechanism. Incus, a modern system container and virtual machine manager, offers a powerful platform for developing and hosting applications. Deploying Incus OS directly onto bare metal ensures maximum performance and control, transforming the host into a dedicated Incus appliance. Incus OS is designed to take advantage of these hardware security mechanisms to create a “locked down environment”.<code class="language-plaintext highlighter-rouge">2</code></p>
+
+<p>The Intel N97 processor, part of the Alder Lake-N series, is a 64-bit, quad-core CPU with features suitable for lightweight server tasks, including virtualization.<code class="language-plaintext highlighter-rouge">1</code> Its low power consumption (12W TDP) makes it an attractive option for always-on home servers or small-scale deployments.<code class="language-plaintext highlighter-rouge">1</code> This guide focuses on a bare-metal x64 host system with an Intel N97 processor.</p>
+
+<p><strong>II. Crucial Preliminary Considerations</strong></p>
+
+<ul>
+  <li><strong>Experimental Stage:</strong> Incus OS is in early development. Users should expect potential rough edges and be prepared for troubleshooting. This guide is primarily for testing and evaluation purposes.</li>
+  <li><strong>Hardware Requirements:</strong>
+    <ul>
+      <li><strong>x64 Architecture:</strong> The Intel N97 meets this.</li>
+      <li><strong>TPM (Trusted Platform Module) 2.0:</strong> This is <strong>mandatory</strong>. A critical point is that systems without a TPM will be flagged by the Incus OS UI, and installation may fail or result in a non-functional state.</li>
+      <li><strong>UEFI Firmware:</strong> Incus OS is designed for UEFI systems.</li>
+      <li><strong>RAM and Storage:</strong> A minimum of 8GB RAM is recommended (as used in a VM test); 16GB or more for multiple or larger instances. An NVMe or SATA SSD is recommended for the target disk. A separate USB drive is needed for installation media.</li>
+    </ul>
+  </li>
+  <li><strong>Backup Existing Data:</strong> The installation process will erase the target disk. <strong>Ensure all important data from the target N97 machine is backed up before proceeding.</strong></li>
+  <li><strong>Separate Linux Machine:</strong> Needed for preparing the USB installation media and seed configuration files.</li>
+  <li><strong>Flasher Tool:</strong> A “flasher tool” to simplify image writing and seed creation is reportedly planned but may not yet be available. This guide describes the manual method.</li>
+</ul>
+
+<p><strong>III. Phase 1: Host System UEFI/BIOS Configuration (Intel N97)</strong></p>
+
+<p>Correct BIOS/UEFI configuration is paramount for a successful Incus OS installation and for enabling its security and virtualization features.</p>
+
+<ul>
+  <li><strong>Understanding the Intel N97 Platform for Incus OS:</strong>
+Before proceeding with the installation, it is crucial to understand the capabilities and potential limitations of the Intel N97 platform in the context of running Incus OS.
+    <ul>
+      <li><strong>Key Intel N97 Features Relevant to Virtualization and Security:</strong> The Intel N97 processor incorporates several hardware features that are essential or beneficial for running a secure and efficient virtualization host with Incus OS. These are foundational to the secure “enclosure” concept.
+        <ul>
+          <li><strong>Table 1: Intel N97 Key Virtualization and Security Features</strong>
+| Feature Name                                            | Status on Intel N97 (Source) | Criticality/Role for Incus OS Deployment                                                                                                     |
+| :—————————————————— | :————————— | :——————————————————————————————————————————————- |
+| Intel® Virtualization Technology (VT-x)                 | Yes <code class="language-plaintext highlighter-rouge">1</code>                      | Essential for all virtualization; enables the CPU to run multiple operating systems (VMs) and enhances container isolation.                  |
+| Intel® Virtualization Technology for Directed I/O (VT-d) | Yes <code class="language-plaintext highlighter-rouge">1</code>                      | Crucial for PCI device passthrough to Incus virtual machines, allowing VMs direct access to hardware like GPUs, network cards, or storage controllers. |
+| Intel® VT-x with Extended Page Tables (EPT)             | Yes <code class="language-plaintext highlighter-rouge">1</code>                      | Enhances VM memory management performance by reducing hypervisor overhead, leading to more efficient virtualization.                         |
+| Intel® Boot Guard                                       | Yes <code class="language-plaintext highlighter-rouge">1</code>                      | Provides hardware-based boot integrity, forming a root of trust. This is a foundational element for Secure Boot, which Incus OS is designed to leverage.<code class="language-plaintext highlighter-rouge">2</code> |
+| Intel® OS Guard                                         | Yes <code class="language-plaintext highlighter-rouge">1</code>                      | Protects the operating system kernel from modification by malicious software, contributing to the overall security of the Incus OS environment. |
+| TPM 2.0 Support                                         | Typically present <code class="language-plaintext highlighter-rouge">3</code>        | Used by Incus OS for features like measured boot (verifying boot components) and TPM-backed full-disk encryption, enhancing system security.<code class="language-plaintext highlighter-rouge">2</code> |
+| 64-bit Instruction Set                                  | Yes <code class="language-plaintext highlighter-rouge">1</code>                      | Mandatory for running modern operating systems, including Incus OS and the guest operating systems within Incus instances.                   |
+The presence of these features, confirmed by Intel’s official specifications <code class="language-plaintext highlighter-rouge">1</code> and motherboard documentation (e.g., ASRock NUC-N97 indicating “TPM 2.0 onboard IC” <code class="language-plaintext highlighter-rouge">3</code>), ensures that the N97 CPU meets the fundamental hardware requirements for a robust Incus OS deployment.</li>
+        </ul>
+      </li>
+      <li><strong>Potential Performance Considerations and Platform Variability:</strong>
+        <ul>
+          <li><strong>Single-Channel Memory Architecture:</strong> The Intel N97 processor supports only a single memory channel.<code class="language-plaintext highlighter-rouge">1</code> Motherboards based on this CPU, such as the ASRock NUC-N97, also specify single-channel DDR4 3200 MHz technology.<code class="language-plaintext highlighter-rouge">3</code> This could be a performance bottleneck for memory-bandwidth intensive Incus workloads. Using the fastest supported RAM type available for the specific N97 board can help maximize available bandwidth.</li>
+          <li><strong>“Embedded” Nature and BIOS Variability:</strong> The Intel N97 is categorized under “Intel® Processor N-series” with a “Vertical Segment” of “Embedded”.<code class="language-plaintext highlighter-rouge">1</code> This can lead to greater variability in BIOS/UEFI implementations across different N97-based systems. User experiences with GMKtec N97 Mini PCs, for instance, have highlighted issues with BIOS interfaces and USB boot behavior.<code class="language-plaintext highlighter-rouge">4</code> The low power consumption, however, is a significant advantage.</li>
+        </ul>
+      </li>
+    </ul>
+  </li>
+  <li>
+    <p><strong>Accessing BIOS/UEFI Setup:</strong>
+This is typically done by pressing a specific key (commonly F2, Delete, ESC, or F10 <code class="language-plaintext highlighter-rouge">6</code>) immediately after powering on the system. The exact key can vary. For instance, the ASRock NUC-N97 motherboard manual outlines its BIOS structure.<code class="language-plaintext highlighter-rouge">3</code></p>
+  </li>
+  <li><strong>Essential Settings to Configure:</strong>
+Once inside the BIOS/UEFI setup utility, several settings must be verified and adjusted.
+    <ul>
+      <li><strong>Table 2: Recommended BIOS/UEFI Settings for Incus OS on Intel N97</strong>
+| Setting Category      | Typical Setting Name(s) in BIOS (and common variations)        | Recommended Value for Incus OS                                              | Rationale &amp; Importance                                                                                                                               |
+| :——————– | :————————————————————- | :————————————————————————– | :————————————————————————————————————————————————— |
+| Load Defaults         | Load Optimized Defaults, Load UEFI Defaults                    | Execute this first                                                          | Establishes a clean, known baseline. Intel NUCs often use F9 for this.<code class="language-plaintext highlighter-rouge">6</code>                                                                              |
+| Virtualization        | Intel® Virtualization Technology, VT-x, Virtualization, SVM Mode | Enabled                                                                     | Core requirement for Incus. Found in “CPU Configuration”.<code class="language-plaintext highlighter-rouge">3</code> N97 supports VT-x.<code class="language-plaintext highlighter-rouge">1</code>                                                                      |
+| I/O Virtualization    | Intel® VT-d, Directed I/O, IOMMU                               | Enabled                                                                     | Essential for PCIe device passthrough. Often in “Chipset Configuration.” N97 supports VT-d.<code class="language-plaintext highlighter-rouge">1</code>                                                         |
+| TPM                   | Trusted Platform Module, TPM Device, Security Chip, fTPM       | Enabled &amp; Activated (or “Available” / “Owned” depending on BIOS)            | Crucial for Incus OS security (measured boot, disk encryption).<code class="language-plaintext highlighter-rouge">2</code> Look for “Trusted Computing”.<code class="language-plaintext highlighter-rouge">3</code> ASRock NUC-N97 has onboard TPM 2.0 IC.<code class="language-plaintext highlighter-rouge">3</code>          |
+| Secure Boot           | Secure Boot Control, Secure Boot                               | Enabled (with keys cleared for “Setup Mode”)                                | Incus OS leverages Secure Boot.<code class="language-plaintext highlighter-rouge">2</code> For first boot, system must be in “Setup Mode” for key enrollment. Found in “Security” or “Boot” sections.<code class="language-plaintext highlighter-rouge">3</code> |
+| CSM                   | Compatibility Support Module                                   | Disabled                                                                    | Ensure pure UEFI mode.                                                                                                                               |
+| Boot Priority / Order | Boot Option #1, Fixed Boot Order Priorities, Boot Sequence     | 1st: USB Drive (for installation), Then: Internal SSD/NVMe (for installed OS) | To boot from installer, then installed system. N97 USB Boot Quirks: Some N97 BIOSes may require disabling boot priority options to recognize USB.<code class="language-plaintext highlighter-rouge">5</code> |
+| Hyper-Threading       | Intel® Hyper-Threading Technology, Logical Processor           | N/A or Disabled/Auto                                                        | Intel N97 does not support Hyper-Threading.<code class="language-plaintext highlighter-rouge">1</code>                                                                                                        |
+| Intel SGX             | Intel® Software Guard Extensions                               | Disabled or Default                                                         | Generally not required for Incus OS.                                                                                                                 |</li>
+      <li><strong>Detailed Configuration Steps:</strong>
+        <ol>
+          <li><strong>Load Optimized Defaults:</strong> Navigate to “Exit” or “Save &amp; Exit” and select “Load Optimized Defaults.” Intel NUC systems often use F9.<code class="language-plaintext highlighter-rouge">6</code></li>
+          <li><strong>Enable Intel® Virtualization Technology (VT-x):</strong> Critical. Typically under “CPU Configuration” or “Advanced.” Set to <code class="language-plaintext highlighter-rouge">Enabled</code>. The Intel N97 supports VT-x.<code class="language-plaintext highlighter-rouge">1</code></li>
+          <li><strong>Enable Intel® VT-d (Virtualization Technology for Directed I/O):</strong> If separate, also set to <code class="language-plaintext highlighter-rouge">Enabled</code>. Vital for PCIe passthrough. The N97 supports VT-d.<code class="language-plaintext highlighter-rouge">1</code></li>
+          <li><strong>Enable and Configure TPM (Trusted Platform Module):</strong> Locate “TPM” or “Trusted Computing” settings.<code class="language-plaintext highlighter-rouge">3</code> Ensure TPM 2.0 is <code class="language-plaintext highlighter-rouge">Enabled</code> and <code class="language-plaintext highlighter-rouge">Activated</code>. For Incus OS, it must be available for the OS to utilize for features like “TPM measured” boot and “storage encrypted using that TPM state”.<code class="language-plaintext highlighter-rouge">2</code></li>
+          <li><strong>Configure Secure Boot:</strong> Find “Secure Boot” options.<code class="language-plaintext highlighter-rouge">3</code> Set Secure Boot to <code class="language-plaintext highlighter-rouge">Enabled</code>. <strong>Crucially, for the initial installation, set Secure Boot to “Setup Mode.”</strong> This often involves an option to “Clear Secure Boot Keys,” “Delete All Secure Boot Variables,” or “Reset to Setup Mode.” This allows Incus OS to enroll its own keys on first boot, as stated in its <code class="language-plaintext highlighter-rouge">README.md</code>: “On first boot, it will automatically add the relevant Secure Boot key (requires the system be in setup mode).”</li>
+          <li><strong>Disable CSM (Compatibility Support Module):</strong> Ensure the system is in pure UEFI mode, not legacy BIOS compatibility mode.</li>
+          <li><strong>Set Boot Order/Priority (Addressing N97 USB Boot Issues):</strong> Configure the USB drive as the primary boot device for installation.
+            <ul>
+              <li><strong>Common N97 USB Boot Challenges:</strong> Users of N97-based systems have reported difficulties booting from USB.<code class="language-plaintext highlighter-rouge">5</code></li>
+              <li><strong>Troubleshooting USB Boot:</strong> First, try setting USB as the first boot option. If it fails, use the system’s boot menu (often F7, F10, F11, F12, or ESC – F7 noted for a GMKtec N97 <code class="language-plaintext highlighter-rouge">5</code>). A specific N97 workaround involved setting both boot priority options to “disabled” to allow USB boot.<code class="language-plaintext highlighter-rouge">5</code></li>
+            </ul>
+          </li>
+          <li><strong>Review Conflicting/Unnecessary Settings:</strong>
+            <ul>
+              <li><strong>Virtualization MUST Be Enabled:</strong> Advice to “disable Virtualization - potential for attack”<code class="language-plaintext highlighter-rouge">8</code> is incorrect for an Incus host. VT-x and VT-d are fundamental.</li>
+              <li><strong>Hyper-Threading:</strong> N/A for Intel N97.<code class="language-plaintext highlighter-rouge">1</code></li>
+              <li><strong>Intel SGX:</strong> Leaving at default (often disabled or auto) is appropriate.</li>
+            </ul>
+          </li>
+        </ol>
+      </li>
+    </ul>
+  </li>
+  <li><strong>Saving Changes:</strong>
+Navigate to “Exit” or “Save &amp; Exit,” select “Save Changes and Exit.” Intel NUCs typically use F10.<code class="language-plaintext highlighter-rouge">6</code></li>
+</ul>
+
+<p><strong>IV. Phase 2: Preparing Incus OS Installation Media &amp; Seed Configuration (on Separate Linux Machine)</strong></p>
+
+<ul>
+  <li><strong>Downloading the Official Incus OS Image:</strong>
+    <ol>
+      <li>Obtain the official Incus OS installation image from trusted sources, typically the official Incus project website or the Incus GitHub repository’s “Releases” section.<code class="language-plaintext highlighter-rouge">2</code> Download the latest raw disk image for x86-64 (e.g., <code class="language-plaintext highlighter-rouge">IncusOS_VERSION.raw.gz</code>).</li>
+      <li>Decompress the image:
+        <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">gzip</span> <span class="nt">-d</span> IncusOS_VERSION.raw.gz
+</code></pre></div>        </div>
+        <p>This results in a <code class="language-plaintext highlighter-rouge">.raw</code> file (e.g., <code class="language-plaintext highlighter-rouge">IncusOS_VERSION.raw</code>). For clarity, this guide may refer to it as <code class="language-plaintext highlighter-rouge">incus-os-installer.raw</code>.</p>
+      </li>
+      <li><strong>(Recommended) Verifying Image Integrity:</strong> If checksums (e.g., SHA256) are provided, download the checksum file and verify the downloaded image using a utility like <code class="language-plaintext highlighter-rouge">sha256sum incus-os-installer.raw</code> and comparing the output.</li>
+    </ol>
+  </li>
+  <li><strong>Preparing the USB Installation Drive:</strong>
+    <ol>
+      <li><strong>USB Drive Selection (Size):</strong> Use a USB drive of <strong>at least 64GB</strong>. This recommendation stems from observations that the Incus OS installer (specifically components like <code class="language-plaintext highlighter-rouge">systemd-repart</code>) might have expectations about minimum media size for its partitioning operations, beyond just fitting the OS image itself.</li>
+      <li><strong>Identify USB Device Name:</strong> Insert the USB drive. Identify its device name (e.g., <code class="language-plaintext highlighter-rouge">/dev/sdb</code>, <code class="language-plaintext highlighter-rouge">/dev/sdc</code>) using <code class="language-plaintext highlighter-rouge">lsblk</code> or <code class="language-plaintext highlighter-rouge">sudo fdisk -l</code>. <strong>Be extremely careful to choose the correct device, as the next step will overwrite it.</strong></li>
+      <li><strong>Writing the Image to USB Drive:</strong>
+        <ul>
+          <li><strong>Using <code class="language-plaintext highlighter-rouge">dd</code> (Linux/macOS - Use with Extreme Caution):</strong>
+            <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo dd </span><span class="k">if</span><span class="o">=</span>incus-os-installer.raw <span class="nv">of</span><span class="o">=</span>/dev/sdX <span class="nv">bs</span><span class="o">=</span>4M <span class="nv">status</span><span class="o">=</span>progress <span class="nv">conv</span><span class="o">=</span>fsync
+</code></pre></div>            </div>
+            <p>Replace <code class="language-plaintext highlighter-rouge">/dev/sdX</code> with your USB device path.</p>
+          </li>
+          <li><strong>Using Graphical Tools:</strong> Balena Etcher (cross-platform) or Rufus (Windows) <code class="language-plaintext highlighter-rouge">5</code> are user-friendly alternatives. For Rufus, ensure “Partition scheme” is “GPT” and “Target system” is “UEFI (non CSM)”.</li>
+        </ul>
+      </li>
+      <li><strong>(Optional) <code class="language-plaintext highlighter-rouge">truncate</code> Raw Image (Primarily for VM testing):</strong> In some VM test scenarios where the <code class="language-plaintext highlighter-rouge">.raw</code> file itself acts as the disk, if boot errors related to partition fitting occurred, truncating the <code class="language-plaintext highlighter-rouge">.raw</code> file to a larger size (e.g., 50GB) <em>before</em> writing it to the virtual disk was a workaround. This is less common for physical USB preparation if the USB stick itself is sufficiently large.
+        <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># truncate -s 50G incus-os-installer.raw # Optional, context-dependent</span>
+</code></pre></div>        </div>
+      </li>
+      <li><strong>(Optional) GPT Table Relocation for Large USBs:</strong> If the USB is much larger than the image, and boot issues occur, the backup GPT table might be misplaced. Use <code class="language-plaintext highlighter-rouge">sgdisk</code> on the USB drive (<code class="language-plaintext highlighter-rouge">x</code> then <code class="language-plaintext highlighter-rouge">e</code> then <code class="language-plaintext highlighter-rouge">w</code>) to relocate it to the end of the physical device.</li>
+    </ol>
+  </li>
+  <li><strong>Creating Seed Configuration Files:</strong>
+Incus OS uses a seed configuration (a tarball) to automate setup. The exact filenames expected within the tarball (<code class="language-plaintext highlighter-rouge">install.yaml</code>, <code class="language-plaintext highlighter-rouge">incus.yaml</code>, <code class="language-plaintext highlighter-rouge">network.yaml</code>) should be verified against the official Incus OS documentation for the specific version you are installing, as these can be implementation details.
+    <ol>
+      <li><strong>Create <code class="language-plaintext highlighter-rouge">install.yaml</code> (Installer Options):</strong>
+        <div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># install.yaml</span>
+<span class="na">version</span><span class="pi">:</span> <span class="s2">"</span><span class="s">1.0"</span> 
+<span class="na">force_install</span><span class="pi">:</span> <span class="kc">true</span> 
+<span class="na">force_reboot</span><span class="pi">:</span> <span class="kc">false</span> 
+<span class="c1"># target: </span>
+<span class="c1">#   id: "ata-YOUR_DISK_MODEL_SERIAL" </span>
+</code></pre></div>        </div>
+      </li>
+      <li><strong>Create <code class="language-plaintext highlighter-rouge">incus.yaml</code> (Incus Daemon Configuration):</strong>
+```yaml
+        <h1 id="incusyaml">incus.yaml</h1>
+        <p>version: “1.0” 
+apply_defaults: true 
+certificates:</p>
+        <ul>
+          <li>name: “my-remote-admin-client” 
+type: “client”
+certificate: |
+  YOUR_SINGLE_LINE_BASE64_ENCODED_DER_CERTIFICATE_CONTENT_HERE
+description: “Certificate for my remote admin machine”
+```</li>
+          <li><strong>Generating Client Certificate in Correct Format (CRITICAL):</strong>
+The certificate content must be <strong>Base64 encoded DER format, WITHOUT PEM headers/footers</strong>.
+To convert a PEM client certificate (e.g., <code class="language-plaintext highlighter-rouge">client.crt</code>):
+            <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>openssl x509 <span class="nt">-in</span> client.crt <span class="nt">-outform</span> DER | <span class="nb">base64</span> <span class="nt">-w0</span>
+</code></pre></div>            </div>
+            <p>Paste the resulting single line of Base64 text into the <code class="language-plaintext highlighter-rouge">certificate:</code> field.</p>
+          </li>
+        </ul>
+      </li>
+      <li><strong>(Optional) Create <code class="language-plaintext highlighter-rouge">network.yaml</code> (Static Network Configuration):</strong>
+If omitted, Incus OS attempts DHCP. Example:
+```yaml
+        <h1 id="networkyaml">network.yaml</h1>
+        <p>version: “1.0”
+dns:
+  hostname: “incus-n97”
+interfaces:</p>
+        <ul>
+          <li>name: “br0” 
+hwaddr: “XX:XX:XX:XX:XX:XX” # Physical NIC MAC
+addresses: [“192.168.1.50/24”] 
+routes:
+            <ul>
+              <li>to: “0.0.0.0/0” 
+via: “192.168.1.1”
+```</li>
+            </ul>
+          </li>
+        </ul>
+      </li>
+    </ol>
+  </li>
+  <li><strong>Packaging Seed Data and Writing to USB Media:</strong>
+    <ol>
+      <li><strong>Create Tarball:</strong> A common name for the tarball in test scripts is <code class="language-plaintext highlighter-rouge">seed.install.tar</code>.
+        <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">tar</span> <span class="nt">-cvf</span> seed.install.tar install.yaml incus.yaml <span class="c"># Add network.yaml if used</span>
+</code></pre></div>        </div>
+      </li>
+      <li><strong>Write the Seed Tarball to the USB Drive:</strong>
+This uses a specific offset. Build scripts often use an offset of <code class="language-plaintext highlighter-rouge">4196352</code> with a block size of <code class="language-plaintext highlighter-rouge">512</code>. This offset, derived from project build scripts, typically places the seed data at the beginning of a dedicated seed partition located after the ESP (often 2GB in size).
+        <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo dd </span><span class="k">if</span><span class="o">=</span>seed.install.tar <span class="nv">of</span><span class="o">=</span>/dev/sdX <span class="nv">seek</span><span class="o">=</span>4196352 <span class="nv">bs</span><span class="o">=</span>512 <span class="nv">conv</span><span class="o">=</span>notrunc
+</code></pre></div>        </div>
+        <p>(Replace <code class="language-plaintext highlighter-rouge">/dev/sdX</code> with your USB device name). <code class="language-plaintext highlighter-rouge">conv=notrunc</code> is vital.</p>
+      </li>
+    </ol>
+  </li>
+</ul>
+
+<p><strong>V. Phase 3: Incus OS Installation on the Target Host (Intel N97)</strong></p>
+
+<ul>
+  <li>
+    <p><strong>Final UEFI/BIOS Boot Configuration for USB Boot:</strong>
+Ensure the USB drive is the primary boot device, Secure Boot is enabled and in Setup Mode, and TPM 2.0 is enabled.</p>
+  </li>
+  <li>
+    <p><strong>Booting from USB and Secure Boot Enrollment:</strong>
+The system should boot from the USB. On first boot with Secure Boot in Setup Mode, Incus OS will attempt to enroll its Secure Boot keys. This might involve one or two automatic reboots.</p>
+  </li>
+  <li>
+    <p><strong>Navigating the Incus OS Installer:</strong>
+A TUI will likely appear. The installer reads the seed data, identifies the target disk, partitions it, and copies OS files automatically. It’s expected to handle full-disk encryption (leveraging TPM <code class="language-plaintext highlighter-rouge">2</code>) and dm-verity <code class="language-plaintext highlighter-rouge">2</code> automatically.</p>
+  </li>
+  <li>
+    <p><strong>Installation Process Details:</strong>
+The installer partitions and formats the target disk, copies Incus OS system files, installs the bootloader to the ESP, and configures the base system, potentially interacting with the TPM and enrolling Secure Boot keys.<code class="language-plaintext highlighter-rouge">2</code></p>
+  </li>
+  <li>
+    <p><strong>Completion and Reboot:</strong>
+Upon completion, a message will prompt for media removal (unless <code class="language-plaintext highlighter-rouge">force_reboot: true</code>). Remove the USB installation drive. Reboot manually if needed.</p>
+  </li>
+</ul>
+
+<p><strong>VI. Phase 4: First Boot, System Verification, and Initial Incus Setup</strong></p>
+
+<ul>
+  <li>
+    <p><strong>First Boot into Installed Incus OS:</strong>
+(Optional: Enter UEFI/BIOS and set your internal disk as primary boot device). The system boots from the internal disk. <code class="language-plaintext highlighter-rouge">incus-osd</code> (the Incus OS daemon) starts and applies the seed configuration. If <code class="language-plaintext highlighter-rouge">apply_defaults: true</code> was set, it initializes ZFS, default Incus networking, and trusts your client certificate. If no <code class="language-plaintext highlighter-rouge">network.yaml</code> was provided, Incus OS itself attempts DHCP. It may download applications like Incus itself.</p>
+  </li>
+  <li><strong>Retrieving and Storing Disk Encryption Recovery Key (Vital):</strong>
+The root filesystem is encrypted. Retrieve the recovery key.
+From your remote client (after establishing access):
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>incus query my-n97-incus-os:/1.0/system/encryption
+</code></pre></div>    </div>
+    <p>The JSON output will contain <code class="language-plaintext highlighter-rouge">config.recovery_keys</code>. <strong>Store these keys securely offline.</strong> A TUI warning on the console may persist until retrieved.</p>
+  </li>
+  <li><strong>Verifying Incus Remote Access:</strong>
+Find the Incus OS host’s IP. From your client machine:
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>incus remote add my-n97-incus-os &lt;IP_OF_INCUS_OS_HOST&gt;:8443
+<span class="c"># You will likely be prompted to accept the server's certificate fingerprint.</span>
+incus list my-n97-incus-os:
+</code></pre></div>    </div>
+  </li>
+  <li><strong>Verifying Incus Service Status:</strong>
+<code class="language-plaintext highlighter-rouge">incus-osd</code> is the Incus OS management daemon, which in turn manages the main <code class="language-plaintext highlighter-rouge">incus</code> service. Check the status of the primary Incus service (e.g., <code class="language-plaintext highlighter-rouge">incus.service</code> or <code class="language-plaintext highlighter-rouge">incusd.service</code> - consult Incus OS documentation for the exact name):
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>systemctl status incus.service <span class="c"># Or the appropriate service name</span>
+<span class="c"># Check logs if needed:</span>
+<span class="nb">sudo </span>journalctl <span class="nt">-u</span> incus.service <span class="c"># Or the appropriate service name</span>
+</code></pre></div>    </div>
+  </li>
+  <li><strong>Initializing the Incus Service (Relationship to Seed):</strong>
+If <code class="language-plaintext highlighter-rouge">apply_defaults: true</code> was used in <code class="language-plaintext highlighter-rouge">incus.yaml</code> and the seed was processed successfully, the Incus daemon (storage pools, default network, etc.) should be automatically configured. In this case, running <code class="language-plaintext highlighter-rouge">sudo incus admin init</code> is generally <strong>not required</strong> for the initial setup.
+The <code class="language-plaintext highlighter-rouge">incus admin init</code> command is used for:
+    <ul>
+      <li>Manual initial configuration if <code class="language-plaintext highlighter-rouge">apply_defaults: false</code> was set or if the seed was not used/failed.</li>
+      <li>Reconfiguring an existing Incus setup.</li>
+      <li>Advanced or custom setups beyond the seed defaults.
+If needed, <code class="language-plaintext highlighter-rouge">sudo incus admin init</code> interactively configures clustering, storage pools (ZFS, Btrfs, etc.), network bridges, and remote access settings.</li>
+    </ul>
+  </li>
+</ul>
+
+<p><strong>VII. Phase 5: Extended Verification - Launching Your First Incus Instance</strong></p>
+
+<ul>
+  <li><strong>Listing Available Images:</strong>
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>incus image list images: <span class="nt">-r</span> my-n97-incus-os
+</code></pre></div>    </div>
+  </li>
+  <li><strong>Launching Test Instances:</strong>
+    <ul>
+      <li><strong>System Container:</strong> <code class="language-plaintext highlighter-rouge">incus launch images:alpine/edge test-alpine-container -r my-n97-incus-os</code></li>
+      <li><strong>OCI Container:</strong> <code class="language-plaintext highlighter-rouge">incus launch oci-docker:nginx nginx-oci-test -r my-n97-incus-os</code></li>
+      <li><strong>Virtual Machine:</strong> <code class="language-plaintext highlighter-rouge">incus launch images:ubuntu/22.04 test-ubuntu-vm --vm -r my-n97-incus-os</code></li>
+    </ul>
+  </li>
+  <li><strong>Checking Instance Status:</strong>
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>incus list <span class="nt">-r</span> my-n97-incus-os
+</code></pre></div>    </div>
+  </li>
+  <li><strong>Accessing Instances:</strong>
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>incus <span class="nb">exec </span>test-alpine-container <span class="nt">--</span> sh <span class="nt">-r</span> my-n97-incus-os
+</code></pre></div>    </div>
+  </li>
+  <li><strong>Basic Network Test from Within an Instance:</strong>
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>ping <span class="nt">-c</span> 3 google.com
+</code></pre></div>    </div>
+  </li>
+</ul>
+
+<p><strong>VIII. Phase 6: Troubleshooting</strong></p>
+
+<ul>
+  <li><strong>TPM Mandatory:</strong> No TPM 2.0 will lead to failure or a non-functional state.</li>
+  <li><strong>Secure Boot Setup Mode:</strong> Essential for initial key enrollment.</li>
+  <li><strong>Seed File Errors:</strong> YAML syntax (indentation) and certificate format (Base64 DER) are common pitfalls.</li>
+  <li><strong>USB Boot Problems:</strong>
+    <ul>
+      <li>Check BIOS boot order, try boot menu (F7, F10, etc.).<code class="language-plaintext highlighter-rouge">5</code></li>
+      <li>N97 specific: Try setting boot priority options to “disabled” in BIOS.<code class="language-plaintext highlighter-rouge">5</code></li>
+      <li>Recreate USB media, try different tools.</li>
+      <li>For very large USBs, consider <code class="language-plaintext highlighter-rouge">sgdisk</code> to relocate backup GPT.</li>
+      <li>Installer might not clean up USB stick partitions after an install (re-image USB for new attempt).</li>
+    </ul>
+  </li>
+  <li><strong>Image Size Issues:</strong>
+    <ul>
+      <li>USB stick must be large enough (&gt;=64GB recommended due to installer repart behavior).</li>
+      <li>Target internal disk should be sufficiently large (e.g., 50GB+).</li>
+    </ul>
+  </li>
+  <li><strong>GitHub Rate Limiting:</strong> During first boot, Incus OS might download components. Repeated attempts from the same IP can hit rate limits.</li>
+  <li><strong>System Overheating (N97 Mini PCs):</strong> Ensure adequate ventilation. Check for BIOS updates for thermal management.<code class="language-plaintext highlighter-rouge">4</code></li>
+  <li><strong>Installer Failures:</strong> Check disk/network connections. Try DHCP if static IP fails. Consult Incus OS release notes.</li>
+  <li><strong><code class="language-plaintext highlighter-rouge">incusd</code> Service Failures:</strong> Check logs. Review seed files or <code class="language-plaintext highlighter-rouge">incus admin init</code> choices.</li>
+  <li><strong>Cannot Launch Instances:</strong> Check storage pool, network, image integrity, host resources, instance logs.</li>
+  <li><strong>BIOS Version Issues:</strong> Outdated BIOS can cause instability.<code class="language-plaintext highlighter-rouge">4, 6</code> Check manufacturer for updates.</li>
+</ul>
+
+<p><strong>IX. Phase 7: Conclusion and Next Steps</strong></p>
+
+<p>Successfully installing and configuring Incus OS on an Intel N97 bare-metal host establishes a robust, secure, and minimal platform for Incus containers and virtual machines.</p>
+
+<ul>
+  <li><strong>Pointers for Further Learning:</strong>
+    <ul>
+      <li><strong>Official Incus Documentation:</strong> The primary resource (typically on <code class="language-plaintext highlighter-rouge">linuxcontainers.org</code>).</li>
+      <li><strong>Community Resources:</strong> Linux Containers Forum,<code class="language-plaintext highlighter-rouge">9</code> Incus Subreddit.<code class="language-plaintext highlighter-rouge">11</code></li>
+      <li><strong>Advanced Incus Features:</strong> Profiles, snapshots, device passthrough (utilizing N97’s VT-d <code class="language-plaintext highlighter-rouge">1</code>), clustering,<code class="language-plaintext highlighter-rouge">2</code> alternative storage backends (Linstor <code class="language-plaintext highlighter-rouge">9</code>), OCI container management.<code class="language-plaintext highlighter-rouge">2</code></li>
+      <li><strong>Automation Tools:</strong> <code class="language-plaintext highlighter-rouge">incus-deploy</code> <code class="language-plaintext highlighter-rouge">2</code> (Ansible/Terraform scripts), IncusScripts <code class="language-plaintext highlighter-rouge">10</code> (community scripts).</li>
+    </ul>
+  </li>
+  <li><strong>Maintaining Your Incus OS Deployment:</strong>
+    <ul>
+      <li><strong>Regular Updates:</strong> Incus OS (via its A/B mechanism) and the Incus package itself (Incus has monthly feature releases and LTS versions <code class="language-plaintext highlighter-rouge">2</code>).</li>
+      <li><strong>System Monitoring:</strong> Host resources and Incus pool usage. Review Incus logs.</li>
+      <li><strong>Backup Strategy:</strong> Incus configuration and instance data.</li>
+    </ul>
+  </li>
+</ul>]]></content><author><name></name></author><category term="scratchpad" /></entry><entry><title type="html">How to run `.qcow2` from Fedora CoreOS + Podman + Incus</title><link href="https://ib.bsb.br/how-to-run-qcow2-from-fedora-coreos-podman-incus/" rel="alternate" type="text/html" title="How to run `.qcow2` from Fedora CoreOS + Podman + Incus" /><published>2025-05-07T00:00:00+00:00</published><updated>2025-05-07T19:14:50+00:00</updated><id>https://ib.bsb.br/how-to-run-qcow2-from-fedora-coreos-podman-incus</id><content type="html" xml:base="https://ib.bsb.br/how-to-run-qcow2-from-fedora-coreos-podman-incus/"><![CDATA[<p><strong>Understanding the Core Technology</strong></p>
 
 <ul>
   <li><strong>Incus:</strong> Your custom OS includes Incus, a powerful system container and virtual machine manager. For VMs, Incus utilizes QEMU/KVM.</li>
@@ -3650,586 +4004,4 @@ qemu-img create <span class="nt">-f</span> qcow2 /home/user/GNS3_VMs/SBNB/persis
   <li><strong>Avoid Relying Solely on <code class="language-plaintext highlighter-rouge">/etc/fstab</code>:</strong> Do not assume an <code class="language-plaintext highlighter-rouge">/etc/fstab</code> entry inside the VM will work correctly after a reboot unless SBNB has a specific feature to persist or re-apply fstab changes.</li>
 </ul>
 
-<p>You have now successfully added persistent storage to your RAM-based SBNB VM within the Live Raizo/GNS3 environment. Remember to handle the mounting process appropriately for the RAM-based nature of the OS.</p>]]></content><author><name></name></author><category term="scratchpad" /></entry><entry><title type="html">sbnb buildroot intel n97 fix</title><link href="https://ib.bsb.br/sbnb-buildroot-intel-n97-fix/" rel="alternate" type="text/html" title="sbnb buildroot intel n97 fix" /><published>2025-05-03T00:00:00+00:00</published><updated>2025-05-03T22:13:51+00:00</updated><id>https://ib.bsb.br/sbnb-buildroot-intel-n97-fix</id><content type="html" xml:base="https://ib.bsb.br/sbnb-buildroot-intel-n97-fix/"><![CDATA[<p>Okay, let’s refactor the provided Buildroot files (<code class="language-plaintext highlighter-rouge">create_efi.sh</code> and <code class="language-plaintext highlighter-rouge">sbnb_defconfig</code>) to permanently include the <code class="language-plaintext highlighter-rouge">nomodeset</code> kernel parameter for the boot process initiated by the custom EFI executable.</p>
-
-<p>The main challenge here is that your <code class="language-plaintext highlighter-rouge">create_efi.sh</code> script <strong>builds a unified EFI executable and hardcodes the kernel command line within itself</strong>. This approach bypasses the standard Buildroot mechanism for setting the kernel command line via <code class="language-plaintext highlighter-rouge">BR2_KERNEL_CMDLINE_*</code> options in the configuration, which are typically used by bootloaders like GRUB or Syslinux.</p>
-
-<p>Therefore, to add <code class="language-plaintext highlighter-rouge">nomodeset</code>, we must modify the script directly. Changes to the <code class="language-plaintext highlighter-rouge">sbnb_defconfig</code> file will primarily involve ensuring other settings (like the initramfs format) are consistent with the script and adding comments for clarity.</p>
-
-<p><strong>1. Refactored <code class="language-plaintext highlighter-rouge">board/sbnb/sbnb/scripts/create_efi.sh</code></strong></p>
-
-<p>This version adds <code class="language-plaintext highlighter-rouge">nomodeset</code> to the command line string and includes a note about a potentially unused variable from the original script.</p>
-
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c">#!/bin/bash</span>
-
-<span class="nb">set</span> <span class="nt">-euxo</span> pipefail
-
-<span class="c"># This script creates a custom bootable EFI binary by combining an EFI stub,</span>
-<span class="c"># Linux kernel, initrd, osrel and cmdline.</span>
-
-<span class="c"># Define variables</span>
-<span class="nv">STUB</span><span class="o">=</span>/usr/lib/systemd/boot/efi/linuxx64.efi.stub
-<span class="nv">KERNEL</span><span class="o">=</span><span class="s2">"</span><span class="k">${</span><span class="nv">BINARIES_DIR</span><span class="k">}</span><span class="s2">/bzImage"</span>
-<span class="c"># --- VERIFY THIS INITRD PATH ---</span>
-<span class="c"># Ensure this path correctly points to the CPIO archive you intend to use.</span>
-<span class="c"># Buildroot generates the CPIO in ${BINARIES_DIR}. Check if it's compressed</span>
-<span class="c"># (e.g., rootfs-sbnb.cpio.xz) or uncompressed (e.g., rootfs-sbnb.cpio)</span>
-<span class="c"># and adjust this variable and/or your Buildroot config accordingly.</span>
-<span class="c"># See notes in the defconfig section below.</span>
-<span class="nv">INITRD</span><span class="o">=</span><span class="s2">"</span><span class="k">${</span><span class="nv">BINARIES_DIR</span><span class="k">}</span><span class="s2">/rootfs-sbnb.cpio"</span>
-<span class="nv">OS_RELEASE</span><span class="o">=</span><span class="s2">"</span><span class="k">${</span><span class="nv">TARGET_DIR</span><span class="k">}</span><span class="s2">/etc/os-release"</span>
-<span class="c"># --- MODIFIED KERNEL COMMAND LINE ---</span>
-<span class="c"># Added 'nomodeset' to the end of the command line string.</span>
-<span class="c"># IMPORTANT: This command line is HARDCODED. Changes to BR2_KERNEL_CMDLINE_*</span>
-<span class="c"># in the Buildroot config will NOT affect the EFI file generated by this script.</span>
-<span class="nv">CMDLINE</span><span class="o">=</span><span class="s2">"console=tty0 console=ttyS0 earlyprintk verbose intel_iommu=on module_blacklist=nouveau,nvidiafb,snd_hda_intel dyndbg=</span><span class="se">\"</span><span class="s2">module firmware_class +p; module microcode +p; module ccp +p</span><span class="se">\"</span><span class="s2"> nomodeset"</span>
-<span class="c"># --- END MODIFICATION ---</span>
-<span class="nv">CMDLINE_TMP</span><span class="o">=</span><span class="si">$(</span><span class="nb">mktemp</span><span class="si">)</span>
-<span class="nv">OUTPUT</span><span class="o">=</span>sbnb.efi <span class="c"># Output filename in the current directory</span>
-
-<span class="c"># Write the command line to a temporary file</span>
-<span class="nb">echo</span> <span class="nt">-n</span> <span class="s2">"</span><span class="k">${</span><span class="nv">CMDLINE</span><span class="k">}</span><span class="s2">"</span> <span class="o">&gt;</span> <span class="s2">"</span><span class="k">${</span><span class="nv">CMDLINE_TMP</span><span class="k">}</span><span class="s2">"</span>
-
-<span class="c"># Calculate alignment</span>
-<span class="nv">align</span><span class="o">=</span><span class="s2">"</span><span class="si">$(</span>objdump <span class="nt">-p</span> <span class="s2">"</span><span class="k">${</span><span class="nv">STUB</span><span class="k">}</span><span class="s2">"</span> | <span class="nb">awk</span> <span class="s1">'{ if ($1 == "SectionAlignment"){print $2} }'</span><span class="si">)</span><span class="s2">"</span>
-<span class="nv">align</span><span class="o">=</span><span class="k">$((</span><span class="m">16</span><span class="c">#$align))</span>
-
-<span class="c"># Calculate offsets for sections</span>
-<span class="nv">stub_line</span><span class="o">=</span><span class="si">$(</span>objdump <span class="nt">-h</span> <span class="s2">"</span><span class="k">${</span><span class="nv">STUB</span><span class="k">}</span><span class="s2">"</span> | <span class="nb">tail</span> <span class="nt">-2</span> | <span class="nb">head</span> <span class="nt">-1</span><span class="si">)</span>
-<span class="nv">stub_size</span><span class="o">=</span><span class="m">0</span>x<span class="si">$(</span><span class="nb">echo</span> <span class="s2">"</span><span class="nv">$stub_line</span><span class="s2">"</span> | <span class="nb">awk</span> <span class="s1">'{print $3}'</span><span class="si">)</span>
-<span class="nv">stub_offs</span><span class="o">=</span><span class="m">0</span>x<span class="si">$(</span><span class="nb">echo</span> <span class="s2">"</span><span class="nv">$stub_line</span><span class="s2">"</span> | <span class="nb">awk</span> <span class="s1">'{print $4}'</span><span class="si">)</span>
-<span class="nv">osrel_offs</span><span class="o">=</span><span class="k">$((</span>stub_size <span class="o">+</span> stub_offs<span class="k">))</span>
-<span class="nv">osrel_offs</span><span class="o">=</span><span class="k">$((</span>osrel_offs <span class="o">+</span> align <span class="o">-</span> osrel_offs <span class="o">%</span> align<span class="k">))</span>
-<span class="nv">cmdline_offs</span><span class="o">=</span><span class="k">$((</span>osrel_offs <span class="o">+</span> <span class="si">$(</span><span class="nb">stat</span> <span class="nt">-Lc</span>%s <span class="s2">"</span><span class="k">${</span><span class="nv">OS_RELEASE</span><span class="k">}</span><span class="s2">"</span><span class="si">)</span><span class="k">))</span>
-<span class="nv">cmdline_offs</span><span class="o">=</span><span class="k">$((</span>cmdline_offs <span class="o">+</span> align <span class="o">-</span> cmdline_offs <span class="o">%</span> align<span class="k">))</span>
-<span class="c"># --- NOTE: splash_offs Calculation ---</span>
-<span class="c"># The following offset is calculated but doesn't appear to be used in the</span>
-<span class="c"># objcopy command below in the original script. Verify if this is intended.</span>
-<span class="nv">splash_offs</span><span class="o">=</span><span class="k">$((</span>cmdline_offs <span class="o">+</span> <span class="si">$(</span><span class="nb">stat</span> <span class="nt">-Lc</span>%s <span class="s2">"</span><span class="k">${</span><span class="nv">CMDLINE_TMP</span><span class="k">}</span><span class="s2">"</span><span class="si">)</span><span class="k">))</span>
-<span class="nv">splash_offs</span><span class="o">=</span><span class="k">$((</span>splash_offs <span class="o">+</span> align <span class="o">-</span> splash_offs <span class="o">%</span> align<span class="k">))</span>
-<span class="c"># --- END NOTE ---</span>
-<span class="nv">linux_offs</span><span class="o">=</span><span class="k">$((</span>splash_offs<span class="k">))</span> <span class="c"># Original script sets linux_offs based on splash_offs</span>
-<span class="nv">initrd_offs</span><span class="o">=</span><span class="k">$((</span>linux_offs <span class="o">+</span> <span class="si">$(</span><span class="nb">stat</span> <span class="nt">-Lc</span>%s <span class="s2">"</span><span class="k">${</span><span class="nv">KERNEL</span><span class="k">}</span><span class="s2">"</span><span class="si">)</span><span class="k">))</span>
-<span class="nv">initrd_offs</span><span class="o">=</span><span class="k">$((</span>initrd_offs <span class="o">+</span> align <span class="o">-</span> initrd_offs <span class="o">%</span> align<span class="k">))</span>
-
-<span class="c"># Use objcopy to add sections to the EFI stub</span>
-<span class="c"># Ensure all required files exist before running objcopy</span>
-<span class="k">if</span> <span class="o">[</span> <span class="o">!</span> <span class="o">-</span>f <span class="s2">"</span><span class="k">${</span><span class="nv">OS_RELEASE</span><span class="k">}</span><span class="s2">"</span> <span class="o">]</span> <span class="o">||</span> <span class="o">[</span> <span class="o">!</span> <span class="o">-</span>f <span class="s2">"</span><span class="k">${</span><span class="nv">CMDLINE_TMP</span><span class="k">}</span><span class="s2">"</span> <span class="o">]</span> <span class="o">||</span> <span class="o">[</span> <span class="o">!</span> <span class="o">-</span>f <span class="s2">"</span><span class="k">${</span><span class="nv">KERNEL</span><span class="k">}</span><span class="s2">"</span> <span class="o">]</span> <span class="o">||</span> <span class="o">[</span> <span class="o">!</span> <span class="o">-</span>f <span class="s2">"</span><span class="k">${</span><span class="nv">INITRD</span><span class="k">}</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then
-    </span><span class="nb">echo</span> <span class="s2">"Error: One or more input files for objcopy not found!"</span> <span class="o">&gt;&amp;</span><span class="m">2</span>
-    <span class="nb">echo</span> <span class="s2">"OS_RELEASE: </span><span class="k">${</span><span class="nv">OS_RELEASE</span><span class="k">}</span><span class="s2">"</span> <span class="o">&gt;&amp;</span><span class="m">2</span>
-    <span class="nb">echo</span> <span class="s2">"CMDLINE_TMP: </span><span class="k">${</span><span class="nv">CMDLINE_TMP</span><span class="k">}</span><span class="s2">"</span> <span class="o">&gt;&amp;</span><span class="m">2</span>
-    <span class="nb">echo</span> <span class="s2">"KERNEL: </span><span class="k">${</span><span class="nv">KERNEL</span><span class="k">}</span><span class="s2">"</span> <span class="o">&gt;&amp;</span><span class="m">2</span>
-    <span class="nb">echo</span> <span class="s2">"INITRD: </span><span class="k">${</span><span class="nv">INITRD</span><span class="k">}</span><span class="s2">"</span> <span class="o">&gt;&amp;</span><span class="m">2</span>
-    <span class="nb">rm</span> <span class="o">-</span>f <span class="s2">"</span><span class="k">${</span><span class="nv">CMDLINE_TMP</span><span class="k">}</span><span class="s2">"</span> <span class="c"># Clean up temp file on error</span>
-    <span class="nb">exit </span><span class="m">1</span>
-<span class="k">fi
-
-</span>objcopy <span class="se">\</span>
-    <span class="o">--</span>add-section .osrel<span class="o">=</span><span class="s2">"</span><span class="k">${</span><span class="nv">OS_RELEASE</span><span class="k">}</span><span class="s2">"</span> <span class="o">--</span>change-section-vma .osrel<span class="o">=</span><span class="si">$(</span><span class="nb">printf </span>0x%x <span class="nv">$osrel_offs</span><span class="si">)</span> <span class="se">\</span>
-    <span class="o">--</span>add-section .cmdline<span class="o">=</span><span class="s2">"</span><span class="k">${</span><span class="nv">CMDLINE_TMP</span><span class="k">}</span><span class="s2">"</span> <span class="o">--</span>change-section-vma .cmdline<span class="o">=</span><span class="si">$(</span><span class="nb">printf </span>0x%x <span class="nv">$cmdline_offs</span><span class="si">)</span> <span class="se">\</span>
-    <span class="o">--</span>add-section .linux<span class="o">=</span><span class="s2">"</span><span class="k">${</span><span class="nv">KERNEL</span><span class="k">}</span><span class="s2">"</span> <span class="o">--</span>change-section-vma .linux<span class="o">=</span><span class="si">$(</span><span class="nb">printf </span>0x%x <span class="nv">$linux_offs</span><span class="si">)</span> <span class="se">\</span>
-    <span class="o">--</span>add-section .initrd<span class="o">=</span><span class="s2">"</span><span class="k">${</span><span class="nv">INITRD</span><span class="k">}</span><span class="s2">"</span> <span class="o">--</span>change-section-vma .initrd<span class="o">=</span><span class="si">$(</span><span class="nb">printf </span>0x%x <span class="nv">$initrd_offs</span><span class="si">)</span> <span class="se">\</span>
-    <span class="s2">"</span><span class="k">${</span><span class="nv">STUB</span><span class="k">}</span><span class="s2">"</span> <span class="s2">"</span><span class="k">${</span><span class="nv">OUTPUT</span><span class="k">}</span><span class="s2">"</span>
-
-<span class="c"># Clean up temporary file</span>
-<span class="nb">rm</span> <span class="o">-</span>f <span class="s2">"</span><span class="k">${</span><span class="nv">CMDLINE_TMP</span><span class="k">}</span><span class="s2">"</span>
-
-<span class="c"># Output the result</span>
-<span class="nb">echo</span> <span class="s2">"Unified EFI executable created: </span><span class="k">${</span><span class="nv">OUTPUT</span><span class="k">}</span><span class="s2">"</span>
-
-<span class="c"># Move the final EFI file to the standard Buildroot images directory</span>
-<span class="c"># BR2_ROOTFS_POST_IMAGE_SCRIPT runs from the Buildroot top-level directory.</span>
-<span class="c"># ${BINARIES_DIR} correctly points to output/images in this context.</span>
-<span class="nb">mv</span> <span class="s2">"</span><span class="k">${</span><span class="nv">OUTPUT</span><span class="k">}</span><span class="s2">"</span> <span class="s2">"</span><span class="k">${</span><span class="nv">BINARIES_DIR</span><span class="k">}</span><span class="s2">/"</span>
-<span class="nb">echo</span> <span class="s2">"Moved </span><span class="k">${</span><span class="nv">OUTPUT</span><span class="k">}</span><span class="s2"> to </span><span class="k">${</span><span class="nv">BINARIES_DIR</span><span class="k">}</span><span class="s2">/"</span>
-
-</code></pre></div></div>
-
-<p><strong>2. Refactored <code class="language-plaintext highlighter-rouge">configs/sbnb_defconfig</code></strong></p>
-
-<p>This version includes comments explaining the implications of the custom script and provides guidance on CPIO and Syslinux settings.</p>
-
-<div class="language-makefile highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">BR2_x86_64</span><span class="o">=</span>y
-<span class="nv">BR2_CCACHE</span><span class="o">=</span>y
-<span class="nv">BR2_INIT_SYSTEMD</span><span class="o">=</span>y
-<span class="nv">BR2_SYSTEM_DEFAULT_PATH</span><span class="o">=</span><span class="s2">"/bin:/sbin:/usr/bin:/usr/sbin"</span>
-<span class="nv">BR2_GENERATE_LOCALE</span><span class="o">=</span><span class="s2">"en_US"</span>
-<span class="nv">BR2_ROOTFS_OVERLAY</span><span class="o">=</span><span class="s2">"</span><span class="p">$(</span><span class="s2">BR2_EXTERNAL_SBNB_PATH</span><span class="p">)</span><span class="s2">/board/sbnb/sbnb/rootfs-overlay"</span>
-<span class="nv">BR2_ROOTFS_PRE_BUILD_SCRIPT</span><span class="o">=</span><span class="s2">"</span><span class="p">$(</span><span class="s2">BR2_EXTERNAL_SBNB_PATH</span><span class="p">)</span><span class="s2">/board/sbnb/sbnb/pre_build.sh"</span>
-<span class="nv">BR2_ROOTFS_POST_BUILD_SCRIPT</span><span class="o">=</span><span class="s2">"</span><span class="p">$(</span><span class="s2">BR2_EXTERNAL_SBNB_PATH</span><span class="p">)</span><span class="s2">/board/sbnb/sbnb/post_build.sh"</span>
-
-<span class="c"># --- Custom EFI Generation ---
-# This post-image script creates a unified EFI executable (sbnb.efi)
-# IMPORTANT: The kernel command line is HARDCODED inside the create_efi.sh script.
-# Standard BR2_KERNEL_CMDLINE_* options below will NOT affect sbnb.efi.
-</span><span class="nv">BR2_ROOTFS_POST_IMAGE_SCRIPT</span><span class="o">=</span><span class="s2">"</span><span class="p">$(</span><span class="s2">BR2_EXTERNAL_SBNB_PATH</span><span class="p">)</span><span class="s2">/board/sbnb/sbnb/scripts/create_efi.sh"</span>
-
-<span class="nv">BR2_LINUX_KERNEL_GZIP</span><span class="o">=</span>y
-<span class="nv">BR2_LINUX_KERNEL</span><span class="o">=</span>y
-<span class="nv">BR2_LINUX_KERNEL_USE_CUSTOM_CONFIG</span><span class="o">=</span>y
-<span class="c"># Switch back to upstream kernel once Restricted Injection hypervisor support
-# patches merged: https://lore.kernel.org/lkml/Z08J0EVu0VeA7Z%2FR@rli9-mobl/T/
-</span><span class="nv">BR2_LINUX_KERNEL_CUSTOM_GIT</span><span class="o">=</span>y
-<span class="nv">BR2_LINUX_KERNEL_CUSTOM_REPO_URL</span><span class="o">=</span><span class="s2">"https://github.com/coconut-svsm/linux.git"</span>
-<span class="nv">BR2_LINUX_KERNEL_CUSTOM_REPO_VERSION</span><span class="o">=</span><span class="s2">"svsm"</span>
-<span class="nv">BR2_LINUX_KERNEL_CUSTOM_CONFIG_FILE</span><span class="o">=</span><span class="s2">"</span><span class="p">$(</span><span class="s2">BR2_EXTERNAL_SBNB_PATH</span><span class="p">)</span><span class="s2">/board/sbnb/sbnb/kernel-config"</span>
-<span class="nv">BR2_LINUX_KERNEL_CONFIG_FRAGMENT_FILES</span><span class="o">=</span><span class="s2">"kernel-config-firmware"</span>
-<span class="nv">BR2_LINUX_KERNEL_NEEDS_HOST_LIBELF</span><span class="o">=</span>y
-
-<span class="c"># --- Kernel Command Line (Standard Bootloaders Only) ---
-# These settings configure bootloaders like Syslinux or GRUB.
-# They are NOT used by the custom create_efi.sh script.
-# If Syslinux (enabled below) is actually used as a boot method,
-# you SHOULD configure these options appropriately for it.
-# Otherwise, the Syslinux boot entry might use an empty or default command line.
-# Example:
-# BR2_KERNEL_CMDLINE_EXTEND=y
-# BR2_KERNEL_CMDLINE_FRAGMENT="nomodeset console=tty1"
-</span><span class="nv">BR2_KERNEL_CMDLINE_DEFAULT</span><span class="o">=</span>y <span class="c"># Or choose custom/extend as needed for Syslinux</span>
-<span class="c"># BR2_KERNEL_CMDLINE_CUSTOM is not set
-# BR2_KERNEL_CMDLINE_EXTEND is not set
-# BR2_KERNEL_CMDLINE_FRAGMENT=""
-</span>
-<span class="nv">BR2_PACKAGE_HOST_LINUX_HEADERS_CUSTOM_6_11</span><span class="o">=</span>y
-<span class="c"># ... (other packages remain the same) ...
-</span><span class="nv">BR2_PACKAGE_LINUX_TOOLS_CPUPOWER</span><span class="o">=</span>y
-<span class="nv">BR2_PACKAGE_XZ</span><span class="o">=</span>y
-<span class="nv">BR2_PACKAGE_STRACE</span><span class="o">=</span>y
-<span class="nv">BR2_PACKAGE_E2FSPROGS</span><span class="o">=</span>y
-<span class="nv">BR2_PACKAGE_E2FSPROGS_DEBUGFS</span><span class="o">=</span>y
-<span class="nv">BR2_PACKAGE_E2FSPROGS_E2IMAGE</span><span class="o">=</span>y
-<span class="nv">BR2_PACKAGE_E2FSPROGS_E4DEFRAG</span><span class="o">=</span>y
-<span class="nv">BR2_PACKAGE_E2FSPROGS_FUSE2FS</span><span class="o">=</span>y
-<span class="nv">BR2_PACKAGE_E2FSPROGS_RESIZE2FS</span><span class="o">=</span>y
-<span class="nv">BR2_PACKAGE_XORG7</span><span class="o">=</span>y
-<span class="nv">BR2_PACKAGE_XLIB_LIBX11</span><span class="o">=</span>y
-<span class="nv">BR2_PACKAGE_DMIDECODE</span><span class="o">=</span>y
-<span class="nv">BR2_PACKAGE_HWDATA</span><span class="o">=</span>y
-<span class="nv">BR2_PACKAGE_HWDATA_IAB_OUI_TXT</span><span class="o">=</span>y
-<span class="nv">BR2_PACKAGE_HWDATA_PNP_IDS</span><span class="o">=</span>y
-<span class="c"># BR2_PACKAGE_HWDATA_USB_IDS is not set
-</span><span class="nv">BR2_PACKAGE_INTEL_MICROCODE</span><span class="o">=</span>y
-<span class="nv">BR2_PACKAGE_IPMITOOL</span><span class="o">=</span>y
-<span class="nv">BR2_PACKAGE_IPMITOOL_LANPLUS</span><span class="o">=</span>y
-<span class="nv">BR2_PACKAGE_NVME</span><span class="o">=</span>y
-<span class="nv">BR2_PACKAGE_PARTED</span><span class="o">=</span>y
-<span class="nv">BR2_PACKAGE_SYSSTAT</span><span class="o">=</span>y
-<span class="nv">BR2_PACKAGE_CA_CERTIFICATES</span><span class="o">=</span>y
-<span class="nv">BR2_PACKAGE_LIBOPENSSL_BIN</span><span class="o">=</span>y
-<span class="nv">BR2_PACKAGE_LIBCURL</span><span class="o">=</span>y
-<span class="nv">BR2_PACKAGE_LIBCURL_CURL</span><span class="o">=</span>y
-<span class="nv">BR2_PACKAGE_SLANG</span><span class="o">=</span>y
-<span class="nv">BR2_PACKAGE_BIRD</span><span class="o">=</span>y
-<span class="nv">BR2_PACKAGE_NETCAT_OPENBSD</span><span class="o">=</span>y
-<span class="nv">BR2_PACKAGE_OPENSSH</span><span class="o">=</span>y
-<span class="nv">BR2_PACKAGE_WIREGUARD_TOOLS</span><span class="o">=</span>y
-<span class="nv">BR2_PACKAGE_SUDO</span><span class="o">=</span>y
-<span class="nv">BR2_PACKAGE_TMUX</span><span class="o">=</span>y
-<span class="nv">BR2_PACKAGE_DOCKER_CLI_BUILDX</span><span class="o">=</span>y
-<span class="nv">BR2_PACKAGE_DOCKER_COMPOSE</span><span class="o">=</span>y
-<span class="nv">BR2_PACKAGE_DOCKER_ENGINE</span><span class="o">=</span>y
-<span class="nv">BR2_PACKAGE_DOCKER_ENGINE_DRIVER_BTRFS</span><span class="o">=</span>y
-<span class="nv">BR2_PACKAGE_DOCKER_ENGINE_DRIVER_DEVICEMAPPER</span><span class="o">=</span>y
-<span class="nv">BR2_PACKAGE_DOCKER_ENGINE_DRIVER_VFS</span><span class="o">=</span>y
-<span class="nv">BR2_PACKAGE_EFIBOOTMGR</span><span class="o">=</span>y
-<span class="nv">BR2_PACKAGE_UTIL_LINUX_WIPEFS</span><span class="o">=</span>y
-
-<span class="c"># --- Syslinux Bootloader ---
-# Syslinux is enabled here for MBR and EFI.
-# If you ONLY boot using the custom sbnb.efi generated by the script,
-# you might consider disabling Syslinux to avoid confusion:
-# # BR2_TARGET_SYSLINUX is not set
-# If Syslinux IS used (e.g., for USB boot), ensure the standard kernel
-# command line options above (BR2_KERNEL_CMDLINE_*) are set correctly for it.
-</span><span class="nv">BR2_TARGET_SYSLINUX</span><span class="o">=</span>y
-<span class="nv">BR2_TARGET_SYSLINUX_MBR</span><span class="o">=</span>y
-<span class="nv">BR2_TARGET_SYSLINUX_EFI</span><span class="o">=</span>y
-
-<span class="nv">BR2_PACKAGE_HOST_KMOD_XZ</span><span class="o">=</span>y
-<span class="c"># ... (other host packages) ...
-</span><span class="nv">BR2_PACKAGE_HOST_PYTHON3</span><span class="o">=</span>y
-<span class="nv">BR2_PACKAGE_HOST_PYTHON3_BZIP2</span><span class="o">=</span>y
-<span class="nv">BR2_PACKAGE_HOST_PYTHON3_XZ</span><span class="o">=</span>y
-<span class="nv">BR2_PACKAGE_HOST_PYTHON3_CURSES</span><span class="o">=</span>y
-<span class="nv">BR2_PACKAGE_HOST_PYTHON3_SSL</span><span class="o">=</span>y
-<span class="nv">BR2_PACKAGE_TAILSCALE</span><span class="o">=</span>y
-
-<span class="c"># --- Root Filesystem / Initramfs Generation ---
-</span><span class="nv">BR2_TARGET_ROOTFS_CPIO</span><span class="o">=</span>y
-<span class="c"># IMPORTANT: Verify CPIO format needed by create_efi.sh!
-# The script uses INITRD="${BINARIES_DIR}/rootfs-sbnb.cpio".
-# This implies an UNCOMPRESSED CPIO archive.
-# Your original defconfig had BR2_TARGET_ROOTFS_CPIO_XZ=y, which creates
-# a compressed file (e.g., rootfs.cpio.xz or rootfs-sbnb.cpio.xz).
-#
-# ACTION REQUIRED:
-# 1. Determine if create_efi.sh truly needs an UNCOMPRESSED CPIO.
-# 2. If YES: Use BR2_TARGET_ROOTFS_CPIO_NONE=y below.
-# 3. If NO (it needs a compressed CPIO like XZ):
-#    a. Change the INITRD variable in create_efi.sh to the correct compressed filename
-#       (e.g., INITRD="${BINARIES_DIR}/rootfs-sbnb.cpio.xz").
-#    b. Use the corresponding compression option below (e.g., BR2_TARGET_ROOTFS_CPIO_XZ=y).
-#
-# Assuming UNCOMPRESSED based on script variable:
-</span><span class="nv">BR2_TARGET_ROOTFS_CPIO_NONE</span><span class="o">=</span>y
-<span class="c"># BR2_TARGET_ROOTFS_CPIO_GZIP is not set
-# BR2_TARGET_ROOTFS_CPIO_BZIP2 is not set
-# BR2_TARGET_ROOTFS_CPIO_LZMA is not set
-# BR2_TARGET_ROOTFS_CPIO_LZO is not set
-# BR2_TARGET_ROOTFS_CPIO_LZ4 is not set
-# BR2_TARGET_ROOTFS_CPIO_XZ is not set # Make sure this is commented out if using NONE
-# BR2_TARGET_ROOTFS_CPIO_ZSTD is not set
-# Set the output filename to match the script variable:
-</span><span class="nv">BR2_TARGET_ROOTFS_CPIO_FILENAME</span><span class="o">=</span><span class="s2">"rootfs-sbnb.cpio"</span>
-<span class="nv">BR2_TARGET_ROOTFS_CPIO_OPTS</span><span class="o">=</span><span class="s2">""</span>
-<span class="nv">BR2_TARGET_ROOTFS_CPIO_ARGS</span><span class="o">=</span><span class="s2">""</span>
-
-<span class="c"># ... (rest of packages remain the same) ...
-</span><span class="nv">BR2_PACKAGE_SEVCTL</span><span class="o">=</span>y
-<span class="nv">BR2_PACKAGE_SNPGUEST</span><span class="o">=</span>y
-<span class="nv">BR2_PACKAGE_TPM2_TOOLS</span><span class="o">=</span>y
-<span class="nv">BR2_PACKAGE_BUSYBOX_CONFIG_FRAGMENT_FILES</span><span class="o">=</span><span class="s2">"</span><span class="p">$(</span><span class="s2">BR2_EXTERNAL_SBNB_PATH</span><span class="p">)</span><span class="s2">/board/sbnb/sbnb/busybox.fragment"</span>
-<span class="nv">BR2_TARGET_ROOTFS_SQUASHFS</span><span class="o">=</span>y
-<span class="nv">BR2_TARGET_ROOTFS_SQUASHFS4_XZ</span><span class="o">=</span>y
-<span class="nv">BR2_PACKAGE_OPENVMTOOLS</span><span class="o">=</span>y
-<span class="nv">BR2_SHARED_STATIC_LIBS</span><span class="o">=</span>y
-<span class="nv">BR2_PACKAGE_FATRESIZE</span><span class="o">=</span>y
-<span class="nv">BR2_PACKAGE_MOKUTIL</span><span class="o">=</span>y
-<span class="nv">BR2_PACKAGE_TCPDUMP</span><span class="o">=</span>y
-<span class="nv">BR2_PACKAGE_DOSFSTOOLS</span><span class="o">=</span>y
-<span class="nv">BR2_PACKAGE_DOSFSTOOLS_FATLABEL</span><span class="o">=</span>y
-<span class="nv">BR2_PACKAGE_DOSFSTOOLS_FSCK_FAT</span><span class="o">=</span>y
-<span class="nv">BR2_PACKAGE_DOSFSTOOLS_MKFS_FAT</span><span class="o">=</span>y
-<span class="nv">BR2_PACKAGE_PYTHON3</span><span class="o">=</span>y
-<span class="nv">BR2_PACKAGE_PYTHON_PIP</span><span class="o">=</span>y
-<span class="nv">BR2_PACKAGE_PYTHON3_ZLIB</span><span class="o">=</span>y
-<span class="nv">BR2_PACKAGE_PYTHON_REQUESTS</span><span class="o">=</span>y
-<span class="nv">BR2_PACKAGE_JQ</span><span class="o">=</span>y
-
-</code></pre></div></div>
-
-<p><strong>3. Explanation of Changes and Important Considerations:</strong></p>
-
-<ul>
-  <li><strong><code class="language-plaintext highlighter-rouge">create_efi.sh</code>:</strong>
-    <ul>
-      <li><code class="language-plaintext highlighter-rouge">nomodeset</code> was added to the <code class="language-plaintext highlighter-rouge">CMDLINE</code> variable.</li>
-      <li>A check was added to ensure input files exist before <code class="language-plaintext highlighter-rouge">objcopy</code> runs.</li>
-      <li>A comment was added regarding the <code class="language-plaintext highlighter-rouge">INITRD</code> variable path – <strong>you must verify</strong> if your script needs a compressed (e.g., <code class="language-plaintext highlighter-rouge">.xz</code>) or uncompressed CPIO file and adjust the <code class="language-plaintext highlighter-rouge">INITRD</code> variable in the script and the CPIO settings in the defconfig accordingly.</li>
-      <li>A note was added about the <code class="language-plaintext highlighter-rouge">splash_offs</code> variable, which seems calculated but unused in the <code class="language-plaintext highlighter-rouge">objcopy</code> command of the original script. You may want to investigate this.</li>
-      <li>The <code class="language-plaintext highlighter-rouge">rm</code> command ensures the temporary command line file is deleted.</li>
-      <li>The <code class="language-plaintext highlighter-rouge">mv</code> command ensures the final <code class="language-plaintext highlighter-rouge">sbnb.efi</code> is placed in <code class="language-plaintext highlighter-rouge">output/images/</code>.</li>
-    </ul>
-  </li>
-  <li><strong><code class="language-plaintext highlighter-rouge">sbnb_defconfig</code>:</strong>
-    <ul>
-      <li><strong>CPIO Configuration:</strong> This is the most critical part to verify. The configuration is set up assuming the script needs an <em>uncompressed</em> CPIO named <code class="language-plaintext highlighter-rouge">rootfs-sbnb.cpio</code>, based on the script’s <code class="language-plaintext highlighter-rouge">INITRD</code> variable. If your original <code class="language-plaintext highlighter-rouge">BR2_TARGET_ROOTFS_CPIO_XZ=y</code> setting was intentional and the script <em>should</em> use a compressed initrd, you need to:
-        <ol>
-          <li>Change <code class="language-plaintext highlighter-rouge">INITRD</code> in the script (e.g., <code class="language-plaintext highlighter-rouge">INITRD="${BINARIES_DIR}/rootfs-sbnb.cpio.xz"</code>).</li>
-          <li>Change the defconfig back to <code class="language-plaintext highlighter-rouge">BR2_TARGET_ROOTFS_CPIO_XZ=y</code> (and comment out <code class="language-plaintext highlighter-rouge">BR2_TARGET_ROOTFS_CPIO_NONE=y</code>).</li>
-          <li>Ensure <code class="language-plaintext highlighter-rouge">BR2_TARGET_ROOTFS_CPIO_FILENAME</code> results in the correct name if needed (it might default correctly if compression is enabled).</li>
-        </ol>
-      </li>
-      <li><strong>Kernel Command Line:</strong> Comments explicitly state that <code class="language-plaintext highlighter-rouge">BR2_KERNEL_CMDLINE_*</code> options are ignored by the script but <em>are</em> relevant for Syslinux. You need to decide:
-        <ul>
-          <li>If Syslinux is used: Configure <code class="language-plaintext highlighter-rouge">BR2_KERNEL_CMDLINE_*</code> appropriately for it.</li>
-          <li>If Syslinux is NOT used: Consider disabling <code class="language-plaintext highlighter-rouge">BR2_TARGET_SYSLINUX*</code> options to avoid confusion.</li>
-        </ul>
-      </li>
-      <li><strong>Comments:</strong> Added comments to explain the hardcoded command line, the CPIO verification need, and the Syslinux interaction.</li>
-    </ul>
-  </li>
-</ul>
-
-<p><strong>4. Next Steps:</strong></p>
-
-<ol>
-  <li><strong>Verify CPIO Requirement:</strong> Determine the exact initramfs file (compressed or uncompressed, exact name) that <code class="language-plaintext highlighter-rouge">create_efi.sh</code> is intended to embed.</li>
-  <li><strong>Apply Changes:</strong> Replace your existing files with these refactored versions, making sure the CPIO settings in <em>both</em> the script (<code class="language-plaintext highlighter-rouge">INITRD</code> variable) and the defconfig (<code class="language-plaintext highlighter-rouge">BR2_TARGET_ROOTFS_CPIO_*</code>) are consistent with your verified requirement. Adjust Syslinux settings as needed.</li>
-  <li><strong>Rebuild:</strong> Navigate to your Buildroot top-level directory and run <code class="language-plaintext highlighter-rouge">make</code>. This will rebuild the necessary components and execute the post-image script.</li>
-  <li><strong>Deploy:</strong> Use the updated <code class="language-plaintext highlighter-rouge">output/images/sbnb.efi</code> file to boot your GMKtec G5.</li>
-  <li><strong>Verify:</strong> After booting, log in and run <code class="language-plaintext highlighter-rouge">cat /proc/cmdline</code> to confirm that <code class="language-plaintext highlighter-rouge">nomodeset</code> is present in the kernel command line arguments.</li>
-</ol>
-
-<p><strong>5. Further Considerations / Alternatives:</strong></p>
-
-<ul>
-  <li><strong>Reading Command Line from Buildroot:</strong> Instead of hardcoding the command line in <code class="language-plaintext highlighter-rouge">create_efi.sh</code>, a more robust approach would be to modify the script to read the command line configured via Buildroot’s <code class="language-plaintext highlighter-rouge">BR2_KERNEL_CMDLINE_*</code> options. This could involve reading the generated bootloader config file (like <code class="language-plaintext highlighter-rouge">syslinux.cfg</code>) or having Buildroot write the command line to a temporary file that the script reads. This makes configuration more centralized but requires more significant script changes.</li>
-  <li><strong>Script Robustness:</strong> The provided <code class="language-plaintext highlighter-rouge">create_efi.sh</code> could benefit from more robust error checking (e.g., verifying <code class="language-plaintext highlighter-rouge">objcopy</code> success).</li>
-</ul>
-
-<p>By applying these changes and carefully verifying the CPIO configuration, you should successfully embed the <code class="language-plaintext highlighter-rouge">nomodeset</code> parameter into your custom EFI boot process.</p>
-
-<hr />
-
-<h1 id="second-approach">second approach</h1>
-
-<p>Okay, let’s refine the approach for adding the <code class="language-plaintext highlighter-rouge">nomodeset</code> kernel parameter to your Buildroot OS image, specifically addressing the interaction between your <code class="language-plaintext highlighter-rouge">sbnb_defconfig</code> and the custom <code class="language-plaintext highlighter-rouge">create_efi.sh</code> script.</p>
-
-<p><strong>Understanding the Context</strong></p>
-
-<p>Your setup uses a custom post-image script (<code class="language-plaintext highlighter-rouge">board/sbnb/sbnb/scripts/create_efi.sh</code>) to generate a unified EFI executable (<code class="language-plaintext highlighter-rouge">sbnb.efi</code>). The critical point is that, in its original form, this script <strong>hardcodes the kernel command line arguments</strong> within the script itself. This bypasses Buildroot’s standard mechanism for managing kernel parameters via the <code class="language-plaintext highlighter-rouge">BR2_CMDLINE</code> variable (or older <code class="language-plaintext highlighter-rouge">BR2_KERNEL_CMDLINE_*</code> options) in the configuration (<code class="language-plaintext highlighter-rouge">defconfig</code>).</p>
-
-<p>Therefore, simply setting <code class="language-plaintext highlighter-rouge">BR2_CMDLINE</code> in your <code class="language-plaintext highlighter-rouge">sbnb_defconfig</code> will <em>not</em> affect the <code class="language-plaintext highlighter-rouge">sbnb.efi</code> file generated by the original script.</p>
-
-<p>We need to modify the system so that <code class="language-plaintext highlighter-rouge">nomodeset</code> is included in the command line embedded within <code class="language-plaintext highlighter-rouge">sbnb.efi</code>. There are two main ways to achieve this:</p>
-
-<ol>
-  <li><strong>Solution A (Quick Fix):</strong> Modify the script to include <code class="language-plaintext highlighter-rouge">nomodeset</code> in its hardcoded command line string. This is simpler but less maintainable.</li>
-  <li><strong>Solution B (Recommended):</strong> Modify the script to <em>read</em> the command line from the Buildroot environment variable <code class="language-plaintext highlighter-rouge">BR2_CMDLINE</code> and define <code class="language-plaintext highlighter-rouge">BR2_CMDLINE</code> in your <code class="language-plaintext highlighter-rouge">sbnb_defconfig</code>. This aligns with standard Buildroot practices and centralizes configuration.</li>
-</ol>
-
-<p>We will also ensure the Buildroot configuration correctly generates the CPIO root filesystem expected by the script.</p>
-
-<p><strong>Rationale Recap:</strong> The <code class="language-plaintext highlighter-rouge">nomodeset</code> parameter is being added as a troubleshooting step. It tells the kernel <em>not</em> to load video drivers and attempt display mode changes during initialization. This can prevent hangs or slowdowns caused by graphics driver issues on certain hardware, like the slow console output you observed.</p>
-
-<hr />
-
-<p><strong>Solution A: Modify Hardcoded Command Line in Script (Quick Fix)</strong></p>
-
-<p>This approach directly edits the <code class="language-plaintext highlighter-rouge">CMDLINE</code> variable within <code class="language-plaintext highlighter-rouge">create_efi.sh</code>.</p>
-
-<p><strong>1. Modify <code class="language-plaintext highlighter-rouge">board/sbnb/sbnb/scripts/create_efi.sh</code>:</strong></p>
-
-<div class="language-diff highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="gd">--- a/board/sbnb/sbnb/scripts/create_efi.sh
-</span><span class="gi">+++ b/board/sbnb/sbnb/scripts/create_efi.sh
-</span><span class="p">@@ -10,8 +10,10 @@</span>
- KERNEL="${BINARIES_DIR}/bzImage"
- INITRD="${BINARIES_DIR}/rootfs-sbnb.cpio"
- OS_RELEASE="${TARGET_DIR}/etc/os-release"
-<span class="gd">-CMDLINE="console=tty0 console=ttyS0 earlyprintk verbose intel_iommu=on module_blacklist=nouveau,nvidiafb,snd_hda_intel dyndbg=\"module firmware_class +p; module microcode +p; module ccp +p\""
-</span><span class="gi">+# --- MODIFIED KERNEL COMMAND LINE (Hardcoded) ---
-+# Added 'nomodeset'. Note: This bypasses standard Buildroot BR2_CMDLINE config.
-+CMDLINE="console=tty0 console=ttyS0 earlyprintk verbose intel_iommu=on module_blacklist=nouveau,nvidiafb,snd_hda_intel dyndbg=\"module firmware_class +p; module microcode +p; module ccp +p\" nomodeset"
-+# --- END MODIFICATION ---
-</span> CMDLINE_TMP=$(mktemp)
- OUTPUT=sbnb.efi
-<span class="err">
-</span><span class="p">@@ -41,8 +43,13 @@</span>
-     --add-section .initrd="${INITRD}" --change-section-vma .initrd=$(printf 0x%x $initrd_offs) \
-     "${STUB}" "${OUTPUT}"
-<span class="err">
-</span><span class="gi">+# Clean up temporary file
-+rm -f "${CMDLINE_TMP}"
-+
-</span> # Output the result
- echo "Output: ${OUTPUT}"
-<span class="gi">+
-+# Move the final EFI file to the standard Buildroot images directory (BINARIES_DIR=output/images)
-+mv "${OUTPUT}" "${BINARIES_DIR}/"
-+echo "Moved ${OUTPUT} to ${BINARIES_DIR}/"
-</span><span class="err">
-</span></code></pre></div></div>
-
-<ul>
-  <li><strong>Change:</strong> Added <code class="language-plaintext highlighter-rouge">nomodeset</code> to the end of the <code class="language-plaintext highlighter-rouge">CMDLINE</code> variable string.</li>
-  <li><strong>Added:</strong> Cleanup for the temporary file (<code class="language-plaintext highlighter-rouge">rm -f "${CMDLINE_TMP}"</code>).</li>
-  <li><strong>Added:</strong> <code class="language-plaintext highlighter-rouge">mv "${OUTPUT}" "${BINARIES_DIR}/"</code> to place the final artifact in the correct Buildroot output directory (<code class="language-plaintext highlighter-rouge">output/images</code>). Buildroot provides <code class="language-plaintext highlighter-rouge">BINARIES_DIR</code> in the environment when running post-image scripts.</li>
-</ul>
-
-<p><strong>2. Modify <code class="language-plaintext highlighter-rouge">configs/sbnb_defconfig</code> (CPIO Settings &amp; Comments):</strong></p>
-
-<p>Ensure the CPIO settings match what the script expects (<code class="language-plaintext highlighter-rouge">rootfs-sbnb.cpio</code>, likely uncompressed). Add comments clarifying the hardcoded nature.</p>
-
-<div class="language-diff highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="gd">--- a/configs/sbnb_defconfig
-</span><span class="gi">+++ b/configs/sbnb_defconfig
-</span><span class="p">@@ -8,9 +8,10 @@</span>
- BR2_ROOTFS_OVERLAY="$(BR2_EXTERNAL_SBNB_PATH)/board/sbnb/sbnb/rootfs-overlay"
- BR2_ROOTFS_PRE_BUILD_SCRIPT="$(BR2_EXTERNAL_SBNB_PATH)/board/sbnb/sbnb/pre_build.sh"
- BR2_ROOTFS_POST_BUILD_SCRIPT="$(BR2_EXTERNAL_SBNB_PATH)/board/sbnb/sbnb/post_build.sh"
-<span class="gi">+# This post-image script creates a unified EFI executable (sbnb.efi)
-+# IMPORTANT: With Solution A, the kernel command line is HARDCODED inside create_efi.sh
-+# Standard BR2_CMDLINE options will NOT affect sbnb.efi in this case.
-</span> BR2_ROOTFS_POST_IMAGE_SCRIPT="$(BR2_EXTERNAL_SBNB_PATH)/board/sbnb/sbnb/scripts/create_efi.sh"
-<span class="gd">-BR2_LINUX_KERNEL_GZIP=y
-</span> BR2_LINUX_KERNEL=y
- BR2_LINUX_KERNEL_USE_CUSTOM_CONFIG=y
- # Switch back to upstream kernel once Restricted Injection hypervisor support
-<span class="p">@@ -20,6 +21,7 @@</span>
- BR2_LINUX_KERNEL_CUSTOM_REPO_VERSION="svsm"
- BR2_LINUX_KERNEL_CUSTOM_CONFIG_FILE="$(BR2_EXTERNAL_SBNB_PATH)/board/sbnb/sbnb/kernel-config"
- BR2_LINUX_KERNEL_CONFIG_FRAGMENT_FILES="kernel-config-firmware"
-<span class="gi">+# BR2_CMDLINE is not set here as it's bypassed by the script in Solution A
-</span> BR2_LINUX_KERNEL_NEEDS_HOST_LIBELF=y
- BR2_PACKAGE_HOST_LINUX_HEADERS_CUSTOM_6_11=y
- BR2_PACKAGE_LINUX_TOOLS_CPUPOWER=y
-<span class="p">@@ -75,14 +77,11 @@</span>
- BR2_PACKAGE_HOST_PYTHON3_CURSES=y
- BR2_PACKAGE_HOST_PYTHON3_SSL=y
- BR2_PACKAGE_TAILSCALE=y
-<span class="gi">+# Configure CPIO rootfs generation to match the script's expectation
-</span> BR2_TARGET_ROOTFS_CPIO=y
-<span class="gd">-# BR2_TARGET_ROOTFS_CPIO_XZ is not set
--BR2_PACKAGE_SEVCTL=y
--BR2_PACKAGE_SNPGUEST=y
--BR2_PACKAGE_TPM2_TOOLS=y
--BR2_PACKAGE_BUSYBOX_CONFIG_FRAGMENT_FILES="$(BR2_EXTERNAL_SBNB_PATH)/board/sbnb/sbnb/busybox.fragment"
--BR2_TARGET_ROOTFS_SQUASHFS=y
--BR2_TARGET_ROOTFS_SQUASHFS4_XZ=y
-</span><span class="gi">+# Ensure CPIO is not compressed as the script uses the base name 'rootfs-sbnb.cpio'
-+BR2_TARGET_ROOTFS_CPIO_NONE=y
-+BR2_TARGET_ROOTFS_CPIO_FILENAME="rootfs-sbnb.cpio"
-</span> BR2_PACKAGE_OPENVMTOOLS=y
- BR2_SHARED_STATIC_LIBS=y
- BR2_PACKAGE_FATRESIZE=y
-<span class="p">@@ -97,4 +96,10 @@</span>
- BR2_PACKAGE_PYTHON3_ZLIB=y
- BR2_PACKAGE_PYTHON_REQUESTS=y
- BR2_PACKAGE_JQ=y
-<span class="gi">+BR2_PACKAGE_SEVCTL=y
-+BR2_PACKAGE_SNPGUEST=y
-+BR2_PACKAGE_TPM2_TOOLS=y
-+BR2_PACKAGE_BUSYBOX_CONFIG_FRAGMENT_FILES="$(BR2_EXTERNAL_SBNB_PATH)/board/sbnb/sbnb/busybox.fragment"
-+BR2_TARGET_ROOTFS_SQUASHFS=y
-+BR2_TARGET_ROOTFS_SQUASHFS4_XZ=y
-</span><span class="err">
-</span></code></pre></div></div>
-
-<ul>
-  <li><strong>Changes:</strong> Added comments about the hardcoded command line. Explicitly set <code class="language-plaintext highlighter-rouge">BR2_TARGET_ROOTFS_CPIO_NONE=y</code> and <code class="language-plaintext highlighter-rouge">BR2_TARGET_ROOTFS_CPIO_FILENAME="rootfs-sbnb.cpio"</code> to ensure the correct, uncompressed CPIO file is generated for the script. Removed <code class="language-plaintext highlighter-rouge">BR2_LINUX_KERNEL_GZIP=y</code> as the script uses <code class="language-plaintext highlighter-rouge">bzImage</code>, implying bzip2 compression (which is the default for x86/x86_64 <code class="language-plaintext highlighter-rouge">bzImage</code> anyway, Buildroot handles this).</li>
-</ul>
-
-<p><strong>Drawbacks of Solution A:</strong></p>
-<ul>
-  <li>Kernel command line configuration is hidden within a script, not in the central Buildroot configuration.</li>
-  <li>Harder to maintain and modify parameters later.</li>
-</ul>
-
-<hr />
-
-<p><strong>Solution B: Integrate Script with Buildroot <code class="language-plaintext highlighter-rouge">BR2_CMDLINE</code> (Recommended)</strong></p>
-
-<p>This approach modifies the script to use the standard <code class="language-plaintext highlighter-rouge">BR2_CMDLINE</code> variable defined in the defconfig. This is the preferred method for better integration and maintainability.</p>
-
-<p><strong>1. Modify <code class="language-plaintext highlighter-rouge">board/sbnb/sbnb/scripts/create_efi.sh</code>:</strong></p>
-
-<div class="language-diff highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="gd">--- a/board/sbnb/sbnb/scripts/create_efi.sh
-</span><span class="gi">+++ b/board/sbnb/sbnb/scripts/create_efi.sh
-</span><span class="p">@@ -10,8 +10,10 @@</span>
- KERNEL="${BINARIES_DIR}/bzImage"
- INITRD="${BINARIES_DIR}/rootfs-sbnb.cpio"
- OS_RELEASE="${TARGET_DIR}/etc/os-release"
-<span class="gd">-CMDLINE="console=tty0 console=ttyS0 earlyprintk verbose intel_iommu=on module_blacklist=nouveau,nvidiafb,snd_hda_intel dyndbg=\"module firmware_class +p; module microcode +p; module ccp +p\""
-</span><span class="gi">+# --- MODIFIED KERNEL COMMAND LINE (Read from Buildroot Env) ---
-+# Read command line from BR2_CMDLINE environment variable provided by Buildroot.
-+CMDLINE="${BR2_CMDLINE:?Error: BR2_CMDLINE environment variable not set or empty. Check Buildroot kernel configuration (BR2_CMDLINE).}"
-+# --- END MODIFICATION ---
-</span> CMDLINE_TMP=$(mktemp)
- OUTPUT=sbnb.efi
-<span class="err">
-</span><span class="p">@@ -41,8 +43,13 @@</span>
-     --add-section .initrd="${INITRD}" --change-section-vma .initrd=$(printf 0x%x $initrd_offs) \
-     "${STUB}" "${OUTPUT}"
-<span class="err">
-</span><span class="gi">+# Clean up temporary file
-+rm -f "${CMDLINE_TMP}"
-+
-</span> # Output the result
- echo "Output: ${OUTPUT}"
-<span class="gi">+
-+# Move the final EFI file to the standard Buildroot images directory (BINARIES_DIR=output/images)
-+mv "${OUTPUT}" "${BINARIES_DIR}/"
-+echo "Moved ${OUTPUT} to ${BINARIES_DIR}/"
-</span><span class="err">
-</span></code></pre></div></div>
-
-<ul>
-  <li><strong>Change:</strong> Replaced the hardcoded <code class="language-plaintext highlighter-rouge">CMDLINE</code> variable with <code class="language-plaintext highlighter-rouge">CMDLINE="${BR2_CMDLINE:?...}"</code>. This reads the command line string from the <code class="language-plaintext highlighter-rouge">BR2_CMDLINE</code> environment variable, which Buildroot sets based on the defconfig. The <code class="language-plaintext highlighter-rouge">:?Error...</code> part ensures the script fails if <code class="language-plaintext highlighter-rouge">BR2_CMDLINE</code> isn’t properly set in the configuration, preventing silent errors.</li>
-  <li><strong>Added:</strong> Cleanup and <code class="language-plaintext highlighter-rouge">mv</code> command as in Solution A.</li>
-</ul>
-
-<p><strong>2. Modify <code class="language-plaintext highlighter-rouge">configs/sbnb_defconfig</code>:</strong></p>
-
-<p>Define <code class="language-plaintext highlighter-rouge">BR2_CMDLINE</code> with all required parameters, including <code class="language-plaintext highlighter-rouge">nomodeset</code>. Also ensure CPIO settings are correct.</p>
-
-<div class="language-diff highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="gd">--- a/configs/sbnb_defconfig
-</span><span class="gi">+++ b/configs/sbnb_defconfig
-</span><span class="p">@@ -8,9 +8,9 @@</span>
- BR2_ROOTFS_OVERLAY="$(BR2_EXTERNAL_SBNB_PATH)/board/sbnb/sbnb/rootfs-overlay"
- BR2_ROOTFS_PRE_BUILD_SCRIPT="$(BR2_EXTERNAL_SBNB_PATH)/board/sbnb/sbnb/pre_build.sh"
- BR2_ROOTFS_POST_BUILD_SCRIPT="$(BR2_EXTERNAL_SBNB_PATH)/board/sbnb/sbnb/post_build.sh"
-<span class="gd">-# This post-image script creates a unified EFI executable (sbnb.efi)
--# IMPORTANT: The kernel command line is HARDCODED inside create_efi.sh
--# Standard BR2_KERNEL_CMDLINE_* options will NOT affect sbnb.efi
-</span><span class="gi">+# This post-image script creates a unified EFI executable (sbnb.efi).
-+# With Solution B, the script reads the command line from BR2_CMDLINE below.
-</span> BR2_ROOTFS_POST_IMAGE_SCRIPT="$(BR2_EXTERNAL_SBNB_PATH)/board/sbnb/sbnb/scripts/create_efi.sh"
-<span class="gd">-BR2_LINUX_KERNEL_GZIP=y
-</span> BR2_LINUX_KERNEL=y
- BR2_LINUX_KERNEL_USE_CUSTOM_CONFIG=y
- # Switch back to upstream kernel once Restricted Injection hypervisor support
-<span class="p">@@ -20,6 +20,8 @@</span>
- BR2_LINUX_KERNEL_CUSTOM_REPO_VERSION="svsm"
- BR2_LINUX_KERNEL_CUSTOM_CONFIG_FILE="$(BR2_EXTERNAL_SBNB_PATH)/board/sbnb/sbnb/kernel-config"
- BR2_LINUX_KERNEL_CONFIG_FRAGMENT_FILES="kernel-config-firmware"
-<span class="gi">+# Define the kernel command line arguments (used by create_efi.sh in Solution B)
-+BR2_CMDLINE="console=tty0 console=ttyS0 earlyprintk verbose intel_iommu=on module_blacklist=nouveau,nvidiafb,snd_hda_intel dyndbg=\"module firmware_class +p; module microcode +p; module ccp +p\" nomodeset"
-</span> BR2_LINUX_KERNEL_NEEDS_HOST_LIBELF=y
- BR2_PACKAGE_HOST_LINUX_HEADERS_CUSTOM_6_11=y
- BR2_PACKAGE_LINUX_TOOLS_CPUPOWER=y
-<span class="p">@@ -75,14 +77,11 @@</span>
- BR2_PACKAGE_HOST_PYTHON3_CURSES=y
- BR2_PACKAGE_HOST_PYTHON3_SSL=y
- BR2_PACKAGE_TAILSCALE=y
-<span class="gi">+# Configure CPIO rootfs generation to match the script's expectation
-</span> BR2_TARGET_ROOTFS_CPIO=y
-<span class="gd">-# BR2_TARGET_ROOTFS_CPIO_XZ is not set
--BR2_PACKAGE_SEVCTL=y
--BR2_PACKAGE_SNPGUEST=y
--BR2_PACKAGE_TPM2_TOOLS=y
--BR2_PACKAGE_BUSYBOX_CONFIG_FRAGMENT_FILES="$(BR2_EXTERNAL_SBNB_PATH)/board/sbnb/sbnb/busybox.fragment"
--BR2_TARGET_ROOTFS_SQUASHFS=y
--BR2_TARGET_ROOTFS_SQUASHFS4_XZ=y
-</span><span class="gi">+# Ensure CPIO is not compressed as the script uses the base name 'rootfs-sbnb.cpio'
-+BR2_TARGET_ROOTFS_CPIO_NONE=y
-+BR2_TARGET_ROOTFS_CPIO_FILENAME="rootfs-sbnb.cpio"
-</span> BR2_PACKAGE_OPENVMTOOLS=y
- BR2_SHARED_STATIC_LIBS=y
- BR2_PACKAGE_FATRESIZE=y
-<span class="p">@@ -97,4 +96,10 @@</span>
- BR2_PACKAGE_PYTHON3_ZLIB=y
- BR2_PACKAGE_PYTHON_REQUESTS=y
- BR2_PACKAGE_JQ=y
-<span class="gi">+BR2_PACKAGE_SEVCTL=y
-+BR2_PACKAGE_SNPGUEST=y
-+BR2_PACKAGE_TPM2_TOOLS=y
-+BR2_PACKAGE_BUSYBOX_CONFIG_FRAGMENT_FILES="$(BR2_EXTERNAL_SBNB_PATH)/board/sbnb/sbnb/busybox.fragment"
-+BR2_TARGET_ROOTFS_SQUASHFS=y
-+BR2_TARGET_ROOTFS_SQUASHFS4_XZ=y
-</span><span class="err">
-</span></code></pre></div></div>
-
-<ul>
-  <li><strong>Changes:</strong> Added the <code class="language-plaintext highlighter-rouge">BR2_CMDLINE</code> definition containing the full command string including <code class="language-plaintext highlighter-rouge">nomodeset</code>. Adjusted comments. Ensured CPIO settings are correct (same as Solution A). Removed <code class="language-plaintext highlighter-rouge">BR2_LINUX_KERNEL_GZIP=y</code> (same reason as Solution A).</li>
-</ul>
-
-<p><strong>Benefits of Solution B:</strong></p>
-<ul>
-  <li>Centralizes kernel command line configuration in the standard Buildroot <code class="language-plaintext highlighter-rouge">defconfig</code>.</li>
-  <li>Easier to manage and modify parameters using <code class="language-plaintext highlighter-rouge">make menuconfig</code> (under <code class="language-plaintext highlighter-rouge">Kernel -&gt; Kernel command line string</code>).</li>
-  <li>Aligns with standard Buildroot practices.</li>
-</ul>
-
-<hr />
-
-<p><strong>Next Steps (Apply either Solution A or B):</strong></p>
-
-<ol>
-  <li><strong>Apply Changes:</strong> Replace the content of your existing <code class="language-plaintext highlighter-rouge">board/sbnb/sbnb/scripts/create_efi.sh</code> and <code class="language-plaintext highlighter-rouge">configs/sbnb_defconfig</code> with the versions from your chosen solution (Solution B is recommended).</li>
-  <li><strong>Rebuild:</strong> Navigate to your Buildroot top-level directory in the terminal and run:
-    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>make
-</code></pre></div>    </div>
-    <p>Buildroot will rebuild the necessary components and execute the post-image script, generating a new <code class="language-plaintext highlighter-rouge">output/images/sbnb.efi</code>.</p>
-  </li>
-  <li><strong>Deploy:</strong> Copy the updated <code class="language-plaintext highlighter-rouge">output/images/sbnb.efi</code> to your target system’s EFI System Partition (ESP).</li>
-  <li><strong>Boot:</strong> Boot your GMKtec G5 from the updated EFI file.</li>
-  <li><strong>Verify:</strong> Once the system has booted (even if slowly), log in to a console and run the following command to check if <code class="language-plaintext highlighter-rouge">nomodeset</code> was actually passed to the kernel:
-    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">cat</span> /proc/cmdline
-</code></pre></div>    </div>
-    <p>Look for <code class="language-plaintext highlighter-rouge">nomodeset</code> within the output string.</p>
-  </li>
-</ol>
-
-<p><strong>Long-Term Alternative:</strong></p>
-
-<p>While outside the scope of simply adding <code class="language-plaintext highlighter-rouge">nomodeset</code>, you might eventually consider whether the custom <code class="language-plaintext highlighter-rouge">create_efi.sh</code> script is strictly necessary. Buildroot has built-in support for generating bootable images using standard bootloaders like GRUB2 or syslinux, which handle kernel parameters through their own configuration files managed by Buildroot based on <code class="language-plaintext highlighter-rouge">BR2_CMDLINE</code>. Migrating to a standard bootloader setup could simplify your build process further, but would require more significant changes.</p>]]></content><author><name></name></author><category term="scratchpad" /></entry></feed>
+<p>You have now successfully added persistent storage to your RAM-based SBNB VM within the Live Raizo/GNS3 environment. Remember to handle the mounting process appropriately for the RAM-based nature of the OS.</p>]]></content><author><name></name></author><category term="scratchpad" /></entry></feed>
