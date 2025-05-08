@@ -1,14 +1,16 @@
 ---
-tags: [scratchpad]
+tags:
+- scratchpad
 info: aberto.
 date: 2025-05-08
 type: post
 layout: post
 published: true
 slug: installing-incus-os
-title: 'installing Incus OS'
+title: installing Incus OS
+comment: https://github.com/lxc/incus-os
 ---
-bibref https://github.com/lxc/incus-os
+
 
 **I. Introduction to Incus OS and Intel N97 Deployment**
 
