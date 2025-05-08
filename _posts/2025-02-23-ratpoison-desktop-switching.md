@@ -1,12 +1,11 @@
 ---
-tags:
-- scratchpad
+tags: [linux]
 info: aberto.
 date: 2025-02-23
 type: post
 layout: post
 published: true
-slug: setting-up-desktop-switching-in-ratpoison
+slug: ratpoison-desktop-switching
 title: Setting Up Desktop Switching in Ratpoison
 comment: '`https://ozi-blog.ru/nastroyka-pereklyucheniya-rabochih-stolov-v-ratpoison/`'
 ---
