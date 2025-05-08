@@ -62,7 +62,7 @@ sudo apt-get install xinit
 
 For autologin, edit `lightdm` as follows:
 
-```
+{% codeblock %}
 1. Open a terminal window.
 
 2. To allow automatic login, you need to edit the 'lightdm.conf' file. If it doesn't exist, you need to create it. Use the following command: `sudo nano /etc/lightdm/lightdm.conf`
@@ -80,8 +80,7 @@ Replace 'yourusername' with your actual username.
 4. Save the file and exit the editor (in nano, you can do this by pressing `Ctrl+X`, then `Y` to confirm saving changes, then `Enter` to confirm the file name).
 
 5. Restart your system for the changes to take effect.
-```
-
+{% endcodeblock %}
 
 i) If you want to get rid of the existing window managers or desktop environments, starting with GNOME, execute:
 
