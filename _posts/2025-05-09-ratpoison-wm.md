@@ -66,14 +66,14 @@ set framesels 123456789
 set font "Intel One Mono:size=13"
 set border 0
 set barborder 0
-set barpadding 0 0
+set barpadding 4 4
 set winname title
 set winfmt %n %s %c
 set winliststyle column
 set wingravity n 
 set gravity center 
 set transgravity center
-set bargravity ne
+set bargravity c
 set waitcursor 1
 set padding 0 0 0 24
 # leave space for bars, 24 for desktop 39 for laptop
