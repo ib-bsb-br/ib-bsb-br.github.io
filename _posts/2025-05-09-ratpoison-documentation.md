@@ -11,7 +11,7 @@ title: ratpoison documentation
 comment: https://raw.githubusercontent.com/dimatura/ratpoison/refs/heads/master/doc/ratpoison.texi
 ---
 
-
+{% raw %}
 \input texinfo   @c -*-texinfo-*-
 @c %**start of header
 @setfilename ratpoison.info
@@ -1911,3 +1911,4 @@ When called with no arguments, the current setting is returned.
 @printindex fn
 
 @bye
+{% endraw %}
