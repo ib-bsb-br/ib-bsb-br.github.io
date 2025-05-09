@@ -60,7 +60,6 @@ Create and configure the ~/.ratpoisonrc file in the home directory of the autolo
 Here’s a comprehensive example configuration:  
 `# ~/.ratpoisonrc for linaro`
 {% codeblock %}
-
 set fgcolor black
 set bgcolor silver
 set framesels 123456789
@@ -68,7 +67,7 @@ set font -xos4-terminus-medium-r-normal-*-*-140-*-*-c-*-iso8859-1
 set border 0
 set barborder 0
 set barpadding 0 0
-set winname class
+set winname title
 set winfmt %n %s %c
 set winliststyle column
 set wingravity n 
@@ -76,13 +75,27 @@ set gravity center
 set transgravity center
 set bargravity ne
 set waitcursor 1
-set padding 0 0 0 0
+set padding 0 0 0 24
+# leave space for bars, 24 for desktop 39 for laptop
 
 startup_message off
 escape Super_L
 banish
-
 unmanage rpbar
+
+exec xrdb -merge /home/linaro/.Xresources
+exec brightnessctl s 7
+exec unclutter
+exec rpws init 9 -k
+exec rpbar
+exec nm-applet &
+
+addhook switchwin exec rpbarsend
+addhook switchframe exec rpbarsend
+addhook switchgroup exec rpbarsend
+addhook deletewindow exec rpbarsend
+addhook titlechanged exec rpbarsend
+addhook newwindow exec rpbarsend
 
 definekey top M-Tab next
 definekey top M-ISO_Left_Tab prev
@@ -92,12 +105,6 @@ definekey top S-Shift-3 exec rpws move3
 definekey top S-Shift-4 exec rpws move4
 definekey top S-Shift-5 exec rpws move5
 definekey top S-Shift-6 exec rpws move6
-
-exec xrdb -merge /home/linaro/.Xresources
-exec brightnessctl s 7
-exec unclutter
-exec rpws init 9 -k
-exec nm-applet &
 
 # bind apostrophe exec zutty -saveLines 50000 -border 0 -font 10x20
 # bind s-apostrophe exec zutty -saveLines 50000 -border 0 -font 12x24
@@ -114,6 +121,7 @@ bind F4 resize
 bind e exec xnedit
 bind s-e exec xnc
 bind f exec thorium-browser
+bind h exec menu
 bind g exec gsimplecal
 bind c exec write_clipboard_to_file.sh
 bind s-c exec galculator
@@ -160,7 +168,6 @@ bind s-1 exec flatpak run org.telegram.desktop
 bind s-2 exec flatpak run com.strlen.TreeSheets
 bind s-3 exec flatpak run io.github.zaps166.QMPlay2
 bind s-4 exec flatpak run com.github.ryonakano.reco
-
 {% endcodeblock %}
 
 ### **Step 5: Configure User-Specific X Settings (~/.xsessionrc)**
