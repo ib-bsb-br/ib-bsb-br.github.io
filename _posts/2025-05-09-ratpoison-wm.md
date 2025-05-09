@@ -1,5 +1,5 @@
 ---
-tags: [scratchpad]
+tags: [aid>linux>software>dotfile]
 info: aberto.
 date: 2025-05-09
 type: post
