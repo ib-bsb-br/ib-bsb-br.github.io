@@ -63,7 +63,7 @@ Here’s a comprehensive example configuration:
 set fgcolor black
 set bgcolor silver
 set framesels 123456789
-set font -xos4-terminus-medium-r-normal-*-*-140-*-*-c-*-iso8859-1
+set font "Intel One Mono:size=13"
 set border 0
 set barborder 0
 set barpadding 0 0
