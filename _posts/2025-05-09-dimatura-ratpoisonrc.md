@@ -10,9 +10,8 @@ slug: dimatura-ratpoisonrc
 title: dimatura .ratpoisonrc
 comment: https://raw.githubusercontent.com/dimatura/dot_ratpoison/refs/heads/master/.ratpoisonrc
 ---
-
-
-{% codeblock %}
+{% raw %}
+```
 # vim: commentstring=#%s
 
 # replacement for this hack: set PATH in .profile
@@ -325,4 +324,5 @@ definekey top s-Menu ratclick 1
 #}}}
 
 #}}}
-{% endcodeblock %}
+```
+{% endraw %}
