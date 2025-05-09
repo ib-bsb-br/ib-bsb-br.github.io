@@ -176,21 +176,45 @@ The ~/.xsessionrc file (in /home/linaro/) is executed when your X session starts
 `nano /home/linaro/.xsessionrc`
 
 Add your configurations, for example:  
-`#!/bin/sh`  
-`# ~/.xsessionrc for linaro`
+{% codeblock %}
+#!/bin/sh
 
-`# Exit immediately if a command exits with a non-zero status.`  
-`set -e`
+# Exit immediately if a command exits with a non-zero status.
+# set -e
 
-`# Example: Set screen resolution with xrandr`  
-`# xrandr —output DP-1 —mode 1920x1080 —rate 60`  
-`# xrandr —output HDMI-1 —primary —mode 2560x1080 —above DP-1`
+# Optional: Uncomment to log script execution for debugging
+LOG_FILE=~/xsessionrc_debug.log
+echo "$(date): .xsessionrc started" >> "$LOG_FILE"
 
-`# Example: Start a key remapper or other background utility`  
-`# xmodmap /home/linaro/.Xmodmap`
+# Define custom mode for DP-1 (1152x864 @ 60Hz)
+# Ensure standard spaces are used in the modeline string.
+# Modeline: "1152x864_60.00" 81.75 1152 1216 1336 1520 864 867 871 897 -hsync +vsync
+xrandr --newmode "1152x864_60.00" 81.75 1152 1216 1336 1520 864 867 871 897 -hsync +vsync # 2>&1 | tee -a "$LOG_FILE"
 
-`# Example: Set an environment variable`  
-`# export QT_QPA_PLATFORMTHEME=qt5ct`
+# Define custom mode for HDMI-1 (2560x1080 @ 60Hz)
+# Modeline: "2560x1080_60.00" 230.00 2560 2720 2992 3424 1080 1083 1093 1120 -hsync +vsync
+xrandr --newmode "2560x1080_60.00" 230.00 2560 2720 2992 3424 1080 1083 1093 1120 -hsync +vsync # 2>&1 | tee -a "$LOG_FILE"
+
+# Add the new modes to the respective outputs
+xrandr --addmode DP-1 "1152x864_60.00" # 2>&1 | tee -a "$LOG_FILE"
+xrandr --addmode HDMI-1 "2560x1080_60.00" # 2>&1 | tee -a "$LOG_FILE"
+
+# Apply the modes and set the layout.
+# NOTE: The command below sets DP-1 as primary.
+# Your comment "# makes HDMI-1 primary" conflicts with this.
+# Adjust --primary flag if HDMI-1 should be the primary display.
+xrandr \
+    --output DP-1 --primary --mode "1152x864_60.00" --below HDMI-1 \
+    --output HDMI-1 --mode "2560x1080_60.00" # 2>&1 | tee -a "$LOG_FILE"
+
+# Example: Start a key remapper or other background utility
+# xmodmap /home/ linaro/.Xmodmap
+
+# Example: Set an environment variable
+# export QT_QPA_PLATFORMTHEME=qt5ct
+
+echo "$(date): .xsessionrc finished successfully" >> "$LOG_FILE"
+{% endcodeblock %}
 
 Make it executable:  
 `chmod +x /home/linaro/.xsessionrc`
@@ -225,21 +249,24 @@ If you choose not to use LightDM or wish to start Ratpoison manually from a TTY 
 2. Create or edit ~/.xinitrc (in /home/linaro/.xinitrc):  
    `nano /home/linaro/.xinitrc`  
    Add:  
-   `#!/bin/sh`  
-   `# ~/.xinitrc for linaro`
 
-   `# Source user-specific X settings if desired (contents similar to .xsessionrc)`  
-   `# if [ -f /home/linaro/.xprofile_custom ]; then`  
-   `#  . /home/linaro/.xprofile_custom`  
-   `# fi`  
-   `# For xrandr, etc., you might call them directly here or source .xsessionrc`  
-   `# if [ -f /home/linaro/.xsessionrc ]; then`  
-   `#   . /home/linaro/.xsessionrc`  
-   `# fi`
+```
+#!/bin/sh
+# ~/.xinitrc for linaro
 
-   `exec ratpoison`
+# Source user-specific X settings if desired (contents similar to .xsessionrc)
+# if [ -f /home/linaro/.xprofile_custom ]; then
+#  . /home/linaro/.xprofile_custom
+# fi
+# For xrandr, etc., you might call them directly here or source .xsessionrc
+if [ -f /home/linaro/.xsessionrc ]; then
+  . /home/linaro/.xsessionrc
+fi
 
-3. Make it executable: chmod +x /home/linaro/.xinitrc.  
-4. Log in to a TTY as linaro and run startx.
+exec ratpoison
+```
+
+4. Make it executable: `chmod +x /home/linaro/.xinitrc`
+5. Log in to a TTY as linaro and run startx.
 
 This approach bypasses LightDM. The primary focus of this guide is the LightDM autologin method.
