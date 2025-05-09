@@ -1,14 +1,16 @@
 ---
-tags: [linux>software>dotfile]
+tags:
+- linux>software>dotfile
 info: aberto.
 date: 2025-05-09
 type: post
 layout: post
 published: true
 slug: ratpoison-documentation
-title: 'ratpoison documentation'
+title: ratpoison documentation
+comment: https://raw.githubusercontent.com/dimatura/ratpoison/refs/heads/master/doc/ratpoison.texi
 ---
-bibref https://raw.githubusercontent.com/dimatura/ratpoison/refs/heads/master/doc/ratpoison.texi
+
 
 \input texinfo   @c -*-texinfo-*-
 @c %**start of header
