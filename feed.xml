@@ -1,4 +1,271 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2025-05-09T08:51:41+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">Ratpoison WM</title><link href="https://ib.bsb.br/ratpoison-wm/" rel="alternate" type="text/html" title="Ratpoison WM" /><published>2025-05-09T00:00:00+00:00</published><updated>2025-05-09T08:48:53+00:00</updated><id>https://ib.bsb.br/ratpoison-wm</id><content type="html" xml:base="https://ib.bsb.br/ratpoison-wm/"><![CDATA[<h3 id="step-1-install-ratpoison-and-essential-tools"><strong>Step 1: Install Ratpoison and Essential Tools</strong></h3>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2025-05-09T09:34:20+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">Dynamic Performance Governor Management Script with Systemd</title><link href="https://ib.bsb.br/dynamic-performance-governor-management-script-with-systemd/" rel="alternate" type="text/html" title="Dynamic Performance Governor Management Script with Systemd" /><published>2025-05-09T00:00:00+00:00</published><updated>2025-05-09T09:31:31+00:00</updated><id>https://ib.bsb.br/dynamic-performance-governor-management-script-with-systemd</id><content type="html" xml:base="https://ib.bsb.br/dynamic-performance-governor-management-script-with-systemd/"><![CDATA[<p>This guide presents a comprehensive, single approach to managing CPU, GPU, NPU, and DMC frequency governors on Linux systems, particularly for devices like the RK3588, by setting them to “performance” mode. This method emphasizes robustness, dynamic discovery of hardware, state persistence for reversibility, and proper integration with systemd. It combines the best practices from various methods into one refined solution.</p>
+
+<p>While the context often mentions RK3588, the script and systemd service are designed to be generally applicable to Linux systems, though specific sysfs paths for governors can vary if not covered by the general patterns.</p>
+
+<p>This solution consists of a powerful Bash script that handles the logic of discovering, setting, and restoring governors, and a systemd service unit to manage this script at boot and allow system-level control.</p>
+
+<p><strong>1. The Bash Script: <code class="language-plaintext highlighter-rouge">/usr/local/bin/performance_governors.sh</code></strong></p>
+
+<p>This script is the core of the solution. Its key features include:</p>
+<ul>
+  <li><strong>Root Privilege Check:</strong> Ensures it’s run with necessary permissions.</li>
+  <li><strong>Robust Scripting:</strong> Uses <code class="language-plaintext highlighter-rouge">set -euo pipefail</code> for strict error handling and <code class="language-plaintext highlighter-rouge">IFS=$’\n\t’</code> for safer processing of paths.</li>
+  <li><strong>Variable Protection:</strong> Uses <code class="language-plaintext highlighter-rouge">readonly</code> for global configuration variables (<code class="language-plaintext highlighter-rouge">STATE_DIR</code>, <code class="language-plaintext highlighter-rouge">STATE_FILE</code>, <code class="language-plaintext highlighter-rouge">GOV_PATTERNS</code>) to prevent accidental modification within the script, enhancing robustness.</li>
+  <li><strong>Dynamic Governor Discovery:</strong> Automatically finds relevant <code class="language-plaintext highlighter-rouge">cpufreq</code> (CPU) and <code class="language-plaintext highlighter-rouge">devfreq</code> (GPU, NPU, DMC, etc.) governor files using general patterns, making it adaptable to different hardware configurations.</li>
+  <li><strong>State Management:</strong> Before setting governors to “performance,” it saves the current (default) governor for each device to a state file (<code class="language-plaintext highlighter-rouge">/var/lib/performance_governors/default_gov.txt</code>). This allows for a clean restoration of previous settings.</li>
+  <li><strong>Comprehensive Actions:</strong>
+    <ul>
+      <li><code class="language-plaintext highlighter-rouge">start</code>: Saves current governors and sets all discovered ones to “performance.”</li>
+      <li><code class="language-plaintext highlighter-rouge">stop</code>: Restores the saved governors from the state file.</li>
+      <li><code class="language-plaintext highlighter-rouge">restart</code>: Performs a <code class="language-plaintext highlighter-rouge">stop</code> then <code class="language-plaintext highlighter-rouge">start</code>.</li>
+      <li><code class="language-plaintext highlighter-rouge">status</code>: Displays the current governor and the saved (default) governor for each discovered path.</li>
+    </ul>
+  </li>
+  <li><strong>Systemd-Aware Logging:</strong> Uses <code class="language-plaintext highlighter-rouge">systemd-cat</code> for logging if available, providing integration with the system journal; otherwise, falls back to the standard <code class="language-plaintext highlighter-rouge">logger</code> utility.</li>
+</ul>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c">#!/usr/bin/env bash</span>
+<span class="c"># ——————————————————————————</span>
+<span class="c"># performance_governors.sh</span>
+<span class="c"># Unified script to manage CPU/GPU/NPU/DMC frequency governors.</span>
+<span class="c"># Targets devices like RK3588 but designed for general Linux applicability.</span>
+<span class="c"># - Requires root (CAP_SYS_ADMIN)</span>
+<span class="c"># - Depends on ‘util-linux’ (for logger) and systemd (for systemd-cat)</span>
+<span class="c"># ——————————————————————————</span>
+<span class="nb">set</span> <span class="nt">-euo</span> pipefail
+<span class="nv">IFS</span><span class="o">=</span><span class="nv">$’</span><span class="se">\n\t</span>’ <span class="c"># Set Internal Field Separator to newline and tab for safer loops.</span>
+
+<span class="c">### Verify running as root</span>
+<span class="k">if</span> <span class="o">[</span> “<span class="si">$(</span><span class="nb">id</span> <span class="nt">-u</span><span class="si">)</span>” <span class="nt">-ne</span> 0 <span class="o">]</span><span class="p">;</span> <span class="k">then
+  </span><span class="nb">echo</span> “ERROR: Must be run as root.” <span class="o">&gt;</span>&amp;2
+  <span class="nb">exit </span>1
+<span class="k">fi</span>
+
+<span class="c"># Location to save/restore default governors</span>
+<span class="nb">readonly </span><span class="nv">STATE_DIR</span><span class="o">=</span>“/var/lib/performance_governors”
+<span class="nb">readonly </span><span class="nv">STATE_FILE</span><span class="o">=</span>“<span class="nv">$STATE_DIR</span>/default_gov.txt”
+
+<span class="c"># General patterns covering cpufreq (CPU) and devfreq (other devices) governors</span>
+<span class="nb">readonly </span><span class="nv">GOV_PATTERNS</span><span class="o">=(</span>
+  “/sys/devices/system/cpu/cpufreq/policy<span class="k">*</span>/scaling_governor” <span class="c"># For CPU cores</span>
+  “/sys/class/devfreq/<span class="k">*</span>/governor”                             <span class="c"># For GPU, NPU, DMC, etc.</span>
+<span class="o">)</span>
+
+<span class="c"># Log function: prefers systemd-cat for journal integration, else falls back to logger.</span>
+log<span class="o">()</span> <span class="o">{</span>
+  <span class="nb">local </span><span class="nv">level</span><span class="o">=</span>“<span class="nv">$1</span>”<span class="p">;</span> <span class="nb">shift
+  local </span><span class="nv">msg</span><span class="o">=</span>“<span class="nv">$*</span>”
+  <span class="k">if </span><span class="nb">command</span> <span class="nt">-v</span> systemd-cat &amp;&gt;/dev/null<span class="p">;</span> <span class="k">then</span>
+    <span class="c"># Pipe to systemd-cat to log with specified level and tag</span>
+    <span class="nb">printf</span> ‘%s<span class="se">\n</span>’ “<span class="nv">$msg</span>” | systemd-cat <span class="nt">-t</span> performance_governors <span class="nt">-p</span> “<span class="nv">$level</span>”
+  <span class="k">else</span>
+    <span class="c"># Fallback to logger if systemd-cat is not available</span>
+    logger <span class="nt">-t</span> performance_governors <span class="nt">-p</span> “user.<span class="nv">$level</span>” — “<span class="nv">$msg</span>”
+  <span class="k">fi</span>
+<span class="o">}</span>
+
+<span class="c"># Discover all existing governor file paths based on GOV_PATTERNS.</span>
+discover_paths<span class="o">()</span> <span class="o">{</span>
+  <span class="k">for </span>patt <span class="k">in</span> “<span class="k">${</span><span class="nv">GOV_PATTERNS</span><span class="p">[@]</span><span class="k">}</span>”<span class="p">;</span> <span class="k">do</span>
+    <span class="c"># $patt is intentionally unquoted to allow shell pathname expansion (globbing).</span>
+    <span class="c"># The shell first performs word splitting on $patt (if it contained IFS characters;</span>
+    <span class="c"># current IFS is newline/tab). Then, pathname expansion (globbing, e.g., ‘*’)</span>
+    <span class="c"># is attempted on each resulting word. For the defined GOV_PATTERNS, which are</span>
+    <span class="c"># single “words” without internal IFS characters, this robustly expands the globs.</span>
+    <span class="k">for </span>f <span class="k">in</span> <span class="nv">$patt</span><span class="p">;</span> <span class="k">do</span>
+      <span class="c"># Check if the glob expansion resulted in an actual existing file</span>
+      <span class="o">[</span> <span class="nt">-f</span> “<span class="nv">$f</span>” <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="nb">printf</span> ‘%s<span class="se">\n</span>’ “<span class="nv">$f</span>”
+    <span class="k">done
+  done</span>
+<span class="o">}</span>
+
+<span class="c"># Action: Save current governors and set all to ‘performance’.</span>
+cmd_start<span class="o">()</span> <span class="o">{</span>
+  log info “START: Saving default governors and forcing ‘performance’ mode.”
+  <span class="nb">mkdir</span> <span class="nt">-p</span> “<span class="nv">$STATE_DIR</span>” <span class="c"># Ensure state directory exists</span>
+  : <span class="o">&gt;</span> “<span class="nv">$STATE_FILE</span>”     <span class="c"># Truncate/create state file</span>
+
+  <span class="c"># Read each discovered governor path</span>
+  <span class="k">while </span><span class="nv">IFS</span><span class="o">=</span> <span class="nb">read</span> <span class="nt">-r</span> path<span class="p">;</span> <span class="k">do
+    </span><span class="nv">current_governor</span><span class="o">=</span><span class="si">$(</span>&lt;“<span class="nv">$path</span>”<span class="si">)</span> <span class="c"># Read current governor</span>
+    <span class="nb">printf</span> ‘%s<span class="se">\t</span>%s<span class="se">\n</span>’ “<span class="nv">$path</span>” “<span class="nv">$current_governor</span>” <span class="o">&gt;&gt;</span>”<span class="nv">$STATE_FILE</span>” <span class="c"># Save path and current governor</span>
+
+    <span class="c"># Attempt to set to ‘performance’</span>
+    <span class="k">if </span><span class="nb">echo </span>performance <span class="o">&gt;</span>”<span class="nv">$path</span>”<span class="p">;</span> <span class="k">then
+      </span>log info “Successfully <span class="nb">set</span> ‘performance’ <span class="k">for</span>: <span class="nv">$path</span>”
+    <span class="k">else
+      </span>log err  “FAILED to <span class="nb">set</span> ‘performance’ <span class="k">for</span>: <span class="nv">$path</span>”
+    <span class="k">fi
+  done</span> &lt; &lt;<span class="o">(</span>discover_paths<span class="o">)</span> <span class="c"># Process substitution feeds paths from discover_paths</span>
+
+  log info “START <span class="nb">command </span>complete.”
+<span class="o">}</span>
+
+<span class="c"># Action: Restore governors to their saved default states.</span>
+cmd_stop<span class="o">()</span> <span class="o">{</span>
+  log info “STOP: Restoring saved default governors.”
+  <span class="k">if</span> <span class="o">[</span> <span class="o">!</span> <span class="nt">-r</span> “<span class="nv">$STATE_FILE</span>” <span class="o">]</span><span class="p">;</span> <span class="k">then
+    </span>log warning “State file <span class="o">(</span><span class="nv">$STATE_FILE</span><span class="o">)</span> not found or not readable. Skipping restore.”
+    <span class="k">return </span>1 <span class="c"># Indicate issue if state file is missing</span>
+  <span class="k">fi</span>
+
+  <span class="c"># Read path and old governor from state file</span>
+  <span class="k">while </span><span class="nv">IFS</span><span class="o">=</span><span class="nv">$’</span><span class="se">\t</span>’ <span class="nb">read</span> <span class="nt">-r</span> path old_governor<span class="p">;</span> <span class="k">do
+    if</span> <span class="o">[</span> <span class="nt">-f</span> “<span class="nv">$path</span>” <span class="o">]</span><span class="p">;</span> <span class="k">then</span> <span class="c"># Check if path still exists</span>
+      <span class="k">if </span><span class="nb">echo</span> “<span class="nv">$old_governor</span>” <span class="o">&gt;</span>”<span class="nv">$path</span>”<span class="p">;</span> <span class="k">then
+        </span>log info “Restored ‘<span class="nv">$old_governor</span>’ to: <span class="nv">$path</span>”
+      <span class="k">else
+        </span>log err  “FAILED to restore ‘<span class="nv">$old_governor</span>’ to: <span class="nv">$path</span>”
+      <span class="k">fi
+    else
+      </span>log warning “Path no longer exists, cannot restore <span class="k">for</span>: <span class="nv">$path</span>”
+    <span class="k">fi
+  done</span> &lt;“<span class="nv">$STATE_FILE</span>”
+
+  log info “STOP <span class="nb">command </span>complete.”
+<span class="o">}</span>
+
+<span class="c"># Action: Display current and saved governors.</span>
+cmd_status<span class="o">()</span> <span class="o">{</span>
+  <span class="nb">echo</span> “Governor Status <span class="o">(</span>Current Governor → Saved Default Governor<span class="o">)</span>:”
+  <span class="nb">declare</span> <span class="nt">-A</span> saved_governors <span class="c"># Associative array to hold saved states</span>
+
+  <span class="c"># Populate saved_governors from state file if it exists</span>
+  <span class="k">if</span> <span class="o">[</span> <span class="nt">-r</span> “<span class="nv">$STATE_FILE</span>” <span class="o">]</span><span class="p">;</span> <span class="k">then
+    while </span><span class="nv">IFS</span><span class="o">=</span><span class="nv">$’</span><span class="se">\t</span>’ <span class="nb">read</span> <span class="nt">-r</span> path old_governor<span class="p">;</span> <span class="k">do
+      </span>saved_governors[“<span class="nv">$path</span>”]<span class="o">=</span>“<span class="nv">$old_governor</span>”
+    <span class="k">done</span> &lt;“<span class="nv">$STATE_FILE</span>”
+  <span class="k">fi</span>
+
+  <span class="c"># Display status for each discovered governor path</span>
+  <span class="nb">local </span><span class="nv">found_any</span><span class="o">=</span>0
+  <span class="k">while </span><span class="nv">IFS</span><span class="o">=</span> <span class="nb">read</span> <span class="nt">-r</span> path<span class="p">;</span> <span class="k">do
+    </span><span class="nv">found_any</span><span class="o">=</span>1
+    <span class="nv">current_governor</span><span class="o">=</span><span class="si">$(</span>&lt;“<span class="nv">$path</span>”<span class="si">)</span>
+    <span class="nv">default_governor</span><span class="o">=</span>“<span class="k">${</span><span class="nv">saved_governors</span><span class="p">[</span><span class="nv">$path</span><span class="p">]</span><span class="k">:-</span><span class="p">&lt;not_saved&gt;</span><span class="k">}</span>” <span class="c"># Use &lt;not_saved&gt; if not in state file</span>
+    <span class="nb">printf</span> ‘%-65s : %-15s → %s<span class="se">\n</span>’ “<span class="nv">$path</span>” “<span class="nv">$current_governor</span>” “<span class="nv">$default_governor</span>”
+  <span class="k">done</span> &lt; &lt;<span class="o">(</span>discover_paths<span class="o">)</span>
+
+  <span class="k">if</span> <span class="o">[</span> “<span class="nv">$found_any</span>” <span class="nt">-eq</span> 0 <span class="o">]</span><span class="p">;</span> <span class="k">then
+    </span><span class="nb">echo</span> “No governor paths found.”
+  <span class="k">fi</span>
+<span class="o">}</span>
+
+<span class="c"># Display usage instructions.</span>
+usage<span class="o">()</span> <span class="o">{</span>
+  <span class="nb">cat</span> <span class="o">&lt;&lt;</span><span class="no">EOF</span><span class="sh">
+Usage: </span><span class="nv">$0</span><span class="sh"> {start|stop|restart|status}
+  start      Saves current governor settings and sets all to ‘performance’.
+  stop       Restores previously saved governor settings.
+  restart    Executes ‘stop’ then ‘start’.
+  status     Displays current vs. saved governor settings for all discovered paths.
+</span><span class="no">EOF
+</span>  <span class="nb">exit </span>1
+<span class="o">}</span>
+
+<span class="c"># Main command dispatcher.</span>
+<span class="k">if</span> <span class="o">[</span> <span class="nv">$# </span><span class="nt">-eq</span> 0 <span class="o">]</span><span class="p">;</span> <span class="k">then</span> <span class="c"># Show usage if no arguments</span>
+  usage
+<span class="k">fi
+
+case</span> “<span class="nv">$1</span>” <span class="k">in
+  </span>start<span class="p">)</span>   cmd_start   <span class="p">;;</span>
+  stop<span class="p">)</span>    cmd_stop    <span class="p">;;</span>
+  restart<span class="p">)</span> cmd_stop<span class="p">;</span> cmd_start <span class="p">;;</span> <span class="c"># Simple restart: stop then start</span>
+  status<span class="p">)</span>  cmd_status  <span class="p">;;</span>
+  <span class="k">*</span><span class="p">)</span>       usage       <span class="p">;;</span> <span class="c"># Show usage for unknown commands</span>
+<span class="k">esac</span>
+</code></pre></div></div>
+
+<p><strong>2. The Systemd Service Unit: <code class="language-plaintext highlighter-rouge">/etc/systemd/system/performance_governors.service</code></strong></p>
+
+<p>This service file allows systemd to manage the script.</p>
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">Type=oneshot</code>: Indicates the script runs once and exits.</li>
+  <li><code class="language-plaintext highlighter-rouge">RemainAfterExit=yes</code>: Tells systemd to consider the service “active” even after the <code class="language-plaintext highlighter-rouge">ExecStart</code> process finishes, as the script’s effects (changed governors) persist.</li>
+  <li><code class="language-plaintext highlighter-rouge">ExecStart</code>, <code class="language-plaintext highlighter-rouge">ExecStop</code>, <code class="language-plaintext highlighter-rouge">ExecReload</code>: Map directly to the script’s <code class="language-plaintext highlighter-rouge">start</code>, <code class="language-plaintext highlighter-rouge">stop</code>, and <code class="language-plaintext highlighter-rouge">restart</code> actions.</li>
+  <li>Dependencies (<code class="language-plaintext highlighter-rouge">After</code>, <code class="language-plaintext highlighter-rouge">Wants</code>): Ensures the service starts at an appropriate time during boot.</li>
+  <li><code class="language-plaintext highlighter-rouge">Restart=no</code>: The <code class="language-plaintext highlighter-rouge">Restart=no</code> directive ensures that if the script fails during startup (e.g., cannot set a governor), systemd will not attempt to restart it automatically. This is generally preferred for configuration services where a failure might indicate a deeper issue requiring manual investigation rather than repeated, potentially problematic, attempts.</li>
+</ul>
+
+<div class="language-ini highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nn">[Unit]</span>
+<span class="py">Description</span><span class="p">=</span><span class="s">Performance Governors Management (CPU/GPU/NPU/DMC)</span>
+<span class="py">Documentation</span><span class="p">=</span><span class="s">man:performance_governors.sh # Assuming script could have a man page</span>
+<span class="py">After</span><span class="p">=</span><span class="s">multi-user.target</span>
+<span class="py">Wants</span><span class="p">=</span><span class="s">network-online.target # Optional: if any governor settings depend on network state</span>
+
+<span class="nn">[Service]</span>
+<span class="py">Type</span><span class="p">=</span><span class="s">oneshot</span>
+<span class="py">ExecStart</span><span class="p">=</span><span class="s">/usr/local/bin/performance_governors.sh start</span>
+<span class="py">ExecStop</span><span class="p">=</span><span class="s">/usr/local/bin/performance_governors.sh stop</span>
+<span class="py">ExecReload</span><span class="p">=</span><span class="s">/usr/local/bin/performance_governors.sh restart</span>
+<span class="py">RemainAfterExit</span><span class="p">=</span><span class="s">yes</span>
+<span class="c"># On failure, log and stay failed. Use ‘systemctl reset-failed performance_governors.service’ to clear.
+</span><span class="py">Restart</span><span class="p">=</span><span class="s">no </span>
+
+<span class="nn">[Install]</span>
+<span class="py">WantedBy</span><span class="p">=</span><span class="s">multi-user.target</span>
+</code></pre></div></div>
+
+<p><strong>3. Installation and Management Instructions</strong></p>
+
+<ol>
+  <li><strong>Install Prerequisites</strong> (if not already present):
+The script uses standard utilities. <code class="language-plaintext highlighter-rouge">util-linux</code> (for <code class="language-plaintext highlighter-rouge">logger</code>) and <code class="language-plaintext highlighter-rouge">systemd</code> (for <code class="language-plaintext highlighter-rouge">systemd-cat</code> and service management) are typically core components of modern Linux distributions.
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># On Debian/Ubuntu based systems, these are usually pre-installed.</span>
+<span class="c"># sudo apt update</span>
+<span class="c"># sudo apt install -y util-linux systemd </span>
+</code></pre></div>    </div>
+  </li>
+  <li>
+    <p><strong>Save the Bash Script:</strong>
+Copy the script code above and save it as <code class="language-plaintext highlighter-rouge">performance_governors.sh</code> in a temporary location.</p>
+  </li>
+  <li><strong>Install the Bash Script:</strong>
+Move it to <code class="language-plaintext highlighter-rouge">/usr/local/bin/</code> and make it executable:
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo cp </span>performance_governors.sh /usr/local/bin/performance_governors.sh
+<span class="nb">sudo chmod </span>755 /usr/local/bin/performance_governors.sh
+</code></pre></div>    </div>
+  </li>
+  <li>
+    <p><strong>Save the Systemd Service Unit:</strong>
+Copy the systemd unit content above and save it as <code class="language-plaintext highlighter-rouge">performance_governors.service</code> in a temporary location.</p>
+  </li>
+  <li><strong>Install the Systemd Service Unit:</strong>
+Move it to <code class="language-plaintext highlighter-rouge">/etc/systemd/system/</code>:
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo cp </span>performance_governors.service /etc/systemd/system/performance_governors.service
+</code></pre></div>    </div>
+  </li>
+  <li><strong>Reload Systemd, Enable and Start the Service:</strong>
+    <ul>
+      <li><code class="language-plaintext highlighter-rouge">daemon-reload</code>: Makes systemd aware of the new service file.</li>
+      <li><code class="language-plaintext highlighter-rouge">enable</code>: Ensures the service starts automatically on boot.</li>
+      <li><code class="language-plaintext highlighter-rouge">start</code>: Starts the service immediately for the current session.
+        <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>systemctl daemon-reload
+<span class="nb">sudo </span>systemctl <span class="nb">enable </span>performance_governors.service
+<span class="nb">sudo </span>systemctl start performance_governors.service
+</code></pre></div>        </div>
+      </li>
+    </ul>
+  </li>
+  <li><strong>Verify Operation:</strong>
+Check the service status and the governor settings:
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>systemctl status performance_governors.service
+<span class="nb">sudo</span> /usr/local/bin/performance_governors.sh status
+</code></pre></div>    </div>
+    <p>You can also check individual governor files, e.g., <code class="language-plaintext highlighter-rouge">cat /sys/devices/system/cpu/cpufreq/policy0/scaling_governor</code>.</p>
+  </li>
+</ol>
+
+<p><strong>4. Using the Script Manually</strong></p>
+
+<p>Once installed, you can also manage the governors manually using the script:</p>
+<ul>
+  <li><strong>Set to performance:</strong> <code class="language-plaintext highlighter-rouge">sudo /usr/local/bin/performance_governors.sh start</code></li>
+  <li><strong>Restore defaults:</strong> <code class="language-plaintext highlighter-rouge">sudo /usr/local/bin/performance_governors.sh stop</code></li>
+  <li><strong>Check status:</strong> <code class="language-plaintext highlighter-rouge">sudo /usr/local/bin/performance_governors.sh status</code></li>
+  <li><strong>Restart (stop then start):</strong> <code class="language-plaintext highlighter-rouge">sudo /usr/local/bin/performance_governors.sh restart</code></li>
+</ul>]]></content><author><name></name></author><category term="scratchpad" /></entry><entry><title type="html">Ratpoison WM</title><link href="https://ib.bsb.br/ratpoison-wm/" rel="alternate" type="text/html" title="Ratpoison WM" /><published>2025-05-09T00:00:00+00:00</published><updated>2025-05-09T08:48:53+00:00</updated><id>https://ib.bsb.br/ratpoison-wm</id><content type="html" xml:base="https://ib.bsb.br/ratpoison-wm/"><![CDATA[<h3 id="step-1-install-ratpoison-and-essential-tools"><strong>Step 1: Install Ratpoison and Essential Tools</strong></h3>
 
 <p>First, update your package lists and install Ratpoison. The rpws (Ratpoison Workspace System) script is included with the ratpoison package in Debian Bullseye. Consider installing dmenu for application launching and a basic terminal like xterm or rxvt-unicode.<br />
 <code class="language-plaintext highlighter-rouge">sudo apt update</code><br />
@@ -3501,151 +3768,4 @@ ping-s1500-c10-Mdowww.example.com
 
 <p>I’m using it to publish <a href="https://simonw.github.io/recent-california-brown-pelicans/atom.xml">an Atom feed</a> of recent California Brown Pelicans sightings on <a href="https://www.inaturalist.org/">iNaturalist</a> in my <a href="https://github.com/simonw/recent-california-brown-pelicans">simonw/recent-california-brown-pelicans</a> repository.</p>
 
-<p>I also use it to publish my <a href="https://tools.simonwillison.net/">tools.simonwillison.net</a> site with a custom <a href="https://tools.simonwillison.net/colophon">colophon</a> page - see <a href="https://simonwillison.net/2025/Mar/11/using-llms-for-code/#a-detailed-example">this post</a> for details.</p>]]></content><author><name></name></author><category term="scratchpad" /></entry><entry><title type="html">how to manage multiple Docker containers</title><link href="https://ib.bsb.br/how-to-manage-multiple-docker-containers/" rel="alternate" type="text/html" title="how to manage multiple Docker containers" /><published>2025-05-03T00:00:00+00:00</published><updated>2025-05-03T23:36:27+00:00</updated><id>https://ib.bsb.br/how-to-manage-multiple-docker-containers</id><content type="html" xml:base="https://ib.bsb.br/how-to-manage-multiple-docker-containers/"><![CDATA[<p><strong>1. Finding Your “Lost” Docker Containers</strong></p>
-
-<p>When you say you’ve “lost” containers, it usually means you don’t know if they are running, what their names or IDs are, or how to connect to them. The first step is to list <em>all</em> containers Docker knows about, including stopped ones:</p>
-
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>docker ps <span class="nt">-a</span>
-</code></pre></div></div>
-
-<ul>
-  <li><code class="language-plaintext highlighter-rouge">docker ps</code>: By itself, this command shows only <em>currently running</em> containers.</li>
-  <li><code class="language-plaintext highlighter-rouge">-a</code> (or <code class="language-plaintext highlighter-rouge">--all</code>): This flag is crucial; it shows <em>all</em> containers, running or stopped.</li>
-</ul>
-
-<p>The output will give you columns like:</p>
-
-<ul>
-  <li><code class="language-plaintext highlighter-rouge">CONTAINER ID</code>: A unique identifier. You can use the first few characters.</li>
-  <li><code class="language-plaintext highlighter-rouge">IMAGE</code>: The image the container was created from (e.g., <code class="language-plaintext highlighter-rouge">nginx</code>, <code class="language-plaintext highlighter-rouge">mysql</code>).</li>
-  <li><code class="language-plaintext highlighter-rouge">COMMAND</code>: The command the container is running or ran.</li>
-  <li><code class="language-plaintext highlighter-rouge">CREATED</code>: When the container was created.</li>
-  <li><code class="language-plaintext highlighter-rouge">STATUS</code>: Shows if it’s <code class="language-plaintext highlighter-rouge">Up</code> (running) or <code class="language-plaintext highlighter-rouge">Exited</code> (stopped), along with how long.</li>
-  <li><code class="language-plaintext highlighter-rouge">PORTS</code>: Any port mappings.</li>
-  <li><code class="language-plaintext highlighter-rouge">NAMES</code>: Docker assigns a random two-word name if you don’t provide one (e.g., <code class="language-plaintext highlighter-rouge">jolly_wozniak</code>).</li>
-</ul>
-
-<p>Look through this list to identify the containers you started. Note their <code class="language-plaintext highlighter-rouge">CONTAINER ID</code> or <code class="language-plaintext highlighter-rouge">NAMES</code>.</p>
-
-<p><strong>2. Running Containers Persistently (and Not Losing Them!)</strong></p>
-
-<p>To avoid losing track and ensure containers keep running after you start them, follow these practices:</p>
-
-<ul>
-  <li><strong>Run in Detached Mode (<code class="language-plaintext highlighter-rouge">-d</code>):</strong> This runs the container in the background, so it doesn’t stop when you close your terminal.</li>
-  <li><strong>Assign a Name (<code class="language-plaintext highlighter-rouge">--name</code>):</strong> Give your containers memorable names. This makes them much easier to manage than using random names or long IDs.</li>
-</ul>
-
-<p>Example: Starting an Nginx web server container:</p>
-
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># docker run [options] &lt;image_name&gt; [command]</span>
-docker run <span class="nt">-d</span> <span class="nt">--name</span> my-webserver nginx
-</code></pre></div></div>
-
-<ul>
-  <li><code class="language-plaintext highlighter-rouge">-d</code>: Detach (run in background).</li>
-  <li><code class="language-plaintext highlighter-rouge">--name my-webserver</code>: Assigns the name <code class="language-plaintext highlighter-rouge">my-webserver</code>.</li>
-  <li><code class="language-plaintext highlighter-rouge">nginx</code>: The image to use.</li>
-</ul>
-
-<p>Now, if you run <code class="language-plaintext highlighter-rouge">docker ps</code>, you should see <code class="language-plaintext highlighter-rouge">my-webserver</code> listed as <code class="language-plaintext highlighter-rouge">Up</code>.</p>
-
-<p><strong>3. Interacting with Running Containers (“Switching”)</strong></p>
-
-<p>“Switching” between containers means changing which container you are interacting with. Since containers run concurrently in the background (when started with <code class="language-plaintext highlighter-rouge">-d</code>), you use commands to execute commands <em>inside</em> a specific container or attach to its main process.</p>
-
-<ul>
-  <li>
-    <p><strong><code class="language-plaintext highlighter-rouge">docker exec</code> (Recommended for Interaction):</strong> This command executes a <em>new</em> command inside an <em>already running</em> container. It’s the safest and most common way to get a shell or run utilities inside a container without disturbing its main process.</p>
-
-    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># docker exec [options] &lt;container_name_or_id&gt; &lt;command&gt;</span>
-docker <span class="nb">exec</span> <span class="nt">-it</span> my-webserver /bin/bash
-</code></pre></div>    </div>
-
-    <ul>
-      <li><code class="language-plaintext highlighter-rouge">-i</code> (interactive): Keeps STDIN open even if not attached.</li>
-      <li><code class="language-plaintext highlighter-rouge">-t</code> (tty): Allocates a pseudo-TTY (makes it look like a normal terminal session).</li>
-      <li><code class="language-plaintext highlighter-rouge">my-webserver</code>: The name of the container you want to enter.</li>
-      <li><code class="language-plaintext highlighter-rouge">/bin/bash</code>: The command to run inside the container (you might need <code class="language-plaintext highlighter-rouge">/bin/sh</code> if bash isn’t installed in the minimal image).</li>
-    </ul>
-
-    <p>You are now “inside” the <code class="language-plaintext highlighter-rouge">my-webserver</code> container. You can run commands there.</p>
-  </li>
-  <li>
-    <p><strong>Detaching Safely:</strong> To leave the container’s shell (from <code class="language-plaintext highlighter-rouge">docker exec -it</code>) without stopping it, press the key sequence: <code class="language-plaintext highlighter-rouge">Ctrl + P</code>, then <code class="language-plaintext highlighter-rouge">Ctrl + Q</code>. You’ll return to your host system’s prompt, and the container keeps running.</p>
-  </li>
-  <li>
-    <p><strong><code class="language-plaintext highlighter-rouge">docker attach</code> (Use with Caution):</strong> This command attaches your terminal’s standard input, output, and error streams directly to the <em>main process</em> running inside the container (the one started by <code class="language-plaintext highlighter-rouge">docker run</code>).</p>
-    <ul>
-      <li><strong>Risk:</strong> If you exit this attached shell (e.g., using <code class="language-plaintext highlighter-rouge">exit</code> or <code class="language-plaintext highlighter-rouge">Ctrl+D</code>), and that causes the container’s main process to terminate, the container <em>will stop</em>.</li>
-      <li>Generally, prefer <code class="language-plaintext highlighter-rouge">docker exec</code> for interactive shells. <code class="language-plaintext highlighter-rouge">attach</code> is more for seeing the direct output of the main process.</li>
-    </ul>
-
-    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># docker attach &lt;container_name_or_id&gt;</span>
-docker attach my-webserver
-</code></pre></div>    </div>
-    <p>(Again, use <code class="language-plaintext highlighter-rouge">Ctrl+P, Ctrl+Q</code> to detach without stopping).</p>
-  </li>
-</ul>
-
-<p><strong>4. Viewing Container Logs</strong></p>
-
-<p>To see the output (logs) from a container’s main process, especially for detached containers:</p>
-
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># See all logs</span>
-docker logs &lt;container_name_or_id&gt;
-
-<span class="c"># Follow logs in real-time (like tail -f)</span>
-docker logs <span class="nt">-f</span> &lt;container_name_or_id&gt;
-</code></pre></div></div>
-
-<p>Example: <code class="language-plaintext highlighter-rouge">docker logs -f my-webserver</code></p>
-
-<p><strong>5. Managing Container Lifecycle (Stopping and Removing)</strong></p>
-
-<ul>
-  <li><strong>Stopping a Container:</strong>
-    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>docker stop &lt;container_name_or_id&gt;
-</code></pre></div>    </div>
-    <p>This sends a SIGTERM signal, then a SIGKILL after a grace period.</p>
-  </li>
-  <li><strong>Starting a Stopped Container:</strong>
-    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>docker start &lt;container_name_or_id&gt;
-</code></pre></div>    </div>
-  </li>
-  <li><strong>Removing a Stopped Container:</strong> You can only remove stopped containers unless you force it.
-    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>docker <span class="nb">rm</span> &lt;container_name_or_id&gt;
-</code></pre></div>    </div>
-  </li>
-  <li><strong>Removing a Running Container (Force):</strong> Use with caution, data may be lost.
-    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>docker <span class="nb">rm</span> <span class="nt">-f</span> &lt;container_name_or_id&gt;
-</code></pre></div>    </div>
-  </li>
-  <li><strong>Cleaning Up:</strong> To remove all stopped containers:
-    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>docker container prune
-</code></pre></div>    </div>
-    <p>(It will ask for confirmation).</p>
-  </li>
-</ul>
-
-<p><strong>6. Broader Context: KVM/QEMU and Buildroot</strong></p>
-
-<ul>
-  <li><strong>KVM/QEMU:</strong> Managing KVM/QEMU virtual machines is separate from Docker. You’ll use different tools, typically <code class="language-plaintext highlighter-rouge">libvirt</code> (with <code class="language-plaintext highlighter-rouge">virsh</code> command-line tool) or direct <code class="language-plaintext highlighter-rouge">qemu-system-*</code> commands. Docker containers share the host kernel; KVM VMs run full separate OS instances with virtualized hardware. They can run concurrently with Docker containers if your system has enough resources (CPU, RAM).</li>
-  <li><strong>Buildroot System:</strong> Since you’re on a custom Buildroot system, be mindful of resource constraints. It’s likely a minimal environment. Running many Docker containers <em>and</em> KVM virtual machines simultaneously might strain CPU, RAM, and disk I/O. Ensure Docker Engine and KVM/QEMU packages were correctly included and configured in your Buildroot build.</li>
-</ul>
-
-<p><strong>Summary of Key Docker Commands for Your Goal:</strong></p>
-
-<ul>
-  <li>Find all containers: <code class="language-plaintext highlighter-rouge">docker ps -a</code></li>
-  <li>Start container in background with a name: <code class="language-plaintext highlighter-rouge">docker run -d --name &lt;your_name&gt; &lt;image&gt;</code></li>
-  <li>See running containers: <code class="language-plaintext highlighter-rouge">docker ps</code></li>
-  <li>Interact with a running container: <code class="language-plaintext highlighter-rouge">docker exec -it &lt;name_or_id&gt; /bin/sh</code> (or <code class="language-plaintext highlighter-rouge">/bin/bash</code>)</li>
-  <li>Detach from interaction: <code class="language-plaintext highlighter-rouge">Ctrl+P, Ctrl+Q</code></li>
-  <li>View logs: <code class="language-plaintext highlighter-rouge">docker logs &lt;name_or_id&gt;</code> (add <code class="language-plaintext highlighter-rouge">-f</code> to follow)</li>
-  <li>Stop container: <code class="language-plaintext highlighter-rouge">docker stop &lt;name_or_id&gt;</code></li>
-  <li>Remove stopped container: <code class="language-plaintext highlighter-rouge">docker rm &lt;name_or_id&gt;</code></li>
-</ul>
-
-<p>By using detached mode (<code class="language-plaintext highlighter-rouge">-d</code>) and naming (<code class="language-plaintext highlighter-rouge">--name</code>) consistently, and utilizing <code class="language-plaintext highlighter-rouge">docker ps -a</code> to find things, you should be able to manage and “switch” between your Docker containers effectively. Remember that KVM management is a separate task using different tools.</p>]]></content><author><name></name></author><category term="scratchpad" /></entry></feed>
+<p>I also use it to publish my <a href="https://tools.simonwillison.net/">tools.simonwillison.net</a> site with a custom <a href="https://tools.simonwillison.net/colophon">colophon</a> page - see <a href="https://simonwillison.net/2025/Mar/11/using-llms-for-code/#a-detailed-example">this post</a> for details.</p>]]></content><author><name></name></author><category term="scratchpad" /></entry></feed>
