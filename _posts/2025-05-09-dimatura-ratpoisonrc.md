@@ -1,14 +1,16 @@
 ---
-tags: [linux>dotfile]
+tags:
+- linux>dotfile
 info: aberto.
 date: 2025-05-09
 type: post
 layout: post
 published: true
 slug: dimatura-ratpoisonrc
-title: 'dimatura .ratpoisonrc'
+title: dimatura .ratpoisonrc
+comment: https://raw.githubusercontent.com/dimatura/dot_ratpoison/refs/heads/master/.ratpoisonrc
 ---
-bibref https://raw.githubusercontent.com/dimatura/dot_ratpoison/refs/heads/master/.ratpoisonrc
+
 
 {% codeblock %}
 # vim: commentstring=#%s
