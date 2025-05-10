@@ -76,7 +76,9 @@ set gravity center
 set transgravity center
 set bargravity c
 set waitcursor 1
-set padding 0 0 0 24
+set inputwidth 600
+set historysize 1000
+set padding 24 24 24 24
 # leave space for bars, 24 for desktop 39 for laptop
 
 startup_message off
@@ -84,12 +86,22 @@ escape Super_L
 banish
 unmanage rpbar
 
+# Keybindings created by 'rpws init -k':
+# M-F<N>           Goto workspace <N>
+# C-M-Right        Goto Next workspace
+# C-M-Left         Goto Prev workspace
+# C-M-S-F<N>       Move window to workspace <N>
+# C-M-greater      Move current window to next workspace
+# C-M-less         Move current window to prev workspace
+# (M- is Meta/Alt, C- is Control, S- is Shift)
+exec rpws init 9 -k
+exec /usr/bin/rpws restore /home/linaro/Desktop/01-document/dotfiles/rpws_layouts.dmp
+exec xsetroot -bitmap /home/linaro/Desktop/02-media/pics/wallpaper.xbm -bg "#073642" -fg "#345345"
 exec xrdb -merge /home/linaro/.Xresources
 exec brightnessctl s 7
 exec unclutter
-exec rpws init 9 -k
+exec nm-applet
 exec rpbar
-exec nm-applet &
 
 addhook switchwin exec rpbarsend
 addhook switchframe exec rpbarsend
@@ -97,6 +109,19 @@ addhook switchgroup exec rpbarsend
 addhook deletewindow exec rpbarsend
 addhook titlechanged exec rpbarsend
 addhook newwindow exec rpbarsend
+addhook switchwin exec ratpoison -c "windows %n %t%s" > /tmp/rpbarfifo
+addhook switchframe exec ratpoison -c "windows %n %t%s" > /tmp/rpbarfifo
+addhook switchgroup exec ratpoison -c "windows %n %t%s" > /tmp/rpbarfifo
+addhook deletewindow exec ratpoison -c "windows %n %t%s" > /tmp/rpbarfifo
+addhook titlechanged exec ratpoison -c "windows %n %t%s" > /tmp/rpbarfifo
+addhook newwindow exec ratpoison -c "windows %n %t%s" > /tmp/rpbarfifo
+addhook switchwin exec echo r > /tmp/rpbarfifo
+addhook switchframe exec echo r > /tmp/rpbarfifo
+addhook switchgroup exec echo r > /tmp/rpbarfifo
+addhook deletewindow exec echo r > /tmp/rpbarfifo
+addhook titlechanged exec echo r > /tmp/rpbarfifo
+addhook newwindow exec echo r > /tmp/rpbarfifo
+addhook switchwin windows %n %c %t
 
 definekey top M-Tab next
 definekey top M-ISO_Left_Tab prev
@@ -110,9 +135,11 @@ definekey top s-Down exec rpws moveprev
 # bind i exec zutty -saveLines 50000 -border 0 -font 10x20 -e wifish
 # bind b exec zutty -saveLines 50000 -border 0 -font 10x20 -e bpytop
 bind apostrophe exec x-terminal-emulator
-bind s-apostrophe eval
+bind s-apostrophe exec /usr/bin/rpws dump /home/linaro/Desktop/01-document/dotfiles/rpws_layouts.dmp
 bind i exec x-terminal-emulator -e wifish
 bind b exec x-terminal-emulator -e bpytop
+unbind exclam
+bind exclam colon exec x-terminal-emulator -e # Super_L ! then type command for terminal
 bind F1 only
 bind F2 hsplit
 bind F3 vsplit
