@@ -1,11 +1,11 @@
 ---
-tags: [aid>linux >software]
+tags: [aid>linux>software]
 info: aberto.
 date: 2025-05-10
 type: post
 layout: post
 published: true
-slug: tailscale-for-secure-external-ssh-access
+slug: tailscale
 title: 'Tailscale for secure external SSH access'
 ---
  * Automated Setup & Auth Keys: Tailscale is often installed and brought online automatically in server environments (e.g., during boot as seen in SBNB's boot-sbnb.sh, or via cloud-init). This is facilitated by Tailscale auth keys (e.g., tailscale up --auth-key=YOUR_KEY), which are treated as secrets and allow non-interactive joining of a machine to your tailnet.
