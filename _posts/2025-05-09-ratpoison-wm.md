@@ -76,7 +76,7 @@ set gravity center
 set transgravity center
 set bargravity c
 set waitcursor 1
-set padding 0 0 0 24
+set padding 0 14 0 14
 # leave space for bars, 24 for desktop 39 for laptop
 
 startup_message off
@@ -100,12 +100,10 @@ addhook newwindow exec rpbarsend
 
 definekey top M-Tab next
 definekey top M-ISO_Left_Tab prev
-definekey top S-Shift-1 exec rpws move1
-definekey top S-Shift-2 exec rpws move2
-definekey top S-Shift-3 exec rpws move3
-definekey top S-Shift-4 exec rpws move4
-definekey top S-Shift-5 exec rpws move5
-definekey top S-Shift-6 exec rpws move6
+definekey top s-Right exec rpws next
+definekey top s-Left exec rpws prev
+definekey top s-Up exec rpws movenext
+definekey top s-Down exec rpws moveprev
 
 # bind apostrophe exec zutty -saveLines 50000 -border 0 -font 10x20
 # bind s-apostrophe exec zutty -saveLines 50000 -border 0 -font 12x24
@@ -164,11 +162,21 @@ bind KP_6 exec rpws 6
 bind KP_7 exec rpws 7
 bind KP_8 exec rpws 8
 bind KP_9 exec rpws 9
+bind s-KP_1 exec rpws move1
+bind s-KP_2 exec rpws move2
+bind s-KP_3 exec rpws move3
+bind s-KP_4 exec rpws move4
+bind s-KP_5 exec rpws move5
+bind s-KP_6 exec rpws move6
+bind s-KP_7 exec rpws move7
+bind s-KP_8 exec rpws move8
+bind s-KP_9 exec rpws move9
 bind Home exec flatpak run com.github.tenderowl.frog
 bind s-1 exec flatpak run org.telegram.desktop
 bind s-2 exec flatpak run com.strlen.TreeSheets
 bind s-3 exec flatpak run io.github.zaps166.QMPlay2
 bind s-4 exec flatpak run com.github.ryonakano.reco
+
 {% endcodeblock %}
 
 #### .Xresources
