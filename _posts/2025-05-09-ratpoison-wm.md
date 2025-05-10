@@ -76,7 +76,7 @@ set gravity center
 set transgravity center
 set bargravity c
 set waitcursor 1
-set padding 0 14 0 14
+set padding 0 0 0 24
 # leave space for bars, 24 for desktop 39 for laptop
 
 startup_message off
@@ -176,8 +176,62 @@ bind s-1 exec flatpak run org.telegram.desktop
 bind s-2 exec flatpak run com.strlen.TreeSheets
 bind s-3 exec flatpak run io.github.zaps166.QMPlay2
 bind s-4 exec flatpak run com.github.ryonakano.reco
-
 {% endcodeblock %}
+
+#### ~/.rpbar.ini
+
+```
+[program]
+# Window name for rpbar
+win_name = rpbar
+
+# Path for the communication socket with rpbarsend
+# /tmp/ is generally standard and should work on Debian.
+socket_path = /tmp/rpbarsocket
+
+# Separator for program title (likely for ratpoison integration)
+sep = $)@=
+
+# Buffer size for communication with ratpoison
+bufsize = 2048
+
+# Timeout in seconds for communication
+timeout_s = 5
+
+[display]
+# Whether rpbar is on the top (1) or bottom (0) of the screen
+top = 0
+
+# The Xorg screen (monitor) to display the bar on.
+# '0' is typically the primary monitor. Adjust if you have multiple monitors
+# and want it on a different one (e.g., 1 for secondary).
+# Use `xrandr` to list screens if unsure.
+screen = 0 ; Defaulting to primary screen, adjust if needed.
+
+# Padding around the top/bottom of the text within the bar
+padding = 4
+
+# Left/right padding for elements like buttons
+button_margin = 10
+
+# Padding specifically for the status bar text area
+status_padding = 30
+
+# Font string for the bar (e.g., "Font Family Name:size=POINT_SIZE").
+# CRITICAL: Ensure "Intel One Mono" is installed on your Debian Bullseye system.
+# If not, replace with an available font (e.g., "DejaVu Sans Mono:size=10", "Liberation Mono:size=10", "Monospace:size=10").
+# Check availability with `fc-list | grep "Your Font Name"`
+font_str = Intel One Mono:size=13 ; ### VERIFY THIS FONT IS INSTALLED OR CHANGE IT ###
+
+[color]
+bordercolor = #d7d7d7
+bgcolor = #353535
+fgcolor = #d7d7d7
+mainbgcolor = #d4ccb9
+mainfgcolor = #45363b
+statusbgcolor = #d7d7d7
+statusfgcolor = #353535
+```
 
 #### .Xresources
 
