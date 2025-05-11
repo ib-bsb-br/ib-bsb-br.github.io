@@ -61,125 +61,282 @@ Create and configure the ~/.ratpoisonrc file in the home directory of the autolo
 Here’s a comprehensive example configuration:  
 `# ~/.ratpoisonrc for linaro`
 {% codeblock %}
+# ==============================================================================
+# Ratpoison Configuration File - Reorganized for Intuitive Use
+# User: linaro (Paths and specific apps based on original config)
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# Core Settings
+# ------------------------------------------------------------------------------
+escape Super_L          # Use Super (Windows/Command key) as the prefix
+startup_message off
+banish                  # Hide mouse cursor on startup to a corner
+set waitcursor 1        # Show wait cursor for slow-starting apps
+
+# Appearance
 set fgcolor black
 set bgcolor silver
-set framesels 123456789
-set font "Intel One Mono:size=13"
-set border 0
-set barborder 0
-set barpadding 4 4
-set winname title
-set winfmt %n %s %c
-set winliststyle column
-set wingravity n 
-set gravity center 
-set transgravity center
-set bargravity c
-set waitcursor 1
-set inputwidth 600
-set historysize 1000
-set padding 24 24 24 24
-# leave space for bars, 24 for desktop 39 for laptop
+set font "Intel One Mono:size=13" # User preference
+set border 0                      # No window borders
+set barborder 0                   # No border for ratpoison's internal message/input bar
+set barpadding 4 4                # Padding for ratpoison's internal bar
+set padding 0 0 0 24           # Screen padding (leaves space for external bars like rpbar)
 
-startup_message off
-escape Super_L
-banish
+# Window & Frame Behavior
+set framesels 123456789           # For selecting frames with prefix + number (e.g., Super+1 to focus frame 1)
+set winname title                 # Display window title in frame name
+set winfmt "%n: %t (%c)"          # Window format for display: "number: title (class)"
+                                  # This is more informative than the original "%n %s %c".
+set winliststyle column           # Display window list in a column
+set wingravity n                  # New windows gravitate North (top)
+set gravity center                # Default frame placement for new windows
+set transgravity center           # Transient window (dialogs) placement
+set bargravity c                  # Ratpoison's internal message bar gravity (center)
+set inputwidth 600                # Width of ratpoison's input box
+set historysize 1000              # Command history size for ratpoison's input box
+
+# If your rpbar is an external window that manages its own position (common),
+# unmanaging it prevents ratpoison from trying to tile it.
 unmanage rpbar
 
-# Keybindings created by 'rpws init -k':
-# M-F<N>           Goto workspace <N>
-# C-M-Right        Goto Next workspace
-# C-M-Left         Goto Prev workspace
-# C-M-S-F<N>       Move window to workspace <N>
-# C-M-greater      Move current window to next workspace
-# C-M-less         Move current window to prev workspace
-# (M- is Meta/Alt, C- is Control, S- is Shift)
-exec rpws init 9 -k
+# ------------------------------------------------------------------------------
+# Startup Applications & Services
+# ------------------------------------------------------------------------------
+# Initialize Ratpoison Windowing System (rpws) for 9 workspaces.
+# The -k flag (which creates default rpws keybindings) is omitted because
+# we are defining all workspace-related keybindings manually for a cohesive setup.
+exec rpws init 9
+
+# Restore previous rpws window layouts if a dump file exists.
 exec /usr/bin/rpws restore /home/linaro/Desktop/01-document/dotfiles/rpws_layouts.dmp
-exec xsetroot -bitmap /home/linaro/Desktop/02-media/pics/wallpaper.xbm -bg "#073642" -fg "#345345"
+
+# Set root window properties (wallpaper and background color)
+exec xsetroot -bitmap /home/linaro/Desktop/02-media/pics/wallpaper1.xbm -bg "#073642" -fg "#345345"
+
+# Merge Xresources (for application theming, fonts, etc.)
 exec xrdb -merge /home/linaro/.Xresources
+
+# Set initial screen brightness (user-specific command)
 exec brightnessctl s 7
-exec unclutter
+
+# Hide mouse cursor after a period of inactivity
+exec unclutter --timeout 2 --jitter 5 # Adjust timeout and jitter as needed
+
+# NetworkManager applet for managing network connections
 exec nm-applet
+
+# Start your status bar (rpbar)
 exec rpbar
 
-addhook switchwin exec rpbarsend
-addhook switchframe exec rpbarsend
-addhook switchgroup exec rpbarsend
-addhook deletewindow exec rpbarsend
-addhook titlechanged exec rpbarsend
-addhook newwindow exec rpbarsend
-addhook switchwin exec ratpoison -c "windows %n %t%s" > /tmp/rpbarfifo
-addhook switchframe exec ratpoison -c "windows %n %t%s" > /tmp/rpbarfifo
-addhook switchgroup exec ratpoison -c "windows %n %t%s" > /tmp/rpbarfifo
-addhook deletewindow exec ratpoison -c "windows %n %t%s" > /tmp/rpbarfifo
-addhook titlechanged exec ratpoison -c "windows %n %t%s" > /tmp/rpbarfifo
-addhook newwindow exec ratpoison -c "windows %n %t%s" > /tmp/rpbarfifo
-addhook switchwin exec echo r > /tmp/rpbarfifo
-addhook switchframe exec echo r > /tmp/rpbarfifo
-addhook switchgroup exec echo r > /tmp/rpbarfifo
-addhook deletewindow exec echo r > /tmp/rpbarfifo
-addhook titlechanged exec echo r > /tmp/rpbarfifo
-addhook newwindow exec echo r > /tmp/rpbarfifo
-addhook switchwin windows %n %c %t
+# ------------------------------------------------------------------------------
+# Hooks for rpbar / Status Bar Updates
+# ------------------------------------------------------------------------------
+# Your original configuration had multiple ways of notifying rpbar.
+# It's very likely that ONLY ONE of the `exec` commands per hook event below
+# is necessary for your specific rpbar setup.
+#
+# METHOD:
+# 1. For each hook event (newwindow, deletewindow, etc.), there are three common methods listed.
+# 2. UNCOMMENT ONLY ONE `addhook ... exec ...` line for each event.
+# 3. Start with one method (e.g., `rpbarsend` for all events if you have that script).
+# 4. Restart ratpoison (or log out/in) and test if rpbar updates correctly.
+# 5. If not, comment out your first choice and try another one for that event.
+#
+# Common methods:
+#   - `exec rpbarsend`: Calls a dedicated script you might have.
+#   - `exec echo r > /tmp/rpbarfifo`: Sends a simple 'refresh' signal to a named pipe (FIFO).
+#   - `exec ratpoison -c "windows <format>" > /tmp/rpbarfifo`: Sends detailed window info to a FIFO.
+#     (Original format was "%n %t%s". If using this, adjust format as needed.)
 
-definekey top M-Tab next
-definekey top M-ISO_Left_Tab prev
-definekey top s-Right exec rpws next
-definekey top s-Left exec rpws prev
-definekey top s-Up exec rpws movenext
-definekey top s-Down exec rpws moveprev
+# --- newwindow ---
+# Choose ONE for newwindow event:
+addhook newwindow exec rpbarsend                                    # Option 1
+# addhook newwindow exec echo r > /tmp/rpbarfifo                      # Option 2
+# addhook newwindow exec ratpoison -c "windows %n %t%s" > /tmp/rpbarfifo # Option 3 (original format)
 
-# bind apostrophe exec zutty -saveLines 50000 -border 0 -font 10x20
-# bind s-apostrophe exec zutty -saveLines 50000 -border 0 -font 12x24
+# --- deletewindow ---
+# Choose ONE for deletewindow event:
+addhook deletewindow exec rpbarsend                                 # Option 1
+# addhook deletewindow exec echo r > /tmp/rpbarfifo                   # Option 2
+# addhook deletewindow exec ratpoison -c "windows %n %t%s" > /tmp/rpbarfifo # Option 3
+
+# --- switchwin (window focus change) ---
+# Choose ONE for switchwin event:
+addhook switchwin exec rpbarsend                                    # Option 1
+# addhook switchwin exec echo r > /tmp/rpbarfifo                      # Option 2
+# addhook switchwin exec ratpoison -c "windows %n %t%s" > /tmp/rpbarfifo # Option 3
+
+# --- switchframe (frame focus change) ---
+# Choose ONE for switchframe event:
+addhook switchframe exec rpbarsend                                  # Option 1
+# addhook switchframe exec echo r > /tmp/rpbarfifo                    # Option 2
+# addhook switchframe exec ratpoison -c "windows %n %t%s" > /tmp/rpbarfifo # Option 3
+
+# --- switchgroup (workspace change, if rpbar uses this) ---
+# Choose ONE for switchgroup event:
+addhook switchgroup exec rpbarsend                                  # Option 1
+# addhook switchgroup exec echo r > /tmp/rpbarfifo                    # Option 2
+# addhook switchgroup exec ratpoison -c "windows %n %t%s" > /tmp/rpbarfifo # Option 3
+
+# --- titlechanged ---
+# Choose ONE for titlechanged event:
+addhook titlechanged exec rpbarsend                                 # Option 1
+# addhook titlechanged exec echo r > /tmp/rpbarfifo                   # Option 2
+# addhook titlechanged exec ratpoison -c "windows %n %t%s" > /tmp/rpbarfifo # Option 3
+
+# This hook updates ratpoison's *internal* window list string,
+# often used by commands like `fselect` or if ratpoison itself displays status.
+# The format should match `set winfmt` if used for similar display purposes.
+# addhook switchwin windows "%n: %t (%c)"
+
+
+# ==============================================================================
+# Keybindings (All 'bind' commands are prefixed by 'Super_L' unless 'definekey top')
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# I. Essential Applications & Actions
+# ------------------------------------------------------------------------------
+# bind Return exec zutty -saveLines 50000 -border 0 -font 10x20orINTEL
 # bind i exec zutty -saveLines 50000 -border 0 -font 10x20 -e wifish
 # bind b exec zutty -saveLines 50000 -border 0 -font 10x20 -e bpytop
-bind apostrophe exec x-terminal-emulator
-bind s-apostrophe exec /usr/bin/rpws dump /home/linaro/Desktop/01-document/dotfiles/rpws_layouts.dmp
-bind i exec x-terminal-emulator -e wifish
-bind b exec x-terminal-emulator -e bpytop
-unbind exclam
-bind exclam colon exec x-terminal-emulator -e # Super_L ! then type command for terminal
-bind F1 only
-bind F2 hsplit
-bind F3 vsplit
-bind F4 resize
-bind e exec xnedit
-bind s-e exec xnc
-bind f exec thorium-browser
-bind h exec menu
-bind g exec gsimplecal
-bind c exec write_clipboard_to_file.sh
-bind s-c exec galculator
-bind p exec xfce4-screenshooter
-bind s-p exec scrot -s -e 'xclip -selection clipboard -t image/png -i $f && rm $f'
-bind Prior exec thermal.sh
-bind Next exec reverse-thermal.sh
-bind r remove
-bind t exec pcmanfm-qt --daemon-mode
-bind v exec paste_clipboard_from_file.sh
-bind s-v exec viewnior
-bind w exec ratpoison -c "select `ratpoison -c "windows" | dmenu | awk '{print $1}'`"
-bind z nextscreen
-bind s-b exec vorta
-bind s-k kill
-bind s-x fselect
-bind BackSpace undo
-bind s-BackSpace redo
+bind Return exec x-terminal-emulator      # Super + Enter: Launch terminal (common standard)
+bind s-Return exec colon exec x-terminal-emulator -e 
+bind space exec dmenu_run                 # Original: bind space exec dmenu_run (Super+Space is also common)
+bind s-space exec ratpoison -c "select \"$(ratpoison -c 'windows %n: %t (%c)' | dmenu -p 'Window:')\""
+bind w exec thorium-browser               # Super + W: Launch Web browser
+bind e exec pcmanfm-qt --daemon-mode      # Super + E: Launch File Manager (E for Explorer-like)
+
+# ------------------------------------------------------------------------------
+# II. Frame & Window Management (within current workspace)
+# ------------------------------------------------------------------------------
+# Killing windows / Removing frames
+bind q kill                               # Super + Q: Kill current window (Q for Quit/Kill)
+bind s-q abort                            # Abort current ratpoison command sequence
+
+# Focusing Windows (within current frame) & Frames
+bind Tab next                             # Super + Tab: Focus next window in current frame
+bind s-Tab prev                       # Focus previous window in current frame
+
+# Focusing Frames (Arrow keys)
+bind Left focusleft                       # Super + Left Arrow: Focus frame to the left
+bind Right focusright                     # Super + Right Arrow: Focus frame to the right
+bind Up focusup                           # Super + Up Arrow: Focus frame above
+bind Down focusdown                       # Super + Down Arrow: Focus frame below
+# Vim-like alternatives for frame focus (uncomment these and comment out arrows if preferred):
+# bind h focusleft
+# bind l focusright
+# bind k focusup
+# bind j focusdown
+
+bind apostrophe fselect                        # Select frame to focus via window list (easier than original s-x)
+bind s-apostrophe colon                        # Open ratpoison command prompt
+
+# Splitting Frames
+bind 0 exec remove                        # Remove current frame (unsplit)
+bind minus hsplit                         # for horizontal
+bind equal vsplit                         # for vertical
+
+# Resizing Frames
+bind r resize                             # Super + R: Enter resize mode (then use HJKL or Arrows, Enter to confirm)
+
+# Maximizing Frame / Fullscreen Toggle
+bind f only                               # Super + F: Toggle current frame to use full screen space (F for Fullscreen/Focus)
+
+# Arrow key alternatives for exchanging (if not using Vim-keys):
+bind s-Left exchangeleft
 bind s-Down exchangedown
 bind s-Up exchangeup
-bind s-Left exchangeleft
 bind s-Right exchangeright
-bind s-Return prev
-bind s-Tab focuslast
-bind Tab focus
-bind Escape abort
-bind space exec dmenu_run
-bind F9 exec amixer set Master 0
-bind F10 exec amixer set Master 25%-
-bind F11 exec amixer set Master 25%+
-bind KP_0 exec xdotool key apostrophe key apostrophe key apostrophe
-bind KP_Separator exec xdotool key quotedbl key quotedbl key quotedbl
+
+# ------------------------------------------------------------------------------
+# III. Workspace Management (using rpws)
+# ------------------------------------------------------------------------------
+# Switch to workspace N (Super + Number)
+bind 1 exec rpws 1
+bind 2 exec rpws 2
+bind 3 exec rpws 3
+bind 4 exec rpws 4
+bind 5 exec rpws 5
+bind 6 exec rpws 6
+bind 7 exec rpws 7
+bind 8 exec rpws 8
+bind 9 exec rpws 9
+
+# Move current window to workspace N
+bind s-1 exec rpws move1
+bind s-2 exec rpws move2
+bind s-3 exec rpws move3
+bind s-4 exec rpws move4
+bind s-5 exec rpws move5
+bind s-6 exec rpws move6
+bind s-7 exec rpws move7
+bind s-8 exec rpws move8
+bind s-9 exec rpws move9
+
+# Switch to next/previous workspace
+bind Page_Down exec rpws prev
+bind Page_Up exec rpws next
+
+# Move current window to next/previous workspace
+bind s-Page_Down exec rpws moveprev
+bind s-Page_Up exec rpws movenext
+
+# ------------------------------------------------------------------------------
+# IV. System Control & Ratpoison Commands
+# ------------------------------------------------------------------------------
+# Volume Control
+bind s-0 exec amixer set Master toggle       # Toggle Mute
+bind s-minus exec amixer set Master 5%-      # Volume Down 5% (adjust percentage as needed)
+bind s-equal exec amixer set Master 5%+      # Volume Up 5%
+
+# Screenshot (using standard PrintScreen keys)
+bind Print exec xfce4-screenshooter       # Super + PrintScreen: Launch screenshot tool (interactive)
+bind s-Print exec scrot -s -e 'xclip -selection clipboard -t image/png -i $f && rm $f' # Select area, copy to clipboard, remove file
+
+# Ratpoison Command Prompt & Actions
+bind u undo                               # Super + U: Undo last ratpoison layout action
+bind s-u redo                             # Super + Shift + U: Redo ratpoison layout action
+
+# ------------------------------------------------------------------------------
+# V. Other Applications & Utilities
+# ------------------------------------------------------------------------------
+# Layout Management (rpws)
+bind Escape exec /usr/bin/rpws dump /home/linaro/Desktop/01-document/dotfiles/rpws_layouts.dmp # (Save layout)
+bind s-Escape exec /usr/bin/rpws restore /home/linaro/Desktop/01-document/dotfiles/rpws_layouts.dmp # (Restore layout)
+
+# Custom User Scripts
+bind F1 exec thermal.sh
+bind s-F1 exec reverse-thermal.sh
+
+# Terminals with specific commands
+bind s-w exec x-terminal-emulator -e nmtui        # (wifi utility)
+bind b exec x-terminal-emulator -e bpytop         # (bpytop system monitor)
+
+# Editor & Other Tools
+bind x exec xnedit                                # Editor: xnedit
+bind s-x exec xnc                                 # xnedit server
+bind g exec gsimplecal                            # Super + G (Calendar: gsimplecal)
+bind s-g exec galculator                          # (Calculator: galculator)
+bind i exec viewnior                              # (Image Viewer: viewnior)
+bind s-b exec vorta                               # (Backup: vorta)
+
+# Clipboard interaction scripts (using standard Super+C/V)
+bind c exec write_clipboard_to_file.sh            # Super + C (Copy to file - user script)
+bind v exec paste_clipboard_from_file.sh          # Super + V (Paste from file - user script)
+
+# User Specific Applications (Flatpaks, etc.)
+bind F4 exec flatpak run org.telegram.desktop
+bind F5 exec flatpak run com.github.tenderowl.frog
+bind F6 exec flatpak run com.strlen.TreeSheets
+bind F7 exec flatpak run com.github.ryonakano.reco
+bind F8 exec flatpak run io.github.zaps166.QMPlay2
+
+# ------------------------------------------------------------------------------
+# VI. Numpad Specific Bindings (Kept if Numpad is actively used for these)
+# ------------------------------------------------------------------------------
+# Switch to workspace N using Numpad
 bind KP_1 exec rpws 1
 bind KP_2 exec rpws 2
 bind KP_3 exec rpws 3
@@ -189,6 +346,8 @@ bind KP_6 exec rpws 6
 bind KP_7 exec rpws 7
 bind KP_8 exec rpws 8
 bind KP_9 exec rpws 9
+
+# Move current window to workspace N
 bind s-KP_1 exec rpws move1
 bind s-KP_2 exec rpws move2
 bind s-KP_3 exec rpws move3
@@ -198,11 +357,23 @@ bind s-KP_6 exec rpws move6
 bind s-KP_7 exec rpws move7
 bind s-KP_8 exec rpws move8
 bind s-KP_9 exec rpws move9
-bind Home exec flatpak run com.github.tenderowl.frog
-bind s-1 exec flatpak run org.telegram.desktop
-bind s-2 exec flatpak run com.strlen.TreeSheets
-bind s-3 exec flatpak run io.github.zaps166.QMPlay2
-bind s-4 exec flatpak run com.github.ryonakano.reco
+
+# Original xdotool bindings for typing quotes (very specific, uncomment if needed)
+bind KP_0 exec xdotool key apostrophe key apostrophe key apostrophe
+bind KP_Separator exec xdotool key quotedbl key quotedbl key quotedbl
+
+# ------------------------------------------------------------------------------
+# VII. Prefix-less Keybindings (`definekey top`)
+# These bindings work WITHOUT the Super_L prefix.
+# ------------------------------------------------------------------------------
+# Standard Alt+Tab like behavior for switching between windows (ratpoison's 'next' and 'prev')
+definekey top M-Tab next
+definekey top M-ISO_Left_Tab prev
+
+
+# ==============================================================================
+# End of Configuration
+# ==============================================================================
 {% endcodeblock %}
 
 #### ~/.rpbar.ini
