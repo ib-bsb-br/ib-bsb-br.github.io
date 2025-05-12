@@ -67,7 +67,7 @@
         
           <span class="post-updated">
             ↣
-            <time datetime="2025-05-12T19:56:15+00:00">
+            <time datetime="2025-05-12T20:16:06+00:00">
               12 May 2025
             </time>
           </span>
@@ -90,11 +90,11 @@
         <div class="page-stats mt-3" role="status" aria-label="Page statistics">
       
       <span class="badge bg-primary">
-        8483 characters
+        13221 characters
       </span>
         <span class="separator mx-2" aria-hidden="true">•</span>
         <span class="badge bg-primary">
-        1014 words
+        1590 words
       </span>
       </div>
         <div class="action-buttons d-flex flex-wrap gap-2">
@@ -243,12 +243,129 @@
     
   </h2>
       
-        <div class="language-bash highlighter-rouge"><div class="highlight"><section><code><span class="nb">echo</span> <span class="nt">-e</span> <span class="s2">"--- FTP Connection Details ---</span><span class="se">\n</span><span class="s2">Host (IP Address): </span><span class="si">$(</span><span class="nb">hostname</span> <span class="nt">-I</span><span class="si">)</span><span class="se">\n</span><span class="s2">Username: ftpuser</span><span class="se">\n</span><span class="s2">Password: [Cannot be retrieved - use the password you set for 'ftpuser']</span><span class="se">\n</span><span class="s2">Port: 21</span><span class="se">\n</span><span class="s2">Passive Port Range (Server Config): 30000-35000 (not entered in FileZilla Port field)</span><span class="se">\n</span><span class="s2">----------------------------"</span>
-</code></section></div>        </div>
+        <p>```bash</p>
+  <h1 id="-begin-command-block-to-paste-">
+    
+    
+     <a href="#-begin-command-block-to-paste-">#</a><a href="#" aria-label="Back to top">— Begin command block to paste —</a>
+        
+    
+  </h1>
+      
       </li>
     </ul>
   </li>
 </ol>
+  <h1 id="pre-calculate-complex-values">
+    
+    
+     <a href="#pre-calculate-complex-values">#</a><a href="#" aria-label="Back to top">Pre-calculate complex values</a>
+        
+    
+  </h1>
+      
+<p>IP_ADDRESSES=$(hostname -I 2&gt;/dev/null | sed ‘s/ *$//g’ || echo “IP addresses not found”)
+SERVICE_STATUS=$(systemctl is-active pure-ftpd 2&gt;/dev/null || echo “Status not determinable or service inactive”)
+PKG_VERSION=$(dpkg -s pure-ftpd 2&gt;/dev/null | grep ‘^Version:’ | awk ‘{print $2}’ || echo “Package version not found”)</p>
+  <h1 id="attempt-to-get-pure-ftpd-process-command-line">
+    
+    
+     <a href="#attempt-to-get-pure-ftpd-process-command-line">#</a><a href="#" aria-label="Back to top">Attempt to get pure-ftpd process command line.</a>
+        
+    
+  </h1>
+      
+  <h1 id="tries-direct-pure-ftpd-process-first-then-pure-ftpd-wrapper">
+    
+    
+     <a href="#tries-direct-pure-ftpd-process-first-then-pure-ftpd-wrapper">#</a><a href="#" aria-label="Back to top">Tries direct pure-ftpd process first, then pure-ftpd-wrapper.</a>
+        
+    
+  </h1>
+      
+<p>PROC_CMD_LINE_RAW=$( (ps auxw | grep ‘[p]ure-ftpd ‘ | grep -v ‘pure-ftpd-wrapper’ | head -n 1) || <br />
+                     (ps auxw | grep ‘[p]ure-ftpd-wrapper’ | head -n 1) || <br />
+                     echo “pure-ftpd process not found” )
+PROC_ARGS_FULL=$(echo “$PROC_CMD_LINE_RAW” | sed -e ‘s/^[^ ]* <em>[^ ]</em> <em>[^ ]</em> <em>[^ ]</em> <em>[^ ]</em> <em>//’ -e ‘s/^[ \t]</em>//’ || echo “Arguments not retrieved”)
+if echo “$PROC_ARGS_FULL” | grep -q “pure-ftpd process not found”; then PROC_ARGS_FULL=”pure-ftpd process not found or args not retrieved”; fi</p>
+
+<p>LISTENING_PORTS=$(ss -tlpn 2&gt;/dev/null | grep ‘pure-ftpd’ | awk ‘{print $4}’ | sed ‘s/.*://’ | sort -u | tr ‘\n’ ‘ ‘ | sed ‘s/ *$//g’)
+if [ -z “$LISTENING_PORTS” ]; then LISTENING_PORTS=”Not found via ss or pure-ftpd not listening”; fi</p>
+
+<p>PASSIVE_PORTS_CONF_VAL=”Not set or file not found”
+if [ -f /etc/pure-ftpd/conf/PassivePortRange ]; then
+    PASSIVE_PORTS_CONF_VAL=$(cat /etc/pure-ftpd/conf/PassivePortRange 2&gt;/dev/null)
+fi</p>
+
+<p>NO_ANON_CONF_RAW=”File not found”
+NO_ANON_CONF_MSG=”Config file /etc/pure-ftpd/conf/NoAnonymous not found or not set.”
+if [ -f /etc/pure-ftpd/conf/NoAnonymous ]; then
+    NO_ANON_CONF_RAW=$(cat /etc/pure-ftpd/conf/NoAnonymous 2&gt;/dev/null)
+    if [ “$NO_ANON_CONF_RAW” = “yes” ]; then
+        NO_ANON_CONF_MSG=”Yes (Anonymous login disabled as per /etc/pure-ftpd/conf/NoAnonymous)”
+    else
+        NO_ANON_CONF_MSG=”Value ‘$NO_ANON_CONF_RAW’ in /etc/pure-ftpd/conf/NoAnonymous (implies anonymous potentially enabled if not ‘yes’)”
+    fi
+fi</p>
+
+<p>TLS_CONF_RAW=”File not found”
+TLS_CONF_MSG=”Config file /etc/pure-ftpd/conf/TLS not found or not set. (0=off, 1=TLS optional, 2=FTPS required)”
+if [ -f /etc/pure-ftpd/conf/TLS ]; then
+    TLS_CONF_RAW=$(cat /etc/pure-ftpd/conf/TLS 2&gt;/dev/null)
+    if [ “$TLS_CONF_RAW” = “0” ]; then TLS_CONF_MSG=”0 (TLS Disabled as per /etc/pure-ftpd/conf/TLS)”;
+    elif [ “$TLS_CONF_RAW” = “1” ]; then TLS_CONF_MSG=”1 (TLS for control &amp; data, optional client cert, as per /etc/pure-ftpd/conf/TLS)”;
+    elif [ “$TLS_CONF_RAW” = “2” ]; then TLS_CONF_MSG=”2 (FTPS: TLS for control &amp; data required, no client cert, as per /etc/pure-ftpd/conf/TLS)”;
+    else TLS_CONF_MSG=”Value ‘$TLS_CONF_RAW’ in /etc/pure-ftpd/conf/TLS (Unknown value)”; fi
+fi</p>
+
+<p>FTPUSER_EXISTS_MSG=”User ‘ftpuser’ (from tutorial) not found in /etc/passwd.”
+FTPUSER_HOME=””
+FTPUSER_SHELL=””
+if getent passwd ftpuser &gt;/dev/null 2&gt;&amp;1; then
+    FTPUSER_EXISTS_MSG=”User ‘ftpuser’ (from tutorial) exists.”
+    FTPUSER_HOME=$(getent passwd ftpuser | cut -d: -f6)
+    FTPUSER_SHELL=$(getent passwd ftpuser | cut -d: -f7)
+fi</p>
+  <h1 id="main-echo-command-using-the-pre-calculated-variables">
+    
+    
+     <a href="#main-echo-command-using-the-pre-calculated-variables">#</a><a href="#" aria-label="Back to top">Main echo command using the pre-calculated variables</a>
+        
+    
+  </h1>
+      
+<p>echo -e “— FTP Server Details (pure-ftpd on Debian Bullseye) —\n<br />
+\n<strong>General System &amp; Service Info:</strong>\n<br />
+  System IP Addresses: $IP_ADDRESSES\n<br />
+  Pure-FTPd Service Status (systemctl): $SERVICE_STATUS\n<br />
+  Pure-FTPd Package Version (dpkg): $PKG_VERSION\n<br />
+  Running pure-ftpd Command Line (best effort from ps): $PROC_ARGS_FULL\n<br />
+  Listening FTP Port(s) (from ss): $LISTENING_PORTS (Typically 21 for control)\n<br />
+\n<strong>Configuration (Values from /etc/pure-ftpd/conf/ unless overridden by command line args above):</strong>\n<br />
+  Passive Port Range (from /etc/pure-ftpd/conf/PassivePortRange): $PASSIVE_PORTS_CONF_VAL\n<br />
+  Anonymous Login (from /etc/pure-ftpd/conf/NoAnonymous): $NO_ANON_CONF_MSG\n<br />
+  TLS Mode (from /etc/pure-ftpd/conf/TLS): $TLS_CONF_MSG\n<br />
+  TLS Certificate: Path is typically set via a command-line option (e.g., -T /path/to/cert.pem) or uses a default compiled-in path. Check the running process arguments above. The tutorial uses /etc/ssl/private/pure-ftpd.pem.\n<br />
+  Chroot Behavior: Default is often to chroot users. Check for /etc/pure-ftpd/conf/NoChroot (if present, may disable chroot for some) or -A/-a flags in running command line args above.\n<br />
+\n<strong>FTP User Information (based on tutorial’s ‘ftpuser’):</strong>\n<br />
+  FTP User for Connection: System user (the tutorial guides creating ‘ftpuser’).\n<br />
+  Password for FTP User: [This cannot be retrieved. Use the password you set for the system user, e.g., ‘ftpuser’.]\n<br />
+  Status of ‘ftpuser’: $FTPUSER_EXISTS_MSG\n<br />
+  Home Directory for ‘ftpuser’ (if exists): $FTPUSER_HOME\n<br />
+  Shell for ‘ftpuser’ (if exists): $FTPUSER_SHELL\n<br />
+\n<strong>Firewall (UFW Example - run the check command with sudo for current status):</strong>\n<br />
+  Expected Ports (as per tutorial): 21/tcp (FTP Control), 30000-35000/tcp (Passive FTP)\n<br />
+  To check UFW status for these ports, run: sudo ufw status verbose | grep -E ‘21/tcp|30000:35000/tcp’\n<br />
+————————————————-“</p>
+  <h1 id="-end-command-block-">
+    
+    
+     <a href="#-end-command-block-">#</a><a href="#" aria-label="Back to top">— End command block —</a>
+        
+    
+  </h1>
+      
+<p>```</p>
   <h3 id="connect-a-windows-11-machine-to-the-debian-ftp-server-using-filezilla">
     
     
@@ -517,7 +634,7 @@ Port: 21
         
         
         <a href="https://ib.bsb.br/404" aria-label="404">
-          2025-05-12 17:16:19
+          2025-05-12 17:22:20
         </a>
         &#x23;
     
@@ -585,7 +702,7 @@ Port: 21
         "headline": "Setup FTP Server on Debian and Connect a Windows Machine",
         "description": "",
         "datePublished": "2024-11-21T00:00:00+00:00",
-        "dateModified": "2025-05-12T19:56:15+00:00",
+        "dateModified": "2025-05-12T20:16:06+00:00",
         "author": {
           "@type": "Person",
           "name": "Author"
