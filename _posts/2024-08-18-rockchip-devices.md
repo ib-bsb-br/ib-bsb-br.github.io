@@ -1,6 +1,6 @@
 ---
 
-tags: [hardware]
+tags: [scratchpad]
 info: aberto.
 date: 2024-08-18
 type: post
