@@ -114,6 +114,7 @@ bind Right focusright
 bind Return exec x-terminal-emulator
 bind r resize
 bind q delete
+bind k kill
 bind Print exec xfce4-screenshooter
 bind Page_Up exec rpws prev
 bind Page_Down exec rpws next
@@ -162,7 +163,7 @@ bind s-Up exchangeup
 bind s-u redo
 bind s-Tab nextscreen
 bind s-t exec sudo pcmanfm-qt
-bind s-space exec ratpoison -c "select \"$(ratpoison -c 'windows %n: %t (%c)' | dmenu -p 'Window:')\""
+bind s-space exec ratpoison -c "select `ratpoison -c "windows %n: %c" | dmenu | awk '{print $1}'`"
 bind s-Right exchangeright
 bind s-Return exec sudo x-terminal-emulator
 bind s-q abort
