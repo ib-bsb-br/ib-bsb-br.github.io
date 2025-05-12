@@ -61,142 +61,145 @@ Create and configure the ~/.ratpoisonrc file in the home directory of the autolo
 Here’s a comprehensive example configuration:  
 `# ~/.ratpoisonrc for linaro`
 {% codeblock %}
-set barborder 0
-set bargravity c
-set barpadding 4 4
-set bgcolor silver
-set border 0
-set font "Intel One Mono:size=13"
-set gravity center
-set historysize 1000
-set inputwidth 600
-set padding 0 0 0 24
-set transgravity center
-set waitcursor 1
-set winfmt "%n: %t (%c)"
-set wingravity n
-set winliststyle column
 set winname title
+set winliststyle column
+set wingravity n
+set winfmt "%n: %t (%c)"
+set waitcursor 1
+set transgravity center
+set padding 0 0 0 24
+set inputwidth 600
+set historysize 1000
+set gravity center
+set font "Intel One Mono:size=13"
+set border 0
+set bgcolor silver
+set barpadding 4 4
+set bargravity c
+set barborder 0
 
-escape Super_L
-startup_message on
-unmanage rpbar
-banish
+definekey top M-Tab next
+definekey top M-ISO_Left_Tab prev
 
-exec brightnessctl s 7
-exec xfce4-power-manager
-exec nm-applet
-exec rpbar
 exec rpws init 9
-exec unclutter --timeout 2 --jitter 5
-exec /usr/bin/rpws restore /home/linaro/Desktop/01-document/dotfiles/rpws_layouts.dmp
-exec xrdb -merge /home/linaro/.Xresources
+exec rpbar
 exec xsetroot -bitmap /home/linaro/Desktop/02-media/pics/wallpaper1.xbm -bg "#073642" -fg "#345345"
+exec xrdb -merge /home/linaro/.Xresources
+exec xfce4-power-manager
+exec unclutter --timeout 2 --jitter 5
+exec nm-applet
+exec brightnessctl s 7
+exec /usr/bin/rpws restore /home/linaro/Desktop/01-document/dotfiles/rpws_layouts.dmp
 
-addhook deletewindow exec rpbarsend
-addhook newwindow exec rpbarsend
-addhook switchframe exec rpbarsend
-addhook switchgroup exec rpbarsend
-addhook switchwin exec rpbarsend
+startup_message on
+escape Super_L
+banish
+unmanage rpbar
+
 addhook titlechanged exec rpbarsend
+addhook switchwin exec rpbarsend
+addhook switchgroup exec rpbarsend
+addhook switchframe exec rpbarsend
+addhook newwindow exec rpbarsend
+addhook deletewindow exec rpbarsend
 
-bind 0 remove
-bind 1 exec rpws 1
-bind 2 exec rpws 2
-bind 3 exec rpws 3
-bind 4 exec rpws 4
-bind 5 exec rpws 5
-bind 6 exec rpws 6
-bind 7 exec rpws 7
-bind 8 exec rpws 8
-bind 9 exec rpws 9
-bind apostrophe fselect
-bind b exec x-terminal-emulator -e bpytop
-bind c exec write_clipboard_to_file.sh
-bind Down focusdown
-bind e exec pcmanfm-qt --daemon-mode
-bind equal vsplit
-bind Escape exec /usr/bin/rpws dump /home/linaro/Desktop/01-document/dotfiles/rpws_layouts.dmp
-bind F1 exec thermal.sh
-bind F4 exec flatpak run org.telegram.desktop
-bind F5 exec flatpak run com.github.tenderowl.frog
-bind F6 exec flatpak run com.strlen.TreeSheets
-bind F7 exec flatpak run com.github.ryonakano.reco
-bind F8 exec flatpak run io.github.zaps166.QMPlay2
-bind f only
-bind g exec gsimplecal
-bind i exec viewnior
-bind KP_0 exec xdotool key apostrophe key apostrophe key apostrophe
-bind KP_1 exec rpws 1
-bind KP_2 exec rpws 2
-bind KP_3 exec rpws 3
-bind KP_4 exec rpws 4
-bind KP_5 exec rpws 5
-bind KP_6 exec rpws 6
-bind KP_7 exec rpws 7
-bind KP_8 exec rpws 8
-bind KP_9 exec rpws 9
-bind KP_Separator exec xdotool key quotedbl key quotedbl key quotedbl
-bind Left focusleft
-bind minus hsplit
-bind Page_Down exec rpws prev
-bind Page_Up exec rpws next
-bind Print exec xfce4-screenshooter
-bind q kill
-bind Return exec x-terminal-emulator
-bind Right focusright
-bind r resize
-bind s-0 exec amixer set Master toggle
-bind s-1 exec rpws move1
-bind s-2 exec rpws move2
-bind s-3 exec rpws move3
-bind s-4 exec rpws move4
-bind s-5 exec rpws move5
-bind s-6 exec rpws move6
-bind s-7 exec rpws move7
-bind s-8 exec rpws move8
-bind s-9 exec rpws move9
-bind s-apostrophe colon
-bind s-a title
-bind s-b exec vorta
-bind s-Down exchangedown
-bind s-equal exec amixer set Master 5%+
-bind s-Escape exec /usr/bin/rpws restore /home/linaro/Desktop/01-document/dotfiles/rpws_layouts.dmp
-bind s-F1 exec reverse-thermal.sh
-bind s-g exec galculator
-bind s-KP_1 exec rpws move1
-bind s-KP_2 exec rpws move2
-bind s-KP_3 exec rpws move3
-bind s-KP_4 exec rpws move4
-bind s-KP_5 exec rpws move5
-bind s-KP_6 exec rpws move6
-bind s-KP_7 exec rpws move7
-bind s-KP_8 exec rpws move8
-bind s-KP_9 exec rpws move9
-bind s-Left exchangeleft
-bind s-minus exec amixer set Master 5%-
-bind space exec dmenu_run
-bind s-Page_Down exec rpws moveprev
-bind s-Page_Up exec rpws movenext
-bind s-Print exec scrot -s -e 'xclip -selection clipboard -t image/png -i $f && rm $f'
-bind s-q abort
-bind s-Return colon exec x-terminal-emulator -e 
-bind s-Right exchangeright
-bind s-space exec ratpoison -c "select \"$(ratpoison -c 'windows %n: %t (%c)' | dmenu -p 'Window:')\""
-bind s-Tab nextscreen
-bind s-Up exchangeup
-bind s-u redo
-bind s-w exec x-terminal-emulator -e nm-connection-editor
-bind s-x exec xnc
-bind Tab focus
+bind w exec thorium-browser
+bind v exec paste_clipboard_from_file.sh
 bind Up focusup
 bind u undo
-bind v exec paste_clipboard_from_file.sh
-bind w exec thorium-browser
-bind x exec xnedit
-
-definekey top M-ISO_Left_Tab prev
-definekey top M-Tab next
+bind Tab next
+bind t exec pcmanfm-qt --daemon-mode
+bind space exec dmenu_run
+bind Right focusright
+bind Return exec x-terminal-emulator
+bind r resize
+bind q delete
+bind Print exec xfce4-screenshooter
+bind Page_Up exec rpws prev
+bind Page_Down exec rpws next
+bind minus vsplit
+bind Left focusleft
+bind KP_Separator exec xdotool key quotedbl key quotedbl key quotedbl
+bind KP_9 exec rpws 9
+bind KP_8 exec rpws 8
+bind KP_7 exec rpws 7
+bind KP_6 exec rpws 6
+bind KP_5 exec rpws 5
+bind KP_4 exec rpws 4
+bind KP_3 exec rpws 3
+bind KP_2 exec rpws 2
+bind KP_1 exec rpws 1
+bind KP_0 exec xdotool key apostrophe key apostrophe key apostrophe
+bind i exec viewnior
+bind g exec gsimplecal
+bind F8 exec flatpak run io.github.zaps166.QMPlay2
+bind F7 exec flatpak run com.github.ryonakano.reco
+bind F6 exec flatpak run com.strlen.TreeSheets
+bind F5 exec flatpak run com.github.tenderowl.frog
+bind F4 exec flatpak run org.telegram.desktop
+bind F1 exec thermal.sh
+bind f only
+bind Escape exec /usr/bin/rpws dump /home/linaro/Desktop/01-document/dotfiles/rpws_layouts.dmp
+bind equal hsplit
+bind e exec xnedit
+bind Down focusdown
+bind c exec write_clipboard_to_file.sh
+bind BackSpace focus
+bind b exec x-terminal-emulator -e bpytop
+bind apostrophe colon exec x-terminal-emulator -e 
+bind 9 exec rpws 9
+bind 8 exec rpws 8
+bind 7 exec rpws 7
+bind 6 exec rpws 6
+bind 5 exec rpws 5
+bind 4 exec rpws 4
+bind 3 exec rpws 3
+bind 2 exec rpws 2
+bind 1 exec rpws 1
+bind 0 remove
+bind s-w exec x-terminal-emulator -e nm-connection-editor
+bind s-Up exchangeup
+bind s-u redo
+bind s-Tab prev
+bind s-t exec sudo pcmanfm-qt
+bind s-space exec ratpoison -c "select \"$(ratpoison -c 'windows %n: %t (%c)' | dmenu -p 'Window:')\""
+bind s-Right exchangeright
+bind s-Return exec sudo x-terminal-emulator
+bind s-q abort
+bind s-Print exec scrot -s -e 'xclip -selection clipboard -t image/png -i $f && rm $f'
+bind s-Page_Up exec rpws movenext
+bind s-Page_Down exec rpws moveprev
+bind s-minus exec amixer set Master 5%-
+bind s-Left exchangeleft
+bind s-KP_9 exec rpws move9
+bind s-KP_8 exec rpws move8
+bind s-KP_7 exec rpws move7
+bind s-KP_6 exec rpws move6
+bind s-KP_5 exec rpws move5
+bind s-KP_4 exec rpws move4
+bind s-KP_3 exec rpws move3
+bind s-KP_2 exec rpws move2
+bind s-KP_1 exec rpws move1
+bind s-g exec galculator
+bind s-F1 exec reverse-thermal.sh
+bind s-Escape exec /usr/bin/rpws restore /home/linaro/Desktop/01-document/dotfiles/rpws_layouts.dmp
+bind s-equal exec amixer set Master 5%+
+bind s-e exec xnc
+bind s-Down exchangedown
+bind s-BackSpace nextscreen
+bind s-b exec vorta
+bind s-apostrophe colon exec x-terminal-emulator -e sudo 
+bind s-a title
+bind s-9 exec rpws move9
+bind s-8 exec rpws move8
+bind s-7 exec rpws move7
+bind s-6 exec rpws move6
+bind s-5 exec rpws move5
+bind s-4 exec rpws move4
+bind s-3 exec rpws move3
+bind s-2 exec rpws move2
+bind s-1 exec rpws move1
+bind s-0 exec amixer set Master toggle
 {% endcodeblock %}
 
 #### ~/.rpbar.ini
