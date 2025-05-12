@@ -5,8 +5,9 @@ date: 2025-05-09
 type: post
 layout: post
 published: true
-slug: dynamic-performance-governor-management-script-with-systemd
-title: 'Dynamic Performance Governor Management Script with Systemd'
+slug: performance-governor-optimizations-script
+title: 'Performance Governor optimizations Script'
+comment: https://github.com/ChisBread/rk3588-gaming-step-by-step/tree/main/rk3588-enhance
 ---
 This guide presents a comprehensive, single approach to managing CPU, GPU, NPU, and DMC frequency governors on Linux systems, particularly for devices like the RK3588, by setting them to “performance” mode. This method emphasizes robustness, dynamic discovery of hardware, state persistence for reversibility, and proper integration with systemd. It combines the best practices from various methods into one refined solution.
 
