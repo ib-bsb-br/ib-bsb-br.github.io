@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2025-05-12T20:29:29+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">backup bash script</title><link href="https://ib.bsb.br/backup-bash-script/" rel="alternate" type="text/html" title="backup bash script" /><published>2025-05-12T00:00:00+00:00</published><updated>2025-05-12T18:04:46+00:00</updated><id>https://ib.bsb.br/backup-bash-script</id><content type="html" xml:base="https://ib.bsb.br/backup-bash-script/"><![CDATA[<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>#!/bin/bash
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2025-05-12T21:04:23+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">backup bash script</title><link href="https://ib.bsb.br/backup-bash-script/" rel="alternate" type="text/html" title="backup bash script" /><published>2025-05-12T00:00:00+00:00</published><updated>2025-05-12T18:04:46+00:00</updated><id>https://ib.bsb.br/backup-bash-script</id><content type="html" xml:base="https://ib.bsb.br/backup-bash-script/"><![CDATA[<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>#!/bin/bash
 
 # ==============================================================================
 # Script Name: comprehensive_backup_v2.sh
@@ -307,7 +307,539 @@ else
 fi
 
 exit 0
-</code></pre></div></div>]]></content><author><name></name></author><category term="scratchpad" /></entry><entry><title type="html">compare</title><link href="https://ib.bsb.br/compare/" rel="alternate" type="text/html" title="compare" /><published>2025-05-10T00:00:00+00:00</published><updated>2025-05-10T17:22:49+00:00</updated><id>https://ib.bsb.br/compare</id><content type="html" xml:base="https://ib.bsb.br/compare/"><![CDATA[<section class="code-block-container" role="group" aria-label="Markdown Code Block" data-filename="markdown_code_block.md" data-code="The task is to compare several scripts for their &quot;robustness&quot; and &quot;featurefullness&quot; and then identify the &quot;best one, the most effective one.&quot;
+</code></pre></div></div>]]></content><author><name></name></author><category term="scratchpad" /></entry><entry><title type="html">Fixing rk3588 Init Scripts</title><link href="https://ib.bsb.br/fixing-rk3588-init-scripts/" rel="alternate" type="text/html" title="Fixing rk3588 Init Scripts" /><published>2025-05-12T00:00:00+00:00</published><updated>2025-05-12T21:01:34+00:00</updated><id>https://ib.bsb.br/fixing-rk3588-init-scripts</id><content type="html" xml:base="https://ib.bsb.br/fixing-rk3588-init-scripts/"><![CDATA[<h2 id="whats-happening">What’s Happening</h2>
+
+<p>You encountered warnings about two scripts in your <code class="language-plaintext highlighter-rouge">/etc/init.d/</code> directory:</p>
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">mount_usb.sh</code></li>
+  <li><code class="language-plaintext highlighter-rouge">gobinet_boot.sh</code></li>
+</ul>
+
+<p>These warnings occurred because:</p>
+
+<ol>
+  <li>When enabling a service, Debian uses a tool called <code class="language-plaintext highlighter-rouge">insserv</code> to analyze all init scripts and determine their proper boot order.</li>
+  <li>This tool requires LSB (Linux Standard Base) headers in each script to understand dependencies and run order.</li>
+  <li>Your scripts lack these headers, causing the warnings.</li>
+</ol>
+
+<p><strong>Understanding the Core Problem</strong></p>
+
+<ul>
+  <li><strong>LSB Tags:</strong> SysV init scripts (those in <code class="language-plaintext highlighter-rouge">/etc/init.d/</code>) use special comment blocks (<code class="language-plaintext highlighter-rouge">### BEGIN INIT INFO ... ### END INIT INFO</code>) called LSB headers. These headers tell the system (via tools like <code class="language-plaintext highlighter-rouge">insserv</code> or <code class="language-plaintext highlighter-rouge">systemd</code>’s compatibility layer) about the service’s dependencies, what runlevels it should start/stop in, and provide descriptions. The warnings you saw mean these headers are missing or incomplete.</li>
+  <li><strong><code class="language-plaintext highlighter-rouge">mount_usb.sh</code>:</strong> This script’s logic (<code class="language-plaintext highlighter-rouge">if [ $ACTION == "add" ]</code>) indicates it’s designed to react to dynamic hardware events (USB stick plugged in/out). This is the job of <code class="language-plaintext highlighter-rouge">udev</code>, not the static boot sequence managed by init scripts.</li>
+  <li><strong><code class="language-plaintext highlighter-rouge">gobinet_boot.sh</code>:</strong> This script, which runs <code class="language-plaintext highlighter-rouge">quectel-CM</code> after a delay, is a more traditional candidate for a boot service, but it needs the proper LSB structure.</li>
+</ul>
+
+<hr />
+
+<p><strong>Part 1: Refactoring <code class="language-plaintext highlighter-rouge">mount_usb.sh</code> (The <code class="language-plaintext highlighter-rouge">udev</code> Approach)</strong></p>
+
+<p>This script should not be in <code class="language-plaintext highlighter-rouge">/etc/init.d/</code>. We’ll move its logic to a helper script called by a <code class="language-plaintext highlighter-rouge">udev</code> rule.</p>
+
+<p><strong>Step 1.1: Create/Move the Helper Script</strong></p>
+
+<p>Let’s place the helper script in <code class="language-plaintext highlighter-rouge">/usr/local/sbin/</code>, a standard location for locally installed system administration scripts.</p>
+
+<p>Original script location: <code class="language-plaintext highlighter-rouge">/etc/init.d/mount_usb.sh</code>
+New helper script location: <code class="language-plaintext highlighter-rouge">/usr/local/sbin/mount_usb_helper.sh</code></p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo mv</span> /etc/init.d/mount_usb.sh /usr/local/sbin/mount_usb_helper.sh
+<span class="nb">sudo chmod</span> +x /usr/local/sbin/mount_usb_helper.sh
+</code></pre></div></div>
+
+<p>Now, replace the content of <code class="language-plaintext highlighter-rouge">/usr/local/sbin/mount_usb_helper.sh</code> with this improved version:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c">#!/bin/bash</span>
+
+<span class="c"># Helper script to auto-mount/unmount USB VFAT drives, intended to be called by udev.</span>
+<span class="c"># $1 (DEVNAME): Device name (e.g., sdb1) passed by the udev rule via %k.</span>
+<span class="c"># $ACTION:      Environment variable (add/remove) set by udev.</span>
+
+<span class="nv">DEVNAME</span><span class="o">=</span><span class="s2">"</span><span class="k">${</span><span class="nv">1</span><span class="k">}</span><span class="s2">"</span>
+<span class="nv">MOUNT_BASE</span><span class="o">=</span><span class="s2">"/mnt/media"</span> <span class="c"># Or your preferred base path</span>
+<span class="nv">MOUNT_POINT</span><span class="o">=</span><span class="s2">"</span><span class="k">${</span><span class="nv">MOUNT_BASE</span><span class="k">}</span><span class="s2">/</span><span class="k">${</span><span class="nv">DEVNAME</span><span class="k">}</span><span class="s2">"</span>
+<span class="nv">LOG_TAG</span><span class="o">=</span><span class="s2">"usb-mount-helper"</span> <span class="c"># For syslog</span>
+
+<span class="c"># Function for logging to syslog (and optionally a dedicated file)</span>
+log_message<span class="o">()</span> <span class="o">{</span>
+    logger <span class="nt">-t</span> <span class="s2">"</span><span class="k">${</span><span class="nv">LOG_TAG</span><span class="k">}</span><span class="s2">"</span> <span class="nt">--</span> <span class="s2">"</span><span class="nv">$1</span><span class="s2">"</span> <span class="c"># -- ensures message isn't mistaken for options</span>
+    <span class="c"># Optional: echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" &gt;&gt; "/var/log/${LOG_TAG}.log"</span>
+<span class="o">}</span>
+
+<span class="k">if</span> <span class="o">[</span> <span class="nt">-z</span> <span class="s2">"</span><span class="nv">$DEVNAME</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then
+    </span>log_message <span class="s2">"Error: Device name not provided. Exiting."</span>
+    <span class="nb">exit </span>1
+<span class="k">fi</span>
+
+<span class="c"># Create the base mount directory if it doesn't exist</span>
+<span class="k">if</span> <span class="o">[</span> <span class="o">!</span> <span class="nt">-d</span> <span class="s2">"</span><span class="k">${</span><span class="nv">MOUNT_BASE</span><span class="k">}</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then
+    </span><span class="nb">mkdir</span> <span class="nt">-p</span> <span class="s2">"</span><span class="k">${</span><span class="nv">MOUNT_BASE</span><span class="k">}</span><span class="s2">"</span>
+    <span class="k">if</span> <span class="o">[</span> <span class="nv">$?</span> <span class="nt">-ne</span> 0 <span class="o">]</span><span class="p">;</span> <span class="k">then
+        </span>log_message <span class="s2">"Error: Could not create base mount directory </span><span class="k">${</span><span class="nv">MOUNT_BASE</span><span class="k">}</span><span class="s2">. Exiting."</span>
+        <span class="nb">exit </span>1
+    <span class="k">fi
+fi
+
+if</span> <span class="o">[</span> <span class="s2">"</span><span class="nv">$ACTION</span><span class="s2">"</span> <span class="o">==</span> <span class="s2">"add"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then
+    </span>log_message <span class="s2">"Add event for /dev/</span><span class="k">${</span><span class="nv">DEVNAME</span><span class="k">}</span><span class="s2">."</span>
+
+    <span class="c"># Check if already mounted using findmnt for reliability</span>
+    <span class="k">if </span>findmnt <span class="nt">--source</span> <span class="s2">"/dev/</span><span class="k">${</span><span class="nv">DEVNAME</span><span class="k">}</span><span class="s2">"</span> <span class="nt">--target</span> <span class="s2">"</span><span class="k">${</span><span class="nv">MOUNT_POINT</span><span class="k">}</span><span class="s2">"</span> <span class="o">&gt;</span> /dev/null<span class="p">;</span> <span class="k">then
+        </span>log_message <span class="s2">"/dev/</span><span class="k">${</span><span class="nv">DEVNAME</span><span class="k">}</span><span class="s2"> already mounted at </span><span class="k">${</span><span class="nv">MOUNT_POINT</span><span class="k">}</span><span class="s2">. Skipping."</span>
+        <span class="nb">exit </span>0
+    <span class="k">fi
+
+    if</span> <span class="o">[</span> <span class="o">!</span> <span class="nt">-d</span> <span class="s2">"</span><span class="k">${</span><span class="nv">MOUNT_POINT</span><span class="k">}</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then
+        </span><span class="nb">mkdir</span> <span class="nt">-p</span> <span class="s2">"</span><span class="k">${</span><span class="nv">MOUNT_POINT</span><span class="k">}</span><span class="s2">"</span>
+        <span class="k">if</span> <span class="o">[</span> <span class="nv">$?</span> <span class="nt">-ne</span> 0 <span class="o">]</span><span class="p">;</span> <span class="k">then
+            </span>log_message <span class="s2">"Error: Could not create mount point </span><span class="k">${</span><span class="nv">MOUNT_POINT</span><span class="k">}</span><span class="s2">. Exiting."</span>
+            <span class="nb">exit </span>1
+        <span class="k">fi
+    fi</span>
+
+    <span class="c"># Give the system a moment if needed (sometimes helpful for newly appeared devices)</span>
+    <span class="nb">sleep </span>1
+
+    <span class="c"># Mount options:</span>
+    <span class="c"># - iocharset=utf8: For correct filename encoding.</span>
+    <span class="c"># - uid=$(id -u linaro), gid=$(id -g linaro): Mounts as user 'linaro'.</span>
+    <span class="c">#   Replace 'linaro' with your desired username or a system user.</span>
+    <span class="c">#   Alternatively, use gid=plugdev (if users are in plugdev group) and appropriate fmask/dmask.</span>
+    <span class="c"># - fmask=0137, dmask=0027: File/Dir permissions.</span>
+    <span class="c">#   fmask=0137 -&gt; owner=rw, group=r, other= --- (640)</span>
+    <span class="c">#   dmask=0027 -&gt; owner=rwx, group=rx, other= --- (750)</span>
+    <span class="c">#   Adjust as needed. E.g., fmask=0117, dmask=0007 for rwx for owner, rwx for group.</span>
+    <span class="c"># - nofail: Prevents boot errors if USB device is problematic or not mountable.</span>
+    <span class="c"># - flush: Mounts VFAT with frequent flushing, good for removable media.</span>
+    <span class="c"># - sync: Can be used, but 'flush' is often preferred for VFAT on removable media.</span>
+    <span class="c">#         Using 'sync' for all I/O can slow things down significantly.</span>
+    <span class="c">#         The original script used 'sync' *after* mount, which is less effective.</span>
+    <span class="nv">USER_NAME</span><span class="o">=</span><span class="s2">"linaro"</span> <span class="c"># CHANGE THIS to your target user if needed</span>
+    <span class="nv">USER_ID</span><span class="o">=</span><span class="si">$(</span><span class="nb">id</span> <span class="nt">-u</span> <span class="s2">"</span><span class="nv">$USER_NAME</span><span class="s2">"</span><span class="si">)</span>
+    <span class="nv">GROUP_ID</span><span class="o">=</span><span class="si">$(</span><span class="nb">id</span> <span class="nt">-g</span> <span class="s2">"</span><span class="nv">$USER_NAME</span><span class="s2">"</span><span class="si">)</span>
+
+    <span class="k">if</span> <span class="o">[</span> <span class="nt">-z</span> <span class="s2">"</span><span class="nv">$USER_ID</span><span class="s2">"</span> <span class="o">]</span> <span class="o">||</span> <span class="o">[</span> <span class="nt">-z</span> <span class="s2">"</span><span class="nv">$GROUP_ID</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then
+        </span>log_message <span class="s2">"Error: Could not determine UID/GID for user '</span><span class="nv">$USER_NAME</span><span class="s2">'. Mounting with defaults."</span>
+        mount <span class="nt">-t</span> vfat <span class="nt">-o</span> <span class="s2">"iocharset=utf8,nofail,flush"</span> <span class="s2">"/dev/</span><span class="k">${</span><span class="nv">DEVNAME</span><span class="k">}</span><span class="s2">"</span> <span class="s2">"</span><span class="k">${</span><span class="nv">MOUNT_POINT</span><span class="k">}</span><span class="s2">"</span>
+    <span class="k">else
+        </span>mount <span class="nt">-t</span> vfat <span class="nt">-o</span> <span class="s2">"iocharset=utf8,uid=</span><span class="k">${</span><span class="nv">USER_ID</span><span class="k">}</span><span class="s2">,gid=</span><span class="k">${</span><span class="nv">GROUP_ID</span><span class="k">}</span><span class="s2">,fmask=0137,dmask=0027,nofail,flush"</span> <span class="s2">"/dev/</span><span class="k">${</span><span class="nv">DEVNAME</span><span class="k">}</span><span class="s2">"</span> <span class="s2">"</span><span class="k">${</span><span class="nv">MOUNT_POINT</span><span class="k">}</span><span class="s2">"</span>
+    <span class="k">fi
+
+    if</span> <span class="o">[</span> <span class="nv">$?</span> <span class="nt">-eq</span> 0 <span class="o">]</span><span class="p">;</span> <span class="k">then
+        </span>log_message <span class="s2">"Successfully mounted /dev/</span><span class="k">${</span><span class="nv">DEVNAME</span><span class="k">}</span><span class="s2"> to </span><span class="k">${</span><span class="nv">MOUNT_POINT</span><span class="k">}</span><span class="s2">."</span>
+    <span class="k">else
+        </span>log_message <span class="s2">"Error: Failed to mount /dev/</span><span class="k">${</span><span class="nv">DEVNAME</span><span class="k">}</span><span class="s2"> to </span><span class="k">${</span><span class="nv">MOUNT_POINT</span><span class="k">}</span><span class="s2">. Cleaning up directory."</span>
+        <span class="nb">rmdir</span> <span class="s2">"</span><span class="k">${</span><span class="nv">MOUNT_POINT</span><span class="k">}</span><span class="s2">"</span> 2&gt;/dev/null <span class="c"># Attempt to remove if empty</span>
+        <span class="nb">exit </span>1
+    <span class="k">fi
+
+elif</span> <span class="o">[</span> <span class="s2">"</span><span class="nv">$ACTION</span><span class="s2">"</span> <span class="o">==</span> <span class="s2">"remove"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then
+    </span>log_message <span class="s2">"Remove event for device that might be mounted at </span><span class="k">${</span><span class="nv">MOUNT_POINT</span><span class="k">}</span><span class="s2"> (was /dev/</span><span class="k">${</span><span class="nv">DEVNAME</span><span class="k">}</span><span class="s2">)."</span>
+
+    <span class="c"># Check if the specific device is mounted at the expected point</span>
+    <span class="k">if </span>findmnt <span class="nt">--source</span> <span class="s2">"/dev/</span><span class="k">${</span><span class="nv">DEVNAME</span><span class="k">}</span><span class="s2">"</span> <span class="nt">--target</span> <span class="s2">"</span><span class="k">${</span><span class="nv">MOUNT_POINT</span><span class="k">}</span><span class="s2">"</span> <span class="o">&gt;</span> /dev/null<span class="p">;</span> <span class="k">then
+        </span>umount <span class="nt">-f</span> <span class="s2">"</span><span class="k">${</span><span class="nv">MOUNT_POINT</span><span class="k">}</span><span class="s2">"</span> <span class="c"># Force unmount</span>
+        <span class="k">if</span> <span class="o">[</span> <span class="nv">$?</span> <span class="nt">-eq</span> 0 <span class="o">]</span><span class="p">;</span> <span class="k">then
+            </span>log_message <span class="s2">"Successfully unmounted </span><span class="k">${</span><span class="nv">MOUNT_POINT</span><span class="k">}</span><span class="s2">."</span>
+        <span class="k">else
+            </span>log_message <span class="s2">"Warning: Failed to unmount </span><span class="k">${</span><span class="nv">MOUNT_POINT</span><span class="k">}</span><span class="s2">. Attempting lazy unmount."</span>
+            umount <span class="nt">-l</span> <span class="s2">"</span><span class="k">${</span><span class="nv">MOUNT_POINT</span><span class="k">}</span><span class="s2">"</span> <span class="c"># Lazy unmount as a fallback</span>
+            <span class="k">if</span> <span class="o">[</span> <span class="nv">$?</span> <span class="nt">-eq</span> 0 <span class="o">]</span><span class="p">;</span> <span class="k">then
+                </span>log_message <span class="s2">"Successfully lazy unmounted </span><span class="k">${</span><span class="nv">MOUNT_POINT</span><span class="k">}</span><span class="s2">."</span>
+            <span class="k">else
+                </span>log_message <span class="s2">"Error: Failed to lazy unmount </span><span class="k">${</span><span class="nv">MOUNT_POINT</span><span class="k">}</span><span class="s2">."</span>
+            <span class="k">fi
+        fi
+    elif </span>findmnt <span class="s2">"</span><span class="k">${</span><span class="nv">MOUNT_POINT</span><span class="k">}</span><span class="s2">"</span> <span class="o">&gt;</span> /dev/null<span class="p">;</span> <span class="k">then</span>
+        <span class="c"># The mount point exists but isn't our device, or our device was already unmounted.</span>
+        log_message <span class="s2">"Mount point </span><span class="k">${</span><span class="nv">MOUNT_POINT</span><span class="k">}</span><span class="s2"> is in use by another device or /dev/</span><span class="k">${</span><span class="nv">DEVNAME</span><span class="k">}</span><span class="s2"> already unmounted. Won't force unmount other devices."</span>
+    <span class="k">else
+        </span>log_message <span class="s2">"Mount point </span><span class="k">${</span><span class="nv">MOUNT_POINT</span><span class="k">}</span><span class="s2"> not found or not mounted. Skipping unmount logic."</span>
+    <span class="k">fi</span>
+
+    <span class="c"># Remove the directory if it exists and is empty</span>
+    <span class="k">if</span> <span class="o">[</span> <span class="nt">-d</span> <span class="s2">"</span><span class="k">${</span><span class="nv">MOUNT_POINT</span><span class="k">}</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then
+        if</span> <span class="o">[</span> <span class="nt">-z</span> <span class="s2">"</span><span class="si">$(</span><span class="nb">ls</span> <span class="nt">-A</span> <span class="s2">"</span><span class="k">${</span><span class="nv">MOUNT_POINT</span><span class="k">}</span><span class="s2">"</span><span class="si">)</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then</span> <span class="c"># Check if directory is empty</span>
+            <span class="nb">rmdir</span> <span class="s2">"</span><span class="k">${</span><span class="nv">MOUNT_POINT</span><span class="k">}</span><span class="s2">"</span>
+            <span class="k">if</span> <span class="o">[</span> <span class="nv">$?</span> <span class="nt">-eq</span> 0 <span class="o">]</span><span class="p">;</span> <span class="k">then
+                </span>log_message <span class="s2">"Successfully removed directory </span><span class="k">${</span><span class="nv">MOUNT_POINT</span><span class="k">}</span><span class="s2">."</span>
+            <span class="k">else
+                </span>log_message <span class="s2">"Note: Directory </span><span class="k">${</span><span class="nv">MOUNT_POINT</span><span class="k">}</span><span class="s2"> not empty after unmount or error removing."</span>
+            <span class="k">fi
+        else
+            </span>log_message <span class="s2">"Note: Directory </span><span class="k">${</span><span class="nv">MOUNT_POINT</span><span class="k">}</span><span class="s2"> is not empty. Not removing."</span>
+        <span class="k">fi
+    fi
+else
+    </span>log_message <span class="s2">"Warning: Unknown or no ACTION ('</span><span class="nv">$ACTION</span><span class="s2">') for device /dev/</span><span class="nv">$DEVNAME</span><span class="s2">. Nothing to do."</span>
+<span class="k">fi
+
+</span><span class="nb">exit </span>0
+</code></pre></div></div>
+
+<p><strong>Step 1.2: Create the <code class="language-plaintext highlighter-rouge">udev</code> Rule</strong></p>
+
+<p>Create a new file named <code class="language-plaintext highlighter-rouge">/etc/udev/rules.d/85-automount-usb-vfat.rules</code>:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code># Udev rule for automatically mounting/unmounting VFAT USB block devices
+
+# Match USB block devices (e.g., partitions on USB sticks) that are VFAT
+# SUBSYSTEMS=="usb": Ensures the device is on the USB bus.
+# SUBSYSTEM=="block": Ensures it's a block device.
+# DRIVERS=="sd": Further refinement for SCSI-like devices (common for USB storage).
+# KERNEL=="sd[a-z]*[0-9]": Matches partitions like sdb1, sdc1. Using sd[a-z]* instead of sd[b-z] for more generality if system disk is nvme.
+# ENV{ID_FS_TYPE}=="vfat": Only act on VFAT filesystems.
+# ACTION=="add": Trigger on device addition.
+# RUN+="/usr/local/sbin/mount_usb_helper.sh %k": Execute helper. %k is kernel name (e.g., sdb1).
+ACTION=="add", SUBSYSTEMS=="usb", SUBSYSTEM=="block", DRIVERS=="sd", KERNEL=="sd[a-z]*[0-9]", ENV{ID_FS_TYPE}=="vfat", RUN+="/usr/local/sbin/mount_usb_helper.sh %k"
+
+# Rule for removal. Simpler match as we mainly care about the KERNEL name passed to the script.
+ACTION=="remove", SUBSYSTEMS=="usb", SUBSYSTEM=="block", DRIVERS=="sd", KERNEL=="sd[a-z]*[0-9]", RUN+="/usr/local/sbin/mount_usb_helper.sh %k"
+
+</code></pre></div></div>
+<p><em>Self-correction:</em> The <code class="language-plaintext highlighter-rouge">KERNEL=="sd[a-z]*[0-9]"</code> combined with <code class="language-plaintext highlighter-rouge">SUBSYSTEMS=="usb"</code> is generally safe. If your main system disk is also USB and named e.g. <code class="language-plaintext highlighter-rouge">sda</code>, you might add <code class="language-plaintext highlighter-rouge">ATTRS{removable}=="1"</code> to only target removable USB block devices, or refine the <code class="language-plaintext highlighter-rouge">KERNEL</code> pattern like <code class="language-plaintext highlighter-rouge">sd[b-z]*[0-9]</code>.</p>
+
+<p><strong>Step 1.3: Apply <code class="language-plaintext highlighter-rouge">udev</code> Changes</strong></p>
+<ol>
+  <li>Reload <code class="language-plaintext highlighter-rouge">udev</code> rules:
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>udevadm control <span class="nt">--reload-rules</span>
+</code></pre></div>    </div>
+  </li>
+  <li>Trigger <code class="language-plaintext highlighter-rouge">udev</code> for existing devices (or just re-plug your USB device):
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>udevadm trigger
+</code></pre></div>    </div>
+    <p>Now, when you plug in a VFAT USB drive, it should be automatically mounted by your user <code class="language-plaintext highlighter-rouge">linaro</code> (or the user you configured) under <code class="language-plaintext highlighter-rouge">/mnt/media/DEVICE_NAME</code>. Logs will go to syslog tagged with <code class="language-plaintext highlighter-rouge">usb-mount-helper</code>.</p>
+  </li>
+</ol>
+
+<hr />
+
+<p><strong>Part 2: Refactoring <code class="language-plaintext highlighter-rouge">gobinet_boot.sh</code> (SysV init script with LSB)</strong></p>
+
+<p>This script will remain in <code class="language-plaintext highlighter-rouge">/etc/init.d/</code> but will be made LSB-compliant.</p>
+
+<p><strong>Step 2.1: Edit <code class="language-plaintext highlighter-rouge">/etc/init.d/gobinet_boot.sh</code></strong></p>
+
+<p>Replace its content with:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c">#!/bin/sh</span>
+<span class="c">### BEGIN INIT INFO</span>
+<span class="c"># Provides:          gobinet-boot</span>
+<span class="c"># Required-Start:    $remote_fs $syslog</span>
+<span class="c"># Required-Stop:     $remote_fs $syslog</span>
+<span class="c"># Should-Start:      $network # If quectel-CM *needs* basic networking already up.</span>
+<span class="c"># Default-Start:     2 3 4 5</span>
+<span class="c"># Default-Stop:      0 1 6</span>
+<span class="c"># Short-Description: Initialize Quectel GobiNet device</span>
+<span class="c"># Description:       This service waits for a specified time and then runs</span>
+<span class="c">#                    the quectel-CM command to initialize GobiNet hardware.</span>
+<span class="c">#                    The Quectel module might provide network connectivity.</span>
+<span class="c">### END INIT INFO</span>
+
+<span class="c"># PATH should only include /usr/* if it runs after the mountnfs.sh script</span>
+<span class="nv">PATH</span><span class="o">=</span>/sbin:/usr/sbin:/bin:/usr/bin
+<span class="nv">DESC</span><span class="o">=</span><span class="s2">"Quectel GobiNet initialization"</span>
+<span class="nv">NAME</span><span class="o">=</span>gobinet-boot <span class="c"># LSB 'Provides' name</span>
+<span class="nv">DAEMON_COMMAND</span><span class="o">=</span>/sbin/quectel-CM <span class="c"># The command to run</span>
+<span class="nv">SCRIPTNAME</span><span class="o">=</span>/etc/init.d/gobinet_boot.sh <span class="c"># Actual script name</span>
+<span class="nv">PIDFILE</span><span class="o">=</span>/var/run/<span class="k">${</span><span class="nv">NAME</span><span class="k">}</span>.pid
+<span class="nv">LOGFILE</span><span class="o">=</span>/var/log/<span class="k">${</span><span class="nv">NAME</span><span class="k">}</span>.log
+<span class="nv">SLEEP_DURATION</span><span class="o">=</span>60 <span class="c"># Original sleep duration</span>
+
+<span class="c"># Exit if the command is not installed</span>
+<span class="o">[</span> <span class="nt">-x</span> <span class="s2">"</span><span class="nv">$DAEMON_COMMAND</span><span class="s2">"</span> <span class="o">]</span> <span class="o">||</span> <span class="o">{</span> <span class="nb">echo</span> <span class="s2">"</span><span class="nv">$DAEMON_COMMAND</span><span class="s2"> not found or not executable."</span><span class="p">;</span> <span class="nb">exit </span>1<span class="p">;</span> <span class="o">}</span>
+
+<span class="c"># Read configuration variable file if it is present</span>
+<span class="o">[</span> <span class="nt">-r</span> /etc/default/<span class="nv">$NAME</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="nb">.</span> /etc/default/<span class="nv">$NAME</span>
+
+<span class="c"># Load the VERBOSE setting and other rcS variables</span>
+<span class="nb">.</span> /lib/init/vars.sh
+
+<span class="c"># Define LSB log_* functions.</span>
+<span class="nb">.</span> /lib/lsb/init-functions
+
+<span class="c"># Function to log messages with timestamp</span>
+_log_msg<span class="o">()</span> <span class="o">{</span>
+    <span class="nb">echo</span> <span class="s2">"</span><span class="si">$(</span><span class="nb">date</span> <span class="s1">'+%Y-%m-%d %H:%M:%S'</span><span class="si">)</span><span class="s2"> - </span><span class="nv">$1</span><span class="s2">"</span> <span class="o">&gt;&gt;</span> <span class="s2">"</span><span class="nv">$LOGFILE</span><span class="s2">"</span>
+    log_action_msg <span class="s2">"</span><span class="nv">$1</span><span class="s2">"</span> <span class="c"># For console via LSB</span>
+<span class="o">}</span>
+
+<span class="c">#</span>
+<span class="c"># Function that starts the service</span>
+<span class="c">#</span>
+do_start<span class="o">()</span>
+<span class="o">{</span>
+    <span class="c"># Check if already running based on PID file and process</span>
+    <span class="k">if</span> <span class="o">[</span> <span class="nt">-f</span> <span class="s2">"</span><span class="nv">$PIDFILE</span><span class="s2">"</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> ps <span class="nt">-p</span> <span class="s2">"</span><span class="si">$(</span><span class="nb">cat</span> <span class="s2">"</span><span class="nv">$PIDFILE</span><span class="s2">"</span><span class="si">)</span><span class="s2">"</span> <span class="o">&gt;</span> /dev/null 2&gt;&amp;1<span class="p">;</span> <span class="k">then
+        </span>_log_msg <span class="s2">"</span><span class="nv">$DESC</span><span class="s2"> (</span><span class="nv">$NAME</span><span class="s2">) is already running (PID </span><span class="si">$(</span><span class="nb">cat</span> <span class="nv">$PIDFILE</span><span class="si">)</span><span class="s2">)."</span>
+        <span class="k">return </span>1 <span class="c"># LSB code for already running</span>
+    <span class="k">fi
+
+    </span>_log_msg <span class="s2">"Starting </span><span class="nv">$DESC</span><span class="s2"> (</span><span class="nv">$NAME</span><span class="s2">)..."</span>
+
+    <span class="c"># This subshell runs the sleep and the command in the background.</span>
+    <span class="c"># IMPORTANT: This PID management is basic. If quectel-CM is a true daemon,</span>
+    <span class="c"># it should create its own PID file. If it does, modify this script to use that.</span>
+    <span class="o">(</span>
+        _log_msg <span class="s2">"Subshell: Sleeping for </span><span class="nv">$SLEEP_DURATION</span><span class="s2"> seconds before running </span><span class="nv">$DAEMON_COMMAND</span><span class="s2">."</span>
+        <span class="nb">sleep</span> <span class="s2">"</span><span class="nv">$SLEEP_DURATION</span><span class="s2">"</span>
+        _log_msg <span class="s2">"Subshell: Executing </span><span class="nv">$DAEMON_COMMAND</span><span class="s2">."</span>
+        <span class="c"># Redirect quectel-CM's stdout and stderr to the log file</span>
+        <span class="s2">"</span><span class="nv">$DAEMON_COMMAND</span><span class="s2">"</span> <span class="o">&gt;&gt;</span> <span class="s2">"</span><span class="nv">$LOGFILE</span><span class="s2">"</span> 2&gt;&amp;1
+        _log_msg <span class="s2">"Subshell: </span><span class="nv">$DAEMON_COMMAND</span><span class="s2"> finished or daemonized. Subshell exiting."</span>
+        <span class="c"># If quectel-CM daemonizes and creates its own PID, this outer PID is not useful after this point.</span>
+    <span class="o">)</span> &amp;
+    <span class="c"># Store the PID of the backgrounded subshell</span>
+    <span class="nb">echo</span> <span class="nv">$!</span> <span class="o">&gt;</span> <span class="s2">"</span><span class="nv">$PIDFILE</span><span class="s2">"</span>
+
+    <span class="k">if</span> <span class="o">[</span> <span class="nv">$?</span> <span class="nt">-eq</span> 0 <span class="o">]</span><span class="p">;</span> <span class="k">then
+        </span>_log_msg <span class="s2">"</span><span class="nv">$DESC</span><span class="s2"> (</span><span class="nv">$NAME</span><span class="s2">) started (subshell PID </span><span class="nv">$!</span><span class="s2">). Check </span><span class="nv">$LOGFILE</span><span class="s2"> for </span><span class="nv">$DAEMON_COMMAND</span><span class="s2"> output."</span>
+        <span class="k">return </span>0 <span class="c"># Success</span>
+    <span class="k">else
+        </span>_log_msg <span class="s2">"Failed to start </span><span class="nv">$DESC</span><span class="s2"> (</span><span class="nv">$NAME</span><span class="s2">) subshell."</span>
+        <span class="nb">rm</span> <span class="nt">-f</span> <span class="s2">"</span><span class="nv">$PIDFILE</span><span class="s2">"</span> <span class="c"># Clean up PID file on failure</span>
+        <span class="k">return </span>2 <span class="c"># LSB code for generic error</span>
+    <span class="k">fi</span>
+<span class="o">}</span>
+
+<span class="c">#</span>
+<span class="c"># Function that stops the service</span>
+<span class="c">#</span>
+do_stop<span class="o">()</span>
+<span class="o">{</span>
+    _log_msg <span class="s2">"Stopping </span><span class="nv">$DESC</span><span class="s2"> (</span><span class="nv">$NAME</span><span class="s2">)..."</span>
+
+    <span class="k">if</span> <span class="o">[</span> <span class="o">!</span> <span class="nt">-f</span> <span class="s2">"</span><span class="nv">$PIDFILE</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then
+        </span>_log_msg <span class="s2">"</span><span class="nv">$DESC</span><span class="s2"> (</span><span class="nv">$NAME</span><span class="s2">) PID file not found. Assuming not running or already stopped."</span>
+        <span class="k">return </span>1 <span class="c"># LSB code for not running</span>
+    <span class="k">fi
+
+    </span><span class="nv">PID_TO_KILL</span><span class="o">=</span><span class="si">$(</span><span class="nb">cat</span> <span class="s2">"</span><span class="nv">$PIDFILE</span><span class="s2">"</span><span class="si">)</span>
+    <span class="k">if</span> <span class="o">!</span> ps <span class="nt">-p</span> <span class="s2">"</span><span class="nv">$PID_TO_KILL</span><span class="s2">"</span> <span class="o">&gt;</span> /dev/null 2&gt;&amp;1<span class="p">;</span> <span class="k">then
+        </span>_log_msg <span class="s2">"</span><span class="nv">$DESC</span><span class="s2"> (</span><span class="nv">$NAME</span><span class="s2">) (PID </span><span class="nv">$PID_TO_KILL</span><span class="s2"> from PID file) not running. Removing stale PID file."</span>
+        <span class="nb">rm</span> <span class="nt">-f</span> <span class="s2">"</span><span class="nv">$PIDFILE</span><span class="s2">"</span>
+        <span class="k">return </span>1 <span class="c"># LSB code for not running</span>
+    <span class="k">fi</span>
+
+    <span class="c"># Attempt to stop the process found in the PID file.</span>
+    <span class="c"># This will kill the subshell. If quectel-CM daemonized and detached,</span>
+    <span class="c"># this won't stop the actual quectel-CM daemon unless it's a child of the subshell</span>
+    <span class="c"># and gets killed when the subshell (its parent) is terminated.</span>
+    <span class="c"># For a true daemon, you'd need to know its actual PID or have it respond to signals.</span>
+    <span class="c"># The `start-stop-daemon --stop` utility is more robust if the process behaves like a daemon.</span>
+    <span class="c"># However, we are targeting the subshell's PID here.</span>
+    <span class="nb">kill</span> <span class="s2">"</span><span class="nv">$PID_TO_KILL</span><span class="s2">"</span>
+    <span class="c"># Allow some time for the process to terminate</span>
+    <span class="nb">sleep </span>2
+
+    <span class="k">if</span> <span class="o">!</span> ps <span class="nt">-p</span> <span class="s2">"</span><span class="nv">$PID_TO_KILL</span><span class="s2">"</span> <span class="o">&gt;</span> /dev/null 2&gt;&amp;1<span class="p">;</span> <span class="k">then
+        </span>_log_msg <span class="s2">"</span><span class="nv">$DESC</span><span class="s2"> (</span><span class="nv">$NAME</span><span class="s2">) (PID </span><span class="nv">$PID_TO_KILL</span><span class="s2">) stopped successfully."</span>
+        <span class="nb">rm</span> <span class="nt">-f</span> <span class="s2">"</span><span class="nv">$PIDFILE</span><span class="s2">"</span>
+        <span class="k">return </span>0 <span class="c"># Success</span>
+    <span class="k">else
+        </span>_log_msg <span class="s2">"Failed to stop </span><span class="nv">$DESC</span><span class="s2"> (</span><span class="nv">$NAME</span><span class="s2">) (PID </span><span class="nv">$PID_TO_KILL</span><span class="s2">) with SIGTERM. Sending SIGKILL."</span>
+        <span class="nb">kill</span> <span class="nt">-9</span> <span class="s2">"</span><span class="nv">$PID_TO_KILL</span><span class="s2">"</span>
+        <span class="nb">sleep </span>1
+        <span class="k">if</span> <span class="o">!</span> ps <span class="nt">-p</span> <span class="s2">"</span><span class="nv">$PID_TO_KILL</span><span class="s2">"</span> <span class="o">&gt;</span> /dev/null 2&gt;&amp;1<span class="p">;</span> <span class="k">then
+            </span>_log_msg <span class="s2">"</span><span class="nv">$DESC</span><span class="s2"> (</span><span class="nv">$NAME</span><span class="s2">) (PID </span><span class="nv">$PID_TO_KILL</span><span class="s2">) killed successfully."</span>
+            <span class="nb">rm</span> <span class="nt">-f</span> <span class="s2">"</span><span class="nv">$PIDFILE</span><span class="s2">"</span>
+            <span class="k">return </span>0 <span class="c"># Success</span>
+        <span class="k">else
+            </span>_log_msg <span class="s2">"Error: Failed to kill </span><span class="nv">$DESC</span><span class="s2"> (</span><span class="nv">$NAME</span><span class="s2">) (PID </span><span class="nv">$PID_TO_KILL</span><span class="s2">) even with SIGKILL."</span>
+            <span class="k">return </span>2 <span class="c"># LSB code for generic error</span>
+        <span class="k">fi
+    fi</span>
+<span class="o">}</span>
+
+<span class="c">#</span>
+<span class="c"># Function that gets the status of the service</span>
+<span class="c">#</span>
+do_status<span class="o">()</span>
+<span class="o">{</span>
+    <span class="c"># status_of_proc -p "$PIDFILE" "$DAEMON_COMMAND" "$NAME"</span>
+    <span class="c"># The above LSB function is good if DAEMON_COMMAND is the actual long-running process name.</span>
+    <span class="c"># Since we are managing a subshell, we'll check the PID from the file.</span>
+    <span class="k">if</span> <span class="o">[</span> <span class="nt">-f</span> <span class="s2">"</span><span class="nv">$PIDFILE</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then
+        </span><span class="nv">SERVICE_PID</span><span class="o">=</span><span class="si">$(</span><span class="nb">cat</span> <span class="s2">"</span><span class="nv">$PIDFILE</span><span class="s2">"</span><span class="si">)</span>
+        <span class="k">if </span>ps <span class="nt">-p</span> <span class="s2">"</span><span class="nv">$SERVICE_PID</span><span class="s2">"</span> <span class="o">&gt;</span> /dev/null 2&gt;&amp;1<span class="p">;</span> <span class="k">then
+            </span>log_success_msg <span class="s2">"</span><span class="nv">$DESC</span><span class="s2"> (</span><span class="nv">$NAME</span><span class="s2">) is running with PID </span><span class="nv">$SERVICE_PID</span><span class="s2">."</span>
+            <span class="c"># You could add more info here, e.g., check if quectel-CM is also running if it's a child.</span>
+            <span class="nb">exit </span>0 <span class="c"># LSB code for running</span>
+        <span class="k">else
+            </span>log_failure_msg <span class="s2">"</span><span class="nv">$DESC</span><span class="s2"> (</span><span class="nv">$NAME</span><span class="s2">) PID file exists, but process </span><span class="nv">$SERVICE_PID</span><span class="s2"> is not running. Stale PID file?"</span>
+            <span class="nb">exit </span>1 <span class="c"># LSB code for not running but PID file exists (stale)</span>
+        <span class="k">fi
+    else
+        </span>log_failure_msg <span class="s2">"</span><span class="nv">$DESC</span><span class="s2"> (</span><span class="nv">$NAME</span><span class="s2">) is not running (no PID file)."</span>
+        <span class="nb">exit </span>3 <span class="c"># LSB code for not running</span>
+    <span class="k">fi</span>
+<span class="o">}</span>
+
+
+<span class="k">case</span> <span class="s2">"</span><span class="nv">$1</span><span class="s2">"</span> <span class="k">in
+  </span>start<span class="p">)</span>
+    do_start
+    <span class="nb">exit</span> <span class="nv">$?</span>
+    <span class="p">;;</span>
+  stop<span class="p">)</span>
+    do_stop
+    <span class="nb">exit</span> <span class="nv">$?</span>
+    <span class="p">;;</span>
+  status<span class="p">)</span>
+    do_status
+    <span class="p">;;</span>
+  restart|force-reload<span class="p">)</span>
+    _log_msg <span class="s2">"Restarting </span><span class="nv">$DESC</span><span class="s2"> (</span><span class="nv">$NAME</span><span class="s2">)..."</span>
+    do_stop
+    <span class="c"># Allow some time for graceful shutdown before restarting</span>
+    <span class="nb">sleep </span>2
+    do_start
+    <span class="nb">exit</span> <span class="nv">$?</span>
+    <span class="p">;;</span>
+  <span class="k">*</span><span class="p">)</span>
+    <span class="nb">echo</span> <span class="s2">"Usage: </span><span class="nv">$SCRIPTNAME</span><span class="s2"> {start|stop|status|restart}"</span> <span class="o">&gt;</span>&amp;2
+    <span class="nb">exit </span>3
+    <span class="p">;;</span>
+<span class="k">esac</span>
+
+<span class="nb">exit </span>0
+</code></pre></div></div>
+
+<p><strong>Step 2.2: Make the script executable</strong></p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo chmod</span> +x /etc/init.d/gobinet_boot.sh
+</code></pre></div></div>
+
+<p><strong>Step 2.3: Test the script</strong></p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo</span> /etc/init.d/gobinet_boot.sh start
+<span class="nb">sudo</span> /etc/init.d/gobinet_boot.sh status
+<span class="c"># Wait for more than SLEEP_DURATION to see if quectel-CM runs</span>
+<span class="nb">sudo</span> /etc/init.d/gobinet_boot.sh status
+<span class="nb">sudo</span> /etc/init.d/gobinet_boot.sh stop
+</code></pre></div></div>
+<p>Check <code class="language-plaintext highlighter-rouge">/var/log/gobinet-boot.log</code> for output.</p>
+
+<p><strong>Step 2.4: Update System’s Understanding of the Service</strong>
+If you had previously enabled it with <code class="language-plaintext highlighter-rouge">systemd-sysv-install</code> or <code class="language-plaintext highlighter-rouge">update-rc.d</code>, systemd might still have an old version of its generated unit.</p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>systemctl daemon-reload
+<span class="c"># If you want to ensure it's enabled for boot (using systemd's SysV generator):</span>
+<span class="nb">sudo </span>systemctl <span class="nb">enable </span>gobinet_boot.sh <span class="c"># Or it might be gobinet-boot based on 'Provides'</span>
+</code></pre></div></div>
+<p>The <code class="language-plaintext highlighter-rouge">insserv</code> warnings for <code class="language-plaintext highlighter-rouge">gobinet_boot.sh</code> should now be gone.</p>
+
+<p><strong>Important Notes for <code class="language-plaintext highlighter-rouge">gobinet_boot.sh</code>:</strong></p>
+<ul>
+  <li><strong><code class="language-plaintext highlighter-rouge">quectel-CM</code> Behavior:</strong> The provided script assumes <code class="language-plaintext highlighter-rouge">quectel-CM</code> is a command that either:
+    <ol>
+      <li>Initializes hardware and then exits.</li>
+      <li>Starts its own daemon process and detaches correctly (in which case the PID in <code class="language-plaintext highlighter-rouge">/var/run/gobinet-boot.pid</code> is only for the initial subshell).
+If <code class="language-plaintext highlighter-rouge">quectel-CM</code> is meant to run continuously as a foreground process <em>managed by the init script</em>, the init script would need to be more complex, likely using <code class="language-plaintext highlighter-rouge">start-stop-daemon</code> to manage it directly.</li>
+    </ol>
+  </li>
+  <li><strong>Dependencies (<code class="language-plaintext highlighter-rouge">Required-Start</code>, <code class="language-plaintext highlighter-rouge">Should-Start</code>):</strong>
+    <ul>
+      <li><code class="language-plaintext highlighter-rouge">$remote_fs $syslog</code>: Standard, almost always needed.</li>
+      <li><code class="language-plaintext highlighter-rouge">$network</code>: Added as <code class="language-plaintext highlighter-rouge">Should-Start</code>. If <code class="language-plaintext highlighter-rouge">/sbin/quectel-CM</code> <em>needs</em> the network to be up before it can configure the Quectel modem, this is appropriate. If the Quectel modem <em>provides</em> a primary network interface, then this script should likely start <em>before</em> the generic <code class="language-plaintext highlighter-rouge">$network</code> target, or it might be part of a more specific modem management service. You might need to remove <code class="language-plaintext highlighter-rouge">$network</code> or change it to something like <code class="language-plaintext highlighter-rouge">Before=network.target</code> in a systemd unit.</li>
+    </ul>
+  </li>
+  <li><strong><code class="language-plaintext highlighter-rouge">sleep 60</code>:</strong> This mimics the original script’s delay. In a production environment, especially with systemd, you’d ideally look for ways to trigger <code class="language-plaintext highlighter-rouge">quectel-CM</code> based on device availability or other events rather than a fixed sleep, if possible.</li>
+</ul>
+
+<hr />
+
+<p><strong>Part 3: The Systemd Native Unit Approach (Recommended for Debian Bullseye)</strong></p>
+
+<p>While the above steps fix the LSB warnings for your SysV init scripts, Debian Bullseye uses <code class="language-plaintext highlighter-rouge">systemd</code> as its primary init system. Creating native <code class="language-plaintext highlighter-rouge">systemd</code> unit files is the modern, more robust, and flexible way to manage services.</p>
+
+<p><strong>3.1 For <code class="language-plaintext highlighter-rouge">gobinet_boot.sh</code> functionality -&gt; <code class="language-plaintext highlighter-rouge">gobinet-boot.service</code></strong></p>
+
+<p>Create <code class="language-plaintext highlighter-rouge">/etc/systemd/system/gobinet-boot.service</code>:</p>
+
+<div class="language-ini highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nn">[Unit]</span>
+<span class="py">Description</span><span class="p">=</span><span class="s">Quectel GobiNet Initialization Service</span>
+<span class="py">Documentation</span><span class="p">=</span><span class="s">man:quectel-CM(8) # If a man page exists</span>
+<span class="c"># If it needs to run after basic network configuration is attempted:
+# After=network.target syslog.target
+# If it needs to run before network-online.target is reached:
+# Before=network-online.target
+# If the GobiNet modem *provides* network, dependencies might be more complex
+# or it might be better integrated with ModemManager or netplan/ifupdown.
+# For now, let's assume it runs after basic system services are up.
+</span><span class="py">After</span><span class="p">=</span><span class="s">syslog.target local-fs.target</span>
+
+<span class="nn">[Service]</span>
+<span class="py">Type</span><span class="p">=</span><span class="s">oneshot # Assumes quectel-CM initializes and exits, or is a self-daemonizing script.</span>
+<span class="py">RemainAfterExit</span><span class="p">=</span><span class="s">yes # If Type=oneshot, and we consider the 'service' up after the command.</span>
+<span class="py">ExecStartPre</span><span class="p">=</span><span class="s">/bin/sleep 60 # The original delay</span>
+<span class="py">ExecStart</span><span class="p">=</span><span class="s">/sbin/quectel-CM</span>
+<span class="py">StandardOutput</span><span class="p">=</span><span class="s">journal+console # Log to systemd journal and console</span>
+<span class="py">StandardError</span><span class="p">=</span><span class="s">journal+console</span>
+
+<span class="c"># If quectel-CM is a true daemon that forks and manages its own PID:
+# Type=forking
+# PIDFile=/var/run/quectel-cm.pid # Path to the PID file quectel-CM creates
+# ExecStart=/sbin/quectel-CM &lt;options_if_any&gt;
+# GuessMainPID=no # If PIDFile is accurate
+</span>
+<span class="c"># If quectel-CM runs in foreground and systemd should manage it:
+# Type=simple
+# ExecStart=/sbin/quectel-CM
+# Restart=on-failure # Optional: restart if it fails
+</span>
+<span class="nn">[Install]</span>
+<span class="py">WantedBy</span><span class="p">=</span><span class="s">multi-user.target # Start when multi-user target is reached</span>
+</code></pre></div></div>
+
+<p><strong>To use this systemd service:</strong></p>
+<ol>
+  <li>Create the file <code class="language-plaintext highlighter-rouge">/etc/systemd/system/gobinet-boot.service</code> with the content above.</li>
+  <li><strong>Disable the SysV init script if you previously enabled it:</strong>
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>systemctl disable gobinet_boot.sh <span class="c"># Or update-rc.d gobinet_boot.sh remove</span>
+<span class="nb">sudo rm</span> /etc/init.d/gobinet_boot.sh <span class="c"># Optionally remove the old script</span>
+</code></pre></div>    </div>
+  </li>
+  <li>Reload systemd: <code class="language-plaintext highlighter-rouge">sudo systemctl daemon-reload</code></li>
+  <li>Enable the new service: <code class="language-plaintext highlighter-rouge">sudo systemctl enable gobinet-boot.service</code></li>
+  <li>Start it: <code class="language-plaintext highlighter-rouge">sudo systemctl start gobinet-boot.service</code></li>
+  <li>Check status: <code class="language-plaintext highlighter-rouge">sudo systemctl status gobinet-boot.service</code> and <code class="language-plaintext highlighter-rouge">journalctl -u gobinet-boot.service</code></li>
+</ol>
+
+<p><strong>Advantages of systemd unit for <code class="language-plaintext highlighter-rouge">gobinet-boot</code>:</strong></p>
+<ul>
+  <li><strong>Clearer Dependencies:</strong> <code class="language-plaintext highlighter-rouge">After=</code>, <code class="language-plaintext highlighter-rouge">Before=</code>, <code class="language-plaintext highlighter-rouge">Wants=</code>, <code class="language-plaintext highlighter-rouge">Requires=</code> offer fine-grained control.</li>
+  <li><strong>Better Process Management:</strong> <code class="language-plaintext highlighter-rouge">Type=</code> (simple, forking, oneshot, etc.) correctly defines how systemd handles the process.</li>
+  <li><strong>Resource Control:</strong> Can set CPU/memory limits, etc.</li>
+  <li><strong>Integrated Logging:</strong> Output goes directly to the systemd journal.</li>
+  <li><strong>Simpler Syntax:</strong> Often more straightforward than complex shell scripting for service management.</li>
+</ul>
+
+<p><strong>3.2 For <code class="language-plaintext highlighter-rouge">mount_usb.sh</code> functionality (udev is still key)</strong></p>
+
+<p>The <code class="language-plaintext highlighter-rouge">udev</code> approach for <code class="language-plaintext highlighter-rouge">mount_usb.sh</code> is already good and leverages <code class="language-plaintext highlighter-rouge">systemd-udevd.service</code>. You don’t typically create a separate <code class="language-plaintext highlighter-rouge">.service</code> file for each <code class="language-plaintext highlighter-rouge">udev</code> <code class="language-plaintext highlighter-rouge">RUN+=</code> script unless the script needs to start a long-running service managed by systemd. Your helper script is short-lived, so the current udev method is fine.</p>
+
+<p><em>Advanced Systemd Automount:</em>
+For truly on-demand mounting managed by systemd (where the mount only happens when the directory is accessed), you could explore systemd <code class="language-plaintext highlighter-rouge">.automount</code> and <code class="language-plaintext highlighter-rouge">.mount</code> units. This is more complex to set up than the udev script but offers different benefits. For your current VFAT use case, the udev + helper script is a good balance of simplicity and functionality.</p>
+
+<hr />
+
+<p><strong>Summary of Recommendations:</strong></p>
+
+<ol>
+  <li><strong>For <code class="language-plaintext highlighter-rouge">mount_usb.sh</code>:</strong>
+    <ul>
+      <li>Definitely move it out of <code class="language-plaintext highlighter-rouge">/etc/init.d/</code>.</li>
+      <li>Use the <code class="language-plaintext highlighter-rouge">udev</code> rule and the improved <code class="language-plaintext highlighter-rouge">/usr/local/sbin/mount_usb_helper.sh</code> script provided above. This addresses the LSB warnings by removing the script from <code class="language-plaintext highlighter-rouge">insserv</code>’s scope and makes it function correctly.</li>
+    </ul>
+  </li>
+  <li><strong>For <code class="language-plaintext highlighter-rouge">gobinet_boot.sh</code>:</strong>
+    <ul>
+      <li><strong>Option A (Improved SysV):</strong> Use the refactored <code class="language-plaintext highlighter-rouge">/etc/init.d/gobinet_boot.sh</code> provided. This will fix the LSB warnings.</li>
+      <li><strong>Option B (Recommended - Systemd Native):</strong> Create the <code class="language-plaintext highlighter-rouge">gobinet-boot.service</code> unit file as described. Disable/remove the old SysV script. This is the more modern and robust solution for Debian Bullseye.</li>
+    </ul>
+  </li>
+</ol>
+
+<p>By implementing these changes, your system will be cleaner, the <code class="language-plaintext highlighter-rouge">insserv</code> warnings will be resolved, and your scripts (or their systemd equivalents) will function more reliably and correctly. Remember to carefully test the behavior of <code class="language-plaintext highlighter-rouge">quectel-CM</code> to choose the best <code class="language-plaintext highlighter-rouge">Type=</code> and PID management strategy if you opt for the systemd unit.</p>]]></content><author><name></name></author><category term="aid&gt;linux&gt;hardware&gt;rockchip" /></entry><entry><title type="html">compare</title><link href="https://ib.bsb.br/compare/" rel="alternate" type="text/html" title="compare" /><published>2025-05-10T00:00:00+00:00</published><updated>2025-05-10T17:22:49+00:00</updated><id>https://ib.bsb.br/compare</id><content type="html" xml:base="https://ib.bsb.br/compare/"><![CDATA[<section class="code-block-container" role="group" aria-label="Markdown Code Block" data-filename="markdown_code_block.md" data-code="The task is to compare several scripts for their &quot;robustness&quot; and &quot;featurefullness&quot; and then identify the &quot;best one, the most effective one.&quot;
 
 To perform the requested comparison and identify the most effective script, here it is the content of those scripts:
 
@@ -4396,429 +4928,4 @@ On Fedora CoreOS, if not already present as a dependency of Incus, you might nee
 
 <p><strong>Conclusion</strong></p>
 
-<p>Your Fedora CoreOS + Podman + Incus system is well-equipped to run <code class="language-plaintext highlighter-rouge">.qcow2</code> Linux images. <strong>Using Incus (Method 1 or 2 for direct use, Method 3 for reusability) is the most integrated and recommended approach.</strong> It provides a robust management layer over QEMU/KVM, allowing you to easily launch and manage these VMs right after your system boots.</p>]]></content><author><name></name></author><category term="scratchpad" /></entry><entry><title type="html">Linux Home Networking</title><link href="https://ib.bsb.br/linux-home-networking/" rel="alternate" type="text/html" title="Linux Home Networking" /><published>2025-05-07T00:00:00+00:00</published><updated>2025-05-07T21:31:32+00:00</updated><id>https://ib.bsb.br/linux-home-networking</id><content type="html" xml:base="https://ib.bsb.br/linux-home-networking/"><![CDATA[<p>This page provides a brief introduction on how to network two Linux computers together so you can share files between machines.</p>
-
-<p>While these techniques can be used to set up regular file sharing, a quick temporary network can be particularly useful when moving files from an old machine to a new machine when you wish to avoid the possible security threats of using intermediate cloud storage.</p>
-
-<h2 id="connectivity">Connectivity</h2>
-
-<p>Your first step is getting some kind of network connectivity between two machines. You have numerous options with contemporary hardware.</p>
-
-<h3 id="wireless-router">Wireless Router</h3>
-
-<p>If you already are networked through a wireless router, you will simply need to run <em>ifconfig</em> on both machines to get the IP addresses they got from the router.</p>
-
-<p>$ sudo ifconfig</p>
-
-<p>eth0: flags=4163&lt;UP,BROADCAST,RUNNING,MULTICAST&gt;  mtu 1500
-        inet <strong>73.45.140.138</strong>  netmask 255.255.254.0  broadcast 255.255.255.255
-        inet6 fe80::6a45:f1ff:fe6f:7b1a  prefixlen 64  scopeid 0x20
-        ether 68:45:f1:6f:7b:1a  txqueuelen 1000  (Ethernet)
-        RX packets 5242077  bytes 5089202364 (4.7 GiB)
-        RX errors 0  dropped 0  overruns 0  frame 0
-        TX packets 3554290  bytes 1467295701 (1.3 GiB)
-        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
-        device interrupt 16  memory 0xb1100000-b1120000</p>
-
-<p>Configuration of wireless interfaces via the <a href="https://michaelminn.com/linux/home_network/#command-line-wireless">comman line is described further below.</a></p>
-
-<p>If you are setting up a file server that you will be using on a regular basis, you will want to find a way to set the file server machine to a manual, fixed IP address that does not rely on DHCP.</p>
-
-<h3 id="ad-hoc-wireless-network">Ad-Hoc Wireless Network</h3>
-
-<p>If you don’t have a wireless router, you can create an <a href="https://help.ubuntu.com/community/WifiDocs/Adhoc">“Ad-Hoc” wireless network</a> to interconnect the two machines.</p>
-
-<p>You should first find the names of the interfaces on both machines. They are usually <em>wlp1s0</em> or <em>wlp2s0</em> on contemporary machines.</p>
-
-<p>$ sudo iw dev</p>
-
-<p>phy#0
-        Interface wlp1s0
-                ifindex 3
-                wdev 0x1
-                addr 3c:9c:0f:46:65:3b
-                type managed
-                txpower 0.00 dBm</p>
-
-<p>The following instructions should be executed on both machines to set the card into ad-hoc mode, specify a frequency, set the network name and set a WEP encryption key.</p>
-
-<p>Note that encryption keys specified as ASCII strings (s:) <a href="http://permalink.gmane.org/gmane.linux.nernel.wireless.general/44915">must be exactly 5 or 13 characters</a>:</p>
-
-<p>$ sudo iwconfig wlp1s0 mode Ad-Hoc
-$ sudo iwconfig wlp1s0 channel 4
-$ sudo iwconfig wlp1s0 essid omega
-$ sudo iwconfig wlp1s0 key s:alpha</p>
-
-<p>On the server machine, bring the interface up with the server address:</p>
-
-<p>$ sudo ifconfig wlp1s0 192.168.1.1</p>
-
-<p>On the client machine, bring the interface up with the client address and ping the server to verify connectivity</p>
-
-<p>$ sudo ifconfig wlp1s0 192.168.1.2</p>
-
-<p>$ ping 192.168.1.1</p>
-
-<p>PING 192.168.1.1 (192.168.1.1) 56(84) bytes of data.
-64 bytes from 192.168.1.1: icmp_seq=1 ttl=64 time=2.21 ms
-64 bytes from 192.168.1.1: icmp_seq=2 ttl=64 time=0.445 ms</p>
-
-<h3 id="crossover-cable">Crossover Cable</h3>
-
-<p>You can connect two machines directly together through their ethernet ports. However, you will will need to get a <strong>crossover cable</strong>, which appears identical to a regular Ethernet cable, the connectors are wired so the outputs of one machine go to the inputs of the other. A regular ethernet cable is inappropriate for this task.</p>
-
-<p>Once connected, you should manually set the IP addresses on the two different machines and then <em>ping</em> the opposite machine to test the connection.</p>
-
-<p>Server machine:</p>
-
-<p>$ sudo ifconfig eth0 192.168.1.1</p>
-
-<p>Client machine:</p>
-
-<p>$ sudo ifconfig eth0 192.168.1.2</p>
-
-<p>$ ping 192.168.1.1</p>
-
-<p>PING 192.168.1.1 (127.0.0.1) 56(84) bytes of data.
-64 bytes from 192.168.1.1: icmp_seq=1 ttl=64 time=0.053 ms
-64 bytes from 192.168.1.1: icmp_seq=2 ttl=64 time=0.066 ms
-64 bytes from 192.168.1.1: icmp_seq=3 ttl=64 time=0.071 ms</p>
-
-<h3 id="physical-router">Physical Router</h3>
-
-<p>It is also possible to connect multiple machines together with a physical router, although such techniques have largely been supplanted by wireless.</p>
-
-<p>The interface configuration would be the same as with a crossover cable configuration above.</p>
-
-<p><img src="https://michaelminn.com/linux/home_network/2021-12-22_08-25-00-thumbnail.jpg" alt="Image 1" /></p>
-
-<p>Interconnection with a physical router</p>
-
-<h2 id="nfs">NFS</h2>
-
-<p>The Network File System (NFS) is the standard Linux file server.</p>
-
-<p>Files under Network File System (NFS) are served by a server and accessed by a client.</p>
-
-<p>If you want to provide mutual access to files between two machines you will need to set both machines up as NFS servers and clients. If only one machine is being used for file storage, you only need NFS server on the source machine and the NFS client software on the other machine.</p>
-
-<h3 id="packages">Packages</h3>
-
-<p>You will need two packages:</p>
-
-<p>$ sudo apt-get install nfs-kernel-server rpcbind</p>
-
-<p>$ sudo /etc/init.d/rpcbind start</p>
-
-<p>$ sudo /etc/init.d/nfs-kernel-server start</p>
-
-<h3 id="nfs-exports">NFS Exports</h3>
-
-<p>The /etc/exports file tells NFS which directories to make visible to network systems. To make the /home directory visible to all machines with the IP addresses given above, the /etc/exports file on both machines would have one line:</p>
-
-<p>/home 192.168.1.0/255.255.255.0(rw)</p>
-
-<p>Export these file systems after modifying /etc/exports. The file systems will subsequently be exported each time the server is reloaded.</p>
-
-<p>$ sudo exportfs -a -v</p>
-
-<p>$ sudo /etc/init.d/nfs-kernel-server reload</p>
-
-<h3 id="mount">Mount</h3>
-
-<p>On all machines needing to mount the networked file system, create a mountpoint:</p>
-
-<p>$ sudo mkdir /media/nfs</p>
-
-<p>You can then mount the file system:</p>
-
-<p>$ sudo mount -v 192.168.1.1:/home /media/nfs</p>
-
-<p>$ ls /media/nfs</p>
-
-<p>lost+found  user1   user2   user3</p>
-
-<h3 id="regular-mounting">Regular Mounting</h3>
-
-<p>If you are going to be using the network on a regular basis, you should place an entry in the <em>/etc/fstab</em> file so users will be able to access the file system without having to manually mount.</p>
-
-<p>192.168.1.1:/home	/mnt/nfs	nfs	auto,user,exec,soft	0  0</p>
-
-<h2 id="nfs-debugging">NFS Debugging</h2>
-
-<p>NFS can be a MAJOR pain in the ass to get running, with cryptic error messages and strange freezes. The following are some errors I encountered and potential fixes. Some of these date from a previous experience with Fedora and they remain here for completeness. When all else fails, <a href="http://google.com/">Google</a> is your friend.</p>
-
-<p><strong>Test the Connection</strong>: If mounting of an NFS file system is freezing or failing, you should first verify that you have connectivity to the server using ping.</p>
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>ping 192.168.1.1
-</code></pre></div></div>
-
-<p>Should give something like this:</p>
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>PING 192.168.1.1 (192.168.1.2) 56(84) bytes of data.
-64 bytes from 192.168.1.1: icmp\_seq=0 ttl=64 time=0.895 ms
-64 bytes from 192.168.1.1: icmp\_seq=1 ttl=64 time=0.435 ms
-64 bytes from 192.168.1.1: icmp\_seq=2 ttl=64 time=0.430 ms
-</code></pre></div></div>
-
-<p>If you do not get ping messages, there’s a problem with the basic connection between the machines. Verify that your cables are connected properly and firmly seated all the way into their sockets. If you are using a switch, make sure it is powered up and the indicator lights confirm connection. If you are using a crossover cable, make sure it is a crossover cable and not a regular Ethernet cable.</p>
-
-<p><strong>NFS Version</strong></p>
-
-<p>The Linux NFS client supposedly supports NFS protocol versions 2, 3, and 4 but the server doesn’t seem quite so robust. nfsvers=2 is used above as the option on the mount command (or in /etc/fstab) to force use of NFS v2. If you fail to use explicit versioning, you may get a message like this:</p>
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>sudo mount -v 192.168.1.1:/home /mnt/network
-
-mount: no type was given - I'll assume nfs because of the colon
-mount.nfs: timeout set for Wed Dec 29 09:20:34 2010
-mount.nfs: text-based options: 'addr=192.168.1.1'
-mount.nfs: mount(2): Protocol not supported
-mount.nfs: trying 192.168.1.1 prog 100003 vers 3 prot UDP port 2049
-mount.nfs: mount to NFS server '192.168.1.1:/home' failed: RPC Error: Success
-</code></pre></div></div>
-
-<p>By contrast, when you use explicit versioning:</p>
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>mount -o nfsvers=2 192.168.1.1:/home /mnt/network
-
-mount: no type was given - I'll assume nfs because of the colon
-mount.nfs: timeout set for Wed Dec 29 09:20:53 2010
-mount.nfs: text-based options: 'nfsvers=2,addr=192.168.1.1'
-192.168.1.1:/home on /mnt/network type nfs (rw,nfsvers=2)
-</code></pre></div></div>
-
-<p><strong>Access denied</strong>: This is likely caused because the directory you are trying to mount is not specified in /etc/exports on the NFS server. You should verify that file contains the correct info as described above.</p>
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>mount.nfs: access denied by server while mounting 192.168.1.1:/home
-</code></pre></div></div>
-
-<p><strong>RPC Error: Program not registered</strong>: This is likely caused because NFS or rpcbind is not running on the server. Execute “/etc/init.d/unfs3 start” on the server as described above.</p>
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>mount.nfs: mount to NFS server '192.168.1.1:/home' failed: 
-RPC Error: Program not registered
-</code></pre></div></div>
-
-<p><strong>Server Is Down</strong></p>
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>mount to NFS server 'x.x.x.x' failed: server is down
-</code></pre></div></div>
-
-<p>This may, in fact, mean that the server is not running or that you do not have connectivity to the server (see above for ping). It can also be caused if the server does not have an entry in /etc/exports giving you permission to mount the requested resource (see above).</p>
-
-<p>However, this message may also be caused by a NFS protocol version mismatch. You should use NFS version 2 as described above.</p>
-
-<p><strong>Permission denied on mount</strong></p>
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>statd: Could not chdir: Permission denied
-mount.nfs: rpc.statd is not running but is required for remote locking.
-mount.nfs: Either use '-o nolock' to keep locks local, or start statd.
-</code></pre></div></div>
-
-<p>This is a strange one. The easiest solution was to just mount as superuser:</p>
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>sudo mount /mnt/network
-</code></pre></div></div>
-
-<p>However, subsequent mounts as non-superuser worked fine, so go figure.</p>
-
-<p><strong>Starting NFS quotas: Cannot register service</strong></p>
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Starting NFS quotas: Cannot register service: RPC: 
-Unable to receive; errno = Connection refused
-rpc.rquotad: unable to register (RQUOTAPROG, RQUOTAVERS, udp).
-</code></pre></div></div>
-
-<p>This is a <a href="http://forums.fedoraforum.org/showthread.php?t=186999">mysterious one</a>. Seems to magically go away if you just restart NFS.</p>
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>/etc/init.d/unfs3 restart
-</code></pre></div></div>
-
-<p><strong>Firewall - iptables</strong>: If you are running a non-Ubuntu configuration or you have iptables running as a firewall, it needs to be configured to allow the client machine(s) to access NFS. On both machines, add a new iptables rule that accepts all input on the eth0 interface from the local network (both 192.168.1.1 and 192.168.1.2). List the new table and if everything looks good, save it to the /etc/sysconfig/iptables file.</p>
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>sudo iptables -I INPUT -p ALL -i eth0 -s 192.168.1.0/255.255.255.0 -j ACCEPT
-sudo iptables -L
-sudo iptables-save \&gt; /etc/sysconfig/iptables
-</code></pre></div></div>
-
-<p><strong>RPC: Port mapper failure - RPC: Unable to receive</strong>: NFS uses TCP/IP port 2049. The default firewalls on many distributions may cause mounting a drive on a remote machine to fail with the message:</p>
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>RPC: Port mapper failure - RPC: Unable to receive
-</code></pre></div></div>
-
-<p>Solution is changing the iptable settings as described above.</p>
-
-<p><strong>RPC: Timed out</strong></p>
-
-<p>The firewall settings on the server or client may cause the mount to hang and eventually issue the message:</p>
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>RPC: Timed out
-</code></pre></div></div>
-
-<p>Solution is changing the iptable settings as described above.</p>
-
-<p><strong>Debugging - Ports</strong>: NFS uses TCP port 2049. rpcinfo can be used to list available ports. Problems with rpcinfo indicates a machine is not accepting NFS requests.</p>
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>rpcinfo
-</code></pre></div></div>
-
-<p>You can also verify open ports with netstat. nfs should be listed for both tcp and udp, although only the tcp port will be in LISTEN state</p>
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code># netstat -tul
-
-Active Internet connections (only servers)
-Proto Recv-Q Send-Q Local Address           Foreign Address         State      
-tcp        0      0 \*:nfs                   \*:\*                     LISTEN      
-tcp        0      0 \*:printer               \*:\*                     LISTEN      
-tcp        0      0 \*:676                   \*:\*                     LISTEN      
-tcp        0      0 \*:sunrpc                \*:\*                     LISTEN      
-tcp        0      0 \*:x11                   \*:\*                     LISTEN      
-tcp        0      0 \*:ha-cluster            \*:\*                     LISTEN      
-tcp        0      0 \*:32893                 \*:\*                     LISTEN      
-tcp        0      0 \*:32894                 \*:\*                     LISTEN      
-udp        0      0 \*:nfs                   \*:\*                                 
-udp        0      0 \*:32782                 \*:\*                                 
-udp        0      0 \*:32783                 \*:\*                                 
-udp        0      0 \*:673                   \*:\*                                 
-udp        0      0 \*:691                   \*:\*                                 
-udp        0      0 \*:bootpc                \*:\*                                 
-udp        0      0 \*:727                   \*:\*                                 
-udp        0      0 \*:sunrpc                \*:\*     
-</code></pre></div></div>
-
-<p><strong>iptables restart</strong>: If all else fails, you can simply stop the firewall.</p>
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>sudo service iptables stop
-</code></pre></div></div>
-
-<p>If this solves the problem, you should look further into correcting your firewall configuration. Running without a firewall, especially with a connection to the internet exposes your machine to hacking and not recommended.</p>
-
-<p>FYI, an important line in /etc/sysconfig/iptables on some Red Hat configurations may be rejection of port 2049, used by NFS:</p>
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>-A RH-Lokkit-0-50-INPUT -p udp -m udp --dport 2049 -j REJECT
-</code></pre></div></div>
-
-<h2 id="command-line-wireless-configuration">Command Line Wireless Configuration</h2>
-
-<p>I prefer to start and stop my networks manually, and removed the network-manager to avoid conflicts and problems encountered on other machines:</p>
-
-<p>$ sudo apt-get remove network-manager</p>
-
-<p>Wireless interfaces can be started with the <em>ifup</em> command:</p>
-
-<p>$ sudo ifup wlp1s0</p>
-
-<p>The interface can be stopped with the <em>ifdown</em> command:</p>
-
-<p>$ sudo ifdown wlp1s0</p>
-
-<p>Access points can be displayed with the <em>iwlist</em> command:</p>
-
-<p>$ sudo iwlist wlp2s0 scan</p>
-
-<p>Access points can be configured with the <em>iwconfig</em> command:</p>
-
-<p>$ sudo iwconfig wlp2s0 essid &lt;SSID&gt;</p>
-
-<p>If you have an access point that you regulaly connect to, you can configure the SSID and password in the <em>/etc/network/interfaces</em> file:</p>
-
-<p>iface wlp2s0 inet dhcp
-wpa-ssid “&lt;SSID&gt;”
-wpa-psk “&lt;PASSWORD&gt;”</p>
-
-<p>To have the interface start automatically on boot:</p>
-
-<p>auto wlp2s0
-iface wlp2s0 inet dhcp
-wpa-ssid “&lt;SSID&gt;”
-wpa-psk “&lt;PASSWORD&gt;”</p>
-
-<h2 id="diagnostic-utilities">Diagnostic Utilities</h2>
-
-<p>Networks always have problems and diagnosis of those problems is the primary activity of network administrators. Diagnosing and solving network problems is a black art that can only be covered superficially here, but the following are some basic utilities for diagnosing problems. Many of these programs are mentioned in more detail above and you can get further information on the command line with the “man &lt;command&gt;” command.</p>
-
-<p><strong>ifconfig</strong>: The first step is to verify that the interface you are trying to connect to the network with is up and has a valid IP address. ifconfig with no arguments lists all the network interfaces on a system and allows configuration. If the interface is not displayed or does not have an IP address, your system cannot connect to the network through that interface. The example output given below shows the interface IP address as 192.168.1.47 and, with the given mask, the default gateway is 192.168.1.1. The “RX bytes” and “TX bytes” can be used to determine if there has been any traffic on an interface, implying that it is or was working at some point. lo is the loopback interface on every system that is, in essence, only connected to itself.</p>
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>eth0      Link encap:Ethernet  HWaddr 00:0F:B0:66:40:C2  
-          inet addr:192.168.1.47  Bcast:255.255.255.255  Mask:255.255.255.0
-          inet6 addr: fe80::20f:b0ff:fe66:40c2/64 Scope:Link
-          UP BROADCAST RUNNING MULTICAST  MTU:1500  Metric:1
-          RX packets:29369 errors:0 dropped:0 overruns:0 frame:0
-          TX packets:32776 errors:0 dropped:0 overruns:0 carrier:0
-          collisions:0 txqueuelen:1000 
-          RX bytes:20428276 (19.4 Mb)  TX bytes:21405541 (20.4 Mb)
-          Interrupt:11 Base address:0x3000
-
-lo        Link encap:Local Loopback  
-          inet addr:127.0.0.1  Mask:255.0.0.0
-          inet6 addr: ::1/128 Scope:Host
-          UP LOOPBACK RUNNING  MTU:16436  Metric:1
-          RX packets:8 errors:0 dropped:0 overruns:0 frame:0
-          TX packets:8 errors:0 dropped:0 overruns:0 carrier:0
-          collisions:0 txqueuelen:0 
-     	  RX bytes:592 (592.0 b)  TX bytes:592 (592.0 b)
-</code></pre></div></div>
-
-<p><strong>ping</strong> is the second most useful network diagnostic utility. ping allows you to send echo request messages to specific IP addresses and verify that they are up. Generally, in diagnosing a connectivity problem you will first try to ping the interface, then ping the gateway (which can be inferred from the output of ifconfig), and, finally, ping the destination you are trying to reach.</p>
-
-<p><strong>traceroute</strong> lists all the routers between you and a destination. This permits detection of the point in a route where there is a problem.</p>
-
-<p><strong>arp</strong> allows display and modification of the ARP caches on interfaces. If you need to determine if you have the lowest level connectivity to the network, in this case through interface eth0:</p>
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>/sbin/arp -a -i eth0
-</code></pre></div></div>
-
-<p><strong>iwconfig</strong> is a utility for displaying and configuring wireless-specific information that is not part of ifconfig. Looking for the connected access point ESSID (or lack thereof) is a common reason to use iwconfig.</p>
-
-<p><strong>iwlist</strong>: When connecting to an unfamiliar network, you may want to use the iwlist command to see what access points are available. If no access point ESSID is specified, bringing a wireless interface up will connect to the most powerful AP it sees, which may not be the one you want.</p>
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>/sbin/iwlist wlan0 scan
-</code></pre></div></div>
-
-<p><strong>tcpdump</strong> is a program for listing network packets. The output can be rather obtuse to the uninitiated. Useful for diagnosing problems with NFS or authentication issues. For example, to display packets in ASCII that are passing through interface eth0:</p>
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>	tcpdump -s 1024 -A -i eth0
-</code></pre></div></div>
-
-<p>In some configurations the filtering used by tcpdump may be so aggressive that it yields no significant output other than ARP requests. In those cases you may need to specify the specific IP network address of the interface you’re trying to list traffic from:</p>
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>	tcpdump -A -s 1024 net 192.168.1.1
-</code></pre></div></div>
-
-<p><strong>netstat</strong> lists active network connections, routing tables, interface statistics, masquerade connections, and multicast membership</p>
-
-<ul>
-  <li>netstat -r: show routing table</li>
-  <li>netstat -a: list connections</li>
-  <li>netstat -s: list statistics by protocol</li>
-  <li>netstat -n: list port numbers</li>
-</ul>
-
-<p><strong>host</strong>, <strong>dig</strong> and <strong>nslookup</strong> are DNS lookup utilities, with dig giving the more detailed output of the bunch. If you are having trouble connecting to a named website, you can use these utilities to try to figure out if the name is getting resolved to an IP address. You can also use these utilities to lookup addresses on specific nameservers if your currently configured nameserver is having problems.</p>
-
-<p><strong>route</strong> is a utility to list and/or manipulate the IP routing table. If you’re having problems with a browser not being able to see a network, this will show if there is a problem in your routing table.</p>
-
-<p>Example route output with a DSL modem</p>
-
-<p>Destination     Gateway         Genmask         Flags Metric Ref    Use Iface
-192.168.1.0     *               255.255.255.0   U     0      0        0 eth0
-169.254.0.0     *               255.255.0.0     U     0      0        0 eth0
-default         dslrouter       0.0.0.0         UG    0      0        0 eth0</p>
-
-<p>Example route output with a dialup modem Destination Gateway Genmask Flags Metric Ref Use Iface nas31.newyork1. * 255.255.255.255 UH 0 0 0 ppp0 default nas31.newyork1. 0.0.0.0 UG 0 0 0 ppp0</p>
-
-<p><strong>whois</strong> queries the Internet WhoIs database to find out who a domain name is registered to. Anonymous or third-world registrations often indicate entities that you should have no dealings with. whois can also be used to list to what organization an IP address has been assigned to, although this information will often only lead you to an ISP that controls a block of IP addresses and not to the company or individual who is actually using that IP address.</p>
-
-<p><strong>airsnort</strong>: When you need to connect to an encrypted network but do not have the encryption key, <a href="http://airsnort.shmoo.com/">AirSnort</a> can listen to traffic for a period of time and determine the key.</p>
-
-<p><strong>nmap</strong> is a network exporation tool and security scanner. Lots of options. The -sT option is especially useful for detecting “open ports” that represent potential entry paths for invaders and the results of this scan may indicate unnecessary services you want to shut down or unnecessary permissions in your firewall.</p>
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Example: scan a local address for open ports
-	nmap -sT 192.168.1.1
-
-Example: looks for hosts on a network
-	nmap -sP 172.16.1.1-127
-</code></pre></div></div>
-
-<p><strong><a href="http://netdisco.org/">Netdisco</a></strong> is an open source web-based network management tool. It’s quite complex and I mention it here only as a suggestion if you’re looking for network discovery software.</p>
-
-<p><strong>nmblookup</strong>, <strong>smbstatus</strong> and <strong>findsmb</strong> are utilities for diagnosing and establishing Samba connections to Windoze systems. They are described earlier in this document.</p>]]></content><author><name></name></author><category term="scratchpad" /></entry></feed>
+<p>Your Fedora CoreOS + Podman + Incus system is well-equipped to run <code class="language-plaintext highlighter-rouge">.qcow2</code> Linux images. <strong>Using Incus (Method 1 or 2 for direct use, Method 3 for reusability) is the most integrated and recommended approach.</strong> It provides a robust management layer over QEMU/KVM, allowing you to easily launch and manage these VMs right after your system boots.</p>]]></content><author><name></name></author><category term="scratchpad" /></entry></feed>
