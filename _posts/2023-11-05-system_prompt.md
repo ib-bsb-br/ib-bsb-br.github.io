@@ -1,10 +1,11 @@
 ---
-title: default
+title: "SYSTEM PROMPT"
 date: 2023-11-05
 tags: [AI>prompt]
 info: aberto.
 type: post
 layout: post
+slug: system_prompt
 ---
 
 {% codeblock xml %}
