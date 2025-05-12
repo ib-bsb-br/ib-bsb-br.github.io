@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2025-05-12T18:30:51+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">backup bash script</title><link href="https://ib.bsb.br/backup-bash-script/" rel="alternate" type="text/html" title="backup bash script" /><published>2025-05-12T00:00:00+00:00</published><updated>2025-05-12T18:04:46+00:00</updated><id>https://ib.bsb.br/backup-bash-script</id><content type="html" xml:base="https://ib.bsb.br/backup-bash-script/"><![CDATA[<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>#!/bin/bash
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2025-05-12T19:19:26+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">backup bash script</title><link href="https://ib.bsb.br/backup-bash-script/" rel="alternate" type="text/html" title="backup bash script" /><published>2025-05-12T00:00:00+00:00</published><updated>2025-05-12T18:04:46+00:00</updated><id>https://ib.bsb.br/backup-bash-script</id><content type="html" xml:base="https://ib.bsb.br/backup-bash-script/"><![CDATA[<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>#!/bin/bash
 
 # ==============================================================================
 # Script Name: comprehensive_backup_v2.sh
@@ -974,7 +974,7 @@ definekey top s-Menu ratclick 1
 #}}}
 
 #}}}
-</code></pre></div></div>]]></content><author><name></name></author><category term="linux&gt;dotfile" /></entry><entry><title type="html">Performance Governor optimizations Script</title><link href="https://ib.bsb.br/performance-governor-optimizations-script/" rel="alternate" type="text/html" title="Performance Governor optimizations Script" /><published>2025-05-09T00:00:00+00:00</published><updated>2025-05-12T18:24:46+00:00</updated><id>https://ib.bsb.br/performance-governor-optimizations-script</id><content type="html" xml:base="https://ib.bsb.br/performance-governor-optimizations-script/"><![CDATA[<p>This guide presents a comprehensive, single approach to managing CPU, GPU, NPU, and DMC frequency governors on Linux systems, particularly for devices like the RK3588, by setting them to “performance” mode. This method emphasizes robustness, dynamic discovery of hardware, state persistence for reversibility, and proper integration with systemd. It combines the best practices from various methods into one refined solution.</p>
+</code></pre></div></div>]]></content><author><name></name></author><category term="linux&gt;dotfile" /></entry><entry><title type="html">Performance Governor optimizations Script</title><link href="https://ib.bsb.br/performance-governor-optimizations-script/" rel="alternate" type="text/html" title="Performance Governor optimizations Script" /><published>2025-05-09T00:00:00+00:00</published><updated>2025-05-12T19:16:40+00:00</updated><id>https://ib.bsb.br/performance-governor-optimizations-script</id><content type="html" xml:base="https://ib.bsb.br/performance-governor-optimizations-script/"><![CDATA[<p>This guide presents a comprehensive, single approach to managing CPU, GPU, NPU, and DMC frequency governors on Linux systems, particularly for devices like the RK3588, by setting them to “performance” mode. This method emphasizes robustness, dynamic discovery of hardware, state persistence for reversibility, and proper integration with systemd. It combines the best practices from various methods into one refined solution.</p>
 
 <p>While the context often mentions RK3588, the script and systemd service are designed to be generally applicable to Linux systems, though specific sysfs paths for governors can vary if not covered by the general patterns.</p>
 
@@ -1006,134 +1006,167 @@ definekey top s-Menu ratclick 1
 <span class="c"># Unified script to manage CPU/GPU/NPU/DMC frequency governors.</span>
 <span class="c"># Targets devices like RK3588 but designed for general Linux applicability.</span>
 <span class="c"># - Requires root (CAP_SYS_ADMIN)</span>
-<span class="c"># - Depends on ‘util-linux’ (for logger) and systemd (for systemd-cat)</span>
+<span class="c"># - Depends on 'util-linux' (for logger) and systemd (for systemd-cat)</span>
 <span class="c"># ——————————————————————————</span>
+
+<span class="c"># Exit on error, treat unset variables as error, propagate pipeline errors</span>
 <span class="nb">set</span> <span class="nt">-euo</span> pipefail
-<span class="nv">IFS</span><span class="o">=</span><span class="nv">$’</span><span class="se">\n\t</span>’ <span class="c"># Set Internal Field Separator to newline and tab for safer loops.</span>
+<span class="c"># Set Internal Field Separator to newline and tab for safer loops.</span>
+<span class="c"># Ensure standard single quotes are used here.</span>
+<span class="nv">IFS</span><span class="o">=</span><span class="s1">$'</span><span class="se">\n\t</span><span class="s1">'</span>
 
 <span class="c">### Verify running as root</span>
-<span class="k">if</span> <span class="o">[</span> “<span class="si">$(</span><span class="nb">id</span> <span class="nt">-u</span><span class="si">)</span>” <span class="nt">-ne</span> 0 <span class="o">]</span><span class="p">;</span> <span class="k">then
-  </span><span class="nb">echo</span> “ERROR: Must be run as root.” <span class="o">&gt;</span>&amp;2
+<span class="c"># Use standard quotes "" and ensure command substitution is quoted.</span>
+<span class="k">if</span> <span class="o">[</span> <span class="s2">"</span><span class="si">$(</span><span class="nb">id</span> <span class="nt">-u</span><span class="si">)</span><span class="s2">"</span> <span class="nt">-ne</span> 0 <span class="o">]</span><span class="p">;</span> <span class="k">then
+  </span><span class="nb">echo</span> <span class="s2">"ERROR: Must be run as root."</span> <span class="o">&gt;</span>&amp;2
   <span class="nb">exit </span>1
 <span class="k">fi</span>
 
-<span class="c"># Location to save/restore default governors</span>
-<span class="nb">readonly </span><span class="nv">STATE_DIR</span><span class="o">=</span>“/var/lib/performance_governors”
-<span class="nb">readonly </span><span class="nv">STATE_FILE</span><span class="o">=</span>“<span class="nv">$STATE_DIR</span>/default_gov.txt”
+<span class="c"># Location to save/restore default governors (use standard quotes)</span>
+<span class="nb">readonly </span><span class="nv">STATE_DIR</span><span class="o">=</span><span class="s2">"/var/lib/performance_governors"</span>
+<span class="nb">readonly </span><span class="nv">STATE_FILE</span><span class="o">=</span><span class="s2">"</span><span class="nv">$STATE_DIR</span><span class="s2">/default_gov.txt"</span>
 
 <span class="c"># General patterns covering cpufreq (CPU) and devfreq (other devices) governors</span>
+<span class="c"># Use standard quotes ""</span>
 <span class="nb">readonly </span><span class="nv">GOV_PATTERNS</span><span class="o">=(</span>
-  “/sys/devices/system/cpu/cpufreq/policy<span class="k">*</span>/scaling_governor” <span class="c"># For CPU cores</span>
-  “/sys/class/devfreq/<span class="k">*</span>/governor”                             <span class="c"># For GPU, NPU, DMC, etc.</span>
+  <span class="s2">"/sys/devices/system/cpu/cpufreq/policy*/scaling_governor"</span> <span class="c"># For CPU cores</span>
+  <span class="s2">"/sys/class/devfreq/*/governor"</span>                             <span class="c"># For GPU, NPU, DMC, etc.</span>
 <span class="o">)</span>
 
 <span class="c"># Log function: prefers systemd-cat for journal integration, else falls back to logger.</span>
 log<span class="o">()</span> <span class="o">{</span>
-  <span class="nb">local </span><span class="nv">level</span><span class="o">=</span>“<span class="nv">$1</span>”<span class="p">;</span> <span class="nb">shift
-  local </span><span class="nv">msg</span><span class="o">=</span>“<span class="nv">$*</span>”
+  <span class="c"># Use standard quotes ""</span>
+  <span class="nb">local </span><span class="nv">level</span><span class="o">=</span><span class="s2">"</span><span class="nv">$1</span><span class="s2">"</span><span class="p">;</span> <span class="nb">shift
+  local </span><span class="nv">msg</span><span class="o">=</span><span class="s2">"</span><span class="nv">$*</span><span class="s2">"</span>
   <span class="k">if </span><span class="nb">command</span> <span class="nt">-v</span> systemd-cat &amp;&gt;/dev/null<span class="p">;</span> <span class="k">then</span>
     <span class="c"># Pipe to systemd-cat to log with specified level and tag</span>
-    <span class="nb">printf</span> ‘%s<span class="se">\n</span>’ “<span class="nv">$msg</span>” | systemd-cat <span class="nt">-t</span> performance_governors <span class="nt">-p</span> “<span class="nv">$level</span>”
+    <span class="c"># Use standard quotes "" and standard single quotes ''</span>
+    <span class="nb">printf</span> <span class="s1">'%s\n'</span> <span class="s2">"</span><span class="nv">$msg</span><span class="s2">"</span> | systemd-cat <span class="nt">-t</span> performance_governors <span class="nt">-p</span> <span class="s2">"</span><span class="nv">$level</span><span class="s2">"</span>
   <span class="k">else</span>
     <span class="c"># Fallback to logger if systemd-cat is not available</span>
-    logger <span class="nt">-t</span> performance_governors <span class="nt">-p</span> “user.<span class="nv">$level</span>” — “<span class="nv">$msg</span>”
+    <span class="c"># Use standard quotes "" and standard single quotes ''</span>
+    logger <span class="nt">-t</span> performance_governors <span class="nt">-p</span> <span class="s2">"user.</span><span class="nv">$level</span><span class="s2">"</span> <span class="nt">--</span> <span class="s2">"</span><span class="nv">$msg</span><span class="s2">"</span>
   <span class="k">fi</span>
 <span class="o">}</span>
 
-<span class="c"># Discover all existing governor file paths based on GOV_PATTERNS.</span>
+<span class="c"># Discover all existing governor file paths based on GOV_PATTERNS (Enhanced with nullglob).</span>
 discover_paths<span class="o">()</span> <span class="o">{</span>
-  <span class="k">for </span>patt <span class="k">in</span> “<span class="k">${</span><span class="nv">GOV_PATTERNS</span><span class="p">[@]</span><span class="k">}</span>”<span class="p">;</span> <span class="k">do</span>
-    <span class="c"># $patt is intentionally unquoted to allow shell pathname expansion (globbing).</span>
-    <span class="c"># The shell first performs word splitting on $patt (if it contained IFS characters;</span>
-    <span class="c"># current IFS is newline/tab). Then, pathname expansion (globbing, e.g., ‘*’)</span>
-    <span class="c"># is attempted on each resulting word. For the defined GOV_PATTERNS, which are</span>
-    <span class="c"># single “words” without internal IFS characters, this robustly expands the globs.</span>
+  <span class="c"># Enable nullglob: patterns that match nothing expand to nothing</span>
+  <span class="nb">shopt</span> <span class="nt">-s</span> nullglob
+  <span class="c"># Ensure nullglob is turned off again when the function exits</span>
+  <span class="nb">trap</span> <span class="s1">'shopt -u nullglob'</span> RETURN
+
+  <span class="k">for </span>patt <span class="k">in</span> <span class="s2">"</span><span class="k">${</span><span class="nv">GOV_PATTERNS</span><span class="p">[@]</span><span class="k">}</span><span class="s2">"</span><span class="p">;</span> <span class="k">do</span>
+    <span class="c"># $patt is intentionally unquoted for globbing.</span>
+    <span class="c"># With nullglob, if $patt matches no files, this loop won't execute for it.</span>
     <span class="k">for </span>f <span class="k">in</span> <span class="nv">$patt</span><span class="p">;</span> <span class="k">do</span>
-      <span class="c"># Check if the glob expansion resulted in an actual existing file</span>
-      <span class="o">[</span> <span class="nt">-f</span> “<span class="nv">$f</span>” <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="nb">printf</span> ‘%s<span class="se">\n</span>’ “<span class="nv">$f</span>”
+      <span class="c"># We know 'f' must be an existing file due to nullglob,</span>
+      <span class="c"># but the check is harmless and adds clarity.</span>
+      <span class="o">[</span> <span class="nt">-f</span> <span class="s2">"</span><span class="nv">$f</span><span class="s2">"</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="nb">printf</span> <span class="s1">'%s\n'</span> <span class="s2">"</span><span class="nv">$f</span><span class="s2">"</span>
     <span class="k">done
   done</span>
+  <span class="c"># The trap automatically runs 'shopt -u nullglob' here.</span>
 <span class="o">}</span>
 
-<span class="c"># Action: Save current governors and set all to ‘performance’.</span>
+<span class="c"># Action: Save current governors and set all to 'performance'.</span>
 cmd_start<span class="o">()</span> <span class="o">{</span>
-  log info “START: Saving default governors and forcing ‘performance’ mode.”
-  <span class="nb">mkdir</span> <span class="nt">-p</span> “<span class="nv">$STATE_DIR</span>” <span class="c"># Ensure state directory exists</span>
-  : <span class="o">&gt;</span> “<span class="nv">$STATE_FILE</span>”     <span class="c"># Truncate/create state file</span>
+  <span class="c"># Use standard quotes ""</span>
+  log info <span class="s2">"START: Saving default governors and forcing 'performance' mode."</span>
+  <span class="nb">mkdir</span> <span class="nt">-p</span> <span class="s2">"</span><span class="nv">$STATE_DIR</span><span class="s2">"</span> <span class="c"># Ensure state directory exists</span>
+  : <span class="o">&gt;</span> <span class="s2">"</span><span class="nv">$STATE_FILE</span><span class="s2">"</span>     <span class="c"># Truncate/create state file</span>
 
   <span class="c"># Read each discovered governor path</span>
-  <span class="k">while </span><span class="nv">IFS</span><span class="o">=</span> <span class="nb">read</span> <span class="nt">-r</span> path<span class="p">;</span> <span class="k">do
-    </span><span class="nv">current_governor</span><span class="o">=</span><span class="si">$(</span>&lt;“<span class="nv">$path</span>”<span class="si">)</span> <span class="c"># Read current governor</span>
-    <span class="nb">printf</span> ‘%s<span class="se">\t</span>%s<span class="se">\n</span>’ “<span class="nv">$path</span>” “<span class="nv">$current_governor</span>” <span class="o">&gt;&gt;</span>”<span class="nv">$STATE_FILE</span>” <span class="c"># Save path and current governor</span>
+  <span class="k">while </span><span class="nv">IFS</span><span class="o">=</span> <span class="nb">read</span> <span class="nt">-r</span> path<span class="p">;</span> <span class="k">do</span>
+    <span class="c"># Use standard quotes "" and standard single quotes ''</span>
+    <span class="nv">current_governor</span><span class="o">=</span><span class="si">$(</span>&lt;<span class="s2">"</span><span class="nv">$path</span><span class="s2">"</span><span class="si">)</span> <span class="c"># Read current governor</span>
+    <span class="nb">printf</span> <span class="s1">'%s\t%s\n'</span> <span class="s2">"</span><span class="nv">$path</span><span class="s2">"</span> <span class="s2">"</span><span class="nv">$current_governor</span><span class="s2">"</span> <span class="o">&gt;&gt;</span><span class="s2">"</span><span class="nv">$STATE_FILE</span><span class="s2">"</span> <span class="c"># Save path and current governor</span>
 
-    <span class="c"># Attempt to set to ‘performance’</span>
-    <span class="k">if </span><span class="nb">echo </span>performance <span class="o">&gt;</span>”<span class="nv">$path</span>”<span class="p">;</span> <span class="k">then
-      </span>log info “Successfully <span class="nb">set</span> ‘performance’ <span class="k">for</span>: <span class="nv">$path</span>”
-    <span class="k">else
-      </span>log err  “FAILED to <span class="nb">set</span> ‘performance’ <span class="k">for</span>: <span class="nv">$path</span>”
+    <span class="c"># Attempt to set to 'performance' (use standard quotes)</span>
+    <span class="k">if </span><span class="nb">echo</span> <span class="s2">"performance"</span> <span class="o">&gt;</span><span class="s2">"</span><span class="nv">$path</span><span class="s2">"</span><span class="p">;</span> <span class="k">then
+      </span>log info <span class="s2">"Successfully set 'performance' for: </span><span class="nv">$path</span><span class="s2">"</span>
+    <span class="k">else</span>
+      <span class="c"># Use standard quotes ""</span>
+      log err <span class="s2">"FAILED to set 'performance' for: </span><span class="nv">$path</span><span class="s2">"</span>
     <span class="k">fi
   done</span> &lt; &lt;<span class="o">(</span>discover_paths<span class="o">)</span> <span class="c"># Process substitution feeds paths from discover_paths</span>
 
-  log info “START <span class="nb">command </span>complete.”
+  <span class="c"># Use standard quotes ""</span>
+  log info <span class="s2">"START command complete."</span>
 <span class="o">}</span>
 
 <span class="c"># Action: Restore governors to their saved default states.</span>
 cmd_stop<span class="o">()</span> <span class="o">{</span>
-  log info “STOP: Restoring saved default governors.”
-  <span class="k">if</span> <span class="o">[</span> <span class="o">!</span> <span class="nt">-r</span> “<span class="nv">$STATE_FILE</span>” <span class="o">]</span><span class="p">;</span> <span class="k">then
-    </span>log warning “State file <span class="o">(</span><span class="nv">$STATE_FILE</span><span class="o">)</span> not found or not readable. Skipping restore.”
+  <span class="c"># Use standard quotes ""</span>
+  log info <span class="s2">"STOP: Restoring saved default governors."</span>
+  <span class="k">if</span> <span class="o">[</span> <span class="o">!</span> <span class="nt">-r</span> <span class="s2">"</span><span class="nv">$STATE_FILE</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then</span>
+    <span class="c"># Use standard quotes "" and standard parentheses ()</span>
+    log warning <span class="s2">"State file (</span><span class="nv">$STATE_FILE</span><span class="s2">) not found or not readable. Skipping restore."</span>
     <span class="k">return </span>1 <span class="c"># Indicate issue if state file is missing</span>
   <span class="k">fi</span>
 
   <span class="c"># Read path and old governor from state file</span>
-  <span class="k">while </span><span class="nv">IFS</span><span class="o">=</span><span class="nv">$’</span><span class="se">\t</span>’ <span class="nb">read</span> <span class="nt">-r</span> path old_governor<span class="p">;</span> <span class="k">do
-    if</span> <span class="o">[</span> <span class="nt">-f</span> “<span class="nv">$path</span>” <span class="o">]</span><span class="p">;</span> <span class="k">then</span> <span class="c"># Check if path still exists</span>
-      <span class="k">if </span><span class="nb">echo</span> “<span class="nv">$old_governor</span>” <span class="o">&gt;</span>”<span class="nv">$path</span>”<span class="p">;</span> <span class="k">then
-        </span>log info “Restored ‘<span class="nv">$old_governor</span>’ to: <span class="nv">$path</span>”
-      <span class="k">else
-        </span>log err  “FAILED to restore ‘<span class="nv">$old_governor</span>’ to: <span class="nv">$path</span>”
+  <span class="c"># Use standard single quotes '' for IFS setting specific to read</span>
+  <span class="k">while </span><span class="nv">IFS</span><span class="o">=</span><span class="s1">$'</span><span class="se">\t</span><span class="s1">'</span> <span class="nb">read</span> <span class="nt">-r</span> path old_governor<span class="p">;</span> <span class="k">do</span>
+    <span class="c"># Use standard quotes ""</span>
+    <span class="k">if</span> <span class="o">[</span> <span class="nt">-f</span> <span class="s2">"</span><span class="nv">$path</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then</span> <span class="c"># Check if path still exists</span>
+      <span class="c"># Use standard quotes "" and standard single quotes ''</span>
+      <span class="k">if </span><span class="nb">echo</span> <span class="s2">"</span><span class="nv">$old_governor</span><span class="s2">"</span> <span class="o">&gt;</span><span class="s2">"</span><span class="nv">$path</span><span class="s2">"</span><span class="p">;</span> <span class="k">then
+        </span>log info <span class="s2">"Restored '</span><span class="nv">$old_governor</span><span class="s2">' to: </span><span class="nv">$path</span><span class="s2">"</span>
+      <span class="k">else</span>
+        <span class="c"># Use standard quotes "" and standard single quotes ''</span>
+        log err <span class="s2">"FAILED to restore '</span><span class="nv">$old_governor</span><span class="s2">' to: </span><span class="nv">$path</span><span class="s2">"</span>
       <span class="k">fi
-    else
-      </span>log warning “Path no longer exists, cannot restore <span class="k">for</span>: <span class="nv">$path</span>”
+    else</span>
+      <span class="c"># Use standard quotes ""</span>
+      log warning <span class="s2">"Path no longer exists, cannot restore for: </span><span class="nv">$path</span><span class="s2">"</span>
     <span class="k">fi
-  done</span> &lt;“<span class="nv">$STATE_FILE</span>”
+  done</span> &lt;<span class="s2">"</span><span class="nv">$STATE_FILE</span><span class="s2">"</span> <span class="c"># Use standard quotes ""</span>
 
-  log info “STOP <span class="nb">command </span>complete.”
+  <span class="c"># Use standard quotes ""</span>
+  log info <span class="s2">"STOP command complete."</span>
 <span class="o">}</span>
 
 <span class="c"># Action: Display current and saved governors.</span>
 cmd_status<span class="o">()</span> <span class="o">{</span>
-  <span class="nb">echo</span> “Governor Status <span class="o">(</span>Current Governor → Saved Default Governor<span class="o">)</span>:”
+  <span class="c"># Use standard quotes ""</span>
+  <span class="nb">echo</span> <span class="s2">"Governor Status (Current Governor -&gt; Saved Default Governor):"</span>
   <span class="nb">declare</span> <span class="nt">-A</span> saved_governors <span class="c"># Associative array to hold saved states</span>
 
   <span class="c"># Populate saved_governors from state file if it exists</span>
-  <span class="k">if</span> <span class="o">[</span> <span class="nt">-r</span> “<span class="nv">$STATE_FILE</span>” <span class="o">]</span><span class="p">;</span> <span class="k">then
-    while </span><span class="nv">IFS</span><span class="o">=</span><span class="nv">$’</span><span class="se">\t</span>’ <span class="nb">read</span> <span class="nt">-r</span> path old_governor<span class="p">;</span> <span class="k">do
-      </span>saved_governors[“<span class="nv">$path</span>”]<span class="o">=</span>“<span class="nv">$old_governor</span>”
-    <span class="k">done</span> &lt;“<span class="nv">$STATE_FILE</span>”
+  <span class="c"># Use standard quotes ""</span>
+  <span class="k">if</span> <span class="o">[</span> <span class="nt">-r</span> <span class="s2">"</span><span class="nv">$STATE_FILE</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then</span>
+    <span class="c"># Use standard single quotes '' for IFS setting specific to read</span>
+    <span class="k">while </span><span class="nv">IFS</span><span class="o">=</span><span class="s1">$'</span><span class="se">\t</span><span class="s1">'</span> <span class="nb">read</span> <span class="nt">-r</span> path old_governor<span class="p">;</span> <span class="k">do</span>
+      <span class="c"># Use standard quotes ""</span>
+      saved_governors[<span class="s2">"</span><span class="nv">$path</span><span class="s2">"</span><span class="o">]=</span><span class="s2">"</span><span class="nv">$old_governor</span><span class="s2">"</span>
+    <span class="k">done</span> &lt;<span class="s2">"</span><span class="nv">$STATE_FILE</span><span class="s2">"</span> <span class="c"># Use standard quotes ""</span>
   <span class="k">fi</span>
 
   <span class="c"># Display status for each discovered governor path</span>
   <span class="nb">local </span><span class="nv">found_any</span><span class="o">=</span>0
   <span class="k">while </span><span class="nv">IFS</span><span class="o">=</span> <span class="nb">read</span> <span class="nt">-r</span> path<span class="p">;</span> <span class="k">do
     </span><span class="nv">found_any</span><span class="o">=</span>1
-    <span class="nv">current_governor</span><span class="o">=</span><span class="si">$(</span>&lt;“<span class="nv">$path</span>”<span class="si">)</span>
-    <span class="nv">default_governor</span><span class="o">=</span>“<span class="k">${</span><span class="nv">saved_governors</span><span class="p">[</span><span class="nv">$path</span><span class="p">]</span><span class="k">:-</span><span class="p">&lt;not_saved&gt;</span><span class="k">}</span>” <span class="c"># Use &lt;not_saved&gt; if not in state file</span>
-    <span class="nb">printf</span> ‘%-65s : %-15s → %s<span class="se">\n</span>’ “<span class="nv">$path</span>” “<span class="nv">$current_governor</span>” “<span class="nv">$default_governor</span>”
+    <span class="c"># Use standard quotes "" and standard curly braces {}</span>
+    <span class="nv">current_governor</span><span class="o">=</span><span class="si">$(</span>&lt;<span class="s2">"</span><span class="nv">$path</span><span class="s2">"</span><span class="si">)</span>
+    <span class="nv">default_governor</span><span class="o">=</span><span class="s2">"</span><span class="k">${</span><span class="nv">saved_governors</span><span class="p">[</span><span class="nv">$path</span><span class="p">]</span><span class="k">:-</span><span class="p">&lt;not_saved&gt;</span><span class="k">}</span><span class="s2">"</span> <span class="c"># Use &lt;not_saved&gt; if not in state file</span>
+    <span class="c"># Use standard quotes "", standard single quotes '', standard parentheses ()</span>
+    <span class="nb">printf</span> <span class="s1">'%-65s : %-15s -&gt; %s\n'</span> <span class="s2">"</span><span class="nv">$path</span><span class="s2">"</span> <span class="s2">"</span><span class="nv">$current_governor</span><span class="s2">"</span> <span class="s2">"</span><span class="nv">$default_governor</span><span class="s2">"</span>
   <span class="k">done</span> &lt; &lt;<span class="o">(</span>discover_paths<span class="o">)</span>
 
-  <span class="k">if</span> <span class="o">[</span> “<span class="nv">$found_any</span>” <span class="nt">-eq</span> 0 <span class="o">]</span><span class="p">;</span> <span class="k">then
-    </span><span class="nb">echo</span> “No governor paths found.”
+  <span class="c"># Use standard quotes ""</span>
+  <span class="k">if</span> <span class="o">[</span> <span class="s2">"</span><span class="nv">$found_any</span><span class="s2">"</span> <span class="nt">-eq</span> 0 <span class="o">]</span><span class="p">;</span> <span class="k">then
+    </span><span class="nb">echo</span> <span class="s2">"No governor paths found."</span>
   <span class="k">fi</span>
 <span class="o">}</span>
 
 <span class="c"># Display usage instructions.</span>
 usage<span class="o">()</span> <span class="o">{</span>
+  <span class="c"># Use standard single quotes ''</span>
   <span class="nb">cat</span> <span class="o">&lt;&lt;</span><span class="no">EOF</span><span class="sh">
 Usage: </span><span class="nv">$0</span><span class="sh"> {start|stop|restart|status}
-  start      Saves current governor settings and sets all to ‘performance’.
+  start      Saves current governor settings and sets all to 'performance'.
   stop       Restores previously saved governor settings.
-  restart    Executes ‘stop’ then ‘start’.
+  restart    Executes 'stop' then 'start'.
   status     Displays current vs. saved governor settings for all discovered paths.
 </span><span class="no">EOF
 </span>  <span class="nb">exit </span>1
@@ -1142,15 +1175,17 @@ Usage: </span><span class="nv">$0</span><span class="sh"> {start|stop|restart|st
 <span class="c"># Main command dispatcher.</span>
 <span class="k">if</span> <span class="o">[</span> <span class="nv">$# </span><span class="nt">-eq</span> 0 <span class="o">]</span><span class="p">;</span> <span class="k">then</span> <span class="c"># Show usage if no arguments</span>
   usage
-<span class="k">fi
+<span class="k">fi</span>
 
-case</span> “<span class="nv">$1</span>” <span class="k">in
+<span class="c"># Use standard quotes ""</span>
+<span class="k">case</span> <span class="s2">"</span><span class="nv">$1</span><span class="s2">"</span> <span class="k">in
   </span>start<span class="p">)</span>   cmd_start   <span class="p">;;</span>
   stop<span class="p">)</span>    cmd_stop    <span class="p">;;</span>
   restart<span class="p">)</span> cmd_stop<span class="p">;</span> cmd_start <span class="p">;;</span> <span class="c"># Simple restart: stop then start</span>
   status<span class="p">)</span>  cmd_status  <span class="p">;;</span>
   <span class="k">*</span><span class="p">)</span>       usage       <span class="p">;;</span> <span class="c"># Show usage for unknown commands</span>
 <span class="k">esac</span>
+
 </code></pre></div></div>
 
 <p><strong>2. The Systemd Service Unit: <code class="language-plaintext highlighter-rouge">/etc/systemd/system/performance_governors.service</code></strong></p>
@@ -1166,18 +1201,19 @@ case</span> “<span class="nv">$1</span>” <span class="k">in
 
 <div class="language-ini highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nn">[Unit]</span>
 <span class="py">Description</span><span class="p">=</span><span class="s">Performance Governors Management (CPU/GPU/NPU/DMC)</span>
-<span class="py">Documentation</span><span class="p">=</span><span class="s">man:performance_governors.sh # Assuming script could have a man page</span>
-<span class="py">After</span><span class="p">=</span><span class="s">multi-user.target</span>
-<span class="py">Wants</span><span class="p">=</span><span class="s">network-online.target # Optional: if any governor settings depend on network state</span>
-
+<span class="py">Documentation</span><span class="p">=</span><span class="s">man:performance_governors.sh</span>
+<span class="c"># Start after basic system services are up.
+</span><span class="py">After</span><span class="p">=</span><span class="s">multi-user.target</span>
+<span class="c"># Removed Wants=network-online.target (usually not needed for governors)
+</span>
 <span class="nn">[Service]</span>
 <span class="py">Type</span><span class="p">=</span><span class="s">oneshot</span>
 <span class="py">ExecStart</span><span class="p">=</span><span class="s">/usr/local/bin/performance_governors.sh start</span>
 <span class="py">ExecStop</span><span class="p">=</span><span class="s">/usr/local/bin/performance_governors.sh stop</span>
 <span class="py">ExecReload</span><span class="p">=</span><span class="s">/usr/local/bin/performance_governors.sh restart</span>
 <span class="py">RemainAfterExit</span><span class="p">=</span><span class="s">yes</span>
-<span class="c"># On failure, log and stay failed. Use ‘systemctl reset-failed performance_governors.service’ to clear.
-</span><span class="py">Restart</span><span class="p">=</span><span class="s">no </span>
+<span class="c"># On failure, log and stay failed. Use 'systemctl reset-failed performance_governors.service' to clear.
+</span><span class="py">Restart</span><span class="p">=</span><span class="s">no</span>
 
 <span class="nn">[Install]</span>
 <span class="py">WantedBy</span><span class="p">=</span><span class="s">multi-user.target</span>
