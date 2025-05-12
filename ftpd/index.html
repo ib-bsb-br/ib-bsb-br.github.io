@@ -67,7 +67,7 @@
         
           <span class="post-updated">
             ↣
-            <time datetime="2025-05-12T20:16:06+00:00">
+            <time datetime="2025-05-12T20:21:24+00:00">
               12 May 2025
             </time>
           </span>
@@ -90,11 +90,11 @@
         <div class="page-stats mt-3" role="status" aria-label="Page statistics">
       
       <span class="badge bg-primary">
-        13221 characters
+        13761 characters
       </span>
         <span class="separator mx-2" aria-hidden="true">•</span>
         <span class="badge bg-primary">
-        1590 words
+        1680 words
       </span>
       </div>
         <div class="action-buttons d-flex flex-wrap gap-2">
@@ -243,23 +243,27 @@
     
   </h2>
       
-        <p>```bash</p>
-  <h1 id="-begin-command-block-to-paste-">
-    
-    
-     <a href="#-begin-command-block-to-paste-">#</a><a href="#" aria-label="Back to top">— Begin command block to paste —</a>
-        
-    
-  </h1>
-      
+        <p>```bash
+#!/bin/bash</p>
       </li>
     </ul>
   </li>
 </ol>
-  <h1 id="pre-calculate-complex-values">
+  <h1 id="script-to-gather-and-display-pure-ftpd-server-information-on-debian-bullseye">
     
     
-     <a href="#pre-calculate-complex-values">#</a><a href="#" aria-label="Back to top">Pre-calculate complex values</a>
+     <a href="#script-to-gather-and-display-pure-ftpd-server-information-on-debian-bullseye">#</a><a href="#" aria-label="Back to top">Script to gather and display Pure-FTPd server information on Debian Bullseye</a>
+        
+    
+  </h1>
+      
+
+<p>echo “Gathering Pure-FTPd server information…”
+echo “—————————————–”</p>
+  <h1 id="-general-system--service-info-">
+    
+    
+     <a href="#-general-system--service-info-">#</a><a href="#" aria-label="Back to top">— General System &amp; Service Info —</a>
         
     
   </h1>
@@ -285,16 +289,31 @@ PKG_VERSION=$(dpkg -s pure-ftpd 2&gt;/dev/null | grep ‘^Version:’ | awk ‘{
       
 <p>PROC_CMD_LINE_RAW=$( (ps auxw | grep ‘[p]ure-ftpd ‘ | grep -v ‘pure-ftpd-wrapper’ | head -n 1) || <br />
                      (ps auxw | grep ‘[p]ure-ftpd-wrapper’ | head -n 1) || <br />
-                     echo “pure-ftpd process not found” )
-PROC_ARGS_FULL=$(echo “$PROC_CMD_LINE_RAW” | sed -e ‘s/^[^ ]* <em>[^ ]</em> <em>[^ ]</em> <em>[^ ]</em> <em>[^ ]</em> <em>//’ -e ‘s/^[ \t]</em>//’ || echo “Arguments not retrieved”)
-if echo “$PROC_ARGS_FULL” | grep -q “pure-ftpd process not found”; then PROC_ARGS_FULL=”pure-ftpd process not found or args not retrieved”; fi</p>
+                     echo “pure-ftpd process not found” )</p>
+
+<p>PROC_ARGS_FULL=”Arguments not retrieved or process not found”
+if ! echo “$PROC_CMD_LINE_RAW” | grep -q “pure-ftpd process not found”; then
+    PROC_ARGS_FULL=$(echo “$PROC_CMD_LINE_RAW” | sed -e ‘s/^[^ ]* <em>[^ ]</em> <em>[^ ]</em> <em>[^ ]</em> <em>[^ ]</em> <em>//’ -e ‘s/^[ \t]</em>//’)
+fi</p>
 
 <p>LISTENING_PORTS=$(ss -tlpn 2&gt;/dev/null | grep ‘pure-ftpd’ | awk ‘{print $4}’ | sed ‘s/.*://’ | sort -u | tr ‘\n’ ‘ ‘ | sed ‘s/ *$//g’)
-if [ -z “$LISTENING_PORTS” ]; then LISTENING_PORTS=”Not found via ss or pure-ftpd not listening”; fi</p>
-
-<p>PASSIVE_PORTS_CONF_VAL=”Not set or file not found”
+if [ -z “$LISTENING_PORTS” ]; then
+    LISTENING_PORTS=”Not found via ss or pure-ftpd not listening”;
+fi</p>
+  <h1 id="-configuration-from-etcpure-ftpdconf-">
+    
+    
+     <a href="#-configuration-from-etcpure-ftpdconf-">#</a><a href="#" aria-label="Back to top">— Configuration from /etc/pure-ftpd/conf/ —</a>
+        
+    
+  </h1>
+      
+<p>PASSIVE_PORTS_CONF_VAL=”File /etc/pure-ftpd/conf/PassivePortRange not found or not readable.”
 if [ -f /etc/pure-ftpd/conf/PassivePortRange ]; then
     PASSIVE_PORTS_CONF_VAL=$(cat /etc/pure-ftpd/conf/PassivePortRange 2&gt;/dev/null)
+    if [ -z “$PASSIVE_PORTS_CONF_VAL” ]; then
+        PASSIVE_PORTS_CONF_VAL=”File /etc/pure-ftpd/conf/PassivePortRange is empty or unreadable.”
+    fi
 fi</p>
 
 <p>NO_ANON_CONF_RAW=”File not found”
@@ -317,55 +336,58 @@ if [ -f /etc/pure-ftpd/conf/TLS ]; then
     elif [ “$TLS_CONF_RAW” = “2” ]; then TLS_CONF_MSG=”2 (FTPS: TLS for control &amp; data required, no client cert, as per /etc/pure-ftpd/conf/TLS)”;
     else TLS_CONF_MSG=”Value ‘$TLS_CONF_RAW’ in /etc/pure-ftpd/conf/TLS (Unknown value)”; fi
 fi</p>
-
+  <h1 id="-ftp-user-information-based-on-tutorials-ftpuser-">
+    
+    
+     <a href="#-ftp-user-information-based-on-tutorials-ftpuser-">#</a><a href="#" aria-label="Back to top">— FTP User Information (based on tutorial’s ‘ftpuser’) —</a>
+        
+    
+  </h1>
+      
 <p>FTPUSER_EXISTS_MSG=”User ‘ftpuser’ (from tutorial) not found in /etc/passwd.”
-FTPUSER_HOME=””
-FTPUSER_SHELL=””
+FTPUSER_HOME_DIR=”N/A” # Renamed to avoid conflict with $HOME
+FTPUSER_SHELL=”N/A”
 if getent passwd ftpuser &gt;/dev/null 2&gt;&amp;1; then
     FTPUSER_EXISTS_MSG=”User ‘ftpuser’ (from tutorial) exists.”
-    FTPUSER_HOME=$(getent passwd ftpuser | cut -d: -f6)
+    FTPUSER_HOME_DIR=$(getent passwd ftpuser | cut -d: -f6)
     FTPUSER_SHELL=$(getent passwd ftpuser | cut -d: -f7)
 fi</p>
-  <h1 id="main-echo-command-using-the-pre-calculated-variables">
+  <h1 id="-displaying-information-">
     
     
-     <a href="#main-echo-command-using-the-pre-calculated-variables">#</a><a href="#" aria-label="Back to top">Main echo command using the pre-calculated variables</a>
+     <a href="#-displaying-information-">#</a><a href="#" aria-label="Back to top">— Displaying Information —</a>
         
     
   </h1>
       
-<p>echo -e “— FTP Server Details (pure-ftpd on Debian Bullseye) —\n<br />
-\n<strong>General System &amp; Service Info:</strong>\n<br />
-  System IP Addresses: $IP_ADDRESSES\n<br />
-  Pure-FTPd Service Status (systemctl): $SERVICE_STATUS\n<br />
-  Pure-FTPd Package Version (dpkg): $PKG_VERSION\n<br />
-  Running pure-ftpd Command Line (best effort from ps): $PROC_ARGS_FULL\n<br />
-  Listening FTP Port(s) (from ss): $LISTENING_PORTS (Typically 21 for control)\n<br />
-\n<strong>Configuration (Values from /etc/pure-ftpd/conf/ unless overridden by command line args above):</strong>\n<br />
-  Passive Port Range (from /etc/pure-ftpd/conf/PassivePortRange): $PASSIVE_PORTS_CONF_VAL\n<br />
-  Anonymous Login (from /etc/pure-ftpd/conf/NoAnonymous): $NO_ANON_CONF_MSG\n<br />
-  TLS Mode (from /etc/pure-ftpd/conf/TLS): $TLS_CONF_MSG\n<br />
-  TLS Certificate: Path is typically set via a command-line option (e.g., -T /path/to/cert.pem) or uses a default compiled-in path. Check the running process arguments above. The tutorial uses /etc/ssl/private/pure-ftpd.pem.\n<br />
-  Chroot Behavior: Default is often to chroot users. Check for /etc/pure-ftpd/conf/NoChroot (if present, may disable chroot for some) or -A/-a flags in running command line args above.\n<br />
-\n<strong>FTP User Information (based on tutorial’s ‘ftpuser’):</strong>\n<br />
-  FTP User for Connection: System user (the tutorial guides creating ‘ftpuser’).\n<br />
-  Password for FTP User: [This cannot be retrieved. Use the password you set for the system user, e.g., ‘ftpuser’.]\n<br />
-  Status of ‘ftpuser’: $FTPUSER_EXISTS_MSG\n<br />
-  Home Directory for ‘ftpuser’ (if exists): $FTPUSER_HOME\n<br />
-  Shell for ‘ftpuser’ (if exists): $FTPUSER_SHELL\n<br />
-\n<strong>Firewall (UFW Example - run the check command with sudo for current status):</strong>\n<br />
-  Expected Ports (as per tutorial): 21/tcp (FTP Control), 30000-35000/tcp (Passive FTP)\n<br />
-  To check UFW status for these ports, run: sudo ufw status verbose | grep -E ‘21/tcp|30000:35000/tcp’\n<br />
-————————————————-“</p>
-  <h1 id="-end-command-block-">
-    
-    
-     <a href="#-end-command-block-">#</a><a href="#" aria-label="Back to top">— End command block —</a>
-        
-    
-  </h1>
-      
-<p>```</p>
+<p>echo -e “\n<strong>General System &amp; Service Info:</strong>”
+echo -e “  System IP Addresses: $IP_ADDRESSES”
+echo -e “  Pure-FTPd Service Status (systemctl): $SERVICE_STATUS”
+echo -e “  Pure-FTPd Package Version (dpkg): $PKG_VERSION”
+echo -e “  Running pure-ftpd Command Line (best effort from ps): $PROC_ARGS_FULL”
+echo -e “  Listening FTP Port(s) (from ss): $LISTENING_PORTS (Typically 21 for control)”</p>
+
+<p>echo -e “\n<strong>Configuration (Values from /etc/pure-ftpd/conf/ unless overridden by command line args above):</strong>”
+echo -e “  Passive Port Range (from /etc/pure-ftpd/conf/PassivePortRange): $PASSIVE_PORTS_CONF_VAL”
+echo -e “  Anonymous Login (from /etc/pure-ftpd/conf/NoAnonymous): $NO_ANON_CONF_MSG”
+echo -e “  TLS Mode (from /etc/pure-ftpd/conf/TLS): $TLS_CONF_MSG”
+echo -e “  TLS Certificate: Path is typically set via a command-line option (e.g., -T /path/to/cert.pem) or uses a default compiled-in path. Check the running process arguments above. The tutorial uses /etc/ssl/private/pure-ftpd.pem.”
+echo -e “  Chroot Behavior: Default is often to chroot users. Check for /etc/pure-ftpd/conf/NoChroot (if present, may disable chroot for some) or -A/-a flags in running command line args above.”</p>
+
+<p>echo -e “\n<strong>FTP User Information (based on tutorial’s ‘ftpuser’):</strong>”
+echo -e “  FTP User for Connection: System user (the tutorial guides creating ‘ftpuser’).”
+echo -e “  Password for FTP User: [This cannot be retrieved. Use the password you set for the system user, e.g., ‘ftpuser’.]”
+echo -e “  Status of ‘ftpuser’: $FTPUSER_EXISTS_MSG”
+echo -e “  Home Directory for ‘ftpuser’ (if exists): $FTPUSER_HOME_DIR”
+echo -e “  Shell for ‘ftpuser’ (if exists): $FTPUSER_SHELL”</p>
+
+<p>echo -e “\n<strong>Firewall (UFW Example - run the check command with sudo for current status):</strong>”
+echo -e “  Expected Ports (as per tutorial): 21/tcp (FTP Control), 30000-35000/tcp (Passive FTP)”
+echo -e “  To check UFW status for these ports, run: sudo ufw status verbose | grep -E ‘21/tcp|30000:35000/tcp’”</p>
+
+<p>echo “—————————————–”
+echo “Script finished.”
+```</p>
   <h3 id="connect-a-windows-11-machine-to-the-debian-ftp-server-using-filezilla">
     
     
@@ -634,7 +656,7 @@ Port: 21
         
         
         <a href="https://ib.bsb.br/404" aria-label="404">
-          2025-05-12 17:22:20
+          2025-05-12 17:29:29
         </a>
         &#x23;
     
@@ -702,7 +724,7 @@ Port: 21
         "headline": "Setup FTP Server on Debian and Connect a Windows Machine",
         "description": "",
         "datePublished": "2024-11-21T00:00:00+00:00",
-        "dateModified": "2025-05-12T20:16:06+00:00",
+        "dateModified": "2025-05-12T20:21:24+00:00",
         "author": {
           "@type": "Person",
           "name": "Author"
