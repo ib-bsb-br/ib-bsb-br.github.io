@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>
+      
+        Performance Governor optimizations Script - infoBAG
+      
+    </title>
+    <meta name="title" content="Performance Governor optimizations Script - infoBAG" />
+    <meta name="description" content="">
+    <meta property="og:type" content="article">
+    <meta property="og:url" content="https://ib.bsb.br/performance-governor-optimizations-script/">
+    <meta property="og:title" content="Performance Governor optimizations Script - infoBAG">
+    <meta property="og:description" content="">
+    <meta property="og:image" content="/favicon.ico">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:url" content="https://ib.bsb.br/performance-governor-optimizations-script/">
+    <meta name="twitter:title" content="Performance Governor optimizations Script - infoBAG">
+    <meta name="twitter:description" content="">
+    <meta name="twitter:image" content="/favicon.ico">
+    <link rel="canonical" href="https://ib.bsb.br/performance-governor-optimizations-script/">
+    <link rel="alternate" type="application/rss+xml" title="infoBAG" href="https://ib.bsb.br/rss.xml">
+    
+      <meta name="keywords" content="scratchpad">
+      
+        <meta property="article:tag" content="scratchpad">
+      
+    
+    <link rel="icon" href="/favicon.ico" type="image/x-icon">
+    <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon">
+    
+    <link rel="stylesheet" href="/style.css">
+  </head>
+  <body class="post-content-body">
+    <header class="header-container">
+      <nav aria-label="Main navigation" class="header-content">
+        <a href="/" aria-label="Home">
+          <img src="/favicon.ico" alt="Home" class="favicon search-link" width="32" height="32" loading="lazy">
+        </a>
+        <a href="/tags" aria-label="Tags">
+          <img src="/assets/Label.gif" alt="Tags" class="favicon search-link" width="32" height="32" loading="lazy">
+        </a>
+        <a href="/send" aria-label="send">
+          <img src="/assets/rot.gif" alt="send" class="favicon search-link" width="32" height="32" loading="lazy">
+        </a> 
+        <a href="/created" aria-label="archive created">
+          <img src="/assets/Loose_Stone_Pile.gif" alt="archive created" class="favicon search-link" width="32" height="32" loading="lazy">
+        </a>
+        <a href="/events" aria-label="Events">
+          <img src="/assets/Paralyse_Rune.gif" alt="Events" class="favicon search-link" width="32" height="32" loading="lazy">
+        </a>
+        <a href="/modified" aria-label="archive modified">
+          <img src="/assets/Hole_(Rock).gif" alt="archive modified" class="favicon search-link" width="32" height="32" loading="lazy">
+        </a>
+    </nav>
+      <h5 class="post-title">
+        <a href="#bottom-of-page" aria-label="Go to bottom">
+          Performance Governor optimizations Script
+        </a>
+      </h5>
+      <div class="post-meta">
+        <time datetime="2025-05-09T00:00:00+00:00" class="post-date">
+          09 May 2025
+        </time>
+        
+          <span class="post-updated">
+            ↣
+            <time datetime="2025-05-12T18:24:46+00:00">
+              12 May 2025
+            </time>
+          </span>
+        
+        
+          <p class="post-slug">
+            Slug: <a href="https://ib.bsb.br/performance-governor-optimizations-script" class="tag">performance-governor-optimizations-script</a>
+          </p>
+        
+        
+          <p class="post-tags">
+            Tags:
+            
+              <a href="https://ib.bsb.br/tags/#scratchpad" class="tag">scratchpad</a>
+            
+          </p>
+        
+      </div>
+      <div class="post-actions">
+        <div class="page-stats mt-3" role="status" aria-label="Page statistics">
+      
+      <span class="badge bg-primary">
+        11424 characters
+      </span>
+        <span class="separator mx-2" aria-hidden="true">•</span>
+        <span class="badge bg-primary">
+        1438 words
+      </span>
+      </div>
+        <div class="action-buttons d-flex flex-wrap gap-2">
+          
+            
+              <form action="https://github.com/ib-bsb-br/ib-bsb-br.github.io/edit/main/_posts/2025-05-09-performance-governor-optimizations-script.md"
+                    method="GET"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="d-inline-block">
+                <button type="submit" class="btn btn-danger" aria-label="Edit page content">
+                  <span class="button-text">Improve this page?</span>
+                  <span class="info-text">aberto.</span>
+                </button>
+              </form>
+            
+            <form action="https://github.com/ib-bsb-br/ib-bsb-br.github.io/commits/main/_posts/2025-05-09-performance-governor-optimizations-script.md"
+                  method="GET"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="d-inline-block">
+              <button type="submit" class="btn btn-danger" aria-label="View page revision history">
+                View revision history
+              </button>
+            </form>
+          
+        </div>
+      </div>
+    </header>
+    <main class="content">
+      <article class="post-wrapper">
+        <div class="post-content-body">
+          
+
+          <p>This guide presents a comprehensive, single approach to managing CPU, GPU, NPU, and DMC frequency governors on Linux systems, particularly for devices like the RK3588, by setting them to “performance” mode. This method emphasizes robustness, dynamic discovery of hardware, state persistence for reversibility, and proper integration with systemd. It combines the best practices from various methods into one refined solution.</p>
+
+<p>While the context often mentions RK3588, the script and systemd service are designed to be generally applicable to Linux systems, though specific sysfs paths for governors can vary if not covered by the general patterns.</p>
+
+<p>This solution consists of a powerful Bash script that handles the logic of discovering, setting, and restoring governors, and a systemd service unit to manage this script at boot and allow system-level control.</p>
+
+<p><strong>1. The Bash Script: <code class="language-plaintext highlighter-rouge">/usr/local/bin/performance_governors.sh</code></strong></p>
+
+<p>This script is the core of the solution. Its key features include:</p>
+<ul>
+  <li><strong>Root Privilege Check:</strong> Ensures it’s run with necessary permissions.</li>
+  <li><strong>Robust Scripting:</strong> Uses <code class="language-plaintext highlighter-rouge">set -euo pipefail</code> for strict error handling and <code class="language-plaintext highlighter-rouge">IFS=$’\n\t’</code> for safer processing of paths.</li>
+  <li><strong>Variable Protection:</strong> Uses <code class="language-plaintext highlighter-rouge">readonly</code> for global configuration variables (<code class="language-plaintext highlighter-rouge">STATE_DIR</code>, <code class="language-plaintext highlighter-rouge">STATE_FILE</code>, <code class="language-plaintext highlighter-rouge">GOV_PATTERNS</code>) to prevent accidental modification within the script, enhancing robustness.</li>
+  <li><strong>Dynamic Governor Discovery:</strong> Automatically finds relevant <code class="language-plaintext highlighter-rouge">cpufreq</code> (CPU) and <code class="language-plaintext highlighter-rouge">devfreq</code> (GPU, NPU, DMC, etc.) governor files using general patterns, making it adaptable to different hardware configurations.</li>
+  <li><strong>State Management:</strong> Before setting governors to “performance,” it saves the current (default) governor for each device to a state file (<code class="language-plaintext highlighter-rouge">/var/lib/performance_governors/default_gov.txt</code>). This allows for a clean restoration of previous settings.</li>
+  <li><strong>Comprehensive Actions:</strong>
+    <ul>
+      <li><code class="language-plaintext highlighter-rouge">start</code>: Saves current governors and sets all discovered ones to “performance.”</li>
+      <li><code class="language-plaintext highlighter-rouge">stop</code>: Restores the saved governors from the state file.</li>
+      <li><code class="language-plaintext highlighter-rouge">restart</code>: Performs a <code class="language-plaintext highlighter-rouge">stop</code> then <code class="language-plaintext highlighter-rouge">start</code>.</li>
+      <li><code class="language-plaintext highlighter-rouge">status</code>: Displays the current governor and the saved (default) governor for each discovered path.</li>
+    </ul>
+  </li>
+  <li><strong>Systemd-Aware Logging:</strong> Uses <code class="language-plaintext highlighter-rouge">systemd-cat</code> for logging if available, providing integration with the system journal; otherwise, falls back to the standard <code class="language-plaintext highlighter-rouge">logger</code> utility.</li>
+</ul>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><section><code><span class="c">#!/usr/bin/env bash</span>
+<span class="c"># ——————————————————————————</span>
+<span class="c"># performance_governors.sh</span>
+<span class="c"># Unified script to manage CPU/GPU/NPU/DMC frequency governors.</span>
+<span class="c"># Targets devices like RK3588 but designed for general Linux applicability.</span>
+<span class="c"># - Requires root (CAP_SYS_ADMIN)</span>
+<span class="c"># - Depends on ‘util-linux’ (for logger) and systemd (for systemd-cat)</span>
+<span class="c"># ——————————————————————————</span>
+<span class="nb">set</span> <span class="nt">-euo</span> pipefail
+<span class="nv">IFS</span><span class="o">=</span><span class="nv">$’</span><span class="se">\n\t</span>’ <span class="c"># Set Internal Field Separator to newline and tab for safer loops.</span>
+
+<span class="c">### Verify running as root</span>
+<span class="k">if</span> <span class="o">[</span> “<span class="si">$(</span><span class="nb">id</span> <span class="nt">-u</span><span class="si">)</span>” <span class="nt">-ne</span> 0 <span class="o">]</span><span class="p">;</span> <span class="k">then
+  </span><span class="nb">echo</span> “ERROR: Must be run as root.” <span class="o">&gt;</span>&amp;2
+  <span class="nb">exit </span>1
+<span class="k">fi</span>
+
+<span class="c"># Location to save/restore default governors</span>
+<span class="nb">readonly </span><span class="nv">STATE_DIR</span><span class="o">=</span>“/var/lib/performance_governors”
+<span class="nb">readonly </span><span class="nv">STATE_FILE</span><span class="o">=</span>“<span class="nv">$STATE_DIR</span>/default_gov.txt”
+
+<span class="c"># General patterns covering cpufreq (CPU) and devfreq (other devices) governors</span>
+<span class="nb">readonly </span><span class="nv">GOV_PATTERNS</span><span class="o">=(</span>
+  “/sys/devices/system/cpu/cpufreq/policy<span class="k">*</span>/scaling_governor” <span class="c"># For CPU cores</span>
+  “/sys/class/devfreq/<span class="k">*</span>/governor”                             <span class="c"># For GPU, NPU, DMC, etc.</span>
+<span class="o">)</span>
+
+<span class="c"># Log function: prefers systemd-cat for journal integration, else falls back to logger.</span>
+log<span class="o">()</span> <span class="o">{</span>
+  <span class="nb">local </span><span class="nv">level</span><span class="o">=</span>“<span class="nv">$1</span>”<span class="p">;</span> <span class="nb">shift
+  local </span><span class="nv">msg</span><span class="o">=</span>“<span class="nv">$*</span>”
+  <span class="k">if </span><span class="nb">command</span> <span class="nt">-v</span> systemd-cat &amp;&gt;/dev/null<span class="p">;</span> <span class="k">then</span>
+    <span class="c"># Pipe to systemd-cat to log with specified level and tag</span>
+    <span class="nb">printf</span> ‘%s<span class="se">\n</span>’ “<span class="nv">$msg</span>” | systemd-cat <span class="nt">-t</span> performance_governors <span class="nt">-p</span> “<span class="nv">$level</span>”
+  <span class="k">else</span>
+    <span class="c"># Fallback to logger if systemd-cat is not available</span>
+    logger <span class="nt">-t</span> performance_governors <span class="nt">-p</span> “user.<span class="nv">$level</span>” — “<span class="nv">$msg</span>”
+  <span class="k">fi</span>
+<span class="o">}</span>
+
+<span class="c"># Discover all existing governor file paths based on GOV_PATTERNS.</span>
+discover_paths<span class="o">()</span> <span class="o">{</span>
+  <span class="k">for </span>patt <span class="k">in</span> “<span class="k">${</span><span class="nv">GOV_PATTERNS</span><span class="p">[@]</span><span class="k">}</span>”<span class="p">;</span> <span class="k">do</span>
+    <span class="c"># $patt is intentionally unquoted to allow shell pathname expansion (globbing).</span>
+    <span class="c"># The shell first performs word splitting on $patt (if it contained IFS characters;</span>
+    <span class="c"># current IFS is newline/tab). Then, pathname expansion (globbing, e.g., ‘*’)</span>
+    <span class="c"># is attempted on each resulting word. For the defined GOV_PATTERNS, which are</span>
+    <span class="c"># single “words” without internal IFS characters, this robustly expands the globs.</span>
+    <span class="k">for </span>f <span class="k">in</span> <span class="nv">$patt</span><span class="p">;</span> <span class="k">do</span>
+      <span class="c"># Check if the glob expansion resulted in an actual existing file</span>
+      <span class="o">[</span> <span class="nt">-f</span> “<span class="nv">$f</span>” <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="nb">printf</span> ‘%s<span class="se">\n</span>’ “<span class="nv">$f</span>”
+    <span class="k">done
+  done</span>
+<span class="o">}</span>
+
+<span class="c"># Action: Save current governors and set all to ‘performance’.</span>
+cmd_start<span class="o">()</span> <span class="o">{</span>
+  log info “START: Saving default governors and forcing ‘performance’ mode.”
+  <span class="nb">mkdir</span> <span class="nt">-p</span> “<span class="nv">$STATE_DIR</span>” <span class="c"># Ensure state directory exists</span>
+  : <span class="o">&gt;</span> “<span class="nv">$STATE_FILE</span>”     <span class="c"># Truncate/create state file</span>
+
+  <span class="c"># Read each discovered governor path</span>
+  <span class="k">while </span><span class="nv">IFS</span><span class="o">=</span> <span class="nb">read</span> <span class="nt">-r</span> path<span class="p">;</span> <span class="k">do
+    </span><span class="nv">current_governor</span><span class="o">=</span><span class="si">$(</span>&lt;“<span class="nv">$path</span>”<span class="si">)</span> <span class="c"># Read current governor</span>
+    <span class="nb">printf</span> ‘%s<span class="se">\t</span>%s<span class="se">\n</span>’ “<span class="nv">$path</span>” “<span class="nv">$current_governor</span>” <span class="o">&gt;&gt;</span>”<span class="nv">$STATE_FILE</span>” <span class="c"># Save path and current governor</span>
+
+    <span class="c"># Attempt to set to ‘performance’</span>
+    <span class="k">if </span><span class="nb">echo </span>performance <span class="o">&gt;</span>”<span class="nv">$path</span>”<span class="p">;</span> <span class="k">then
+      </span>log info “Successfully <span class="nb">set</span> ‘performance’ <span class="k">for</span>: <span class="nv">$path</span>”
+    <span class="k">else
+      </span>log err  “FAILED to <span class="nb">set</span> ‘performance’ <span class="k">for</span>: <span class="nv">$path</span>”
+    <span class="k">fi
+  done</span> &lt; &lt;<span class="o">(</span>discover_paths<span class="o">)</span> <span class="c"># Process substitution feeds paths from discover_paths</span>
+
+  log info “START <span class="nb">command </span>complete.”
+<span class="o">}</span>
+
+<span class="c"># Action: Restore governors to their saved default states.</span>
+cmd_stop<span class="o">()</span> <span class="o">{</span>
+  log info “STOP: Restoring saved default governors.”
+  <span class="k">if</span> <span class="o">[</span> <span class="o">!</span> <span class="nt">-r</span> “<span class="nv">$STATE_FILE</span>” <span class="o">]</span><span class="p">;</span> <span class="k">then
+    </span>log warning “State file <span class="o">(</span><span class="nv">$STATE_FILE</span><span class="o">)</span> not found or not readable. Skipping restore.”
+    <span class="k">return </span>1 <span class="c"># Indicate issue if state file is missing</span>
+  <span class="k">fi</span>
+
+  <span class="c"># Read path and old governor from state file</span>
+  <span class="k">while </span><span class="nv">IFS</span><span class="o">=</span><span class="nv">$’</span><span class="se">\t</span>’ <span class="nb">read</span> <span class="nt">-r</span> path old_governor<span class="p">;</span> <span class="k">do
+    if</span> <span class="o">[</span> <span class="nt">-f</span> “<span class="nv">$path</span>” <span class="o">]</span><span class="p">;</span> <span class="k">then</span> <span class="c"># Check if path still exists</span>
+      <span class="k">if </span><span class="nb">echo</span> “<span class="nv">$old_governor</span>” <span class="o">&gt;</span>”<span class="nv">$path</span>”<span class="p">;</span> <span class="k">then
+        </span>log info “Restored ‘<span class="nv">$old_governor</span>’ to: <span class="nv">$path</span>”
+      <span class="k">else
+        </span>log err  “FAILED to restore ‘<span class="nv">$old_governor</span>’ to: <span class="nv">$path</span>”
+      <span class="k">fi
+    else
+      </span>log warning “Path no longer exists, cannot restore <span class="k">for</span>: <span class="nv">$path</span>”
+    <span class="k">fi
+  done</span> &lt;“<span class="nv">$STATE_FILE</span>”
+
+  log info “STOP <span class="nb">command </span>complete.”
+<span class="o">}</span>
+
+<span class="c"># Action: Display current and saved governors.</span>
+cmd_status<span class="o">()</span> <span class="o">{</span>
+  <span class="nb">echo</span> “Governor Status <span class="o">(</span>Current Governor → Saved Default Governor<span class="o">)</span>:”
+  <span class="nb">declare</span> <span class="nt">-A</span> saved_governors <span class="c"># Associative array to hold saved states</span>
+
+  <span class="c"># Populate saved_governors from state file if it exists</span>
+  <span class="k">if</span> <span class="o">[</span> <span class="nt">-r</span> “<span class="nv">$STATE_FILE</span>” <span class="o">]</span><span class="p">;</span> <span class="k">then
+    while </span><span class="nv">IFS</span><span class="o">=</span><span class="nv">$’</span><span class="se">\t</span>’ <span class="nb">read</span> <span class="nt">-r</span> path old_governor<span class="p">;</span> <span class="k">do
+      </span>saved_governors[“<span class="nv">$path</span>”]<span class="o">=</span>“<span class="nv">$old_governor</span>”
+    <span class="k">done</span> &lt;“<span class="nv">$STATE_FILE</span>”
+  <span class="k">fi</span>
+
+  <span class="c"># Display status for each discovered governor path</span>
+  <span class="nb">local </span><span class="nv">found_any</span><span class="o">=</span>0
+  <span class="k">while </span><span class="nv">IFS</span><span class="o">=</span> <span class="nb">read</span> <span class="nt">-r</span> path<span class="p">;</span> <span class="k">do
+    </span><span class="nv">found_any</span><span class="o">=</span>1
+    <span class="nv">current_governor</span><span class="o">=</span><span class="si">$(</span>&lt;“<span class="nv">$path</span>”<span class="si">)</span>
+    <span class="nv">default_governor</span><span class="o">=</span>“<span class="k">${</span><span class="nv">saved_governors</span><span class="p">[</span><span class="nv">$path</span><span class="p">]</span><span class="k">:-</span><span class="p">&lt;not_saved&gt;</span><span class="k">}</span>” <span class="c"># Use &lt;not_saved&gt; if not in state file</span>
+    <span class="nb">printf</span> ‘%-65s : %-15s → %s<span class="se">\n</span>’ “<span class="nv">$path</span>” “<span class="nv">$current_governor</span>” “<span class="nv">$default_governor</span>”
+  <span class="k">done</span> &lt; &lt;<span class="o">(</span>discover_paths<span class="o">)</span>
+
+  <span class="k">if</span> <span class="o">[</span> “<span class="nv">$found_any</span>” <span class="nt">-eq</span> 0 <span class="o">]</span><span class="p">;</span> <span class="k">then
+    </span><span class="nb">echo</span> “No governor paths found.”
+  <span class="k">fi</span>
+<span class="o">}</span>
+
+<span class="c"># Display usage instructions.</span>
+usage<span class="o">()</span> <span class="o">{</span>
+  <span class="nb">cat</span> <span class="o">&lt;&lt;</span><span class="no">EOF</span><span class="sh">
+Usage: </span><span class="nv">$0</span><span class="sh"> {start|stop|restart|status}
+  start      Saves current governor settings and sets all to ‘performance’.
+  stop       Restores previously saved governor settings.
+  restart    Executes ‘stop’ then ‘start’.
+  status     Displays current vs. saved governor settings for all discovered paths.
+</span><span class="no">EOF
+</span>  <span class="nb">exit </span>1
+<span class="o">}</span>
+
+<span class="c"># Main command dispatcher.</span>
+<span class="k">if</span> <span class="o">[</span> <span class="nv">$# </span><span class="nt">-eq</span> 0 <span class="o">]</span><span class="p">;</span> <span class="k">then</span> <span class="c"># Show usage if no arguments</span>
+  usage
+<span class="k">fi
+
+case</span> “<span class="nv">$1</span>” <span class="k">in
+  </span>start<span class="p">)</span>   cmd_start   <span class="p">;;</span>
+  stop<span class="p">)</span>    cmd_stop    <span class="p">;;</span>
+  restart<span class="p">)</span> cmd_stop<span class="p">;</span> cmd_start <span class="p">;;</span> <span class="c"># Simple restart: stop then start</span>
+  status<span class="p">)</span>  cmd_status  <span class="p">;;</span>
+  <span class="k">*</span><span class="p">)</span>       usage       <span class="p">;;</span> <span class="c"># Show usage for unknown commands</span>
+<span class="k">esac</span>
+</code></section></div></div>
+
+<p><strong>2. The Systemd Service Unit: <code class="language-plaintext highlighter-rouge">/etc/systemd/system/performance_governors.service</code></strong></p>
+
+<p>This service file allows systemd to manage the script.</p>
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">Type=oneshot</code>: Indicates the script runs once and exits.</li>
+  <li><code class="language-plaintext highlighter-rouge">RemainAfterExit=yes</code>: Tells systemd to consider the service “active” even after the <code class="language-plaintext highlighter-rouge">ExecStart</code> process finishes, as the script’s effects (changed governors) persist.</li>
+  <li><code class="language-plaintext highlighter-rouge">ExecStart</code>, <code class="language-plaintext highlighter-rouge">ExecStop</code>, <code class="language-plaintext highlighter-rouge">ExecReload</code>: Map directly to the script’s <code class="language-plaintext highlighter-rouge">start</code>, <code class="language-plaintext highlighter-rouge">stop</code>, and <code class="language-plaintext highlighter-rouge">restart</code> actions.</li>
+  <li>Dependencies (<code class="language-plaintext highlighter-rouge">After</code>, <code class="language-plaintext highlighter-rouge">Wants</code>): Ensures the service starts at an appropriate time during boot.</li>
+  <li><code class="language-plaintext highlighter-rouge">Restart=no</code>: The <code class="language-plaintext highlighter-rouge">Restart=no</code> directive ensures that if the script fails during startup (e.g., cannot set a governor), systemd will not attempt to restart it automatically. This is generally preferred for configuration services where a failure might indicate a deeper issue requiring manual investigation rather than repeated, potentially problematic, attempts.</li>
+</ul>
+
+<div class="language-ini highlighter-rouge"><div class="highlight"><section><code><span class="nn">[Unit]</span>
+<span class="py">Description</span><span class="p">=</span><span class="s">Performance Governors Management (CPU/GPU/NPU/DMC)</span>
+<span class="py">Documentation</span><span class="p">=</span><span class="s">man:performance_governors.sh # Assuming script could have a man page</span>
+<span class="py">After</span><span class="p">=</span><span class="s">multi-user.target</span>
+<span class="py">Wants</span><span class="p">=</span><span class="s">network-online.target # Optional: if any governor settings depend on network state</span>
+
+<span class="nn">[Service]</span>
+<span class="py">Type</span><span class="p">=</span><span class="s">oneshot</span>
+<span class="py">ExecStart</span><span class="p">=</span><span class="s">/usr/local/bin/performance_governors.sh start</span>
+<span class="py">ExecStop</span><span class="p">=</span><span class="s">/usr/local/bin/performance_governors.sh stop</span>
+<span class="py">ExecReload</span><span class="p">=</span><span class="s">/usr/local/bin/performance_governors.sh restart</span>
+<span class="py">RemainAfterExit</span><span class="p">=</span><span class="s">yes</span>
+<span class="c"># On failure, log and stay failed. Use ‘systemctl reset-failed performance_governors.service’ to clear.
+</span><span class="py">Restart</span><span class="p">=</span><span class="s">no </span>
+
+<span class="nn">[Install]</span>
+<span class="py">WantedBy</span><span class="p">=</span><span class="s">multi-user.target</span>
+</code></section></div></div>
+
+<p><strong>3. Installation and Management Instructions</strong></p>
+
+<ol>
+  <li><strong>Install Prerequisites</strong> (if not already present):
+The script uses standard utilities. <code class="language-plaintext highlighter-rouge">util-linux</code> (for <code class="language-plaintext highlighter-rouge">logger</code>) and <code class="language-plaintext highlighter-rouge">systemd</code> (for <code class="language-plaintext highlighter-rouge">systemd-cat</code> and service management) are typically core components of modern Linux distributions.
+    <div class="language-bash highlighter-rouge"><div class="highlight"><section><code><span class="c"># On Debian/Ubuntu based systems, these are usually pre-installed.</span>
+<span class="c"># sudo apt update</span>
+<span class="c"># sudo apt install -y util-linux systemd </span>
+</code></section></div>    </div>
+  </li>
+  <li>
+    <p><strong>Save the Bash Script:</strong>
+Copy the script code above and save it as <code class="language-plaintext highlighter-rouge">performance_governors.sh</code> in a temporary location.</p>
+  </li>
+  <li><strong>Install the Bash Script:</strong>
+Move it to <code class="language-plaintext highlighter-rouge">/usr/local/bin/</code> and make it executable:
+    <div class="language-bash highlighter-rouge"><div class="highlight"><section><code><span class="nb">sudo cp </span>performance_governors.sh /usr/local/bin/performance_governors.sh
+<span class="nb">sudo chmod </span>755 /usr/local/bin/performance_governors.sh
+</code></section></div>    </div>
+  </li>
+  <li>
+    <p><strong>Save the Systemd Service Unit:</strong>
+Copy the systemd unit content above and save it as <code class="language-plaintext highlighter-rouge">performance_governors.service</code> in a temporary location.</p>
+  </li>
+  <li><strong>Install the Systemd Service Unit:</strong>
+Move it to <code class="language-plaintext highlighter-rouge">/etc/systemd/system/</code>:
+    <div class="language-bash highlighter-rouge"><div class="highlight"><section><code><span class="nb">sudo cp </span>performance_governors.service /etc/systemd/system/performance_governors.service
+</code></section></div>    </div>
+  </li>
+  <li><strong>Reload Systemd, Enable and Start the Service:</strong>
+    <ul>
+      <li><code class="language-plaintext highlighter-rouge">daemon-reload</code>: Makes systemd aware of the new service file.</li>
+      <li><code class="language-plaintext highlighter-rouge">enable</code>: Ensures the service starts automatically on boot.</li>
+      <li><code class="language-plaintext highlighter-rouge">start</code>: Starts the service immediately for the current session.
+        <div class="language-bash highlighter-rouge"><div class="highlight"><section><code><span class="nb">sudo </span>systemctl daemon-reload
+<span class="nb">sudo </span>systemctl <span class="nb">enable </span>performance_governors.service
+<span class="nb">sudo </span>systemctl start performance_governors.service
+</code></section></div>        </div>
+      </li>
+    </ul>
+  </li>
+  <li><strong>Verify Operation:</strong>
+Check the service status and the governor settings:
+    <div class="language-bash highlighter-rouge"><div class="highlight"><section><code><span class="nb">sudo </span>systemctl status performance_governors.service
+<span class="nb">sudo</span> /usr/local/bin/performance_governors.sh status
+</code></section></div>    </div>
+    <p>You can also check individual governor files, e.g., <code class="language-plaintext highlighter-rouge">cat /sys/devices/system/cpu/cpufreq/policy0/scaling_governor</code>.</p>
+  </li>
+</ol>
+
+<p><strong>4. Using the Script Manually</strong></p>
+
+<p>Once installed, you can also manage the governors manually using the script:</p>
+<ul>
+  <li><strong>Set to performance:</strong> <code class="language-plaintext highlighter-rouge">sudo /usr/local/bin/performance_governors.sh start</code></li>
+  <li><strong>Restore defaults:</strong> <code class="language-plaintext highlighter-rouge">sudo /usr/local/bin/performance_governors.sh stop</code></li>
+  <li><strong>Check status:</strong> <code class="language-plaintext highlighter-rouge">sudo /usr/local/bin/performance_governors.sh status</code></li>
+  <li><strong>Restart (stop then start):</strong> <code class="language-plaintext highlighter-rouge">sudo /usr/local/bin/performance_governors.sh restart</code></li>
+</ul>
+
+        </div>
+        
+          URL: https://ib.bsb.br/performance-governor-optimizations-script
+        
+      </article>
+      <nav class="post-navigation-combined" aria-label="Post navigation">
+        <!-- Chronological Navigation (always visible at 40vh) -->
+        
+          <div class="nav-arrow chronological prev">
+            <a href="/dimatura-ratpoisonrc/" title="dimatura .ratpoisonrc" rel="prev">
+              <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAC0AAAAtCAYAAAA6GuKaAAAAAXNSR0IArs4c6QAAAxVJREFUaEPt18FqG1cUBuD/nLkzI42UiVInkFLTCAKhS+9KA+3Kq1L8AAHjhR7AKz+ADV55qUfoqhvThTfdmC4KzTKmYJrELshJW9PIlSeKRpqZe88pUtouihvVRknqMNoMzD1zdPXNrzMM4RJ+6BLuGeWm39RdK6VL6VcIlPEo41HG401loJQupS8mUM7pi7md/6p3UtoHUJzf4vVecZb0e0EQfB7H8b0kSeqqummt/eb1buN83SebNsZ8QkQCYHVpaenu/v7+ra2tLRwdHWF1ddWq6hfM3BCRE2b+FcBHACQAHo1E5v9c+5mIhkR0e3z0VQ8LotuqWlXVw/GRmT8QkdMK89McuAOAAfwoIu8z85yIHBPRKRGN1/IAeDx0rul53hivo6psrf2ejDGfEtFOu92u7O3tBWtra2i322g0GhgOh9je3ka325UPax7fCR0iw+lp4aLxr70aeOmgkChTRY3JGSb73EroERD73uB54WpOgdhwZkXNQNQLiVDzOU1yFymAhu+lqZVopIqISQKmPLFS+atHv3A1q8AVQ+lXP/VHRPQx+b6frKysxMvLy1hfX0ez2USv18PCwgLiOEaSJKhWq/jhwQN8dnIfVOS4dsWHqCJ5YREGjBuNEMfd0eTc9WshBqnFYGhRqxrUIoNuLwMT4eb1Cp6dZshywdW6mZzr9QsEPuPmXIhfno3gnGKuEWCUC14MLKoVb1L72+8Zvj3JOl/udZt/S7darUqn0wlarRZ2d3cxPz+PJ8dPsPP1Doq8kIbL+cawjxBIM8MRFAidpBlRpIbhFc55gM2NF5IIQtVBRlRTZgTWZQ4wzvc8spO1NPM4Gr9Wh1bSDIjU98C5E0PIC8OVSX+Rlz08hl+4/LsML6X/menFxcW7BwcHtzY2NvDw8CE21zf/NdMAHskFMs3MT/EfMg3gsTsr02f8byfTo16v3+v3+//f6fGKgXNp5vT5huZbqH4nH+NvwXH6V5bS041mU1FKz8ZxepdSerrRbCpK6dk4Tu9SSk83mk1FKT0bx+ldSunpRrOpuJTSfwBcuImxpyA7XgAAAABJRU5ErkJggg==" alt="Previous article" width="45" height="45" loading="lazy">
+            </a>
+          </div>
+        
+        
+          <div class="nav-arrow chronological next">
+            <a href="/ratpoison-documentation/" title="ratpoison documentation" rel="next">
+              <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAC0AAAAtCAYAAAA6GuKaAAAAAXNSR0IArs4c6QAAAwdJREFUaEPtl01rG1cUht9z7p070ijKWLVS3I9YULtNMBRn2UIXxZtuvCjedNWfoKVXBvsHeOUfoIUx5AeY0pVXXSR052UxBJSi0kDiRplII83HvadI9CMtOFjCmBjubC7cc8+Zc555eYdLuIEP3cCe4Zu+rq/mSXvSbyHg5eHl4eVxXRrwpD3p+Qh4n56P2+xZnvTszC7MCAAUF0XfOdJa62+IaCeO40GSJA/zPP8RwB9vDjBtWmv9JRE5ImpZawdVpbo58CkAIyJnIrLAzEvOuXNm/h3AfQDOAGdj5z5m5gXn3G9ENCKilckaiDwpiFZEpCoiTyYrM3/knOtXmHs58BkABvCLc+4DZl6cxIjoh4ODA728vIzt7W2sra09PT4+fgTgQES4LMvHZIy5LyI/f/dJvfK6FKMJqAdqmBS2ZgWINY9zJyZ1whUiRJrTfmGjybSxUemwcFEmghqT1UxlUrpQEXD7jRq3NWelEz10okIi1AJOX+U2EgALgUrT0kVnmcKvQ+uazSZvbW2hWq2i3++j3W5jf38f6+vrebvdHovI5pT09+vN7teLYev990K8GpQYjS1u1TQqhnHez6EU4cM7FTw7z5AXDo16ACcyPRsaxp2FEM9ejKd7zUaIYVpiOCpRq2rUIo0XLzMwEZaaFTzvZ8hyh/iWnu69fF1AAoOfFr/A5w8eYDQaIY5jJEmC09NTNBoNdLtd7O3t4ejoCIeHh8k/pL8KUSkCZcg6hCLDjLk2ufYGpRuXAuOMYiosQiDNNEcQILQuzYgi0QxVWKuAMtcqJPdXDaKaMMOUNrOAtoFSVE5jaaY4mtQPS5dmQPS8WkdfGReYgDe/3cTdpbvo9XrY2NhAp9NBq9XKO53Ov6T/r2mlVBeX0DSAMzeHppm5h7doemdvR99buYfd3V2srq4+PTk5+a+mr9CmrqTU3+5Rr9cHg8HgYve4krddbZGb5dOXmf2d+7n4pi9D4LrOeHl40v42fl0a8KQ96fkIeJ+ej9vsWZ707Mzmy/Ck5+M2e9afhmuAz1BhwewAAAAASUVORK5CYII=" alt="Next article" width="45" height="45" loading="lazy">
+            </a>
+          </div>
+        
+            
+            
+              
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+                  
+                  
+              
+              
+              
+              <!-- Navigation block for tag "scratchpad"; default display for the first tag -->
+              <div class="nav-group tags" id="tag-nav-scratchpad" style="display: block;">
+                <div class="nav-arrow tags prev">
+                  
+                    <a href="/installing-incus-os/" title="installing Incus OS" rel="prev">
+                      <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAC0AAAAtCAYAAAA6GuKaAAAAAXNSR0IArs4c6QAAAxVJREFUaEPt18FqG1cUBuD/nLkzI42UiVInkFLTCAKhS+9KA+3Kq1L8AAHjhR7AKz+ADV55qUfoqhvThTfdmC4KzTKmYJrELshJW9PIlSeKRpqZe88pUtouihvVRknqMNoMzD1zdPXNrzMM4RJ+6BLuGeWm39RdK6VL6VcIlPEo41HG401loJQupS8mUM7pi7md/6p3UtoHUJzf4vVecZb0e0EQfB7H8b0kSeqqummt/eb1buN83SebNsZ8QkQCYHVpaenu/v7+ra2tLRwdHWF1ddWq6hfM3BCRE2b+FcBHACQAHo1E5v9c+5mIhkR0e3z0VQ8LotuqWlXVw/GRmT8QkdMK89McuAOAAfwoIu8z85yIHBPRKRGN1/IAeDx0rul53hivo6psrf2ejDGfEtFOu92u7O3tBWtra2i322g0GhgOh9je3ka325UPax7fCR0iw+lp4aLxr70aeOmgkChTRY3JGSb73EroERD73uB54WpOgdhwZkXNQNQLiVDzOU1yFymAhu+lqZVopIqISQKmPLFS+atHv3A1q8AVQ+lXP/VHRPQx+b6frKysxMvLy1hfX0ez2USv18PCwgLiOEaSJKhWq/jhwQN8dnIfVOS4dsWHqCJ5YREGjBuNEMfd0eTc9WshBqnFYGhRqxrUIoNuLwMT4eb1Cp6dZshywdW6mZzr9QsEPuPmXIhfno3gnGKuEWCUC14MLKoVb1L72+8Zvj3JOl/udZt/S7darUqn0wlarRZ2d3cxPz+PJ8dPsPP1Doq8kIbL+cawjxBIM8MRFAidpBlRpIbhFc55gM2NF5IIQtVBRlRTZgTWZQ4wzvc8spO1NPM4Gr9Wh1bSDIjU98C5E0PIC8OVSX+Rlz08hl+4/LsML6X/menFxcW7BwcHtzY2NvDw8CE21zf/NdMAHskFMs3MT/EfMg3gsTsr02f8byfTo16v3+v3+//f6fGKgXNp5vT5huZbqH4nH+NvwXH6V5bS041mU1FKz8ZxepdSerrRbCpK6dk4Tu9SSk83mk1FKT0bx+ldSunpRrOpuJTSfwBcuImxpyA7XgAAAABJRU5ErkJggg==" alt="Previous in Tag" width="45" height="45" loading="lazy">
+                    </a>
+                  
+                </div>
+                <div class="nav-arrow tags next">
+                  
+                    <a href="/backup-bash-script/" title="backup bash script" rel="next">
+                      <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAC0AAAAtCAYAAAA6GuKaAAAAAXNSR0IArs4c6QAAAwdJREFUaEPtl01rG1cUht9z7p070ijKWLVS3I9YULtNMBRn2UIXxZtuvCjedNWfoKVXBvsHeOUfoIUx5AeY0pVXXSR052UxBJSi0kDiRplII83HvadI9CMtOFjCmBjubC7cc8+Zc555eYdLuIEP3cCe4Zu+rq/mSXvSbyHg5eHl4eVxXRrwpD3p+Qh4n56P2+xZnvTszC7MCAAUF0XfOdJa62+IaCeO40GSJA/zPP8RwB9vDjBtWmv9JRE5ImpZawdVpbo58CkAIyJnIrLAzEvOuXNm/h3AfQDOAGdj5z5m5gXn3G9ENCKilckaiDwpiFZEpCoiTyYrM3/knOtXmHs58BkABvCLc+4DZl6cxIjoh4ODA728vIzt7W2sra09PT4+fgTgQES4LMvHZIy5LyI/f/dJvfK6FKMJqAdqmBS2ZgWINY9zJyZ1whUiRJrTfmGjybSxUemwcFEmghqT1UxlUrpQEXD7jRq3NWelEz10okIi1AJOX+U2EgALgUrT0kVnmcKvQ+uazSZvbW2hWq2i3++j3W5jf38f6+vrebvdHovI5pT09+vN7teLYev990K8GpQYjS1u1TQqhnHez6EU4cM7FTw7z5AXDo16ACcyPRsaxp2FEM9ejKd7zUaIYVpiOCpRq2rUIo0XLzMwEZaaFTzvZ8hyh/iWnu69fF1AAoOfFr/A5w8eYDQaIY5jJEmC09NTNBoNdLtd7O3t4ejoCIeHh8k/pL8KUSkCZcg6hCLDjLk2ufYGpRuXAuOMYiosQiDNNEcQILQuzYgi0QxVWKuAMtcqJPdXDaKaMMOUNrOAtoFSVE5jaaY4mtQPS5dmQPS8WkdfGReYgDe/3cTdpbvo9XrY2NhAp9NBq9XKO53Ov6T/r2mlVBeX0DSAMzeHppm5h7doemdvR99buYfd3V2srq4+PTk5+a+mr9CmrqTU3+5Rr9cHg8HgYve4krddbZGb5dOXmf2d+7n4pi9D4LrOeHl40v42fl0a8KQ96fkIeJ+ej9vsWZ707Mzmy/Ck5+M2e9afhmuAz1BhwewAAAAASUVORK5CYII=" alt="Next in Tag" width="45" height="45" loading="lazy">
+                    </a>
+                  
+                </div>
+              </div>
+            
+          
+          <!-- JavaScript to Toggle the Tag-based Navigation -->
+          <script>
+            document.addEventListener("DOMContentLoaded", function(){
+              var tagLinks = document.querySelectorAll('.tag-option');
+              tagLinks.forEach(function(link){
+                link.addEventListener('click', function(event){
+                  event.preventDefault();
+                  // Remove "active" class from all tag options.
+                  tagLinks.forEach(function(el){ el.classList.remove('active'); });
+                  // Add active class to the clicked tag option.
+                  this.classList.add('active');
+                  // Hide all tag navigation blocks.
+                  document.querySelectorAll('.nav-group.tags').forEach(function(block){
+                    block.style.display = 'none';
+                  });
+                  // Show the navigation block corresponding to the selected tag.
+                  var tagSlug = this.getAttribute('data-tag');
+                  var target = document.getElementById('tag-nav-' + tagSlug);
+                  if(target) {
+                    target.style.display = 'block';
+                  }
+                });
+              });
+            });
+          </script>
+      </nav>
+      
+    <div class="comment-box">
+      Ref. 
+      <a href="https://github.com/ChisBread/rk3588-gaming-step-by-step/tree/main/rk3588-enhance" title="https://github.com/ChisBread/rk3588-gaming-step-by-step/tree/main/rk3588-enhance">https://github.com/ChisBread/rk3588-gaming-step-by-step/tree/main/rk3588-enhance</a>
+    </div>
+    
+    </main>
+    <footer id="bottom-of-page" class="site-footer">
+      <div class="footer-content">
+        <!-- Back to top link -->
+        <a href="#" aria-label="Back to top" class="back2top-link">
+          <span class="sronly">Back to top</span>
+        </a>
+    
+        <!-- Liquid Time Calculation and Display -->
+        
+        
+        
+        <a href="https://ib.bsb.br/404" aria-label="404">
+          2025-05-12 15:30:51
+        </a>
+        &#x23;
+    
+        <!-- Tag Selector -->
+        <ul class="tag-selector">
+          
+            
+            
+              <li>
+                <a href="#" class="tag-option active" data-tag="scratchpad">
+                  scratchpad
+                </a>
+              </li>
+            
+          
+        </ul>
+        &hArr;
+    
+        <!-- GitHub Link -->
+        <a href="https://github.com/ib-bsb-br/ib-bsb-br.github.io" aria-label="GitHub">
+          &#8505;
+        </a>
+    
+        <!-- Homepage Link -->
+        <a href="/" aria-label="Homepage">
+          infoBAG
+        </a>
+    
+        <!-- Copy All Code Button -->
+        <button id="copyAllButton" aria-label="Copy all code">
+          &copy;
+        </button>
+      </div>
+    </footer>
+    <style>
+      .back2top-link {
+        display: inline-block;
+        width: 32px;
+        height: 32px;
+        background: url("/assets/Rope_(Old).gif") center center no-repeat;
+        background-size: contain;
+        text-decoration: none;
+        vertical-align: middle;
+      }
+      .sronly {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
+    </style>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Article",
+        "mainEntityOfPage": {
+          "@type": "WebPage",
+          "@id": "https://ib.bsb.br/performance-governor-optimizations-script/"
+        },
+        "headline": "Performance Governor optimizations Script",
+        "description": "",
+        "datePublished": "2025-05-09T00:00:00+00:00",
+        "dateModified": "2025-05-12T18:24:46+00:00",
+        "author": {
+          "@type": "Person",
+          "name": "Author"
+        },
+        "publisher": {
+          "@type": "Organization",
+          "name": "infoBAG"
+          
+        }
+        
+      }
+    </script>
+    <script src="/assets/js/prism.js" defer></script>
+    <script src="/assets/js/copy-all-code.js"></script>
+  </body>
+</html>
