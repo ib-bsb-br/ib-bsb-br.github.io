@@ -37,134 +37,167 @@ This script is the core of the solution. Its key features include:
 # Unified script to manage CPU/GPU/NPU/DMC frequency governors.
 # Targets devices like RK3588 but designed for general Linux applicability.
 # - Requires root (CAP_SYS_ADMIN)
-# - Depends on ‘util-linux’ (for logger) and systemd (for systemd-cat)
+# - Depends on 'util-linux' (for logger) and systemd (for systemd-cat)
 # ——————————————————————————
+
+# Exit on error, treat unset variables as error, propagate pipeline errors
 set -euo pipefail
-IFS=$’\n\t’ # Set Internal Field Separator to newline and tab for safer loops.
+# Set Internal Field Separator to newline and tab for safer loops.
+# Ensure standard single quotes are used here.
+IFS=$'\n\t'
 
 ### Verify running as root
-if [ “$(id -u)” -ne 0 ]; then
-  echo “ERROR: Must be run as root.” >&2
+# Use standard quotes "" and ensure command substitution is quoted.
+if [ "$(id -u)" -ne 0 ]; then
+  echo "ERROR: Must be run as root." >&2
   exit 1
 fi
 
-# Location to save/restore default governors
-readonly STATE_DIR=“/var/lib/performance_governors”
-readonly STATE_FILE=“$STATE_DIR/default_gov.txt”
+# Location to save/restore default governors (use standard quotes)
+readonly STATE_DIR="/var/lib/performance_governors"
+readonly STATE_FILE="$STATE_DIR/default_gov.txt"
 
 # General patterns covering cpufreq (CPU) and devfreq (other devices) governors
+# Use standard quotes ""
 readonly GOV_PATTERNS=(
-  “/sys/devices/system/cpu/cpufreq/policy*/scaling_governor” # For CPU cores
-  “/sys/class/devfreq/*/governor”                             # For GPU, NPU, DMC, etc.
+  "/sys/devices/system/cpu/cpufreq/policy*/scaling_governor" # For CPU cores
+  "/sys/class/devfreq/*/governor"                             # For GPU, NPU, DMC, etc.
 )
 
 # Log function: prefers systemd-cat for journal integration, else falls back to logger.
 log() {
-  local level=“$1”; shift
-  local msg=“$*”
+  # Use standard quotes ""
+  local level="$1"; shift
+  local msg="$*"
   if command -v systemd-cat &>/dev/null; then
     # Pipe to systemd-cat to log with specified level and tag
-    printf ‘%s\n’ “$msg” | systemd-cat -t performance_governors -p “$level”
+    # Use standard quotes "" and standard single quotes ''
+    printf '%s\n' "$msg" | systemd-cat -t performance_governors -p "$level"
   else
     # Fallback to logger if systemd-cat is not available
-    logger -t performance_governors -p “user.$level” — “$msg”
+    # Use standard quotes "" and standard single quotes ''
+    logger -t performance_governors -p "user.$level" -- "$msg"
   fi
 }
 
-# Discover all existing governor file paths based on GOV_PATTERNS.
+# Discover all existing governor file paths based on GOV_PATTERNS (Enhanced with nullglob).
 discover_paths() {
-  for patt in “${GOV_PATTERNS[@]}”; do
-    # $patt is intentionally unquoted to allow shell pathname expansion (globbing).
-    # The shell first performs word splitting on $patt (if it contained IFS characters;
-    # current IFS is newline/tab). Then, pathname expansion (globbing, e.g., ‘*’)
-    # is attempted on each resulting word. For the defined GOV_PATTERNS, which are
-    # single “words” without internal IFS characters, this robustly expands the globs.
+  # Enable nullglob: patterns that match nothing expand to nothing
+  shopt -s nullglob
+  # Ensure nullglob is turned off again when the function exits
+  trap 'shopt -u nullglob' RETURN
+
+  for patt in "${GOV_PATTERNS[@]}"; do
+    # $patt is intentionally unquoted for globbing.
+    # With nullglob, if $patt matches no files, this loop won't execute for it.
     for f in $patt; do
-      # Check if the glob expansion resulted in an actual existing file
-      [ -f “$f” ] && printf ‘%s\n’ “$f”
+      # We know 'f' must be an existing file due to nullglob,
+      # but the check is harmless and adds clarity.
+      [ -f "$f" ] && printf '%s\n' "$f"
     done
   done
+  # The trap automatically runs 'shopt -u nullglob' here.
 }
 
-# Action: Save current governors and set all to ‘performance’.
+# Action: Save current governors and set all to 'performance'.
 cmd_start() {
-  log info “START: Saving default governors and forcing ‘performance’ mode.”
-  mkdir -p “$STATE_DIR” # Ensure state directory exists
-  : > “$STATE_FILE”     # Truncate/create state file
+  # Use standard quotes ""
+  log info "START: Saving default governors and forcing 'performance' mode."
+  mkdir -p "$STATE_DIR" # Ensure state directory exists
+  : > "$STATE_FILE"     # Truncate/create state file
 
   # Read each discovered governor path
   while IFS= read -r path; do
-    current_governor=$(<“$path”) # Read current governor
-    printf ‘%s\t%s\n’ “$path” “$current_governor” >>”$STATE_FILE” # Save path and current governor
+    # Use standard quotes "" and standard single quotes ''
+    current_governor=$(<"$path") # Read current governor
+    printf '%s\t%s\n' "$path" "$current_governor" >>"$STATE_FILE" # Save path and current governor
 
-    # Attempt to set to ‘performance’
-    if echo performance >”$path”; then
-      log info “Successfully set ‘performance’ for: $path”
+    # Attempt to set to 'performance' (use standard quotes)
+    if echo "performance" >"$path"; then
+      log info "Successfully set 'performance' for: $path"
     else
-      log err  “FAILED to set ‘performance’ for: $path”
+      # Use standard quotes ""
+      log err "FAILED to set 'performance' for: $path"
     fi
   done < <(discover_paths) # Process substitution feeds paths from discover_paths
 
-  log info “START command complete.”
+  # Use standard quotes ""
+  log info "START command complete."
 }
 
 # Action: Restore governors to their saved default states.
 cmd_stop() {
-  log info “STOP: Restoring saved default governors.”
-  if [ ! -r “$STATE_FILE” ]; then
-    log warning “State file ($STATE_FILE) not found or not readable. Skipping restore.”
+  # Use standard quotes ""
+  log info "STOP: Restoring saved default governors."
+  if [ ! -r "$STATE_FILE" ]; then
+    # Use standard quotes "" and standard parentheses ()
+    log warning "State file ($STATE_FILE) not found or not readable. Skipping restore."
     return 1 # Indicate issue if state file is missing
   fi
 
   # Read path and old governor from state file
-  while IFS=$’\t’ read -r path old_governor; do
-    if [ -f “$path” ]; then # Check if path still exists
-      if echo “$old_governor” >”$path”; then
-        log info “Restored ‘$old_governor’ to: $path”
+  # Use standard single quotes '' for IFS setting specific to read
+  while IFS=$'\t' read -r path old_governor; do
+    # Use standard quotes ""
+    if [ -f "$path" ]; then # Check if path still exists
+      # Use standard quotes "" and standard single quotes ''
+      if echo "$old_governor" >"$path"; then
+        log info "Restored '$old_governor' to: $path"
       else
-        log err  “FAILED to restore ‘$old_governor’ to: $path”
+        # Use standard quotes "" and standard single quotes ''
+        log err "FAILED to restore '$old_governor' to: $path"
       fi
     else
-      log warning “Path no longer exists, cannot restore for: $path”
+      # Use standard quotes ""
+      log warning "Path no longer exists, cannot restore for: $path"
     fi
-  done <“$STATE_FILE”
+  done <"$STATE_FILE" # Use standard quotes ""
 
-  log info “STOP command complete.”
+  # Use standard quotes ""
+  log info "STOP command complete."
 }
 
 # Action: Display current and saved governors.
 cmd_status() {
-  echo “Governor Status (Current Governor → Saved Default Governor):”
+  # Use standard quotes ""
+  echo "Governor Status (Current Governor -> Saved Default Governor):"
   declare -A saved_governors # Associative array to hold saved states
 
   # Populate saved_governors from state file if it exists
-  if [ -r “$STATE_FILE” ]; then
-    while IFS=$’\t’ read -r path old_governor; do
-      saved_governors[“$path”]=“$old_governor”
-    done <“$STATE_FILE”
+  # Use standard quotes ""
+  if [ -r "$STATE_FILE" ]; then
+    # Use standard single quotes '' for IFS setting specific to read
+    while IFS=$'\t' read -r path old_governor; do
+      # Use standard quotes ""
+      saved_governors["$path"]="$old_governor"
+    done <"$STATE_FILE" # Use standard quotes ""
   fi
 
   # Display status for each discovered governor path
   local found_any=0
   while IFS= read -r path; do
     found_any=1
-    current_governor=$(<“$path”)
-    default_governor=“${saved_governors[$path]:-<not_saved>}” # Use <not_saved> if not in state file
-    printf ‘%-65s : %-15s → %s\n’ “$path” “$current_governor” “$default_governor”
+    # Use standard quotes "" and standard curly braces {}
+    current_governor=$(<"$path")
+    default_governor="${saved_governors[$path]:-<not_saved>}" # Use <not_saved> if not in state file
+    # Use standard quotes "", standard single quotes '', standard parentheses ()
+    printf '%-65s : %-15s -> %s\n' "$path" "$current_governor" "$default_governor"
   done < <(discover_paths)
 
-  if [ “$found_any” -eq 0 ]; then
-    echo “No governor paths found.”
+  # Use standard quotes ""
+  if [ "$found_any" -eq 0 ]; then
+    echo "No governor paths found."
   fi
 }
 
 # Display usage instructions.
 usage() {
+  # Use standard single quotes ''
   cat <<EOF
 Usage: $0 {start|stop|restart|status}
-  start      Saves current governor settings and sets all to ‘performance’.
+  start      Saves current governor settings and sets all to 'performance'.
   stop       Restores previously saved governor settings.
-  restart    Executes ‘stop’ then ‘start’.
+  restart    Executes 'stop' then 'start'.
   status     Displays current vs. saved governor settings for all discovered paths.
 EOF
   exit 1
@@ -175,13 +208,15 @@ if [ $# -eq 0 ]; then # Show usage if no arguments
   usage
 fi
 
-case “$1” in
+# Use standard quotes ""
+case "$1" in
   start)   cmd_start   ;;
   stop)    cmd_stop    ;;
   restart) cmd_stop; cmd_start ;; # Simple restart: stop then start
   status)  cmd_status  ;;
   *)       usage       ;; # Show usage for unknown commands
 esac
+
 ```
 
 **2. The Systemd Service Unit: `/etc/systemd/system/performance_governors.service`**
@@ -196,9 +231,10 @@ This service file allows systemd to manage the script.
 ```ini
 [Unit]
 Description=Performance Governors Management (CPU/GPU/NPU/DMC)
-Documentation=man:performance_governors.sh # Assuming script could have a man page
+Documentation=man:performance_governors.sh
+# Start after basic system services are up.
 After=multi-user.target
-Wants=network-online.target # Optional: if any governor settings depend on network state
+# Removed Wants=network-online.target (usually not needed for governors)
 
 [Service]
 Type=oneshot
@@ -206,8 +242,8 @@ ExecStart=/usr/local/bin/performance_governors.sh start
 ExecStop=/usr/local/bin/performance_governors.sh stop
 ExecReload=/usr/local/bin/performance_governors.sh restart
 RemainAfterExit=yes
-# On failure, log and stay failed. Use ‘systemctl reset-failed performance_governors.service’ to clear.
-Restart=no 
+# On failure, log and stay failed. Use 'systemctl reset-failed performance_governors.service' to clear.
+Restart=no
 
 [Install]
 WantedBy=multi-user.target
