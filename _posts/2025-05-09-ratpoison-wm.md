@@ -107,7 +107,7 @@ bind w exec thorium-browser
 bind v exec paste_clipboard_from_file.sh
 bind Up focusup
 bind u undo
-bind Tab next
+bind Tab focus 
 bind t exec pcmanfm-qt --daemon-mode
 bind space exec dmenu_run
 bind Right focusright
@@ -144,7 +144,7 @@ bind equal hsplit
 bind e exec xnedit
 bind Down focusdown
 bind c exec write_clipboard_to_file.sh
-bind BackSpace focus
+bind BackSpace next
 bind b exec x-terminal-emulator -e bpytop
 bind apostrophe colon exec x-terminal-emulator -e 
 bind 9 exec rpws 9
@@ -160,7 +160,7 @@ bind 0 remove
 bind s-w exec x-terminal-emulator -e nm-connection-editor
 bind s-Up exchangeup
 bind s-u redo
-bind s-Tab prev
+bind s-Tab nextscreen
 bind s-t exec sudo pcmanfm-qt
 bind s-space exec ratpoison -c "select \"$(ratpoison -c 'windows %n: %t (%c)' | dmenu -p 'Window:')\""
 bind s-Right exchangeright
@@ -186,7 +186,7 @@ bind s-Escape exec /usr/bin/rpws restore /home/linaro/Desktop/01-document/dotfil
 bind s-equal exec amixer set Master 5%+
 bind s-e exec xnc
 bind s-Down exchangedown
-bind s-BackSpace nextscreen
+bind s-BackSpace prev
 bind s-b exec vorta
 bind s-apostrophe colon exec x-terminal-emulator -e sudo 
 bind s-a title
