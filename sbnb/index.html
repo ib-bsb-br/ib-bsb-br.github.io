@@ -67,7 +67,7 @@
         
           <span class="post-updated">
             ↣
-            <time datetime="2025-05-13T14:08:36+00:00">
+            <time datetime="2025-05-13T14:42:20+00:00">
               13 May 2025
             </time>
           </span>
@@ -90,11 +90,11 @@
         <div class="page-stats mt-3" role="status" aria-label="Page statistics">
       
       <span class="badge bg-primary">
-        99011 characters
+        101111 characters
       </span>
         <span class="separator mx-2" aria-hidden="true">•</span>
         <span class="badge bg-primary">
-        10353 words
+        10529 words
       </span>
       </div>
         <div class="action-buttons d-flex flex-wrap gap-2">
@@ -449,15 +449,44 @@ run_advanced_mode<span class="o">()</span> <span class="o">{</span>
 
         <span class="c"># --- CRITICAL SAFETY CHECK: Prevent targeting the root filesystem device ---</span>
         info <span class="s2">"Performing safety checks for </span><span class="nv">$TARGET_DEVICE_ADV</span><span class="s2">..."</span>
-        <span class="nb">local </span>root_dev_path_adv<span class="p">;</span> <span class="nv">root_dev_path_adv</span><span class="o">=</span><span class="si">$(</span>findmnt <span class="nt">-n</span> <span class="nt">-o</span> SOURCE /<span class="si">)</span>
-        <span class="nb">local </span>root_base_dev_name_adv<span class="p">;</span> <span class="nv">root_base_dev_name_adv</span><span class="o">=</span><span class="si">$(</span>lsblk <span class="nt">-no</span> pkname <span class="s2">"</span><span class="si">$(</span><span class="nb">realpath</span> <span class="s2">"</span><span class="nv">$root_dev_path_adv</span><span class="s2">"</span><span class="si">)</span><span class="s2">"</span><span class="si">)</span> <span class="o">||</span> error <span class="s2">"Cannot find base device for root FS."</span>
-        <span class="nb">local </span>target_base_dev_name_adv<span class="p">;</span> <span class="nv">target_base_dev_name_adv</span><span class="o">=</span><span class="si">$(</span>lsblk <span class="nt">-no</span> pkname <span class="s2">"</span><span class="si">$(</span><span class="nb">realpath</span> <span class="s2">"</span><span class="nv">$TARGET_DEVICE_ADV</span><span class="s2">"</span><span class="si">)</span><span class="s2">"</span><span class="si">)</span> <span class="o">||</span> error <span class="s2">"Cannot find base device for target </span><span class="nv">$TARGET_DEVICE_ADV</span><span class="s2">."</span>
-        <span class="nb">local </span><span class="nv">root_base_dev_adv</span><span class="o">=</span><span class="s2">"/dev/</span><span class="k">${</span><span class="nv">root_base_dev_name_adv</span><span class="k">}</span><span class="s2">"</span><span class="p">;</span> <span class="nb">local </span><span class="nv">target_base_dev_adv</span><span class="o">=</span><span class="s2">"/dev/</span><span class="k">${</span><span class="nv">target_base_dev_name_adv</span><span class="k">}</span><span class="s2">"</span>
+        <span class="nb">local </span>root_dev_path_adv_raw<span class="p">;</span> <span class="nv">root_dev_path_adv_raw</span><span class="o">=</span><span class="si">$(</span>findmnt <span class="nt">-n</span> <span class="nt">-o</span> SOURCE /<span class="si">)</span>
+        <span class="nb">local </span>resolved_root_path<span class="p">;</span> <span class="nv">resolved_root_path</span><span class="o">=</span><span class="si">$(</span><span class="nb">realpath</span> <span class="s2">"</span><span class="nv">$root_dev_path_adv_raw</span><span class="s2">"</span> 2&gt;/dev/null<span class="si">)</span>
+        <span class="nb">local </span><span class="nv">root_fs_block_device_for_pkname</span><span class="o">=</span><span class="s2">""</span>
+
+        <span class="k">if</span> <span class="o">[</span> <span class="nt">-n</span> <span class="s2">"</span><span class="nv">$resolved_root_path</span><span class="s2">"</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="o">[</span> <span class="nt">-b</span> <span class="s2">"</span><span class="nv">$resolved_root_path</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then
+            </span><span class="nv">root_fs_block_device_for_pkname</span><span class="o">=</span><span class="s2">"</span><span class="nv">$resolved_root_path</span><span class="s2">"</span>
+        <span class="k">else
+            </span><span class="nb">local </span>df_root_src<span class="p">;</span> <span class="nv">df_root_src</span><span class="o">=</span><span class="si">$(</span><span class="nb">df</span> <span class="nt">--output</span><span class="o">=</span><span class="nb">source</span> / | <span class="nb">awk</span> <span class="s1">'NR==2 {print $1}'</span><span class="si">)</span>
+            <span class="nb">local </span>resolved_df_root_src<span class="p">;</span> <span class="nv">resolved_df_root_src</span><span class="o">=</span><span class="si">$(</span><span class="nb">realpath</span> <span class="s2">"</span><span class="nv">$df_root_src</span><span class="s2">"</span> 2&gt;/dev/null<span class="si">)</span>
+            <span class="k">if</span> <span class="o">[</span> <span class="nt">-n</span> <span class="s2">"</span><span class="nv">$resolved_df_root_src</span><span class="s2">"</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="o">[</span> <span class="nt">-b</span> <span class="s2">"</span><span class="nv">$resolved_df_root_src</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then
+                </span>info <span class="s2">"Root FS source '</span><span class="nv">$root_dev_path_adv_raw</span><span class="s2">' (resolved: '</span><span class="k">${</span><span class="nv">resolved_root_path</span><span class="k">:-</span><span class="p">&lt;empty/failed&gt;</span><span class="k">}</span><span class="s2">') not a direct block device. Using 'df /' source '</span><span class="nv">$df_root_src</span><span class="s2">' (resolved: '</span><span class="nv">$resolved_df_root_src</span><span class="s2">') for pkname lookup."</span>
+                <span class="nv">root_fs_block_device_for_pkname</span><span class="o">=</span><span class="s2">"</span><span class="nv">$resolved_df_root_src</span><span class="s2">"</span>
+            <span class="k">else
+                </span>error <span class="s2">"Cannot determine a valid block device for the root filesystem to find its PKNAME. Sources checked: findmnt raw '</span><span class="nv">$root_dev_path_adv_raw</span><span class="s2">' (resolved '</span><span class="k">${</span><span class="nv">resolved_root_path</span><span class="k">:-</span><span class="p">&lt;empty/failed&gt;</span><span class="k">}</span><span class="s2">'), df raw '</span><span class="nv">$df_root_src</span><span class="s2">' (resolved '</span><span class="k">${</span><span class="nv">resolved_df_root_src</span><span class="k">:-</span><span class="p">&lt;empty/failed&gt;</span><span class="k">}</span><span class="s2">')."</span>
+            <span class="k">fi
+        fi
+        </span><span class="nb">local </span>root_base_dev_name_adv<span class="p">;</span> <span class="nv">root_base_dev_name_adv</span><span class="o">=</span><span class="si">$(</span>lsblk <span class="nt">-no</span> pkname <span class="s2">"</span><span class="nv">$root_fs_block_device_for_pkname</span><span class="s2">"</span><span class="si">)</span>
+        <span class="k">if</span> <span class="o">[</span> <span class="nt">-z</span> <span class="s2">"</span><span class="nv">$root_base_dev_name_adv</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then</span> <span class="c"># Check if lsblk succeeded in getting a pkname</span>
+            error <span class="s2">"Failed to get PKNAME for root filesystem device '</span><span class="nv">$root_fs_block_device_for_pkname</span><span class="s2">'. Safety check aborted."</span>
+        <span class="k">fi
+
+        </span><span class="nb">local </span>resolved_target_path<span class="p">;</span> <span class="nv">resolved_target_path</span><span class="o">=</span><span class="si">$(</span><span class="nb">realpath</span> <span class="s2">"</span><span class="nv">$TARGET_DEVICE_ADV</span><span class="s2">"</span> 2&gt;/dev/null<span class="si">)</span>
+        <span class="k">if</span> <span class="o">[</span> <span class="nt">-z</span> <span class="s2">"</span><span class="nv">$resolved_target_path</span><span class="s2">"</span> <span class="o">]</span> <span class="o">||</span> <span class="o">[</span> <span class="o">!</span> <span class="nt">-b</span> <span class="s2">"</span><span class="nv">$resolved_target_path</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then
+            </span>error <span class="s2">"Selected target device '</span><span class="nv">$TARGET_DEVICE_ADV</span><span class="s2">' (resolved: '</span><span class="k">${</span><span class="nv">resolved_target_path</span><span class="k">:-</span><span class="p">&lt;empty/failed&gt;</span><span class="k">}</span><span class="s2">') is not a valid block device."</span>
+        <span class="k">fi
+        </span><span class="nb">local </span>target_base_dev_name_adv<span class="p">;</span> <span class="nv">target_base_dev_name_adv</span><span class="o">=</span><span class="si">$(</span>lsblk <span class="nt">-no</span> pkname <span class="s2">"</span><span class="nv">$resolved_target_path</span><span class="s2">"</span><span class="si">)</span>
+        <span class="k">if</span> <span class="o">[</span> <span class="nt">-z</span> <span class="s2">"</span><span class="nv">$target_base_dev_name_adv</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then</span> <span class="c"># Check if lsblk succeeded</span>
+            error <span class="s2">"Failed to get PKNAME for target device '</span><span class="nv">$resolved_target_path</span><span class="s2">'. Safety check aborted."</span>
+        <span class="k">fi
+        
+        </span><span class="nb">local </span><span class="nv">root_base_dev_adv</span><span class="o">=</span><span class="s2">"/dev/</span><span class="k">${</span><span class="nv">root_base_dev_name_adv</span><span class="k">}</span><span class="s2">"</span>
+        <span class="nb">local </span><span class="nv">target_base_dev_adv</span><span class="o">=</span><span class="s2">"/dev/</span><span class="k">${</span><span class="nv">target_base_dev_name_adv</span><span class="k">}</span><span class="s2">"</span>
 
         <span class="k">if</span> <span class="o">[</span> <span class="s2">"</span><span class="nv">$target_base_dev_adv</span><span class="s2">"</span> <span class="o">==</span> <span class="s2">"</span><span class="nv">$root_base_dev_adv</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then
-          </span>error <span class="s2">"FATAL ERROR: Target device '</span><span class="nv">$TARGET_DEVICE_ADV</span><span class="s2">' appears to be the same device ('</span><span class="nv">$root_base_dev_adv</span><span class="s2">') as the running root filesystem ('</span><span class="nv">$root_dev_path_adv</span><span class="s2">'). Aborting."</span>
+          </span>error <span class="s2">"FATAL ERROR: Target device '</span><span class="nv">$TARGET_DEVICE_ADV</span><span class="s2">' (base: </span><span class="nv">$target_base_dev_adv</span><span class="s2">) appears to be the same device as the running root filesystem (base: </span><span class="nv">$root_base_dev_adv</span><span class="s2">, determined from source: '</span><span class="nv">$root_fs_block_device_for_pkname</span><span class="s2">', original findmnt source: '</span><span class="nv">$root_dev_path_adv_raw</span><span class="s2">'). Aborting."</span>
         <span class="k">fi
-        </span>info <span class="s2">"Safety check passed: Target device '</span><span class="nv">$TARGET_DEVICE_ADV</span><span class="s2">' is not the root filesystem device ('</span><span class="nv">$root_base_dev_adv</span><span class="s2">')."</span>
+        </span>info <span class="s2">"Safety check passed: Target device '</span><span class="nv">$TARGET_DEVICE_ADV</span><span class="s2">' (base: </span><span class="nv">$target_base_dev_adv</span><span class="s2">) is not the root filesystem device (base: </span><span class="nv">$root_base_dev_adv</span><span class="s2">)."</span>
+
 
         <span class="k">if</span> <span class="o">[[</span> <span class="s2">"</span><span class="nv">$TARGET_DEVICE_ADV</span><span class="s2">"</span> <span class="o">==</span> /dev/mmcblk<span class="k">*</span> <span class="o">]]</span><span class="p">;</span> <span class="k">then </span>warn <span class="s2">"'</span><span class="nv">$TARGET_DEVICE_ADV</span><span class="s2">' looks like an SD card. Double-check this is not your primary OS drive!"</span><span class="p">;</span> <span class="k">fi
 
@@ -1919,7 +1948,7 @@ journalctl <span class="nt">-t</span> backup-docker.sh <span class="nt">-t</span
         
         
         <a href="https://ib.bsb.br/404" aria-label="404">
-          2025-05-13 11:34:16
+          2025-05-13 11:45:54
         </a>
         &#x23;
     
@@ -1987,7 +2016,7 @@ journalctl <span class="nt">-t</span> backup-docker.sh <span class="nt">-t</span
         "headline": "Portable linux via Sbnb distro with persistence",
         "description": "",
         "datePublished": "2025-04-07T00:00:00+00:00",
-        "dateModified": "2025-05-13T14:08:36+00:00",
+        "dateModified": "2025-05-13T14:42:20+00:00",
         "author": {
           "@type": "Person",
           "name": "Author"
