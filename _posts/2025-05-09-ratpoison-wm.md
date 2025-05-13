@@ -146,7 +146,7 @@ bind e exec xnedit
 bind Down focusdown
 bind c exec write_clipboard_to_file.sh
 bind BackSpace next
-bind b exec x-terminal-emulator -e bpytop
+bind h exec x-terminal-emulator -e bpytop
 bind apostrophe colon exec x-terminal-emulator -e 
 bind 9 exec rpws 9
 bind 8 exec rpws 8
@@ -189,6 +189,7 @@ bind s-e exec xnc
 bind s-Down exchangedown
 bind s-BackSpace prev
 bind s-b exec vorta
+bind b exec sudo timeshift --create --comments "Before making changes"
 bind s-apostrophe colon exec x-terminal-emulator -e sudo 
 bind s-a title
 bind s-9 exec rpws move9
