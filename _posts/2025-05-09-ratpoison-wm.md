@@ -83,6 +83,13 @@ set barborder 0
 
 definekey top M-Tab next
 definekey top M-ISO_Left_Tab prev
+definekey top M-KP_8 ratrelwarp 0 -15
+definekey top M-KP_2 ratrelwarp 0 15
+definekey top M-KP_4 ratrelwarp -15 0
+definekey top M-KP_6 ratrelwarp 15 0
+definekey top M-KP_1 ratclick 1
+definekey top M-KP_5 ratclick 2
+definekey top M-KP_3 ratclick 3
 
 exec rpws init 9
 exec rpbar
@@ -166,7 +173,7 @@ bind s-Up exchangeup
 bind s-u redo
 bind s-Tab nextscreen
 bind s-t exec sudo pcmanfm-qt
-bind s-space exec ratpoison -c "select `ratpoison -c "windows %n: %c" | dmenu | awk '{print $1}'`"
+bind s-space exec dratmenu.py
 bind s-Right exchangeright
 bind s-Return exec sudo x-terminal-emulator
 bind s-q abort
@@ -260,6 +267,340 @@ mainbgcolor = #d4ccb9
 mainfgcolor = #45363b
 statusbgcolor = #d7d7d7
 statusfgcolor = #353535
+```
+
+#### **Configure dratmenu.py (/home/linaro/.local/bin/dratmenu.py)**
+
+{% codeblock python %}
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+"""
+dratmenu.py: A dmenu-based window switcher for the Ratpoison Window Manager.
+
+This script fetches the list of current windows from Ratpoison, presents them
+in dmenu for selection, and then tells Ratpoison to switch to the chosen window.
+It is updated for Python 3 and aims for robustness.
+"""
+
+import subprocess
+import sys
+import shlex # For safer command construction if needed, though not strictly required here
+
+# --- Configuration ---
+
+# Separator string used internally to parse Ratpoison output.
+# IMPORTANT: This exact string MUST NOT appear in any window number, class, or title.
+# Using a complex, unlikely sequence to minimize collision risk.
+SEP = "~!@#DRATMENU_SEP#@!~"
+
+# Separator used *within dmenu* to separate the hidden window number from the visible text.
+# A tab character is often a good choice as it's unlikely to be the *first* character
+# in the formatted display string and easy to split on.
+DMENU_SEP = '\t'
+
+# dmenu appearance settings (adjust as needed)
+# Font examples:
+# FONT = "-*-terminus-*-r-*-*-14-*-*-*-*-*-*-*"
+# FONT = "-*-jetbrains mono-*-r-*-*-14-*-*-*-*-*-*-*"
+FONT = 'Intel One Mono:size=13' # Default Terminus
+NORMAL_BG = '#002b36'      # Solarized Dark base03
+SELECTED_BG = '#859900'    # Solarized Dark green
+NUM_LINES = '20'           # Number of lines dmenu shows vertically
+
+# --- Helper Function ---
+
+def run_subprocess(command_list, input_data=None):
+    """
+    Runs a subprocess, handling text encoding/decoding and errors.
+
+    Args:
+        command_list (list): The command and its arguments.
+        input_data (str, optional): String data to pass to the command's stdin. Defaults to None.
+
+    Returns:
+        subprocess.CompletedProcess: The result object from subprocess.run.
+
+    Raises:
+        FileNotFoundError: If the command is not found.
+        subprocess.CalledProcessError: If the command returns a non-zero exit code.
+        Exception: For other unexpected errors during execution.
+    """
+    try:
+        result = subprocess.run(
+            command_list,
+            input=input_data,
+            capture_output=True, # Capture stdout and stderr
+            text=True,           # Work with text (auto encodes input, decodes output)
+            check=True,          # Raise CalledProcessError on non-zero exit codes
+            encoding='utf-8'     # Explicitly use UTF-8
+        )
+        return result
+    except FileNotFoundError:
+        print(f"Error: Command '{command_list[0]}' not found. Is it installed and in your PATH?", file=sys.stderr)
+        raise # Re-raise the exception to be caught by the main logic
+    except subprocess.CalledProcessError as e:
+        # check=True raises this, stderr is part of the exception object
+        print(f"Error running command: {' '.join(e.cmd)}", file=sys.stderr)
+        print(f"Return code: {e.returncode}", file=sys.stderr)
+        if e.stderr:
+            print(f"Stderr: {e.stderr.strip()}", file=sys.stderr)
+        # Don't raise here if we want to handle specific return codes (like dmenu cancel) later
+        # For now, let the main logic handle specific cases if needed, otherwise re-raise
+        raise
+    except Exception as e:
+        print(f"An unexpected error occurred running {' '.join(command_list)}: {e}", file=sys.stderr)
+        raise
+
+# --- Main Logic ---
+
+def main():
+    # 1. Get window list from Ratpoison
+    # Format: %n<SEP>%c<SEP>%t (number, class, title)
+    rp_list_cmd = ['ratpoison', '-c', f"windows %n{SEP}%c{SEP}%t"]
+    try:
+        rp_result = run_subprocess(rp_list_cmd)
+    except (FileNotFoundError, subprocess.CalledProcessError, Exception):
+        sys.exit(1) # Error message already printed by run_subprocess
+
+    # Process the output from Ratpoison
+    stdout_str = rp_result.stdout.strip()
+    if not stdout_str:
+        print("No ratpoison windows found.", file=sys.stderr)
+        sys.exit(0)
+
+    lines = stdout_str.split('\n')
+    windows_data = [] # Store tuples of (number, class, title)
+    for i, ln in enumerate(lines):
+        parts = ln.split(SEP)
+        if len(parts) == 3:
+            windows_data.append(parts)
+        else:
+            print(f"Warning: Skipping malformed line {i+1} from ratpoison (separator issue?): {ln}", file=sys.stderr)
+
+    if not windows_data:
+        print("No valid window data parsed from ratpoison.", file=sys.stderr)
+        sys.exit(1)
+
+    # 2. Format window list for dmenu
+    # Format for dmenu input: "<number><DMENU_SEP><formatted_display_string>"
+    # The <number> part is hidden by dmenu but used for selection later.
+    dmenu_input_lines = []
+    for num, current, title in windows_data:
+        # Format the part visible in dmenu
+        display_str = f"{num.rjust(3)} {current.ljust(10)[:10]} {title}"
+        # Prepend the raw number and the dmenu separator
+        dmenu_input_lines.append(f"{num}{DMENU_SEP}{display_str}")
+
+    dmenu_input_text = '\n'.join(dmenu_input_lines)
+
+    # 3. Pipe the list to dmenu and get the selection
+    dmenu_cmd = ['dmenu', '-i',                # Case-insensitive
+                 '-sb', SELECTED_BG,         # Selected background
+                 '-nb', NORMAL_BG,           # Normal background
+                 '-fn', FONT,                # Font
+                 '-l', NUM_LINES]            # Lines to display
+
+    try:
+        # We expect dmenu might return 1 if the user cancels (e.g., Esc)
+        # So, we temporarily disable check=True and handle return codes manually
+        dmenu_result = subprocess.run(
+            dmenu_cmd,
+            input=dmenu_input_text,
+            capture_output=True,
+            text=True,
+            encoding='utf-8'
+            # check=False # Default, handle return code below
+        )
+
+        if dmenu_result.returncode == 1:
+            # User cancelled dmenu (e.g., pressed Esc)
+            print("dmenu cancelled by user.", file=sys.stderr)
+            sys.exit(0)
+        elif dmenu_result.returncode != 0:
+            # Other dmenu error
+            print(f"Error running dmenu.", file=sys.stderr)
+            print(f"Return code: {dmenu_result.returncode}", file=sys.stderr)
+            if dmenu_result.stderr:
+                print(f"Stderr: {dmenu_result.stderr.strip()}", file=sys.stderr)
+            sys.exit(1)
+
+        selection = dmenu_result.stdout.strip()
+
+    except FileNotFoundError:
+        print(f"Error: Command 'dmenu' not found. Is it installed and in your PATH?", file=sys.stderr)
+        sys.exit(1)
+    except Exception as e:
+        print(f"An unexpected error occurred running dmenu: {e}", file=sys.stderr)
+        sys.exit(1)
+
+    # 4. Extract the *actual* window number from the selection
+    if not selection:
+        # Should not happen if return code was 0, but check anyway
+        print("dmenu returned success but selection is empty.", file=sys.stderr)
+        sys.exit(1)
+
+    try:
+        # Split the selected line ONLY at the first dmenu separator
+        # The first part is the raw window number we embedded
+        sel_number = selection.split(DMENU_SEP, 1)[0]
+
+        # Basic validation that it looks like a number
+        if not sel_number.isdigit():
+             raise ValueError("Extracted selection number is not a digit.")
+
+    except (IndexError, ValueError) as e:
+        print(f"Error: Could not parse window number from dmenu selection.", file=sys.stderr)
+        print(f"Selected line: '{selection}'", file=sys.stderr)
+        print(f"Reason: {e}", file=sys.stderr)
+        sys.exit(1)
+
+    # 5. Tell Ratpoison to select the chosen window
+    rp_select_cmd = ['ratpoison', '-c', f'select {sel_number}']
+    try:
+        run_subprocess(rp_select_cmd)
+    except (FileNotFoundError, subprocess.CalledProcessError, Exception):
+        # Error message already printed by run_subprocess
+        sys.exit(1)
+
+    # Success!
+    sys.exit(0)
+
+if __name__ == "__main__":
+    main()
+{% endcodeblock %}
+
+#### **Configure ratpoison.py (/home/linaro/.local/bin/ratpoison.py)**
+
+```python
+import os
+ratpoison = os.getenv('RATPOISON') or 'ratpoison'
+def rp_command( *args ):
+    p = os.popen( ratpoison + ' -c ' + '"' + (' '.join(  args  ) ) + '"', 'r' )
+    r = p.readlines();
+    p.close();
+    return r
+
+
+def rp_abort( *args ): return rp_command ( 'abort ' +  ' '.join( args ) )
+def rp_addhook( *args ): return rp_command ( 'addhook ' +  ' '.join( args ) )
+def rp_alias( *args ): return rp_command ( 'alias ' +  ' '.join( args ) )
+def rp_banish( *args ): return rp_command ( 'banish ' +  ' '.join( args ) )
+def rp_chdir( *args ): return rp_command ( 'chdir ' +  ' '.join( args ) )
+def rp_clrunmanaged( *args ): return rp_command ( 'clrunmanaged ' +  ' '.join( args ) )
+def rp_colon( *args ): return rp_command ( 'colon ' +  ' '.join( args ) )
+def rp_curframe( *args ): return rp_command ( 'curframe ' +  ' '.join( args ) )
+def rp_definekey( *args ): return rp_command ( 'definekey ' +  ' '.join( args ) )
+def rp_undefinekey( *args ): return rp_command ( 'undefinekey ' +  ' '.join( args ) )
+def rp_delete( *args ): return rp_command ( 'delete ' +  ' '.join( args ) )
+def rp_delkmap( *args ): return rp_command ( 'delkmap ' +  ' '.join( args ) )
+def rp_echo( *args ): return rp_command ( 'echo ' +  ' '.join( args ) )
+def rp_escape( *args ): return rp_command ( 'escape ' +  ' '.join( args ) )
+def rp_exec( *args ): return rp_command ( 'exec ' +  ' '.join( args ) )
+def rp_execa( *args ): return rp_command ( 'execa ' +  ' '.join( args ) )
+def rp_execf( *args ): return rp_command ( 'execf ' +  ' '.join( args ) )
+def rp_fdump( *args ): return rp_command ( 'fdump ' +  ' '.join( args ) )
+def rp_focus( *args ): return rp_command ( 'focus ' +  ' '.join( args ) )
+def rp_focusprev( *args ): return rp_command ( 'focusprev ' +  ' '.join( args ) )
+def rp_focusdown( *args ): return rp_command ( 'focusdown ' +  ' '.join( args ) )
+def rp_exchangeup( *args ): return rp_command ( 'exchangeup ' +  ' '.join( args ) )
+def rp_exchangedown( *args ): return rp_command ( 'exchangedown ' +  ' '.join( args ) )
+def rp_exchangeleft( *args ): return rp_command ( 'exchangeleft ' +  ' '.join( args ) )
+def rp_exchangeright( *args ): return rp_command ( 'exchangeright ' +  ' '.join( args ) )
+def rp_swap( *args ): return rp_command ( 'swap ' +  ' '.join( args ) )
+def rp_focuslast( *args ): return rp_command ( 'focuslast ' +  ' '.join( args ) )
+def rp_focusleft( *args ): return rp_command ( 'focusleft ' +  ' '.join( args ) )
+def rp_focusright( *args ): return rp_command ( 'focusright ' +  ' '.join( args ) )
+def rp_focusup( *args ): return rp_command ( 'focusup ' +  ' '.join( args ) )
+def rp_frestore( *args ): return rp_command ( 'frestore ' +  ' '.join( args ) )
+def rp_fselect( *args ): return rp_command ( 'fselect ' +  ' '.join( args ) )
+def rp_gdelete( *args ): return rp_command ( 'gdelete ' +  ' '.join( args ) )
+def rp_getenv( *args ): return rp_command ( 'getenv ' +  ' '.join( args ) )
+def rp_gmerge( *args ): return rp_command ( 'gmerge ' +  ' '.join( args ) )
+def rp_gmove( *args ): return rp_command ( 'gmove ' +  ' '.join( args ) )
+def rp_gnew( *args ): return rp_command ( 'gnew ' +  ' '.join( args ) )
+def rp_gnewbg( *args ): return rp_command ( 'gnewbg ' +  ' '.join( args ) )
+def rp_gnumber( *args ): return rp_command ( 'gnumber ' +  ' '.join( args ) )
+def rp_grename( *args ): return rp_command ( 'grename ' +  ' '.join( args ) )
+def rp_gnext( *args ): return rp_command ( 'gnext ' +  ' '.join( args ) )
+def rp_gprev( *args ): return rp_command ( 'gprev ' +  ' '.join( args ) )
+def rp_gother( *args ): return rp_command ( 'gother ' +  ' '.join( args ) )
+def rp_gravity( *args ): return rp_command ( 'gravity ' +  ' '.join( args ) )
+def rp_groups( *args ): return rp_command ( 'groups ' +  ' '.join( args ) )
+def rp_gselect( *args ): return rp_command ( 'gselect ' +  ' '.join( args ) )
+def rp_help( *args ): return rp_command ( 'help ' +  ' '.join( args ) )
+def rp_hsplit( *args ): return rp_command ( 'hsplit ' +  ' '.join( args ) )
+def rp_info( *args ): return rp_command ( 'info ' +  ' '.join( args ) )
+def rp_kill( *args ): return rp_command ( 'kill ' +  ' '.join( args ) )
+def rp_lastmsg( *args ): return rp_command ( 'lastmsg ' +  ' '.join( args ) )
+def rp_license( *args ): return rp_command ( 'license ' +  ' '.join( args ) )
+def rp_link( *args ): return rp_command ( 'link ' +  ' '.join( args ) )
+def rp_listhook( *args ): return rp_command ( 'listhook ' +  ' '.join( args ) )
+def rp_meta( *args ): return rp_command ( 'meta ' +  ' '.join( args ) )
+def rp_msgwait( *args ): return rp_command ( 'msgwait ' +  ' '.join( args ) )
+def rp_newkmap( *args ): return rp_command ( 'newkmap ' +  ' '.join( args ) )
+def rp_newwm( *args ): return rp_command ( 'newwm ' +  ' '.join( args ) )
+def rp_next( *args ): return rp_command ( 'next ' +  ' '.join( args ) )
+def rp_nextscreen( *args ): return rp_command ( 'nextscreen ' +  ' '.join( args ) )
+def rp_number( *args ): return rp_command ( 'number ' +  ' '.join( args ) )
+def rp_only( *args ): return rp_command ( 'only ' +  ' '.join( args ) )
+def rp_other( *args ): return rp_command ( 'other ' +  ' '.join( args ) )
+def rp_prev( *args ): return rp_command ( 'prev ' +  ' '.join( args ) )
+def rp_prevscreen( *args ): return rp_command ( 'prevscreen ' +  ' '.join( args ) )
+def rp_quit( *args ): return rp_command ( 'quit ' +  ' '.join( args ) )
+def rp_ratinfo( *args ): return rp_command ( 'ratinfo ' +  ' '.join( args ) )
+def rp_ratrelinfo( *args ): return rp_command ( 'ratrelinfo ' +  ' '.join( args ) )
+def rp_banishrel( *args ): return rp_command ( 'banishrel ' +  ' '.join( args ) )
+def rp_ratwarp( *args ): return rp_command ( 'ratwarp ' +  ' '.join( args ) )
+def rp_ratrelwarp( *args ): return rp_command ( 'ratrelwarp ' +  ' '.join( args ) )
+def rp_ratclick( *args ): return rp_command ( 'ratclick ' +  ' '.join( args ) )
+def rp_rathold( *args ): return rp_command ( 'rathold ' +  ' '.join( args ) )
+def rp_readkey( *args ): return rp_command ( 'readkey ' +  ' '.join( args ) )
+def rp_redisplay( *args ): return rp_command ( 'redisplay ' +  ' '.join( args ) )
+def rp_remhook( *args ): return rp_command ( 'remhook ' +  ' '.join( args ) )
+def rp_remove( *args ): return rp_command ( 'remove ' +  ' '.join( args ) )
+def rp_removeup( *args ): return rp_command ( 'removeup ' +  ' '.join( args ) )
+def rp_removedown( *args ): return rp_command ( 'removedown ' +  ' '.join( args ) )
+def rp_removeleft( *args ): return rp_command ( 'removeleft ' +  ' '.join( args ) )
+def rp_removeright( *args ): return rp_command ( 'removeright ' +  ' '.join( args ) )
+def rp_resize( *args ): return rp_command ( 'resize ' +  ' '.join( args ) )
+def rp_restart( *args ): return rp_command ( 'restart ' +  ' '.join( args ) )
+def rp_rudeness( *args ): return rp_command ( 'rudeness ' +  ' '.join( args ) )
+def rp_select( *args ): return rp_command ( 'select ' +  ' '.join( args ) )
+def rp_set( *args ): return rp_command ( 'set ' +  ' '.join( args ) )
+def rp_setenv( *args ): return rp_command ( 'setenv ' +  ' '.join( args ) )
+def rp_shrink( *args ): return rp_command ( 'shrink ' +  ' '.join( args ) )
+def rp_sfrestore( *args ): return rp_command ( 'sfrestore ' +  ' '.join( args ) )
+def rp_source( *args ): return rp_command ( 'source ' +  ' '.join( args ) )
+def rp_sselect( *args ): return rp_command ( 'sselect ' +  ' '.join( args ) )
+def rp_startup_message( *args ): return rp_command ( 'startup_message ' +  ' '.join( args ) )
+def rp_time( *args ): return rp_command ( 'time ' +  ' '.join( args ) )
+def rp_title( *args ): return rp_command ( 'title ' +  ' '.join( args ) )
+def rp_tmpwm( *args ): return rp_command ( 'tmpwm ' +  ' '.join( args ) )
+def rp_unalias( *args ): return rp_command ( 'unalias ' +  ' '.join( args ) )
+def rp_unmanage( *args ): return rp_command ( 'unmanage ' +  ' '.join( args ) )
+def rp_unsetenv( *args ): return rp_command ( 'unsetenv ' +  ' '.join( args ) )
+def rp_verbexec( *args ): return rp_command ( 'verbexec ' +  ' '.join( args ) )
+def rp_version( *args ): return rp_command ( 'version ' +  ' '.join( args ) )
+def rp_vsplit( *args ): return rp_command ( 'vsplit ' +  ' '.join( args ) )
+def rp_warp( *args ): return rp_command ( 'warp ' +  ' '.join( args ) )
+def rp_windows( *args ): return rp_command ( 'windows ' +  ' '.join( args ) )
+def rp_cnext( *args ): return rp_command ( 'cnext ' +  ' '.join( args ) )
+def rp_cother( *args ): return rp_command ( 'cother ' +  ' '.join( args ) )
+def rp_cprev( *args ): return rp_command ( 'cprev ' +  ' '.join( args ) )
+def rp_dedicate( *args ): return rp_command ( 'dedicate ' +  ' '.join( args ) )
+def rp_describekey( *args ): return rp_command ( 'describekey ' +  ' '.join( args ) )
+def rp_inext( *args ): return rp_command ( 'inext ' +  ' '.join( args ) )
+def rp_iother( *args ): return rp_command ( 'iother ' +  ' '.join( args ) )
+def rp_iprev( *args ): return rp_command ( 'iprev ' +  ' '.join( args ) )
+def rp_prompt( *args ): return rp_command ( 'prompt ' +  ' '.join( args ) )
+def rp_sdump( *args ): return rp_command ( 'sdump ' +  ' '.join( args ) )
+def rp_sfdump( *args ): return rp_command ( 'sfdump ' +  ' '.join( args ) )
+def rp_undo( *args ): return rp_command ( 'undo ' +  ' '.join( args ) )
+def rp_redo( *args ): return rp_command ( 'redo ' +  ' '.join( args ) )
+def rp_putsel( *args ): return rp_command ( 'putsel ' +  ' '.join( args ) )
+def rp_getsel( *args ): return rp_command ( 'getsel ' +  ' '.join( args ) )
+def rp_commands( *args ): return rp_command ( 'commands ' +  ' '.join( args ) )
 ```
 
 #### .Xresources
