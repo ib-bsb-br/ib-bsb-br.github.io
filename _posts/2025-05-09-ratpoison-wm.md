@@ -9,6 +9,9 @@ slug: ratpoison-wm
 title: 'Ratpoison WM'
 comment: 'https://ozi-blog.ru/nastroyka-pereklyucheniya-rabochih-stolov-v-ratpoison/'
 ---
+## documentation at
+`https://ib.bsb.br/ratpoison-documentation/`
+
 ### **Step 1: Install Ratpoison and Essential Tools**
 
 First, update your package lists and install Ratpoison. The rpws (Ratpoison Workspace System) script is included with the ratpoison package in Debian Bullseye. Consider installing dmenu for application launching and a basic terminal like xterm or rxvt-unicode.  
