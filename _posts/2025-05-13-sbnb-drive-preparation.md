@@ -8,6 +8,7 @@ published: true
 slug: sbnb-drive-preparation
 title: 'SBNB Drive Preparation'
 ---
+{% raw %}
 This guide presents a unified, comprehensive utility script to prepare SBNB (Secure Bare-Metal Node Bootstrap) Linux bootable drives. It combines robust partitioning, flexible image deployment, and advanced persistent storage configuration into a user-friendly Bash script that orchestrates operations, including a helper Python script for complex configurations. Whether you need a quick standard bootable drive or a complex setup with persistent Docker storage and automated system management, this utility adapts to your needs.
 
 This approach synergizes two powerful methodologies:
@@ -1632,3 +1633,4 @@ This unified utility leverages the strengths of several well-designed components
 ## Conclusion
 
 This Unified SBNB Drive Preparation Utility provides a flexible, robust, and more maintainable solution for SBNB Linux deployment. By offering distinct modes and separating complex configuration logic into a Python helper, it caters to both simple needs and advanced, persistent setups, while prioritizing safety and comprehensive functionality. Remember to always double-check your target device and understand the operations being performed.
+{% endraw %}
