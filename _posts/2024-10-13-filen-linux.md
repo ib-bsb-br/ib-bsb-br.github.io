@@ -1,5 +1,4 @@
 ---
-
 tags: [software>linux, cloud]
 comment: 'https://github.com/FilenCloudDienste/filen-cli'
 info: fechado.
@@ -7,10 +6,8 @@ date: '2024-10-13'
 type: post
 layout: post
 published: true
-sha: 
 slug: filen-linux
 title: 'Filen CLI sync: Setup Guide for Linux'
-
 ---
 # Setting up Filen CLI as a Systemd Service on Debian Bullseye ARM64
 
@@ -18,18 +15,18 @@ This guide outlines the process of installing and configuring the Filen CLI to r
 
 ## 1. Install Filen CLI
 
-```bash
+```
 # Download the ARM64 version of filen-cli
-wget https://cdn.filen.io/desktop/release/filen-cli_linux_arm64.tar.gz
-
-# Extract the archive
-tar -xzvf filen-cli_linux_arm64.tar.gz
-
+curl -sL https://filen.io/cli.sh | bash
+```
+```
 # Move the binary to a location in your PATH
-sudo mv filen-cli-v0.0.12-linux-arm64 /usr/bin/
+mv filen-cli-v0.0.33-linux-arm64 /home/linaro/.local/bin/filen-cli-v0.0.33-linux-arm64
+```
 
+```
 # Verify installation
-/usr/bin/filen-cli-v0.0.12-linux-arm64 --version
+filen-cli-v0.0.33-linux-arm64 --version
 ```
 
 ## 2. Set up Authentication
@@ -37,7 +34,7 @@ sudo mv filen-cli-v0.0.12-linux-arm64 /usr/bin/
 Create a file named `.filen-cli-credentials` in the root user's home directory:
 
 ```bash
-sudo nano /root/.filen-cli-credentials
+xnedit /home/linaro/.filen-cli-credentials
 ```
 
 Add your Filen credentials to this file:
@@ -51,7 +48,7 @@ your_2fa_code  # If 2FA is enabled
 Secure the credentials file:
 
 ```bash
-sudo chmod 600 /root/.filen-cli-credentials
+chmod 600 /home/linaro/.filen-cli-credentials
 ```
 
 ## 3. Create Systemd Service File
@@ -59,7 +56,7 @@ sudo chmod 600 /root/.filen-cli-credentials
 Create a new systemd service file:
 
 ```bash
-sudo nano /etc/systemd/system/filen-sync.service
+sudo xnedit /etc/systemd/system/filen-sync.service
 ```
 
 Add the following content:
@@ -72,11 +69,11 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/filen-cli-v0.0.12-linux-arm64 sync /userdata/000_download/share/:twoWay:/999_SHARED --continuous
+ExecStart=/home/linaro/.local/bin/filen-cli-v0.0.33-linux-arm64 sync /userdata/filen/999_SHARED/:twoWay:/999_SHARED --continuous
 Restart=on-failure
 RestartSec=5
 User=root
-WorkingDirectory=/root
+WorkingDirectory=/home/linaro
 
 [Install]
 WantedBy=multi-user.target
@@ -86,14 +83,15 @@ Note: Adjust the paths in the `ExecStart` line to match your specific sync requi
 
 ## 4. Enable and Start the Service
 
-```bash
-# Reload systemd configuration
+```
 sudo systemctl daemon-reload
+```
 
-# Enable the service to start on boot
+```
 sudo systemctl enable filen-sync.service
+```
 
-# Start the service
+```
 sudo systemctl start filen-sync.service
 ```
 
@@ -101,7 +99,7 @@ sudo systemctl start filen-sync.service
 
 Check if the service is running correctly:
 
-```bash
+```
 sudo systemctl status filen-sync.service
 ```
 
@@ -109,7 +107,7 @@ sudo systemctl status filen-sync.service
 
 To view the service logs:
 
-```bash
+```
 journalctl -u filen-sync.service -f
 ```
 
@@ -119,12 +117,12 @@ If you encounter issues:
 
 1. Check the service status and logs using the commands in steps 5 and 6.
 2. Ensure the sync directories exist and have the correct permissions.
-3. Verify the credentials in `/root/.filen-cli-credentials` are correct.
+3. Verify the credentials in `/home/linaro/.filen-cli-credentials` are correct.
 4. Try running the sync command manually to see if there are any errors:
 
-   ```bash
-   sudo /usr/bin/filen-cli-v0.0.12-linux-arm64 sync /userdata/000_download/share/:twoWay:/999_SHARED
-   ```
+```bash
+/usr/bin/filen-cli-v0.0.12-linux-arm64 sync /userdata/000_download/share/:twoWay:/999_SHARED
+```
 
 5. If problems persist, check for updates to the Filen CLI or consult the official Filen documentation.
 
