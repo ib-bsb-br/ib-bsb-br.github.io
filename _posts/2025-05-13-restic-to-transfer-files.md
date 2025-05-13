@@ -1,5 +1,5 @@
 ---
-tags: [scratchpad]
+tags: [aid>software]
 info: aberto.
 date: 2025-05-13
 type: post
