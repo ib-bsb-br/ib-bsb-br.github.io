@@ -119,7 +119,7 @@ bind Up focusup
 bind u undo
 bind Tab focus 
 bind t exec pcmanfm-qt --daemon-mode
-bind space exec dmenu_run
+bind space exec xboomx
 bind Right focusright
 bind Return exec x-terminal-emulator
 bind r resize
@@ -173,7 +173,7 @@ bind s-Up exchangeup
 bind s-u redo
 bind s-Tab nextscreen
 bind s-t exec sudo pcmanfm-qt
-bind s-space exec dratmenu.py
+bind s-space exec x-terminal-emulator -e dratmenu.py
 bind s-Right exchangeright
 bind s-Return exec sudo x-terminal-emulator
 bind s-q abort
