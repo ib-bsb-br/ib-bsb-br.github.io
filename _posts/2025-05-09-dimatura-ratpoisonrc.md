@@ -1,16 +1,288 @@
 ---
-tags:
-- linux>dotfile
+tags: [scratchpad,linux>dotfile]
 info: aberto.
 date: 2025-05-09
 type: post
 layout: post
 published: true
-slug: dimatura-ratpoisonrc
-title: dimatura .ratpoisonrc
-comment: https://raw.githubusercontent.com/dimatura/dot_ratpoison/refs/heads/master/.ratpoisonrc
+slug: ratpoisonrc
+title: "ratpoisonrc dot files"
 ---
 {% raw %}
+# kkantadas
+`https://raw.githubusercontent.com/kkantadas/dotfiles/refs/heads/main/.ratpoisonrc`
+
+```
+exec /usr/bin/rpws init 2 -k
+
+if egrep -iq 'touchpad' /proc/bus/input/devices; then
+exec   synclient VertEdgeScroll=1 &
+exec   synclient TapButton1=1 &
+exec xsetroot -cursor_name left_ptr > /dev/null &
+#exec redshift &
+#exec xset r rate 250 25 &
+#exec ./bin/conky.sh & ratpoison -c "set padding 0 15 0 0" & sleep 10s && killall conky ; ratpoison -c "set padding 0 0 0 0" > /dev/null &
+#addhook switchwin exec rpthumb
+#addhook quit exec rpexpose --clean
+#bind v exec rpselect
+
+#addhook switchwin banish
+#exec unclutter -idle 1 -jitter 3 -root
+#warp on
+
+#RP commands
+#aliasarestart "exec ratpoison -c 'restart ~/.config/ratpoison/.ratpoisonrc'"
+#set chdir ~/.config/ratpoison/
+
+set bgcolor grey1
+set fgcolor grey
+#set fwcolor black
+set fwcolor #2f2f2f
+set bwcolor #1f1f1f
+#set bwcolor black
+
+set barborder 0
+set border 2
+
+set bargravity n
+#set padding 0 0 0 0
+#set font fixed-6
+#set resizeunit 1
+set historysize 100
+set historycompaction 1
+startup_message off
+set wingravity n#ne
+#set winliststyle row
+#set winfmt %t
+#set inputwidth 800
+
+##KeyBindings
+newkmap   super-x
+#definekey super-x d     exec 'exec' # exec dmenu_run > /dev/null &
+#definekey super-x d     exec rofi -show drun -theme dmenu
+#definekey super-x d     exec rofi -theme flat-orange -font "hack 11" -show drun
+definekey super-x l      exec ./bin/lapower.sh
+definekey super-x j      exec urxvt -e alsamixer 
+definekey super-x space  exec ./bin/split.sh
+definekey super-x R      exec ratpoison -c restart
+definekey super-x D      exec dmenumount
+#definekey super-x p     exec ./bin/mptest.sh
+definekey super-x c      exec dratmenu
+definekey top s-x        readkey super-x
+definekey super-x Q      exec ratpoison -c quit
+definekey super-x e      exec emacs
+definekey super-x E      exec emacs -q -l ~/Emacs-project/init.el
+#definekey super-x m     exec  urxvt -e mutt > /dev/null &
+
+
+definekey super-x 1    exec  ratpoison -c "frestore `tail -n 1 .config/ratframe/ratframe1`" ;  ratpoison -c next
+definekey super-x 2    exec  ratpoison -c "frestore `tail -n 1 .config/ratframe/ratframe2`" ;  ratpoison -c next
+definekey super-x 3    exec  ratpoison -c "frestore `tail -n 1 .config/ratframe/ratframe3`" ;  ratpoison -c next
+definekey super-x 4    exec  ./bin/rat-frame4.sh
+definekey super-x 5    exec  ./bin/rat-frame5.sh
+definekey super-x 6    exec  ./bin/rat-frame6.sh
+definekey super-x 7    exec   transset-df 0.7
+definekey super-x 8    exec   transset-df 0.8
+definekey super-x 9    exec   transset-df 0.9
+definekey super-x 0    exec   transset-df 1.0
+definekey super-x "apostrophe"  exec ./bin/wifi.sh
+definekey super-x F1   exec ratpoison -c "hsplit 21/29" -c focusleft -c "hsplit " -c focusleft -c "resize -190 0" -c  exchangeright
+definekey super-x x   exec rat-ranger &
+definekey super-x X   exec urxvt -e ranger &
+#definekey super-x w exec chromium --process-per-site
+definekey super-x w exec rat-or-raise firefox &
+definekey super-x m exec scrot -e 'convert $f label:"%x %X" -append $f'
+# exec sh ~/.fehbg &
+
+#definekey super-x v  exec ./bin/conky.sh & sleep 9s && killall conky
+#definekey super-x v   exec ./bin/conky.sh & ratpoison -c "set padding 0 15 0 0" & sleep 25s && killall conky ; ratpoison -c "set padding 0 0 0 0" &
+#definekey super-x t   exec ratpoison -c "setenv fs1 `ratpoison -c 'fdump'`"
+
+#restore the frame layout in slot #1
+definekey super-x p exec ratpoison -c "frestore `tail -n 1 .config/ratframe/fsPing`" & urxvt -e ping -c4 google.com && ratpoison -c undo
+#definekey super-x p exec ratpoison -c "vsplit 12/13" -c focusdown &  urxvt -e ping -c4 google.com  && ratpoison -c undo
+#definekey super-x p exec ratpoison -c "echo `ping -c2 google.com | grep data`"
+#definekey super-x C exec ratpoison -c "echo Connecting Ethernet `con` "
+definekey super-x r exec ratpoison -c "frestore `ratpoison -c 'getenv fs1'`"
+definekey super-x s exec ratpoison -c "vsplit 5/6" -c focusdown
+definekey super-x S exec ratpoison -c "vsplit 5/6" -c focusdown & urxvt  
+definekey super-x f exec xterm -e w3m -B
+
+definekey super-x l exec ratpoison -c fdump > dump
+
+definekey super-x f exec xterm -e w3m -B
+definekey super-x h exec urxvt -e htop &
+
+definekey super-x Down exec xrandr -o normal &
+definekey super-x Left exec xrandr -o right &
+definekey super-x Right exec xrandr -o left &
+
+#definekey super-x a exec ratpoison -d :0.0 -c "echo Batt `acpi -b|cut -c-11-25` `acpi -t` `date`"
+definekey super-x a exec ratpoison -d :0.0 -c "echo `~/bin/ping-check.sh` Net: `cat /sys/class/net/enp2s0f1/operstate` @  Wifi: `cat /sys/class/net/wlan0/operstate /sys/class/net/wlp3s0/operstate` `iw wlan0 info |grep ssid|cut -c6-50` @ Bat:`acpi -b |cut -c11-27` @  Mem: `free -h | grep Mem | cut -c27-30` @ Themp:`acpi -t|cut -c15-19`°C @ `date -R|cut -c18-22` `date|cut -c1-10`"
+#: `connmanctl state|grep State|cut -c11-19`
+definekey super-x G exec urxvt -e vim Vedatxt/Bhagavat-Gita/Bhagavad-Gita.txt &
+definekey super-x K exec urxvt -e less Vedatxt/A.C.Bhaktivadanta\ Swami\ Prabhupada/Krsna_Book.txt &
+definekey super-x B exec urxvt -e ranger Vedatxt/Srimad\ Bhagavatam/ &
+definekey super-x V exec urxvt -e ranger Vedatxt &
+
+bind k exec ratpoison -c focusup
+bind j exec ratpoison -c focusdown 
+bind h exec ratpoison -c focusleft
+bind l exec ratpoison -c focusright
+bind C-k exec ratpoison -c exchangeup
+bind C-j exec ratpoison -c exchangedown
+bind C-h exec ratpoison -c exchangeleft
+bind C-l exec ratpoison -c exchangeright
+
+bind C exec urxvt -bg grey -fg black & sleep 0.3 && transset-df -a 0.7
+bind s exec ratpoison -c  vsplit -c focusdown
+bind parenright exec ratpoison -c "frestore `tail -n 1 .config/ratframe/dump`" & sleep 0.6s && sudo systemctl suspend  
+
+bind S exec ratpoison -c  hsplit -c focusright
+bind O exec ratpoison -c kill 
+bind o exec ratpoison -c delete
+exec /usr/bin/rpws init 2 -k
+
+if egrep -iq 'touchpad' /proc/bus/input/devices; then
+exec   synclient VertEdgeScroll=1 &
+exec   synclient TapButton1=1 &
+exec xsetroot -cursor_name left_ptr > /dev/null &
+#exec redshift &
+#exec xset r rate 250 25 &
+#exec ./bin/conky.sh & ratpoison -c "set padding 0 15 0 0" & sleep 10s && killall conky ; ratpoison -c "set padding 0 0 0 0" > /dev/null &
+#addhook switchwin exec rpthumb
+#addhook quit exec rpexpose --clean
+#bind v exec rpselect
+
+#addhook switchwin banish
+#exec unclutter -idle 1 -jitter 3 -root
+#warp on
+
+#RP commands
+#aliasarestart "exec ratpoison -c 'restart ~/.config/ratpoison/.ratpoisonrc'"
+#set chdir ~/.config/ratpoison/
+
+set bgcolor grey1
+set fgcolor grey
+#set fwcolor black
+set fwcolor #2f2f2f
+set bwcolor #1f1f1f
+#set bwcolor black
+
+set barborder 0
+set border 2
+
+set bargravity n
+#set padding 0 0 0 0
+#set font fixed-6
+#set resizeunit 1
+set historysize 100
+set historycompaction 1
+startup_message off
+set wingravity n#ne
+#set winliststyle row
+#set winfmt %t
+#set inputwidth 800
+
+##KeyBindings
+newkmap   super-x
+#definekey super-x d     exec 'exec' # exec dmenu_run > /dev/null &
+#definekey super-x d     exec rofi -show drun -theme dmenu
+#definekey super-x d     exec rofi -theme flat-orange -font "hack 11" -show drun
+definekey super-x l      exec ./bin/lapower.sh
+definekey super-x j      exec urxvt -e alsamixer 
+definekey super-x space  exec ./bin/split.sh
+definekey super-x R      exec ratpoison -c restart
+definekey super-x D      exec dmenumount
+#definekey super-x p     exec ./bin/mptest.sh
+#definekey super-x c      exec xterm  -e 'rm -rfv ~/{.cache/{/google-chrome/Default/,common-lisp/,gstreamer-1.0/,vimb/WebKitCache},  .cache/yay/,.local/share/webkitgtk,.pki/} ;read'
+#definekey super-x c      exec xterm -e 'rm -rfv .cache/mozilla/firefox/3s57yr41.default-release/{thumbnails/,cache2/,weave/logs/,storage/default} .cache/yay/ .local/share/webkitgtk .pki/ .mozilla/firefox/3s57yr41.default-release/{thumbnails/,cache2/,weave/logs/,storage/default/} ;read'
+definekey super-x c      exec xterm -e 'rm -rfv .cache/mozilla/firefox/3s57yr41.default-release/{thumbnails/,cache2/,weave/logs/,storage/default} .cache/yay/ .local/share/webkitgtk .pki/ . ;read'
+definekey top s-x        readkey super-x
+definekey super-x Q      exec ratpoison -c quit
+definekey super-x e      exec emacs
+#definekey super-x m     exec  urxvt -e mutt > /dev/null &
+
+
+definekey super-x 1    exec  ratpoison -c "frestore `tail -n 1 .config/ratframe/ratframe1`" ;  ratpoison -c next
+definekey super-x 2    exec  ratpoison -c "frestore `tail -n 1 .config/ratframe/ratframe2`" ;  ratpoison -c next
+definekey super-x 3    exec  ratpoison -c "frestore `tail -n 1 .config/ratframe/ratframe3`" ;  ratpoison -c next
+definekey super-x 4    exec  ./bin/frame4.sh
+definekey super-x 5    exec  ./bin/frame5.sh
+definekey super-x 6    exec  ./bin/frame6.sh
+definekey super-x 7    exec   transset-df 0.7
+definekey super-x 8    exec   transset-df 0.8
+definekey super-x 9    exec   transset-df 0.9
+definekey super-x 0    exec   transset-df 1.0
+definekey super-x "apostrophe"  exec ./bin/wifi.sh
+definekey super-x F1   exec ratpoison -c "hsplit 21/29" -c focusleft -c "hsplit " -c focusleft -c "resize -190 0" -c  exchangeright
+definekey super-x x    exec urxvt -e ranger &
+definekey super-x m    exec scrot -e 'convert $f label:"%x %X" -append $f'
+# exec sh ~/.fehbg &
+
+#definekey super-x v  exec ./bin/conky.sh & sleep 9s && killall conky
+#definekey super-x v   exec ./bin/conky.sh & ratpoison -c "set padding 0 15 0 0" & sleep 25s && killall conky ; ratpoison -c "set padding 0 0 0 0" &
+
+#definekey super-x t   exec ratpoison -c "setenv fs1 `ratpoison -c 'fdump'`"
+
+#restore the frame layout in slot #1
+definekey super-x p exec ratpoison -c "frestore `tail -n 1 .config/ratframe/fsPing`" & urxvt -fn "xft:monaco:pixelsize=10" -e ping -c4 google.com && ratpoison -c undo
+#definekey super-x p exec ratpoison -c "frestore `tail -n 1 .config/ratframe/fsPing`" & urxvt -e ping -c4 google.com && ratpoison -c undo
+
+#definekey super-x p exec ratpoison -c "vsplit 12/13" -c focusdown &  urxvt -e ping -c4 google.com  && ratpoison -c undo
+#definekey super-x p exec ratpoison -c "echo `ping -c2 google.com | grep data`"
+#definekey super-x C exec ratpoison -c "echo Connecting Ethernet `con` "
+definekey super-x r exec ratpoison -c "frestore `ratpoison -c 'getenv fs1'`"
+definekey super-x s exec ratpoison -c "vsplit 5/6" -c focusdown
+definekey super-x f exec xterm -e w3m -B
+
+definekey super-x l exec ratpoison -c fdump > dump
+
+definekey super-x f exec xterm -e w3m -B
+definekey super-x h exec urxvt -e htop &
+
+definekey super-x Down exec xrandr -o normal &
+definekey super-x Left exec xrandr -o right &
+definekey super-x Right exec xrandr -o left &
+
+#definekey super-x a exec ratpoison -d :0.0 -c "echo Batt `acpi -b|cut -c-11-25` `acpi -t` `date`"
+definekey super-x a exec ratpoison -d :0.0 -c "echo `~/bin/ping-check.sh` Net: `cat /sys/class/net/enp2s0f1/operstate` @  Wifi: `cat /sys/class/net/wlan0/operstate /sys/class/net/wlp3s0/operstate` `iw wlan0 info |grep ssid|cut -c6-50` @ Bat:`acpi -b |cut -c11-27` @  Mem: `free -h | grep Mem | cut -c27-30` @ Themp:`acpi -t|cut -c15-19`°C @ `date -R|cut -c18-22` `date|cut -c1-10`"
+#: `connmanctl state|grep State|cut -c11-19`
+
+definekey super-x G exec urxvt -e vim Vedatxt/Bhagavat-Gita/Bhagavad-Gita.txt &
+definekey super-x K exec urxvt -e less Vedatxt/A.C.Bhaktivadanta\ Swami\ Prabhupada/Krsna_Book.txt &
+definekey super-x B exec urxvt -e ranger Vedatxt/Srimad\ Bhagavatam/ &
+definekey super-x V exec urxvt -e ranger Vedatxt &
+
+#bind j exec amixer -q set Master 10+
+#bind h exec amixer -q set Master 10-
+#bind C exec urxvt -bg grey -fg black & sleep 0.3 && transset-df -a 0.7
+bind s exec ratpoison -c  vsplit -c focusdown
+#bind parenright exec ratpoison -c "frestore `tail -n 1 .config/ratframe/dump`" & sleep 0.5s && sudo systemctl suspend  
+
+bind S exec ratpoison -c  hsplit -c focusright
+bind C exec  urxvt -bg '#F8C888' -fg '#392613' -fn "xft:comic shanns:pixelsize=16"
+#bind h exec amixer -q set Speaker unmute # 100%
+#bind l exec amixer -q set Speaker mute   # 0%
+bind t exec ratpoison -d :0.0 -c "echo `ratpoison -c windows`"
+bind m exec ratpoison -c undo "title mutt" ; urxvt -e mutt > /dev/null &
+bind c exec urxvt
+bind d exec xterm & sleep .3s && transset-df -a 0.7
+#set font ScaBenguit 
+#set font terminus
+set font ter-13n
+#set font Liberation Serif
+#set font "-*-fixed-bold-r-normal-*-5-*-*-*-c-*-*-*"
+set inputwidth 250
+
+GPG_TTY=$(tty)
+export GPG_TTY
+exec xset b 0
+```
+
+# dimatura
+`https://raw.githubusercontent.com/dimatura/dot_ratpoison/refs/heads/master/.ratpoisonrc`
+
 ```
 # vim: commentstring=#%s
 
