@@ -14,50 +14,69 @@ title: 'Setting Up SSH Key-Based Authentication on Debian'
 
 Ensure the OpenSSH server is installed and running on your Debian server:
 
-```bash
 # Update package list
+```
 sudo apt update
-
+```
 # Install SSH server if not present
+```
 sudo apt install openssh-server
-
+```
 # Check SSH service status
+```
 sudo systemctl status sshd
-
+```
 
 If it's not active (running), start and enable it to run on boot:
+```
 sudo systemctl start sshd
-sudo systemctl enable sshd
+```
 
+```
+sudo systemctl enable sshd
+```
 
 2. SSH Key Pair
 You need an SSH key pair on your client machine (the one you'll connect from).
 Generate Keys (if you don't have them):
 # Recommended: Ed25519 (modern and secure)
+```
 ssh-keygen -t ed25519
-
+```
 # Or: RSA (widely compatible, use 4096 bits)
+```
 # ssh-keygen -t rsa -b 4096
+```
 
 Follow the prompts. You can optionally add a passphrase for extra security. This typically creates:
-~/.ssh/id_ed25519 or ~/.ssh/id_rsa (Private Key - Never share this file. It's your private identity. Adding a passphrase encrypts this file on your disk, providing an extra layer of security if someone gains access to your client machine.)
-~/.ssh/id_ed25519.pub or ~/.ssh/id_rsa.pub (Public Key - This goes on the server)
-Identify your Public Key File: Note the path to your public key file (e.g., ~/.ssh/id_ed25519.pub).
-Steps on the Debian Server
+`~/.ssh/id_ed25519` or `~/.ssh/id_rsa` (Private Key - Never share this file. It's your private identity. Adding a passphrase encrypts this file on your disk, providing an extra layer of security if someone gains access to your client machine.)
+`~/.ssh/id_ed25519.pub` or `~/.ssh/id_rsa.pub` (Public Key - This goes on the server)
+Identify your Public Key File: Note the path to your public key file (e.g., `~/.ssh/id_ed25519.pub`).
+
+## Steps on the Debian Server
+
 Let's assume you want to set up key-based login for a user named your_user on the server your_debian_server_ip. Replace these with your actual username and server IP/hostname.
+
 Security Note: While possible, enabling direct root login via SSH (even with keys) is generally discouraged. Prefer logging in as a regular user and using sudo.
+
 Method 1: Using ssh-copy-id (Recommended)
 This is the easiest and safest method. It automatically copies the key, creates the necessary directory/file, and sets the correct permissions on the server.
+
 Run ssh-copy-id from your Client Machine:
 # Replace with your public key file if not the default
-# ssh-copy-id -i ~/.ssh/your_public_key.pub your_user@your_debian_server_ip
+```
+ssh-copy-id -i ~/.ssh/your_public_key.pub your_user@your_debian_server_ip
+```
 
 # If using the default key (e.g., id_rsa.pub, id_ed25519.pub):
+```
 ssh-copy-id your_user@your_debian_server_ip
-
+```
 
 Enter Password: You will be prompted for your_user's password on the Debian server one last time.
+
 Done: Your public key is now installed in /home/your_user/.ssh/authorized_keys on the server with the correct permissions.
+
 Method 2: Manual Installation (Alternative)
 This method involves manually creating the necessary files and setting permissions on the server. It's useful if ssh-copy-id isn't available or if you prefer manual control.
 Use this if ssh-copy-id is unavailable or if you need finer control. Perform these steps on the Debian server, logged in as your_user (or as root, carefully adjusting paths and ownership).
@@ -132,7 +151,11 @@ ls -ld ~ ~/.ssh ~/.ssh/authorized_keys
 
 Ensure ~/.ssh is 700 (drwx------) and ~/.ssh/authorized_keys is 600 (-rw-------), and both are owned by your_user. Also check the home directory (~) itself isn't world-writable.
 Check SSHD Configuration (Server): Ensure public key authentication is enabled in /etc/ssh/sshd_config:
+```
 sudo grep -iE 'PubkeyAuthentication|AuthorizedKeysFile' /etc/ssh/sshd_config
+```
 
 You should see PubkeyAuthentication yes and likely .ssh/authorized_keys within the AuthorizedKeysFile line. If you change this file, restart SSH:
+```
 sudo systemctl restart sshd
+```
