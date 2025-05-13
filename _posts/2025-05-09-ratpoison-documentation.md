@@ -12,6 +12,7 @@ comment: https://raw.githubusercontent.com/dimatura/ratpoison/refs/heads/master/
 ---
 
 {% raw %}
+{% codeblock %}
 \input texinfo   @c -*-texinfo-*-
 @c %**start of header
 @setfilename ratpoison.info
@@ -1911,4 +1912,5 @@ When called with no arguments, the current setting is returned.
 @printindex fn
 
 @bye
+{% endcodeblock %}
 {% endraw %}
