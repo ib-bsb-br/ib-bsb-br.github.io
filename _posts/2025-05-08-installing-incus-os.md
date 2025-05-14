@@ -10,7 +10,7 @@ slug: installing-incus-os
 title: installing Incus OS
 comment: https://github.com/lxc/incus-os
 ---
-
+**Part 1: Installing and Configuring an Incus OS Environment**
 
 **I. Introduction to Incus OS and Intel N97 Deployment**
 
@@ -284,3 +284,230 @@ Successfully installing and configuring Incus OS on an Intel N97 bare-metal host
     *   **Regular Updates:** Incus OS (via its A/B mechanism) and the Incus package itself (Incus has monthly feature releases and LTS versions `2`).
     *   **System Monitoring:** Host resources and Incus pool usage. Review Incus logs.
     *   **Backup Strategy:** Incus configuration and instance data.
+
+---
+
+With an Incus OS environment (or Incus installed on a standard operating system) established, the subsequent focus often shifts to managing and utilizing virtual machine disk images within that Incus setup. The following sections detail these processes.
+
+---
+
+**Part 2: Managing and Utilizing Virtual Machine Disk Images with Incus**
+
+**Section 2.1: Introduction to VM Disk Images and Tools**
+
+When working with virtual machines in Incus, understanding the underlying technologies and disk image formats is beneficial.
+*   **QEMU/KVM:**
+    *   **QEMU:** An open-source machine emulator and virtualizer that Incus utilizes for running VMs.
+    *   **KVM (Kernel-based Virtual Machine):** A Linux kernel module that enables QEMU to use hardware virtualization extensions (like Intel VT-x or AMD-V), providing near-native performance. Operating systems like Fedora CoreOS include KVM support.
+*   **`.qcow2`:** This is a disk image format commonly used by QEMU. It supports features like copy-on-write (allowing for smaller "diff" images that depend on a backing file) and snapshots.
+
+**Section 2.2: Creating Standalone VM Images by Merging `.qcow2` Diffs**
+
+The objective here is to consolidate the data from your `.qcow2` overlay (which contains only the changes or differences) and its base backing image (often a `.raw` file) into one new image file. This new file will not have any external backing file dependencies, making it a "flat" or "standalone" image, which simplifies management and portability for use with Incus.
+
+**Prerequisites for Merging:**
+
+*   **`qemu-utils` installed:** This package provides the `qemu-img` utility.
+*   **Access to both files:** You need read access to both the `.qcow2` overlay file and its backing file.
+*   **Correct backing file path:** The `.qcow2` file must correctly reference its backing file.
+
+**Verifying the Backing File Information (Recommended)**
+
+Before attempting to merge, check the `.qcow2` image's information, especially the backing file path:
+```bash
+qemu-img info /path/to/your/overlay-image.qcow2
+```
+Look for the `backing file:` line. Ensure this path is resolvable.
+
+**Merge the Images into a Single File**
+
+**Method A: Create a New Standalone Image using `qemu-img convert` (Recommended)**
+This method reads the overlay and its backing file, merging them into a *new* file, leaving your original files untouched.
+
+1.  **Choose your output format (raw or qcow2):**
+    *   **To create a new standalone RAW image:**
+        ```bash
+        qemu-img convert -f qcow2 -O raw /path/to/your/overlay-image.qcow2 /path/to/your/new-standalone-image.raw
+        ```
+    *   **To create a new standalone QCOW2 image (without a backing file):**
+        ```bash
+        qemu-img convert -f qcow2 -O qcow2 /path/to/your/overlay-image.qcow2 /path/to/your/new-standalone-image.qcow2
+        ```
+
+**Method B: Commit Changes to the Backing File using `qemu-img commit` (Modifies Original Backing File - Use with Caution)**
+This method merges changes from the `.qcow2` overlay directly into its backing file. **This action permanently modifies your original backing file.**
+
+1.  **Commit the changes:**
+    ```bash
+    qemu-img commit /path/to/your/overlay-image.qcow2
+    ```    Your original backing file now contains the merged data and is your single, standalone file.
+
+**Method C: Rebase QCOW2 to No Backing File using `qemu-img rebase` (Modifies Overlay - Use with Caution if not on a copy)**
+This method is specific to making a `.qcow2` file standalone.
+
+1.  **It's safest to work on a copy:**
+    ```bash
+    cp /path/to/your/overlay-image.qcow2 /path/to/your/standalone-candidate.qcow2
+    ```
+2.  **Rebase the copy to remove the backing file link:**
+    ```bash
+    qemu-img rebase -b "" -f qcow2 /path/to/your/standalone-candidate.qcow2
+    ```
+
+**Verifying the Merged Image**
+After merging, use `qemu-img info /path/to/your/resulting-standalone-image.[qcow2_or_raw]` to confirm the `backing file:` line is absent.
+
+**Section 2.3: Importing and Running VM Images in Incus**
+
+Once you have a standalone image file (or an existing `.qcow2` you wish to use), you can import or run it in Incus.
+
+**General Prerequisites for Using Images with Incus:**
+
+1.  **Hardware Virtualization:** Ensure Intel VT-x or AMD-V is enabled in your machine's BIOS/UEFI.
+2.  **Incus Initialization (One-time if not done):** If Incus hasn't been used before, initialize it:
+    ```bash
+    sudo incus admin init
+    ```
+    Follow the prompts, accepting defaults for simplicity if unsure. This typically sets up a default profile and a storage pool.
+3.  **User Permissions:** Your user might need to be in the `incus-admin` group (or `lxd`) to run `incus` commands without `sudo`.
+
+**Method 1: Importing as a Reusable Incus Image (`incus image import`)**
+This adds the image to the Incus image store for launching multiple VM instances. There are a few ways to provide the image and its metadata:
+
+*   **Option 1.1: Import a standalone image file directly, specifying properties via flags:**
+    ```bash
+    incus image import /path/to/your/standalone-image.[qcow2_or_raw] --alias my-custom-vm-image --type virtual-machine --property os="Ubuntu" --property release="22.04" --property description="My custom VM"
+    ```
+    Adjust alias and properties as needed.
+
+*   **Option 1.2: Import a standalone image file accompanied by a separate metadata tarball:**
+    1.  **Prepare `metadata.yaml`:**
+        ```yaml
+        architecture: x86_64
+        creation_date: $(date +%s) # Or a static Unix timestamp
+        properties:
+          os: "MyOS"
+          release: "MyVersion"
+          description: "VM image with separate metadata"
+          type: "virtual-machine"
+        ```
+    2.  **Create a tarball of the metadata:**
+        ```bash
+        tar -cvf metadata.tar metadata.yaml
+        ```
+    3.  **Import the image file with its metadata tarball:**
+        ```bash
+        incus image import metadata.tar /path/to/your/standalone-image.[qcow2_or_raw] --alias my-custom-metadata-vm
+        ```
+
+*   **Option 1.3: Import a single tarball containing both the image and its metadata:**
+    1.  **Prepare `metadata.yaml`** (as in Option 1.2).
+    2.  **Prepare the image file:** Often, the image file inside the tarball is named `root.qcow2`, `disk.qcow2`, or `rootfs.img`.
+        ```bash
+        cp /path/to/your/standalone-image.qcow2 ./root.qcow2 # Example renaming
+        ```
+    3.  **Create a tarball containing both:**
+        ```bash
+        tar -czvf my-incus-image.tar.gz root.qcow2 metadata.yaml
+        ```
+    4.  **Import the combined tarball:**
+        ```bash
+        incus image import my-incus-image.tar.gz --alias my-packaged-vm-image
+        ```
+
+After importing using any of these options, launch a VM:
+```bash
+incus launch <image_alias_used_during_import> my-new-vm-instance --vm
+```
+
+**Method 2: Creating a VM Instance Directly from a Disk Image (`incus-migrate`)**
+The `incus-migrate` tool guides you through creating a new Incus VM instance directly from a disk image.
+
+1.  **Run `incus-migrate` interactively:**
+    ```bash
+    incus-migrate
+    ```
+2.  **Follow the prompts:**
+    *   Choose to create a **virtual-machine**.
+    *   Provide the Incus project, a name for the new VM, and the **full path to your standalone image file**.
+    *   Answer questions about UEFI support, etc.
+
+**Method 3: Direct Boot by Attaching an Existing `.qcow2` File (Quick Use)**
+This is useful for quickly booting an existing `.qcow2` file, especially if your Incus storage pool is type `dir`.
+
+1.  **Launch a minimal VM instance (placeholder):**
+    ```bash
+    incus launch images:alpine/edge temp-vm --vm
+    ```
+2.  **Stop the VM:**
+    ```bash
+    incus stop temp-vm
+    ```
+3.  **Remove its default root disk:**
+    ```bash
+    incus config device remove temp-vm root
+    ```
+4.  **Add your `.qcow2` file as the new root disk:**
+    ```bash
+    incus config device add temp-vm root disk source=/path/to/your/image.qcow2 boot.priority=1
+    ```
+5.  **Rename the VM if desired and start it:**
+    ```bash
+    # incus rename temp-vm my-qcow-vm # Optional
+    incus start temp-vm # or new name
+    ```
+6.  **Access the console:**
+    ```bash
+    incus console temp-vm # or new name
+    ```
+
+**Method 4: Importing a Disk Image into a Custom Storage Volume (`incus storage volume import`)**
+This is suitable if your storage pool is block-based, or you want Incus to manage the disk as a distinct volume.
+
+1.  **Identify your storage pool:** `incus storage list`
+2.  **(Optional) Convert `.qcow2` to Raw:** Incus volume import often works best with raw files.
+    ```bash
+    qemu-img convert -f qcow2 -O raw /path/to/your/image.qcow2 /tmp/image-for-volume.raw
+    ```
+3.  **Import the image into an Incus custom storage volume:**
+    ```bash
+    incus storage volume import <your-pool-name> /tmp/image-for-volume.raw <name-for-your-volume>
+    # Or if importing qcow2 directly (Incus might convert it):
+    # incus storage volume import <your-pool-name> /path/to/your/image.qcow2 <name-for-your-volume>
+    ```
+4.  **Launch a VM using the custom volume:**
+    Create a VM instance (as in Method 3, steps 1-3 for creating a placeholder VM), then add the custom volume as its root disk:
+    ```bash
+    incus config device add <vm-name> root disk pool=<your-pool-name> source=<name-for-your-volume> boot.priority=1
+    incus start <vm-name>
+    ```
+
+**Important Considerations for Images in Incus:**
+
+*   **Safety First (Merging):** Always prefer `qemu-img convert` to create new files when merging, preserving your originals. Back up important images before modification.
+*   **Disk Space:** Merged images will require space. Ensure sufficiency.
+*   **VM Configuration:** After importing/launching, you might need to adjust VM configuration (CPU, memory, network) using `incus config edit <vm-name>`.
+*   **UEFI/Secure Boot:** If your original VM used UEFI/Secure Boot, ensure these settings are appropriately configured in Incus for the new VM. `incus-migrate` often handles this well.
+*   **Image Format in Incus Storage:** Incus often stores VM root disks as raw image files (e.g., `rootfs.img`) within its storage pool structure, even if you import a qcow2 file. This conversion is typically handled by Incus.
+*   **Storage Pools:** Imported images and instance disks reside in Incus storage pools. The type of pool (`dir`, `zfs`, `lvm`, etc.) can influence performance and features.
+
+**Section 2.4: Direct QEMU/KVM Usage (Alternative)**
+
+While Incus provides a management layer, you could use QEMU/KVM directly. This bypasses Incus's features.
+Ensure QEMU/KVM utilities are installed (e.g., `qemu-system-x86` on Fedora CoreOS, though Incus usually installs dependencies).
+Example command:
+```bash
+qemu-system-x86_64 \
+    -enable-kvm \
+    -m 2048 \
+    -smp 2 \
+    -hda /path/to/your/image.qcow2 \
+    -boot d \
+    -vga std \
+    -net nic -net user,hostfwd=tcp::2222-:22 # Example networking
+```
+This is more manual and generally not preferred if Incus is available and configured.
+
+**Section 2.5: Clarification on Podman's Role**
+
+Podman is for managing OCI/Docker-compatible *containers*, not full virtual machines from `.qcow2` images. It operates at a different level of virtualization (OS-level virtualization, sharing the host kernel) compared to the hardware virtualization used by Incus (via QEMU/KVM) for VMs. Therefore, Podman is not the tool for running `.qcow2` based virtual machines.
