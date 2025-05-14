@@ -173,7 +173,7 @@ bind s-Up exchangeup
 bind s-u redo
 bind s-Tab nextscreen
 bind s-t exec sudo pcmanfm-qt
-bind s-space exec x-terminal-emulator -e dratmenu.py
+bind s-space exec x-terminal-emulator --hold -e python3 /home/linaro/.local/bin/dratmenu.py
 bind s-Right exchangeright
 bind s-Return exec sudo x-terminal-emulator
 bind s-q abort
