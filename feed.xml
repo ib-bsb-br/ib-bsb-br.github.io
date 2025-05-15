@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2025-05-15T09:25:05+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">GitHub Actions Build Workflow Locally on a Debian</title><link href="https://ib.bsb.br/github-actions-build-workflow-locally-on-a-debian/" rel="alternate" type="text/html" title="GitHub Actions Build Workflow Locally on a Debian" /><published>2025-05-15T00:00:00+00:00</published><updated>2025-05-15T09:21:47+00:00</updated><id>https://ib.bsb.br/github-actions-build-workflow-locally-on-a-debian</id><content type="html" xml:base="https://ib.bsb.br/github-actions-build-workflow-locally-on-a-debian/"><![CDATA[<p><strong>Goal:</strong> To build the OS images and related artifacts as specified in the workflow, using a Debian-based environment like Finnix.</p>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2025-05-15T12:42:44+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">GitHub Actions Build Workflow Locally on a Debian</title><link href="https://ib.bsb.br/github-actions-build-workflow-locally-on-a-debian/" rel="alternate" type="text/html" title="GitHub Actions Build Workflow Locally on a Debian" /><published>2025-05-15T00:00:00+00:00</published><updated>2025-05-15T09:21:47+00:00</updated><id>https://ib.bsb.br/github-actions-build-workflow-locally-on-a-debian</id><content type="html" xml:base="https://ib.bsb.br/github-actions-build-workflow-locally-on-a-debian/"><![CDATA[<p><strong>Goal:</strong> To build the OS images and related artifacts as specified in the workflow, using a Debian-based environment like Finnix.</p>
 
 <p><strong>Assumed Environment:</strong></p>
 <ul>
@@ -283,7 +283,7 @@ gh release create <span class="s2">"</span><span class="k">${</span><span class=
   <li><strong>Alternative: Containerized Builds:</strong> For higher fidelity reproduction and isolation, consider running the entire build process within a Docker or Podman container based on a <code class="language-plaintext highlighter-rouge">debian:12</code> image. This is more complex to set up but offers a cleaner environment.</li>
 </ul>
 
-<hr />]]></content><author><name></name></author><category term="scratchpad" /></entry><entry><title type="html">restic to transfer files</title><link href="https://ib.bsb.br/restic-to-transfer-files/" rel="alternate" type="text/html" title="restic to transfer files" /><published>2025-05-13T00:00:00+00:00</published><updated>2025-05-13T23:52:43+00:00</updated><id>https://ib.bsb.br/restic-to-transfer-files</id><content type="html" xml:base="https://ib.bsb.br/restic-to-transfer-files/"><![CDATA[<p>This guide uses the following specific paths:</p>
+<hr />]]></content><author><name></name></author><category term="scratchpad" /></entry><entry><title type="html">restic to transfer files</title><link href="https://ib.bsb.br/restic-to-transfer-files/" rel="alternate" type="text/html" title="restic to transfer files" /><published>2025-05-13T00:00:00+00:00</published><updated>2025-05-15T12:39:44+00:00</updated><id>https://ib.bsb.br/restic-to-transfer-files</id><content type="html" xml:base="https://ib.bsb.br/restic-to-transfer-files/"><![CDATA[<p>This guide uses the following specific paths:</p>
 <ul>
   <li><strong>Source File:</strong> <code class="language-plaintext highlighter-rouge">/opt/data_files/original_large.img</code></li>
   <li><strong>External Drive Mount Point:</strong> <code class="language-plaintext highlighter-rouge">/media/my_external_drive</code></li>
@@ -385,6 +385,319 @@ irreversibly lost.
       <li>Forget the snapshot(s) and prune data: <code class="language-plaintext highlighter-rouge">restic -r /media/my_external_drive/restic_img_repo forget &lt;SNAPSHOT_ID_or_latest&gt; --prune</code></li>
       <li>To completely remove the repository: <code class="language-plaintext highlighter-rouge">rm -rf /media/my_external_drive/restic_img_repo</code> (Use <code class="language-plaintext highlighter-rouge">rm -rf</code> with extreme caution).</li>
     </ol>
+  </li>
+</ul>
+
+<h1 id="integrating-restic-with-storj-for-decentralized-cloud-backups">Integrating Restic with Storj for Decentralized Cloud Backups</h1>
+
+<p>Storj is a decentralized cloud object storage platform that offers a compelling backend solution for Restic backups due to its distributed architecture, S3 compatibility, end-to-end encryption principles, and potentially competitive pricing. This section provides a comprehensive guide to configuring and using Restic with Storj, primarily leveraging Rclone as the intermediary.</p>
+
+<h3 id="1-introduction-to-storj-for-restic-users">1. Introduction to Storj for Restic Users</h3>
+
+<p>Storj provides enterprise-grade, globally distributed cloud object storage. Its key features relevant to Restic users include:</p>
+<ul>
+  <li><strong>Decentralization:</strong> Files are encrypted, erasure-coded, and spread across a vast network of independent storage nodes, enhancing durability and availability.</li>
+  <li><strong>Security:</strong> Storj emphasizes zero-trust security. When combined with Restic’s client-side end-to-end encryption, your backup data remains confidential even from Storj and its node operators.</li>
+  <li><strong>S3-Compatible API:</strong> Storj offers an Amazon S3-compatible API, allowing tools like Rclone (and by extension, Restic) to interact with it seamlessly.</li>
+  <li><strong>Native Integration Potential:</strong> Rclone also supports a native Storj integration (via Uplink CLI concepts), which can offer client-side erasure coding for path encryption and potentially optimized performance.</li>
+  <li><strong>Cost-Effectiveness:</strong> Storj’s pricing model (typically per GB stored and per GB downloaded) can be attractive, especially when paired with Restic’s efficient deduplication, which minimizes storage footprint.</li>
+</ul>
+
+<p>Using Restic with Storj via Rclone allows you to combine Restic’s robust backup features with Storj’s resilient and secure decentralized storage.</p>
+
+<h3 id="2-prerequisites">2. Prerequisites</h3>
+
+<p>Before you begin, ensure you have the following:</p>
+<ol>
+  <li><strong>A Storj Account:</strong> Sign up at <a href="https://storj.io/signup?partner=restic">Storj.io</a>. New accounts often come with a free trial allowance.</li>
+  <li><strong>Restic Installed:</strong> Download and install the Restic binary for your operating system from the <a href="https://github.com/restic/restic/releases">official Restic releases page</a> or via your system’s package manager. Ensure it’s in your PATH.</li>
+  <li><strong>Rclone Installed:</strong> Download and install Rclone from the <a href="https://rclone.org/install/">official Rclone website</a>. Ensure it’s in your PATH.</li>
+</ol>
+
+<h3 id="3-rclone-configuration-for-storj">3. Rclone Configuration for Storj</h3>
+
+<p>Rclone is the bridge between Restic and Storj. You need to configure an Rclone “remote” that points to your Storj account. Storj can be accessed by Rclone in two main ways. The <strong>S3-Compatible Gateway</strong> (Method 1) is often simpler to set up if you’re familiar with S3 credentials and offers broad compatibility. The <strong>Native Storj Integration</strong> (Method 2) uses Storj’s Uplink protocols, may offer client-side erasure coding for path encryption, and could have different performance characteristics. Choose the method that best fits your technical comfort and requirements.</p>
+
+<h4 id="31-method-1-configuring-rclone-for-storj-via-s3-compatible-gateway">3.1. Method 1: Configuring Rclone for Storj via S3-Compatible Gateway</h4>
+
+<p>This method uses Storj’s S3-compatible API endpoint and requires S3 credentials (access key and secret key).</p>
+
+<p><strong>Step 1: Generate S3 Credentials in Storj Console</strong></p>
+<ol>
+  <li>Log in to your Storj account.</li>
+  <li>Navigate to <strong>Access Keys</strong> (or a similarly named section for S3 credentials).</li>
+  <li>Create a new Access Key.
+    <ul>
+      <li>Give it a descriptive name (e.g., <code class="language-plaintext highlighter-rouge">restic-backup-s3-creds</code>).</li>
+      <li>Set appropriate permissions (Read, Write, List, Delete for the buckets Restic will use).</li>
+      <li>Note down the <strong>Access Key ID</strong>, <strong>Secret Access Key</strong>, and the <strong>S3 Gateway Endpoint</strong> (e.g., <code class="language-plaintext highlighter-rouge">gateway.storjshare.io</code>).</li>
+    </ul>
+  </li>
+</ol>
+
+<p><strong>Step 2: Configure Rclone Remote for S3 Gateway</strong>
+You can configure Rclone by editing its configuration file directly (find its location with <code class="language-plaintext highlighter-rouge">rclone config file</code>) or by using the interactive <code class="language-plaintext highlighter-rouge">rclone config</code> setup.</p>
+
+<ul>
+  <li><strong>Editing <code class="language-plaintext highlighter-rouge">rclone.conf</code> directly:</strong>
+Add a new remote section to your <code class="language-plaintext highlighter-rouge">rclone.conf</code> file (e.g., <code class="language-plaintext highlighter-rouge">~/.config/rclone/rclone.conf</code>):
+    <div class="language-ini highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nn">[storj_s3]</span>
+<span class="py">type</span> <span class="p">=</span> <span class="s">s3</span>
+<span class="py">provider</span> <span class="p">=</span> <span class="s">Storj</span>
+<span class="py">access_key_id</span> <span class="p">=</span> <span class="s">YOUR_STORJ_ACCESS_KEY_ID</span>
+<span class="py">secret_access_key</span> <span class="p">=</span> <span class="s">YOUR_STORJ_SECRET_ACCESS_KEY</span>
+<span class="py">endpoint</span> <span class="p">=</span> <span class="s">gateway.storjshare.io</span>
+<span class="c"># Optional: Define a specific region if needed, though often not required for Storj's global gateway
+# region = us-east-1
+# Optional: Storj docs sometimes recommend disabling checksum for S3 gateway with rclone
+# disable_checksum = true
+# Optional: Rclone's 'chunk_size' (e.g., '64M') controls how Rclone itself chunks large files (Restic packs in this case) 
+# for multipart upload to S3-compatible storage. This is distinct from Restic's '--pack-size'. 
+# Adjusting Rclone's 'chunk_size' might be relevant for optimizing uploads of very large Restic packs 
+# over unstable connections, but Restic's default pack handling is usually sufficient.
+# chunk_size = 64M 
+</span></code></pre></div>    </div>
+    <p>Replace <code class="language-plaintext highlighter-rouge">YOUR_STORJ_ACCESS_KEY_ID</code> and <code class="language-plaintext highlighter-rouge">YOUR_STORJ_SECRET_ACCESS_KEY</code> with the credentials you generated.</p>
+  </li>
+  <li><strong>Using <code class="language-plaintext highlighter-rouge">rclone config</code> (Interactive):</strong>
+    <ol>
+      <li>Run <code class="language-plaintext highlighter-rouge">rclone config</code>.</li>
+      <li>Choose <code class="language-plaintext highlighter-rouge">n</code> for a new remote.</li>
+      <li>Enter a name, e.g., <code class="language-plaintext highlighter-rouge">storj_s3</code>.</li>
+      <li>For “Type of storage to configure,” choose <code class="language-plaintext highlighter-rouge">s3</code> (Amazon S3 Compliant Storage Providers).</li>
+      <li>For “S3 Provider,” choose <code class="language-plaintext highlighter-rouge">Storj</code>.</li>
+      <li>Enter your <code class="language-plaintext highlighter-rouge">access_key_id</code> and <code class="language-plaintext highlighter-rouge">secret_access_key</code>.</li>
+      <li>For “Endpoint for S3 API,” enter the Storj S3 gateway (e.g., <code class="language-plaintext highlighter-rouge">gateway.storjshare.io</code>).</li>
+      <li>You can typically leave other options (region, location_constraint, acl) as default or blank unless you have specific requirements.</li>
+      <li>Save the configuration.</li>
+    </ol>
+  </li>
+</ul>
+
+<h4 id="32-method-2-configuring-rclone-for-native-storj-integration-uplink">3.2. Method 2: Configuring Rclone for Native Storj Integration (Uplink)</h4>
+
+<p>This method uses Storj’s native protocols via the Uplink library integrated into Rclone. It might offer client-side erasure coding and potentially different performance characteristics. It typically uses an Access Grant or an API Key and Encryption Passphrase.</p>
+
+<p><strong>Step 1: Obtain Native Access Credentials</strong></p>
+<ul>
+  <li><strong>Access Grant:</strong> This is a serialized string that bundles permissions, API key, satellite address, and encryption passphrase. You might generate this via the Uplink CLI or receive it if someone is granting you access.</li>
+  <li><strong>API Key &amp; Encryption Passphrase:</strong> You can generate an API key from the Storj console and then use it with your chosen encryption passphrase.</li>
+</ul>
+
+<p><strong>Step 2: Configure Rclone Remote for Native Storj</strong>
+Use the <code class="language-plaintext highlighter-rouge">rclone config</code> interactive setup:</p>
+<ol>
+  <li>Run <code class="language-plaintext highlighter-rouge">rclone config</code>.</li>
+  <li>Choose <code class="language-plaintext highlighter-rouge">n</code> for a new remote.</li>
+  <li>Enter a name, e.g., <code class="language-plaintext highlighter-rouge">storj_native</code>.</li>
+  <li>For “Type of storage to configure,” find and choose <code class="language-plaintext highlighter-rouge">storj</code> (Storj Decentralized Cloud Storage).</li>
+  <li>Rclone will then prompt for the authentication method:
+    <ul>
+      <li><strong>Existing Access Grant:</strong> If you have an access grant string, choose this option and paste the grant.</li>
+      <li><strong>New Access Grant (API Key &amp; Passphrase):</strong> If you have an API key and want to use a new or existing encryption passphrase:
+        <ul>
+          <li>Select the appropriate satellite address (e.g., <code class="language-plaintext highlighter-rouge">us-central-1.storj.io</code>, <code class="language-plaintext highlighter-rouge">europe-west-1.storj.io</code>, <code class="language-plaintext highlighter-rouge">asia-east-1.storj.io</code>).</li>
+          <li>Enter your API Key.</li>
+          <li>Enter your encryption passphrase (this is critical for encrypting/decrypting file paths and metadata <em>before</em> Restic’s own encryption layer).</li>
+        </ul>
+      </li>
+    </ul>
+  </li>
+  <li>Review the summary and save the configuration.
+    <ul>
+      <li><em>Note:</em> Remote-specific tuning flags for the native Storj Rclone remote (like a hypothetical <code class="language-plaintext highlighter-rouge">upload_nolarge_chunks = true</code>) would be added directly to this remote’s section in <code class="language-plaintext highlighter-rouge">rclone.conf</code> if needed, rather than typically passed via <code class="language-plaintext highlighter-rouge">restic -o rclone.args</code>.</li>
+    </ul>
+  </li>
+</ol>
+
+<p><strong>Step 3: Verify Rclone Remote</strong>
+After configuring, test your Rclone remote:</p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>rclone lsd storj_s3:  <span class="c"># or storj_native:</span>
+<span class="c"># This should list any buckets you have. If it's a new account, it will be empty.</span>
+</code></pre></div></div>
+
+<h3 id="4-restic-repository-setup-on-storj">4. Restic Repository Setup on Storj</h3>
+
+<p><strong>Step 1: Create a Storj Bucket</strong>
+Restic needs a bucket (and optionally a path within it) to store its repository. Use Rclone to create a bucket if it doesn’t exist.</p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Replace 'your-restic-bucket' with your desired bucket name</span>
+<span class="c"># Replace 'storj_s3' with your configured Rclone remote name (storj_s3 or storj_native)</span>
+rclone <span class="nb">mkdir </span>storj_s3:your-restic-bucket
+</code></pre></div></div>
+<p>Bucket names must be globally unique if using the S3 gateway, or unique within your project for native access.</p>
+
+<p><strong>Step 2: Initialize the Restic Repository</strong>
+Now, initialize the Restic repository within the bucket using the Rclone backend.
+Choose a strong, unique password for your Restic repository. <strong>Losing this Restic password means your backup data is irrecoverably lost, regardless of Storj access.</strong></p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Define your Restic repository location using the Rclone remote</span>
+<span class="c"># Format: rclone:&lt;rclone-remote-name&gt;:&lt;bucket-name&gt;/&lt;path-within-bucket&gt;</span>
+<span class="c"># The path-within-bucket is optional but recommended for organization.</span>
+<span class="nb">export </span><span class="nv">RESTIC_REPOSITORY</span><span class="o">=</span><span class="s2">"rclone:storj_s3:your-restic-bucket/my-server-backups"</span>
+
+<span class="c"># Set your Restic password (choose one method)</span>
+<span class="nb">export </span><span class="nv">RESTIC_PASSWORD</span><span class="o">=</span><span class="s1">'your-super-strong-restic-password'</span>
+<span class="c"># OR use a password file:</span>
+<span class="c"># echo 'your-super-strong-restic-password' &gt; ~/.restic-storj-pass</span>
+<span class="c"># chmod 600 ~/.restic-storj-pass</span>
+<span class="c"># export RESTIC_PASSWORD_FILE=~/.restic-storj-pass</span>
+
+<span class="c"># Initialize the repository</span>
+restic init
+</code></pre></div></div>
+<p>On success, Restic will confirm repository creation.</p>
+
+<h3 id="5-backup-operations-with-storj">5. Backup Operations with Storj</h3>
+
+<p>With the repository initialized, you can start backing up data.</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Example: Backing up your home directory</span>
+restic backup ~/ <span class="nt">--verbose</span> <span class="nt">--tag</span> home_backup_<span class="si">$(</span><span class="nb">date</span> +%Y%m%d<span class="si">)</span>
+
+<span class="c"># Example: Backing up specific project directories</span>
+restic backup /srv/projectA /var/www/projectB <span class="nt">--verbose</span> <span class="nt">--tag</span> web_projects
+</code></pre></div></div>
+
+<p><strong>Storj-Specific Optimizations and Considerations:</strong></p>
+
+<ul>
+  <li><strong>Pack Size (<code class="language-plaintext highlighter-rouge">--pack-size</code>):</strong>
+The Storj documentation (from <code class="language-plaintext highlighter-rouge">raw_data</code>) recommends setting Restic’s pack size to 60 MiB. This is suggested because it aligns well with Storj’s underlying segment sizes (often around 64MiB), potentially minimizing padding or overhead per segment and improving storage efficiency or transfer performance on their network.
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>restic backup /data/to/backup <span class="nt">--pack-size</span><span class="o">=</span>60
+</code></pre></div>    </div>
+    <p>While Restic might be “not very precise” and actual pack files may be slightly larger, this is a good target.</p>
+  </li>
+  <li><strong>Rclone Options via Restic (<code class="language-plaintext highlighter-rouge">-o</code> or <code class="language-plaintext highlighter-rouge">--option</code>):</strong>
+You can pass arguments to the underlying <code class="language-plaintext highlighter-rouge">rclone serve restic</code> command that Restic invokes. These are best used for flags affecting the <code class="language-plaintext highlighter-rouge">serve</code> command itself or general Rclone behavior during that operation.
+    <ul>
+      <li><strong>Connection Parallelism (<code class="language-plaintext highlighter-rouge">rclone.connections</code>):</strong>
+The Storj documentation draft mentions: <code class="language-plaintext highlighter-rouge">Passing -o rclone.connections=1 reduces the Rclone parallelism to a single upload. The Storj backend will still open multiple connections to storage nodes. Use this option to reduce the stress on your router in case of failing uploads with the default parallelism.</code>
+        <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>restic <span class="nt">-o</span> rclone.connections<span class="o">=</span>1 backup /data/to/backup
+</code></pre></div>        </div>
+        <p>Conversely, on very stable, high-bandwidth connections, you <em>might</em> experiment with higher values (e.g., <code class="language-plaintext highlighter-rouge">rclone.connections=4</code> or <code class="language-plaintext highlighter-rouge">8</code>), but monitor for errors. The default for Restic’s Rclone backend is 5 connections.</p>
+      </li>
+      <li><strong>Bandwidth Limiting (via <code class="language-plaintext highlighter-rouge">rclone.args</code>):</strong>
+If backups saturate your internet connection or cause instability, you can limit Rclone’s bandwidth by passing the <code class="language-plaintext highlighter-rouge">--bwlimit</code> flag to Rclone:
+        <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Limit to 5 MiB/s</span>
+restic <span class="nt">-o</span> rclone.args<span class="o">=</span><span class="s2">"serve restic --stdio --bwlimit 5M"</span> backup /data/to/backup
+</code></pre></div>        </div>
+      </li>
+      <li><strong>Other Rclone Arguments (<code class="language-plaintext highlighter-rouge">rclone.args</code>):</strong>
+For other Rclone flags specific to the <code class="language-plaintext highlighter-rouge">rclone serve restic</code> command:
+        <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>restic <span class="nt">-o</span> rclone.args<span class="o">=</span><span class="s2">"serve restic --stdio --stats 1m"</span> backup /data/to/backup
+<span class="c"># --stats 1m would make rclone print transfer stats every minute during the 'serve restic' operation.</span>
+</code></pre></div>        </div>
+      </li>
+    </ul>
+  </li>
+  <li><strong>Unix Root Backups:</strong>
+When backing up the root directory (<code class="language-plaintext highlighter-rouge">/</code>) on Unix systems, always use <code class="language-plaintext highlighter-rouge">--one-file-system</code> to prevent Restic from trying to back up virtual filesystems like <code class="language-plaintext highlighter-rouge">/proc</code>, <code class="language-plaintext highlighter-rouge">/sys</code>, or other mounted filesystems you don’t intend to include:
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>restic backup / <span class="nt">--one-file-system</span> <span class="nt">--exclude</span> /mnt <span class="nt">--exclude</span> /media <span class="nt">--exclude</span> /var/cache <span class="nt">--exclude</span> /tmp
+</code></pre></div>    </div>
+  </li>
+</ul>
+
+<h3 id="6-restore-operations-from-storj">6. Restore Operations from Storj</h3>
+
+<p>Restoring data is straightforward:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Restore the latest snapshot to ~/restore_dir</span>
+restic restore latest <span class="nt">--target</span> ~/restore_dir <span class="nt">--verbose</span>
+
+<span class="c"># Restore a specific snapshot by ID</span>
+restic restore &lt;snapshot_ID&gt; <span class="nt">--target</span> ~/restore_dir
+
+<span class="c"># Restore specific files/folders from the latest snapshot</span>
+restic restore latest <span class="nt">--target</span> ~/restore_dir <span class="nt">--include</span> <span class="s2">"/path/within/snapshot/to/file.txt"</span> <span class="nt">--include</span> <span class="s2">"/another/path/*"</span>
+</code></pre></div></div>
+<p><strong>Considerations:</strong></p>
+<ul>
+  <li><strong>Egress Costs:</strong> Restoring large amounts of data from any cloud storage, including Storj, will incur download (egress) bandwidth charges. Factor this into your recovery plan.</li>
+  <li><strong>Time:</strong> Download speeds will depend on your internet connection, Storj network performance, and the number/size of files.</li>
+</ul>
+
+<h3 id="7-repository-maintenance-on-storj">7. Repository Maintenance on Storj</h3>
+
+<p>Regular maintenance is crucial for managing storage space and ensuring repository health.</p>
+
+<ul>
+  <li><strong>Forgetting Old Snapshots (<code class="language-plaintext highlighter-rouge">restic forget</code>):</strong>
+Define a retention policy to remove old, unneeded snapshots. Always use <code class="language-plaintext highlighter-rouge">--prune</code> with <code class="language-plaintext highlighter-rouge">forget</code> when interacting with cloud backends to reclaim space.
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Keep the last 7 daily, 4 weekly, 6 monthly, 1 yearly snapshots, and prune data</span>
+restic forget <span class="nt">--keep-daily</span> 7 <span class="nt">--keep-weekly</span> 4 <span class="nt">--keep-monthly</span> 6 <span class="nt">--keep-yearly</span> 1 <span class="nt">--prune</span>
+
+<span class="c"># Forget a specific snapshot and prune</span>
+<span class="c"># restic forget &lt;snapshot_ID&gt; --prune</span>
+</code></pre></div>    </div>
+  </li>
+  <li><strong>Checking Repository Integrity (<code class="language-plaintext highlighter-rouge">restic check</code>):</strong>
+Periodically verify the repository’s consistency.
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>restic check
+</code></pre></div>    </div>
+    <p>For a more thorough check that reads all data packs (slower and incurs more download operations/costs on cloud storage):</p>
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>restic check <span class="nt">--read-data</span>
+<span class="c"># Or check a subset of data:</span>
+<span class="c"># restic check --read-data-subset=10%</span>
+</code></pre></div>    </div>
+  </li>
+</ul>
+
+<h3 id="8-performance-considerations-and-troubleshooting-with-storj">8. Performance Considerations and Troubleshooting with Storj</h3>
+
+<p>Based on community discussions (e.g., the Storj forum thread in <code class="language-plaintext highlighter-rouge">raw_data</code>):</p>
+<ul>
+  <li><strong>“Successful puts less than success threshold” Errors:</strong> This error, sometimes seen with Rclone and Storj, indicates that Rclone couldn’t upload enough erasure-coded pieces of a segment to enough storage nodes to meet the success threshold.
+    <ul>
+      <li><strong>Possible Causes:</strong> Network instability, router issues (too many connections), very slow individual nodes, or aggressive Rclone transfer settings.</li>
+      <li><strong>Mitigation:</strong>
+        <ul>
+          <li>Try reducing Rclone’s parallelism: <code class="language-plaintext highlighter-rouge">restic -o rclone.connections=1 ...</code></li>
+          <li>Limit bandwidth: <code class="language-plaintext highlighter-rouge">restic -o rclone.args="serve restic --stdio --bwlimit &lt;rate&gt;" ...</code></li>
+          <li>Ensure your Rclone and Restic versions are up-to-date.</li>
+          <li>Check the Storj status page and community forums for any ongoing network issues.</li>
+        </ul>
+      </li>
+    </ul>
+  </li>
+  <li><strong>Upload/Download Speeds:</strong>
+    <ul>
+      <li>Heavily dependent on your internet connection’s upload/download capacity.</li>
+      <li>Storj’s decentralized nature means performance can vary.</li>
+      <li>Small files can have higher per-file overhead than large files. Restic’s packing helps, but very numerous tiny files can still be slower.</li>
+      <li>Initial backups are often slower than subsequent incremental backups due to Restic’s deduplication.</li>
+    </ul>
+  </li>
+  <li><strong>Rclone &amp; Restic Logging:</strong>
+    <ul>
+      <li>To get detailed logs from Rclone during a Restic operation, you can instruct Restic to pass logging flags to Rclone:
+        <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>restic <span class="nt">-o</span> rclone.args<span class="o">=</span><span class="s2">"serve restic --stdio -vv --log-file /tmp/rclone-restic.log"</span> backup ...
+</code></pre></div>        </div>
+        <p>This will make Rclone itself very verbose. Inspect <code class="language-plaintext highlighter-rouge">/tmp/rclone-restic.log</code>.</p>
+      </li>
+      <li>For debugging Restic’s own operations and progress, use Restic’s verbosity flags (e.g., <code class="language-plaintext highlighter-rouge">restic -vv backup ...</code>) or set <code class="language-plaintext highlighter-rouge">export RESTIC_PROGRESS_FPS=10</code> for more frequent progress updates from Restic.</li>
+    </ul>
+  </li>
+</ul>
+
+<p>Refer to the <a href="https://forum.storj.io/">Storj Community Forum</a> for ongoing discussions and support, particularly the thread mentioned in the initial draft: <a href="https://forum.storj.io/t/two-more-tech-previews-rclone-and-restic/6072">Two more Tech Previews - RClone and Restic</a> (though note this thread is from 2020 and information may have evolved).</p>
+
+<h3 id="9-security-and-cost-considerations">9. Security and Cost Considerations</h3>
+
+<ul>
+  <li><strong>Security:</strong>
+    <ul>
+      <li><strong>Restic’s End-to-End Encryption:</strong> Your data is encrypted on your machine <em>before</em> it’s sent to Rclone and then to Storj. Only you, with the Restic repository password, can decrypt it. A key benefit of Restic’s client-side encryption is that Storj (or any cloud provider used as a backend) only ever stores encrypted blobs of data. They cannot access your actual file contents or metadata, ensuring a high degree of privacy.</li>
+      <li><strong>Storj’s Security:</strong> Storj further encrypts data segments and distributes them. If using native Rclone integration with an encryption passphrase, that adds another layer for metadata path encryption.</li>
+      <li><strong>Access Credentials:</strong> Protect your Storj S3 credentials, Access Grants, API keys, and especially your Restic repository password diligently.</li>
+    </ul>
+  </li>
+  <li><strong>Cost:</strong>
+    <ul>
+      <li><strong>Storage:</strong> Storj charges for the amount of data stored per month (after erasure coding, so 1GB of your data might consume ~2.7GB on the network, but you are typically billed for the 1GB). Restic’s deduplication significantly reduces the actual data stored over time for versioned backups.</li>
+      <li><strong>Egress (Download):</strong> Storj charges for data downloaded from the network. This is relevant for restores.</li>
+      <li><strong>Operations:</strong> There might be minor charges for certain API operations, but these are usually less significant for typical Restic usage.</li>
+      <li>Always refer to the <a href="https://storj.io/dcs/pricing">official Storj pricing page</a> for current details. Restic’s efficiency helps in making Storj a cost-effective option for long-term, secure backups.</li>
+    </ul>
   </li>
 </ul>]]></content><author><name></name></author><category term="aid&gt;software" /></entry><entry><title type="html">backup bash script</title><link href="https://ib.bsb.br/backup-bash-script/" rel="alternate" type="text/html" title="backup bash script" /><published>2025-05-12T00:00:00+00:00</published><updated>2025-05-12T18:04:46+00:00</updated><id>https://ib.bsb.br/backup-bash-script</id><content type="html" xml:base="https://ib.bsb.br/backup-bash-script/"><![CDATA[<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>#!/bin/bash
 
