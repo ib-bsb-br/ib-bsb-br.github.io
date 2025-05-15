@@ -1,4 +1,186 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2025-05-15T12:42:44+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">GitHub Actions Build Workflow Locally on a Debian</title><link href="https://ib.bsb.br/github-actions-build-workflow-locally-on-a-debian/" rel="alternate" type="text/html" title="GitHub Actions Build Workflow Locally on a Debian" /><published>2025-05-15T00:00:00+00:00</published><updated>2025-05-15T09:21:47+00:00</updated><id>https://ib.bsb.br/github-actions-build-workflow-locally-on-a-debian</id><content type="html" xml:base="https://ib.bsb.br/github-actions-build-workflow-locally-on-a-debian/"><![CDATA[<p><strong>Goal:</strong> To build the OS images and related artifacts as specified in the workflow, using a Debian-based environment like Finnix.</p>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2025-05-15T21:48:42+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">Copying data in Linux</title><link href="https://ib.bsb.br/copying-data-in-linux/" rel="alternate" type="text/html" title="Copying data in Linux" /><published>2025-05-15T00:00:00+00:00</published><updated>2025-05-15T21:45:24+00:00</updated><id>https://ib.bsb.br/copying-data-in-linux</id><content type="html" xml:base="https://ib.bsb.br/copying-data-in-linux/"><![CDATA[<p>Copying a large volume of data like 500GiB, especially when it consists of thousands of individual files, from an SD card to an external hard disk in Linux requires strategies that minimize overhead and maximize throughput. The key is to leverage parallel processing to utilize multiple CPU cores and choose tools that handle file operations efficiently.</p>
+
+<p><strong>Understanding the Bottlenecks</strong></p>
+
+<p>Before diving into tools, it’s helpful to understand potential bottlenecks:</p>
+<ol>
+  <li><strong>Per-File Overhead (CPU Bound):</strong> When dealing with thousands of small files, the operating system incurs overhead for each file operation (opening, reading metadata, writing metadata, closing). This can make the CPU a bottleneck even if the drives aren’t saturated. Parallel processing helps here.</li>
+  <li><strong>I/O Throughput (Drive Bound):</strong> The read speed of your SD card and the write speed of your external HDD (especially if it’s a mechanical drive vs. an SSD) will ultimately limit transfer rates for large files or when per-file overhead is minimized.</li>
+  <li><strong>Single-Threaded Operations:</strong> Standard <code class="language-plaintext highlighter-rouge">cp</code> or <code class="language-plaintext highlighter-rouge">mv</code> commands are typically single-threaded, processing one file at a time, making them inefficient for this scale.</li>
+</ol>
+
+<p>Here are several effective Linux tools and techniques to accomplish this task, focusing on speed and resource utilization:</p>
+
+<p><strong>1. <code class="language-plaintext highlighter-rouge">rsync</code> with GNU <code class="language-plaintext highlighter-rouge">parallel</code> (Recommended for Robustness &amp; Parallelism)</strong></p>
+
+<p><code class="language-plaintext highlighter-rouge">rsync</code> is a powerful and versatile tool for copying and synchronizing files. While <code class="language-plaintext highlighter-rouge">rsync</code> itself processes files sequentially within a single instance, you can use it with GNU <code class="language-plaintext highlighter-rouge">parallel</code> to run multiple <code class="language-plaintext highlighter-rouge">rsync</code> jobs concurrently, significantly speeding up the transfer of many files.</p>
+
+<ul>
+  <li><strong>How it Works:</strong> <code class="language-plaintext highlighter-rouge">find</code> lists all files and directories. GNU <code class="language-plaintext highlighter-rouge">parallel</code> takes this list and launches multiple <code class="language-plaintext highlighter-rouge">rsync</code> processes, each handling a subset of the files/directories simultaneously. This leverages multiple CPU cores to manage the per-file operations and can better saturate your drive’s I/O capabilities.</li>
+  <li><strong>Key Advantages:</strong> Robust error handling, ability to resume interrupted transfers (with <code class="language-plaintext highlighter-rouge">rsync</code>), preserves permissions and metadata, detailed progress.</li>
+  <li><strong>Installation:</strong> If <code class="language-plaintext highlighter-rouge">parallel</code> isn’t installed: <code class="language-plaintext highlighter-rouge">sudo apt update &amp;&amp; sudo apt install parallel</code> (Debian/Ubuntu) or <code class="language-plaintext highlighter-rouge">sudo dnf install parallel</code> (Fedora/RHEL).</li>
+</ul>
+
+<p><strong>Example Command (Copying contents of source into destination):</strong></p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Ensure destination directory exists: mkdir -p /media/user/externalhdd/backup_destination</span>
+find /media/user/sdcard/source_folder/ <span class="nt">-mindepth</span> 1 <span class="nt">-print0</span> | <span class="se">\</span>
+  parallel <span class="nt">-0</span> <span class="nt">-j</span><span class="si">$(</span><span class="nb">nproc</span><span class="si">)</span> <span class="nt">--eta</span> <span class="nt">--joblog</span> /tmp/rsync_parallel.log <span class="se">\</span>
+  rsync <span class="nt">-aP</span> <span class="o">{}</span> /media/user/externalhdd/backup_destination/
+</code></pre></div></div>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">/media/user/sdcard/source_folder/</code>: Your source directory on the SD card. The trailing slash means “contents of.”</li>
+  <li><code class="language-plaintext highlighter-rouge">-mindepth 1</code>: Excludes the top-level source directory itself from the list, processing its contents.</li>
+  <li><code class="language-plaintext highlighter-rouge">-print0</code>: Handles filenames with spaces or special characters safely.</li>
+  <li><code class="language-plaintext highlighter-rouge">parallel -0 -j$(nproc) --eta --joblog /tmp/rsync_parallel.log</code>:
+    <ul>
+      <li><code class="language-plaintext highlighter-rouge">-0</code>: Expects null-terminated input from <code class="language-plaintext highlighter-rouge">find</code>.</li>
+      <li><code class="language-plaintext highlighter-rouge">-j$(nproc)</code>: Runs a number of jobs equal to your CPU cores. You can set a specific number, e.g., <code class="language-plaintext highlighter-rouge">-j4</code>.</li>
+      <li><code class="language-plaintext highlighter-rouge">--eta</code>: Shows estimated time of arrival.</li>
+      <li><code class="language-plaintext highlighter-rouge">--joblog /tmp/rsync_parallel.log</code>: Logs the progress and success/failure of each parallel job.</li>
+    </ul>
+  </li>
+  <li><code class="language-plaintext highlighter-rouge">rsync -aP {} /media/user/externalhdd/backup_destination/</code>:
+    <ul>
+      <li><code class="language-plaintext highlighter-rouge">-a</code>: Archive mode (preserves permissions, timestamps, symbolic links, etc.).</li>
+      <li><code class="language-plaintext highlighter-rouge">-P</code>: Combines <code class="language-plaintext highlighter-rouge">--progress</code> and <code class="language-plaintext highlighter-rouge">--partial</code> (for resumability).</li>
+      <li><code class="language-plaintext highlighter-rouge">{}</code>: Placeholder for the file/directory passed by <code class="language-plaintext highlighter-rouge">parallel</code>.</li>
+      <li><code class="language-plaintext highlighter-rouge">/media/user/externalhdd/backup_destination/</code>: The destination. The trailing slash is important for <code class="language-plaintext highlighter-rouge">rsync</code> to copy items <em>into</em> this directory.</li>
+    </ul>
+  </li>
+</ul>
+
+<p><strong>Dry Run (Highly Recommended):</strong> Before running the actual copy, perform a dry run:
+Add <code class="language-plaintext highlighter-rouge">rsync -anP</code> (note the <code class="language-plaintext highlighter-rouge">n</code> for dry-run) in the command above, or add <code class="language-plaintext highlighter-rouge">--dry-run</code> to the <code class="language-plaintext highlighter-rouge">parallel</code> command.</p>
+
+<p><strong>2. <code class="language-plaintext highlighter-rouge">tar</code> Pipelined (Efficient for Many Small Files)</strong></p>
+
+<p>This classic method archives the source files into a single stream (<code class="language-plaintext highlighter-rouge">stdout</code>) and pipes this stream directly to another <code class="language-plaintext highlighter-rouge">tar</code> process that extracts it at the destination (<code class="language-plaintext highlighter-rouge">stdin</code>). This significantly reduces the overhead of individual file system operations, especially beneficial for mechanical drives and vast numbers of tiny files.</p>
+
+<ul>
+  <li><strong>How it Works:</strong> <code class="language-plaintext highlighter-rouge">tar</code> reads all source files sequentially and writes them as a continuous data stream. The receiving <code class="language-plaintext highlighter-rouge">tar</code> process reads this stream and recreates the files and directory structure.</li>
+  <li><strong>Key Advantages:</strong> Can be very fast for scenarios with extreme numbers of small files by minimizing disk head seeking.</li>
+  <li><strong>Considerations:</strong> Less easily resumable if interrupted compared to <code class="language-plaintext highlighter-rouge">rsync</code>. Progress indication is often through tools like <code class="language-plaintext highlighter-rouge">pv</code> (Pipe Viewer).</li>
+</ul>
+
+<p><strong>Example Command:</strong></p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Ensure destination directory exists: mkdir -p /media/user/externalhdd/backup_destination</span>
+<span class="o">(</span><span class="nb">cd</span> /media/user/sdcard/source_folder/ <span class="o">&amp;&amp;</span> <span class="nb">tar</span> <span class="nt">-cf</span> - .<span class="o">)</span> | pv | <span class="o">(</span><span class="nb">cd</span> /media/user/externalhdd/backup_destination/ <span class="o">&amp;&amp;</span> <span class="nb">tar</span> <span class="nt">-xf</span> -<span class="o">)</span>
+</code></pre></div></div>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">(cd /media/user/sdcard/source_folder/ &amp;&amp; tar -cf - .)</code>:
+    <ul>
+      <li><code class="language-plaintext highlighter-rouge">cd ...</code>: Changes to the source directory. The subshell <code class="language-plaintext highlighter-rouge">(...)</code> ensures this <code class="language-plaintext highlighter-rouge">cd</code> doesn’t affect your main shell’s working directory.</li>
+      <li><code class="language-plaintext highlighter-rouge">tar -cf - .</code>: Creates (<code class="language-plaintext highlighter-rouge">c</code>) an archive of the current directory (<code class="language-plaintext highlighter-rouge">.</code>) and writes it to standard output (<code class="language-plaintext highlighter-rouge">f -</code>).</li>
+    </ul>
+  </li>
+  <li><code class="language-plaintext highlighter-rouge">pv</code>: (Optional, install with <code class="language-plaintext highlighter-rouge">sudo apt install pv</code>) Pipe Viewer shows progress of data through the pipe.</li>
+  <li><code class="language-plaintext highlighter-rouge">(cd /media/user/externalhdd/backup_destination/ &amp;&amp; tar -xf -)</code>:
+    <ul>
+      <li><code class="language-plaintext highlighter-rouge">cd ...</code>: Changes to the destination directory in a subshell.</li>
+      <li><code class="language-plaintext highlighter-rouge">tar -xf -</code>: Extracts (<code class="language-plaintext highlighter-rouge">x</code>) the archive from standard input (<code class="language-plaintext highlighter-rouge">f -</code>).</li>
+    </ul>
+  </li>
+</ul>
+
+<p><strong>3. <code class="language-plaintext highlighter-rouge">find</code> with <code class="language-plaintext highlighter-rouge">xargs</code> and <code class="language-plaintext highlighter-rouge">cp --parents</code> (Parallel Basic Copy)</strong></p>
+
+<p>This method uses <code class="language-plaintext highlighter-rouge">find</code> to locate files, and <code class="language-plaintext highlighter-rouge">xargs</code> to execute <code class="language-plaintext highlighter-rouge">cp</code> commands in parallel. The crucial <code class="language-plaintext highlighter-rouge">--parents</code> option for <code class="language-plaintext highlighter-rouge">cp</code> ensures the source directory structure is replicated at the destination.</p>
+
+<ul>
+  <li><strong>How it Works:</strong> <code class="language-plaintext highlighter-rouge">find</code> generates a list of files. <code class="language-plaintext highlighter-rouge">xargs</code> takes this list and runs multiple <code class="language-plaintext highlighter-rouge">cp</code> commands simultaneously. <code class="language-plaintext highlighter-rouge">cp --parents</code> recreates the necessary parent directories at the destination.</li>
+  <li><strong>Key Advantages:</strong> Uses standard <code class="language-plaintext highlighter-rouge">cp</code>, can be effective if <code class="language-plaintext highlighter-rouge">rsync</code>’s overhead is a concern for a simple copy.</li>
+  <li><strong>Considerations:</strong> <code class="language-plaintext highlighter-rouge">cp</code> doesn’t have <code class="language-plaintext highlighter-rouge">rsync</code>’s advanced resumability or delta-transfer capabilities (though not relevant for an initial full copy).</li>
+</ul>
+
+<p><strong>Example Command:</strong></p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Ensure base destination directory exists: mkdir -p /media/user/externalhdd/backup_destination</span>
+<span class="nb">cd</span> /media/user/sdcard/source_folder/ <span class="o">&amp;&amp;</span> <span class="se">\</span>
+  find <span class="nb">.</span> <span class="nt">-type</span> f <span class="nt">-print0</span> | <span class="se">\</span>
+  xargs <span class="nt">-0</span> <span class="nt">-P</span><span class="si">$(</span><span class="nb">nproc</span><span class="si">)</span> <span class="nt">-I</span> <span class="o">{}</span> <span class="nb">cp</span> <span class="nt">--parents</span> <span class="nt">-a</span> <span class="o">{}</span> /media/user/externalhdd/backup_destination/
+</code></pre></div></div>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">cd /media/user/sdcard/source_folder/</code>: Change to the source directory to make relative paths work with <code class="language-plaintext highlighter-rouge">cp --parents</code>.</li>
+  <li><code class="language-plaintext highlighter-rouge">find . -type f -print0</code>: Finds only files (<code class="language-plaintext highlighter-rouge">-type f</code>) in the current directory (<code class="language-plaintext highlighter-rouge">.</code>) and its subdirectories.</li>
+  <li><code class="language-plaintext highlighter-rouge">xargs -0 -P$(nproc) -I {}</code>:
+    <ul>
+      <li><code class="language-plaintext highlighter-rouge">-0</code>: Null-terminated input.</li>
+      <li><code class="language-plaintext highlighter-rouge">-P$(nproc)</code>: Parallel processes up to the number of CPU cores.</li>
+      <li><code class="language-plaintext highlighter-rouge">-I {}</code>: Replaces <code class="language-plaintext highlighter-rouge">{}</code> with each input item. This makes <code class="language-plaintext highlighter-rouge">cp --parents</code> work correctly with paths containing spaces.</li>
+    </ul>
+  </li>
+  <li><code class="language-plaintext highlighter-rouge">cp --parents -a {} /media/user/externalhdd/backup_destination/</code>:
+    <ul>
+      <li><code class="language-plaintext highlighter-rouge">--parents</code>: Recreates the source directory structure under the destination.</li>
+      <li><code class="language-plaintext highlighter-rouge">-a</code>: Archive mode (like <code class="language-plaintext highlighter-rouge">rsync -a</code>, equivalent to <code class="language-plaintext highlighter-rouge">-dR --preserve=all</code>).</li>
+      <li><code class="language-plaintext highlighter-rouge">{}</code>: The file to copy.</li>
+      <li><code class="language-plaintext highlighter-rouge">/media/user/externalhdd/backup_destination/</code>: The target directory where the structure from <code class="language-plaintext highlighter-rouge">source_folder</code> will be created.</li>
+    </ul>
+  </li>
+</ul>
+
+<p><strong>4. <code class="language-plaintext highlighter-rouge">fpsync</code> (Specialized Parallel <code class="language-plaintext highlighter-rouge">rsync</code> Wrapper)</strong></p>
+
+<p><code class="language-plaintext highlighter-rouge">fpsync</code> is a tool designed to parallelize <code class="language-plaintext highlighter-rouge">rsync</code>. It uses <code class="language-plaintext highlighter-rouge">fpart</code> to partition the file list and then runs multiple <code class="language-plaintext highlighter-rouge">rsync</code> workers.</p>
+
+<ul>
+  <li><strong>How it Works:</strong> Automates the process of splitting the workload and managing parallel <code class="language-plaintext highlighter-rouge">rsync</code> instances.</li>
+  <li><strong>Key Advantages:</strong> Tailored for this exact scenario; can be very efficient.</li>
+  <li><strong>Installation:</strong> May need to be installed via your package manager (e.g., <code class="language-plaintext highlighter-rouge">sudo apt install fpart</code>, as <code class="language-plaintext highlighter-rouge">fpsync</code> is often bundled with it).</li>
+</ul>
+
+<p><strong>Example Command:</strong></p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Ensure destination directory exists: mkdir -p /media/user/externalhdd/backup_destination</span>
+fpsync <span class="nt">-n</span> <span class="si">$(</span><span class="nb">nproc</span><span class="si">)</span> <span class="nt">-v</span> <span class="se">\</span>
+  /media/user/sdcard/source_folder/ /media/user/externalhdd/backup_destination/
+</code></pre></div></div>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">-n $(nproc)</code>: Number of parallel <code class="language-plaintext highlighter-rouge">rsync</code> workers (e.g., number of CPU cores).</li>
+  <li><code class="language-plaintext highlighter-rouge">-v</code>: Verbose mode.</li>
+  <li><code class="language-plaintext highlighter-rouge">/media/user/sdcard/source_folder/</code>: Source directory.</li>
+  <li><code class="language-plaintext highlighter-rouge">/media/user/externalhdd/backup_destination/</code>: Destination directory.</li>
+  <li><strong>Note on batching:</strong> <code class="language-plaintext highlighter-rouge">fpsync</code> uses <code class="language-plaintext highlighter-rouge">fpart</code> underneath. If you need to control batching by number of files per job (rather than just total workers), you might pass <code class="language-plaintext highlighter-rouge">fpart</code> options using <code class="language-plaintext highlighter-rouge">fpsync -o "-f &lt;num_files&gt;"</code>. Check <code class="language-plaintext highlighter-rouge">man fpart</code> for details.</li>
+</ul>
+
+<p><strong>5. <code class="language-plaintext highlighter-rouge">mc</code> (Midnight Commander - TUI Alternative)</strong></p>
+
+<p>For users who prefer a Text-based User Interface, Midnight Commander is a powerful console file manager. Its built-in copy operations (<code class="language-plaintext highlighter-rouge">F5</code>) are generally well-optimized and can handle large numbers of files more gracefully than a simple desktop file manager.</p>
+
+<ul>
+  <li><strong>How it Works:</strong> Provides an interactive way to select source files/directories and copy them. While it might not offer the same granular parallel control as CLI combinations, it’s often faster than basic <code class="language-plaintext highlighter-rouge">cp</code> for large jobs.</li>
+  <li><strong>Installation:</strong> <code class="language-plaintext highlighter-rouge">sudo apt install mc</code> or <code class="language-plaintext highlighter-rouge">sudo dnf install mc</code>.</li>
+  <li><strong>Usage:</strong> Run <code class="language-plaintext highlighter-rouge">mc</code>, navigate panels to source and destination, select files (e.g., <code class="language-plaintext highlighter-rouge">Insert</code> key or <code class="language-plaintext highlighter-rouge">*</code>), press <code class="language-plaintext highlighter-rouge">F5</code> to copy.</li>
+</ul>
+
+<p><strong>Additional Considerations for Maximizing Speed:</strong></p>
+
+<ul>
+  <li><strong>Hardware:</strong> Ensure both SD card reader and external HDD are connected to the fastest available USB ports (USB 3.0+). An SSD external drive will be significantly faster than a mechanical HDD.</li>
+  <li><strong>Filesystem Mount Options:</strong> Mounting filesystems with <code class="language-plaintext highlighter-rouge">noatime</code> or <code class="language-plaintext highlighter-rouge">relatime</code> can reduce some disk I/O by not updating file access times on every read.
+<code class="language-plaintext highlighter-rouge">sudo mount -o remount,noatime /media/user/sdcard</code> (if applicable and safe for your use case).</li>
+  <li><strong>I/O Scheduler:</strong> For mechanical drives, the I/O scheduler can matter. Modern kernels often default to <code class="language-plaintext highlighter-rouge">bfq</code> or <code class="language-plaintext highlighter-rouge">mq-deadline</code>, which are generally good.</li>
+  <li><strong>System Load:</strong> Minimize other disk-intensive or CPU-intensive processes during the copy.</li>
+  <li><strong>Resource Monitoring:</strong> Use tools like <code class="language-plaintext highlighter-rouge">iotop</code> (to see disk I/O per process), <code class="language-plaintext highlighter-rouge">htop</code> (CPU/memory), <code class="language-plaintext highlighter-rouge">vmstat</code>, or <code class="language-plaintext highlighter-rouge">dstat</code> to identify bottlenecks during the transfer.</li>
+  <li><strong>GUI <code class="language-plaintext highlighter-rouge">rsync</code> Front-ends:</strong> If you prefer a GUI but want <code class="language-plaintext highlighter-rouge">rsync</code>’s power, tools like <code class="language-plaintext highlighter-rouge">grsync</code> provide a graphical interface to <code class="language-plaintext highlighter-rouge">rsync</code>.</li>
+</ul>
+
+<p><strong>Which Method to Choose?</strong></p>
+
+<ul>
+  <li><strong>For general robustness, features, and good parallel performance:</strong> <code class="language-plaintext highlighter-rouge">rsync</code> with GNU <code class="language-plaintext highlighter-rouge">parallel</code> (Method 1) or <code class="language-plaintext highlighter-rouge">fpsync</code> (Method 4) are excellent choices.</li>
+  <li><strong>For potentially the highest speed with extreme numbers of very small files (especially to/from mechanical drives):</strong> The <code class="language-plaintext highlighter-rouge">tar</code> pipe (Method 2) can be very effective.</li>
+  <li><strong>For a simpler parallel <code class="language-plaintext highlighter-rouge">cp</code> approach:</strong> <code class="language-plaintext highlighter-rouge">find</code> with <code class="language-plaintext highlighter-rouge">xargs</code> and <code class="language-plaintext highlighter-rouge">cp --parents</code> (Method 3) is a solid option.</li>
+  <li><strong>For an interactive TUI approach:</strong> <code class="language-plaintext highlighter-rouge">mc</code> (Method 5) is user-friendly.</li>
+</ul>
+
+<p>Always test with a smaller subset of your data and use dry-run options where available before committing to the full 500GiB transfer. This allows you to verify commands and estimate performance. Remember to replace placeholder paths with your actual SD card and external HDD mount points.</p>]]></content><author><name></name></author><category term="scratchpad" /></entry><entry><title type="html">GitHub Actions Build Workflow Locally on a Debian</title><link href="https://ib.bsb.br/github-actions-build-workflow-locally-on-a-debian/" rel="alternate" type="text/html" title="GitHub Actions Build Workflow Locally on a Debian" /><published>2025-05-15T00:00:00+00:00</published><updated>2025-05-15T09:21:47+00:00</updated><id>https://ib.bsb.br/github-actions-build-workflow-locally-on-a-debian</id><content type="html" xml:base="https://ib.bsb.br/github-actions-build-workflow-locally-on-a-debian/"><![CDATA[<p><strong>Goal:</strong> To build the OS images and related artifacts as specified in the workflow, using a Debian-based environment like Finnix.</p>
 
 <p><strong>Assumed Environment:</strong></p>
 <ul>
@@ -6437,1194 +6619,4 @@ Turn on or off the startup_message. This is most useful in your
 <p>@printindex fn</p>
 
 <p>@bye
-{% endcodeblock %}</p>]]></content><author><name></name></author><category term="linux&gt;software&gt;dotfile" /></entry><entry><title type="html">Ratpoison WM</title><link href="https://ib.bsb.br/ratpoison-wm/" rel="alternate" type="text/html" title="Ratpoison WM" /><published>2025-05-09T00:00:00+00:00</published><updated>2025-05-14T08:27:08+00:00</updated><id>https://ib.bsb.br/ratpoison-wm</id><content type="html" xml:base="https://ib.bsb.br/ratpoison-wm/"><![CDATA[<h2 id="documentation-at">documentation at</h2>
-<p><code class="language-plaintext highlighter-rouge">https://ib.bsb.br/ratpoison-documentation/</code></p>
-
-<h3 id="step-1-install-ratpoison-and-essential-tools"><strong>Step 1: Install Ratpoison and Essential Tools</strong></h3>
-
-<p>First, update your package lists and install Ratpoison. The rpws (Ratpoison Workspace System) script is included with the ratpoison package in Debian Bullseye. Consider installing dmenu for application launching and a basic terminal like xterm or rxvt-unicode.<br />
-<code class="language-plaintext highlighter-rouge">sudo apt update</code><br />
-<code class="language-plaintext highlighter-rouge">sudo apt upgrade</code><br />
-<code class="language-plaintext highlighter-rouge">sudo apt install ratpoison dmenu xterm # Or rxvt-unicode, etc.</code><br />
-<code class="language-plaintext highlighter-rouge"># Install other optional utilities you might find useful:</code><br />
-<code class="language-plaintext highlighter-rouge"># sudo apt install alsamixergui bpytop brightnessctl catfish dialog gmrun gsimplecal neofetch </code><br />
-<code class="language-plaintext highlighter-rouge"># python3-psutil unclutter viewnior xdotool scrot </code><br />
-<code class="language-plaintext highlighter-rouge"># fonts-dejavu fonts-terminus nitrogen picom # (nitrogen for wallpaper, picom for compositing)</code></p>
-
-<h3 id="step-2-create-a-ratpoison-session-file-for-lightdm"><strong>Step 2: Create a Ratpoison Session File for LightDM</strong></h3>
-
-<p>LightDM uses .desktop files located in /usr/share/xsessions/ to identify available sessions. Create one for Ratpoison:<br />
-<code class="language-plaintext highlighter-rouge">sudo nano /usr/share/xsessions/ratpoison.desktop</code></p>
-
-<p>Add the following content:<br />
-<code class="language-plaintext highlighter-rouge">[Desktop Entry]</code><br />
-<code class="language-plaintext highlighter-rouge">Version=1.0</code><br />
-<code class="language-plaintext highlighter-rouge">Encoding=UTF-8</code><br />
-<code class="language-plaintext highlighter-rouge">Name=Ratpoison</code><br />
-<code class="language-plaintext highlighter-rouge">Comment=Minimalist Tiling Window Manager</code><br />
-<code class="language-plaintext highlighter-rouge">Exec=ratpoison</code><br />
-<code class="language-plaintext highlighter-rouge">TryExec=ratpoison</code><br />
-<code class="language-plaintext highlighter-rouge">Icon=</code><br />
-<code class="language-plaintext highlighter-rouge">Type=XSession</code></p>
-
-<p>Save and close the file (e.g., Ctrl+X, then Y, then Enter in nano).</p>
-
-<h3 id="step-3-configure-lightdm-for-ratpoison-autologin"><strong>Step 3: Configure LightDM for Ratpoison Autologin</strong></h3>
-
-<p>To ensure LightDM launches Ratpoison for the autologin user, you need to update its configuration. Debian best practices suggest using configuration snippets in /etc/lightdm/lightdm.conf.d/. If you already have an autologin configuration file there (e.g., 50-autologin.conf), modify it. Otherwise, you can edit /etc/lightdm/lightdm.conf directly or create a new snippet.</p>
-
-<ol>
-  <li><strong>Edit or Create LightDM Configuration:</strong> For example, to create/edit a dedicated snippet:<br />
-<code class="language-plaintext highlighter-rouge">sudo nano /etc/lightdm/lightdm.conf.d/60-autologin-ratpoison.conf</code><br />
-Ensure the configuration specifies linaro and sets autologin-session to ratpoison. The autologin-session value should match the filename of the .desktop file created in Step 2 (without the .desktop extension).<br />
-<code class="language-plaintext highlighter-rouge">[Seat:*]</code><br />
-<code class="language-plaintext highlighter-rouge">autologin-user=linaro</code><br />
-<code class="language-plaintext highlighter-rouge">autologin-user-timeout=0</code><br />
-<code class="language-plaintext highlighter-rouge">autologin-session=ratpoison</code><br />
-If you are editing an existing file that previously specified autologin-session=xfce (or similar), change it to ratpoison. Adding this line explicitly makes the autologin deterministic.</li>
-  <li><strong>Note on Session Selection:</strong> While LightDM can sometimes remember the last session selected at the greeter, for an autologin setup, explicitly defining autologin-session is the most reliable method.</li>
-</ol>
-
-<h3 id="step-4-configure-ratpoison-ratpoisonrc"><strong>Step 4: Configure Ratpoison (~/.ratpoisonrc)</strong></h3>
-
-<p>Create and configure the ~/.ratpoisonrc file in the home directory of the autologin user (i.e., /home/linaro/.ratpoisonrc). This file controls Ratpoison’s behavior, keybindings, and startup applications.<br />
-<code class="language-plaintext highlighter-rouge"># Ensure you are the user ‘linaro’ or adjust path accordingly</code><br />
-<code class="language-plaintext highlighter-rouge">nano /home/linaro/.ratpoisonrc</code></p>
-
-<p>Here’s a comprehensive example configuration:<br />
-<code class="language-plaintext highlighter-rouge"># ~/.ratpoisonrc for linaro</code></p>
-<section class="code-block-container" role="group" aria-label=" Code Block" data-filename="_code_block.txt" data-code="set winname title
-set winliststyle column
-set wingravity n
-set winfmt &quot;%n: %t (%c)&quot;
-set waitcursor 1
-set transgravity center
-set padding 0 0 0 24
-set inputwidth 600
-set historysize 1000
-set gravity center
-set font &quot;Intel One Mono:size=13&quot;
-set border 0
-set bgcolor silver
-set barpadding 4 4
-set bargravity c
-set barborder 0
-
-definekey top M-Tab next
-definekey top M-ISO_Left_Tab prev
-definekey top M-KP_8 ratrelwarp 0 -15
-definekey top M-KP_2 ratrelwarp 0 15
-definekey top M-KP_4 ratrelwarp -15 0
-definekey top M-KP_6 ratrelwarp 15 0
-definekey top M-KP_1 ratclick 1
-definekey top M-KP_5 ratclick 2
-definekey top M-KP_3 ratclick 3
-
-exec rpws init 9
-exec rpbar
-exec xsetroot -bitmap /home/linaro/Desktop/02-media/pics/wallpaper1.xbm -bg &quot;#073642&quot; -fg &quot;#345345&quot;
-exec xrdb -merge /home/linaro/.Xresources
-exec xfce4-power-manager
-exec unclutter --timeout 2 --jitter 5
-exec nm-applet
-exec brightnessctl s 7
-exec /usr/bin/rpws restore /home/linaro/Desktop/01-document/dotfiles/rpws_layouts.dmp
-
-startup_message on
-escape Super_L
-banish
-unmanage rpbar
-
-addhook titlechanged exec rpbarsend
-addhook switchwin exec rpbarsend
-addhook switchgroup exec rpbarsend
-addhook switchframe exec rpbarsend
-addhook newwindow exec rpbarsend
-addhook deletewindow exec rpbarsend
-
-bind w exec thorium-browser
-bind v exec paste_clipboard_from_file.sh
-bind Up focusup
-bind u undo
-bind Tab focus 
-bind t exec pcmanfm-qt --daemon-mode
-bind space exec xboomx
-bind Right focusright
-bind Return exec x-terminal-emulator
-bind r resize
-bind q delete
-bind k kill
-bind Print exec xfce4-screenshooter
-bind Page_Up exec rpws prev
-bind Page_Down exec rpws next
-bind minus vsplit
-bind Left focusleft
-bind KP_Separator exec xdotool key quotedbl key quotedbl key quotedbl
-bind KP_9 exec rpws 9
-bind KP_8 exec rpws 8
-bind KP_7 exec rpws 7
-bind KP_6 exec rpws 6
-bind KP_5 exec rpws 5
-bind KP_4 exec rpws 4
-bind KP_3 exec rpws 3
-bind KP_2 exec rpws 2
-bind KP_1 exec rpws 1
-bind KP_0 exec xdotool key apostrophe key apostrophe key apostrophe
-bind i exec viewnior
-bind g exec gsimplecal
-bind F8 exec flatpak run io.github.zaps166.QMPlay2
-bind F7 exec flatpak run com.github.ryonakano.reco
-bind F6 exec flatpak run com.strlen.TreeSheets
-bind F5 exec flatpak run com.github.tenderowl.frog
-bind F4 exec flatpak run org.telegram.desktop
-bind F1 exec thermal.sh
-bind f only
-bind Escape exec /usr/bin/rpws dump /home/linaro/Desktop/01-document/dotfiles/rpws_layouts.dmp
-bind equal hsplit
-bind e exec xnedit
-bind Down focusdown
-bind c exec write_clipboard_to_file.sh
-bind BackSpace next
-bind h exec x-terminal-emulator -e bpytop
-bind apostrophe colon exec x-terminal-emulator -e 
-bind 9 exec rpws 9
-bind 8 exec rpws 8
-bind 7 exec rpws 7
-bind 6 exec rpws 6
-bind 5 exec rpws 5
-bind 4 exec rpws 4
-bind 3 exec rpws 3
-bind 2 exec rpws 2
-bind 1 exec rpws 1
-bind 0 remove
-bind s-w exec x-terminal-emulator -e nm-connection-editor
-bind s-Up exchangeup
-bind s-u redo
-bind s-Tab nextscreen
-bind s-t exec sudo pcmanfm-qt
-bind s-space exec x-terminal-emulator --hold -e python3 /home/linaro/.local/bin/dratmenu.py
-bind s-Right exchangeright
-bind s-Return exec sudo x-terminal-emulator
-bind s-q abort
-bind s-Print exec scrot -s -e &#39;xclip -selection clipboard -t image/png -i $f &amp;&amp; rm $f&#39;
-bind s-Page_Up exec rpws movenext
-bind s-Page_Down exec rpws moveprev
-bind s-minus exec amixer set Master 5%-
-bind s-Left exchangeleft
-bind s-KP_9 exec rpws move9
-bind s-KP_8 exec rpws move8
-bind s-KP_7 exec rpws move7
-bind s-KP_6 exec rpws move6
-bind s-KP_5 exec rpws move5
-bind s-KP_4 exec rpws move4
-bind s-KP_3 exec rpws move3
-bind s-KP_2 exec rpws move2
-bind s-KP_1 exec rpws move1
-bind s-g exec galculator
-bind s-F1 exec reverse-thermal.sh
-bind s-Escape exec /usr/bin/rpws restore /home/linaro/Desktop/01-document/dotfiles/rpws_layouts.dmp
-bind s-equal exec amixer set Master 5%+
-bind s-e exec xnc
-bind s-Down exchangedown
-bind s-BackSpace prev
-bind s-b exec vorta
-bind b exec sudo timeshift --create --comments &quot;Before making changes&quot;
-bind s-apostrophe colon exec x-terminal-emulator -e sudo 
-bind s-a title
-bind s-9 exec rpws move9
-bind s-8 exec rpws move8
-bind s-7 exec rpws move7
-bind s-6 exec rpws move6
-bind s-5 exec rpws move5
-bind s-4 exec rpws move4
-bind s-3 exec rpws move3
-bind s-2 exec rpws move2
-bind s-1 exec rpws move1
-bind s-0 exec amixer set Master toggle" data-download-link="" data-download-label="Download ">
-  <code class="language-">set winname title
-set winliststyle column
-set wingravity n
-set winfmt &quot;%n: %t (%c)&quot;
-set waitcursor 1
-set transgravity center
-set padding 0 0 0 24
-set inputwidth 600
-set historysize 1000
-set gravity center
-set font &quot;Intel One Mono:size=13&quot;
-set border 0
-set bgcolor silver
-set barpadding 4 4
-set bargravity c
-set barborder 0
-
-definekey top M-Tab next
-definekey top M-ISO_Left_Tab prev
-definekey top M-KP_8 ratrelwarp 0 -15
-definekey top M-KP_2 ratrelwarp 0 15
-definekey top M-KP_4 ratrelwarp -15 0
-definekey top M-KP_6 ratrelwarp 15 0
-definekey top M-KP_1 ratclick 1
-definekey top M-KP_5 ratclick 2
-definekey top M-KP_3 ratclick 3
-
-exec rpws init 9
-exec rpbar
-exec xsetroot -bitmap /home/linaro/Desktop/02-media/pics/wallpaper1.xbm -bg &quot;#073642&quot; -fg &quot;#345345&quot;
-exec xrdb -merge /home/linaro/.Xresources
-exec xfce4-power-manager
-exec unclutter --timeout 2 --jitter 5
-exec nm-applet
-exec brightnessctl s 7
-exec /usr/bin/rpws restore /home/linaro/Desktop/01-document/dotfiles/rpws_layouts.dmp
-
-startup_message on
-escape Super_L
-banish
-unmanage rpbar
-
-addhook titlechanged exec rpbarsend
-addhook switchwin exec rpbarsend
-addhook switchgroup exec rpbarsend
-addhook switchframe exec rpbarsend
-addhook newwindow exec rpbarsend
-addhook deletewindow exec rpbarsend
-
-bind w exec thorium-browser
-bind v exec paste_clipboard_from_file.sh
-bind Up focusup
-bind u undo
-bind Tab focus 
-bind t exec pcmanfm-qt --daemon-mode
-bind space exec xboomx
-bind Right focusright
-bind Return exec x-terminal-emulator
-bind r resize
-bind q delete
-bind k kill
-bind Print exec xfce4-screenshooter
-bind Page_Up exec rpws prev
-bind Page_Down exec rpws next
-bind minus vsplit
-bind Left focusleft
-bind KP_Separator exec xdotool key quotedbl key quotedbl key quotedbl
-bind KP_9 exec rpws 9
-bind KP_8 exec rpws 8
-bind KP_7 exec rpws 7
-bind KP_6 exec rpws 6
-bind KP_5 exec rpws 5
-bind KP_4 exec rpws 4
-bind KP_3 exec rpws 3
-bind KP_2 exec rpws 2
-bind KP_1 exec rpws 1
-bind KP_0 exec xdotool key apostrophe key apostrophe key apostrophe
-bind i exec viewnior
-bind g exec gsimplecal
-bind F8 exec flatpak run io.github.zaps166.QMPlay2
-bind F7 exec flatpak run com.github.ryonakano.reco
-bind F6 exec flatpak run com.strlen.TreeSheets
-bind F5 exec flatpak run com.github.tenderowl.frog
-bind F4 exec flatpak run org.telegram.desktop
-bind F1 exec thermal.sh
-bind f only
-bind Escape exec /usr/bin/rpws dump /home/linaro/Desktop/01-document/dotfiles/rpws_layouts.dmp
-bind equal hsplit
-bind e exec xnedit
-bind Down focusdown
-bind c exec write_clipboard_to_file.sh
-bind BackSpace next
-bind h exec x-terminal-emulator -e bpytop
-bind apostrophe colon exec x-terminal-emulator -e 
-bind 9 exec rpws 9
-bind 8 exec rpws 8
-bind 7 exec rpws 7
-bind 6 exec rpws 6
-bind 5 exec rpws 5
-bind 4 exec rpws 4
-bind 3 exec rpws 3
-bind 2 exec rpws 2
-bind 1 exec rpws 1
-bind 0 remove
-bind s-w exec x-terminal-emulator -e nm-connection-editor
-bind s-Up exchangeup
-bind s-u redo
-bind s-Tab nextscreen
-bind s-t exec sudo pcmanfm-qt
-bind s-space exec x-terminal-emulator --hold -e python3 /home/linaro/.local/bin/dratmenu.py
-bind s-Right exchangeright
-bind s-Return exec sudo x-terminal-emulator
-bind s-q abort
-bind s-Print exec scrot -s -e &#39;xclip -selection clipboard -t image/png -i $f &amp;&amp; rm $f&#39;
-bind s-Page_Up exec rpws movenext
-bind s-Page_Down exec rpws moveprev
-bind s-minus exec amixer set Master 5%-
-bind s-Left exchangeleft
-bind s-KP_9 exec rpws move9
-bind s-KP_8 exec rpws move8
-bind s-KP_7 exec rpws move7
-bind s-KP_6 exec rpws move6
-bind s-KP_5 exec rpws move5
-bind s-KP_4 exec rpws move4
-bind s-KP_3 exec rpws move3
-bind s-KP_2 exec rpws move2
-bind s-KP_1 exec rpws move1
-bind s-g exec galculator
-bind s-F1 exec reverse-thermal.sh
-bind s-Escape exec /usr/bin/rpws restore /home/linaro/Desktop/01-document/dotfiles/rpws_layouts.dmp
-bind s-equal exec amixer set Master 5%+
-bind s-e exec xnc
-bind s-Down exchangedown
-bind s-BackSpace prev
-bind s-b exec vorta
-bind b exec sudo timeshift --create --comments &quot;Before making changes&quot;
-bind s-apostrophe colon exec x-terminal-emulator -e sudo 
-bind s-a title
-bind s-9 exec rpws move9
-bind s-8 exec rpws move8
-bind s-7 exec rpws move7
-bind s-6 exec rpws move6
-bind s-5 exec rpws move5
-bind s-4 exec rpws move4
-bind s-3 exec rpws move3
-bind s-2 exec rpws move2
-bind s-1 exec rpws move1
-bind s-0 exec amixer set Master toggle</code>
-</section>
-
-<h4 id="rpbarini">~/.rpbar.ini</h4>
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>[program]
-# Window name for rpbar
-win_name = rpbar
-
-# Path for the communication socket with rpbarsend
-# /tmp/ is generally standard and should work on Debian.
-socket_path = /tmp/rpbarsocket
-
-# Separator for program title (likely for ratpoison integration)
-sep = $)@=
-
-# Buffer size for communication with ratpoison
-bufsize = 2048
-
-# Timeout in seconds for communication
-timeout_s = 5
-
-[display]
-# Whether rpbar is on the top (1) or bottom (0) of the screen
-top = 0
-
-# The Xorg screen (monitor) to display the bar on.
-# '0' is typically the primary monitor. Adjust if you have multiple monitors
-# and want it on a different one (e.g., 1 for secondary).
-# Use `xrandr` to list screens if unsure.
-screen = 0 ; Defaulting to primary screen, adjust if needed.
-
-# Padding around the top/bottom of the text within the bar
-padding = 4
-
-# Left/right padding for elements like buttons
-button_margin = 10
-
-# Padding specifically for the status bar text area
-status_padding = 30
-
-# Font string for the bar (e.g., "Font Family Name:size=POINT_SIZE").
-# CRITICAL: Ensure "Intel One Mono" is installed on your Debian Bullseye system.
-# If not, replace with an available font (e.g., "DejaVu Sans Mono:size=10", "Liberation Mono:size=10", "Monospace:size=10").
-# Check availability with `fc-list | grep "Your Font Name"`
-font_str = Intel One Mono:size=13 ; ### VERIFY THIS FONT IS INSTALLED OR CHANGE IT ###
-
-[color]
-bordercolor = #d7d7d7
-bgcolor = #353535
-fgcolor = #d7d7d7
-mainbgcolor = #d4ccb9
-mainfgcolor = #45363b
-statusbgcolor = #d7d7d7
-statusfgcolor = #353535
-</code></pre></div></div>
-
-<h4 id="configure-dratmenupy-homelinarolocalbindratmenupy"><strong>Configure dratmenu.py (/home/linaro/.local/bin/dratmenu.py)</strong></h4>
-
-<section class="code-block-container" role="group" aria-label="Python Code Block" data-filename="python_code_block.py" data-code="#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
-&quot;&quot;&quot;
-dratmenu.py: A dmenu-based window switcher for the Ratpoison Window Manager.
-
-This script fetches the list of current windows from Ratpoison, presents them
-in dmenu for selection, and then tells Ratpoison to switch to the chosen window.
-It is updated for Python 3 and aims for robustness.
-&quot;&quot;&quot;
-
-import subprocess
-import sys
-import shlex # For safer command construction if needed, though not strictly required here
-
-# --- Configuration ---
-
-# Separator string used internally to parse Ratpoison output.
-# IMPORTANT: This exact string MUST NOT appear in any window number, class, or title.
-# Using a complex, unlikely sequence to minimize collision risk.
-SEP = &quot;~!@#DRATMENU_SEP#@!~&quot;
-
-# Separator used *within dmenu* to separate the hidden window number from the visible text.
-# A tab character is often a good choice as it&#39;s unlikely to be the *first* character
-# in the formatted display string and easy to split on.
-DMENU_SEP = &#39;\t&#39;
-
-# dmenu appearance settings (adjust as needed)
-# Font examples:
-# FONT = &quot;-*-terminus-*-r-*-*-14-*-*-*-*-*-*-*&quot;
-# FONT = &quot;-*-jetbrains mono-*-r-*-*-14-*-*-*-*-*-*-*&quot;
-FONT = &#39;Intel One Mono:size=13&#39; # Default Terminus
-NORMAL_BG = &#39;#002b36&#39;      # Solarized Dark base03
-SELECTED_BG = &#39;#859900&#39;    # Solarized Dark green
-NUM_LINES = &#39;20&#39;           # Number of lines dmenu shows vertically
-
-# --- Helper Function ---
-
-def run_subprocess(command_list, input_data=None):
-    &quot;&quot;&quot;
-    Runs a subprocess, handling text encoding/decoding and errors.
-
-    Args:
-        command_list (list): The command and its arguments.
-        input_data (str, optional): String data to pass to the command&#39;s stdin. Defaults to None.
-
-    Returns:
-        subprocess.CompletedProcess: The result object from subprocess.run.
-
-    Raises:
-        FileNotFoundError: If the command is not found.
-        subprocess.CalledProcessError: If the command returns a non-zero exit code.
-        Exception: For other unexpected errors during execution.
-    &quot;&quot;&quot;
-    try:
-        result = subprocess.run(
-            command_list,
-            input=input_data,
-            capture_output=True, # Capture stdout and stderr
-            text=True,           # Work with text (auto encodes input, decodes output)
-            check=True,          # Raise CalledProcessError on non-zero exit codes
-            encoding=&#39;utf-8&#39;     # Explicitly use UTF-8
-        )
-        return result
-    except FileNotFoundError:
-        print(f&quot;Error: Command &#39;{command_list[0]}&#39; not found. Is it installed and in your PATH?&quot;, file=sys.stderr)
-        raise # Re-raise the exception to be caught by the main logic
-    except subprocess.CalledProcessError as e:
-        # check=True raises this, stderr is part of the exception object
-        print(f&quot;Error running command: {&#39; &#39;.join(e.cmd)}&quot;, file=sys.stderr)
-        print(f&quot;Return code: {e.returncode}&quot;, file=sys.stderr)
-        if e.stderr:
-            print(f&quot;Stderr: {e.stderr.strip()}&quot;, file=sys.stderr)
-        # Don&#39;t raise here if we want to handle specific return codes (like dmenu cancel) later
-        # For now, let the main logic handle specific cases if needed, otherwise re-raise
-        raise
-    except Exception as e:
-        print(f&quot;An unexpected error occurred running {&#39; &#39;.join(command_list)}: {e}&quot;, file=sys.stderr)
-        raise
-
-# --- Main Logic ---
-
-def main():
-    # 1. Get window list from Ratpoison
-    # Format: %n&lt;SEP&gt;%c&lt;SEP&gt;%t (number, class, title)
-    rp_list_cmd = [&#39;ratpoison&#39;, &#39;-c&#39;, f&quot;windows %n{SEP}%c{SEP}%t&quot;]
-    try:
-        rp_result = run_subprocess(rp_list_cmd)
-    except (FileNotFoundError, subprocess.CalledProcessError, Exception):
-        sys.exit(1) # Error message already printed by run_subprocess
-
-    # Process the output from Ratpoison
-    stdout_str = rp_result.stdout.strip()
-    if not stdout_str:
-        print(&quot;No ratpoison windows found.&quot;, file=sys.stderr)
-        sys.exit(0)
-
-    lines = stdout_str.split(&#39;\n&#39;)
-    windows_data = [] # Store tuples of (number, class, title)
-    for i, ln in enumerate(lines):
-        parts = ln.split(SEP)
-        if len(parts) == 3:
-            windows_data.append(parts)
-        else:
-            print(f&quot;Warning: Skipping malformed line {i+1} from ratpoison (separator issue?): {ln}&quot;, file=sys.stderr)
-
-    if not windows_data:
-        print(&quot;No valid window data parsed from ratpoison.&quot;, file=sys.stderr)
-        sys.exit(1)
-
-    # 2. Format window list for dmenu
-    # Format for dmenu input: &quot;&lt;number&gt;&lt;DMENU_SEP&gt;&lt;formatted_display_string&gt;&quot;
-    # The &lt;number&gt; part is hidden by dmenu but used for selection later.
-    dmenu_input_lines = []
-    for num, current, title in windows_data:
-        # Format the part visible in dmenu
-        display_str = f&quot;{num.rjust(3)} {current.ljust(10)[:10]} {title}&quot;
-        # Prepend the raw number and the dmenu separator
-        dmenu_input_lines.append(f&quot;{num}{DMENU_SEP}{display_str}&quot;)
-
-    dmenu_input_text = &#39;\n&#39;.join(dmenu_input_lines)
-
-    # 3. Pipe the list to dmenu and get the selection
-    dmenu_cmd = [&#39;dmenu&#39;, &#39;-i&#39;,                # Case-insensitive
-                 &#39;-sb&#39;, SELECTED_BG,         # Selected background
-                 &#39;-nb&#39;, NORMAL_BG,           # Normal background
-                 &#39;-fn&#39;, FONT,                # Font
-                 &#39;-l&#39;, NUM_LINES]            # Lines to display
-
-    try:
-        # We expect dmenu might return 1 if the user cancels (e.g., Esc)
-        # So, we temporarily disable check=True and handle return codes manually
-        dmenu_result = subprocess.run(
-            dmenu_cmd,
-            input=dmenu_input_text,
-            capture_output=True,
-            text=True,
-            encoding=&#39;utf-8&#39;
-            # check=False # Default, handle return code below
-        )
-
-        if dmenu_result.returncode == 1:
-            # User cancelled dmenu (e.g., pressed Esc)
-            print(&quot;dmenu cancelled by user.&quot;, file=sys.stderr)
-            sys.exit(0)
-        elif dmenu_result.returncode != 0:
-            # Other dmenu error
-            print(f&quot;Error running dmenu.&quot;, file=sys.stderr)
-            print(f&quot;Return code: {dmenu_result.returncode}&quot;, file=sys.stderr)
-            if dmenu_result.stderr:
-                print(f&quot;Stderr: {dmenu_result.stderr.strip()}&quot;, file=sys.stderr)
-            sys.exit(1)
-
-        selection = dmenu_result.stdout.strip()
-
-    except FileNotFoundError:
-        print(f&quot;Error: Command &#39;dmenu&#39; not found. Is it installed and in your PATH?&quot;, file=sys.stderr)
-        sys.exit(1)
-    except Exception as e:
-        print(f&quot;An unexpected error occurred running dmenu: {e}&quot;, file=sys.stderr)
-        sys.exit(1)
-
-    # 4. Extract the *actual* window number from the selection
-    if not selection:
-        # Should not happen if return code was 0, but check anyway
-        print(&quot;dmenu returned success but selection is empty.&quot;, file=sys.stderr)
-        sys.exit(1)
-
-    try:
-        # Split the selected line ONLY at the first dmenu separator
-        # The first part is the raw window number we embedded
-        sel_number = selection.split(DMENU_SEP, 1)[0]
-
-        # Basic validation that it looks like a number
-        if not sel_number.isdigit():
-             raise ValueError(&quot;Extracted selection number is not a digit.&quot;)
-
-    except (IndexError, ValueError) as e:
-        print(f&quot;Error: Could not parse window number from dmenu selection.&quot;, file=sys.stderr)
-        print(f&quot;Selected line: &#39;{selection}&#39;&quot;, file=sys.stderr)
-        print(f&quot;Reason: {e}&quot;, file=sys.stderr)
-        sys.exit(1)
-
-    # 5. Tell Ratpoison to select the chosen window
-    rp_select_cmd = [&#39;ratpoison&#39;, &#39;-c&#39;, f&#39;select {sel_number}&#39;]
-    try:
-        run_subprocess(rp_select_cmd)
-    except (FileNotFoundError, subprocess.CalledProcessError, Exception):
-        # Error message already printed by run_subprocess
-        sys.exit(1)
-
-    # Success!
-    sys.exit(0)
-
-if __name__ == &quot;__main__&quot;:
-    main()" data-download-link="" data-download-label="Download Python">
-  <code class="language-python">#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
-&quot;&quot;&quot;
-dratmenu.py: A dmenu-based window switcher for the Ratpoison Window Manager.
-
-This script fetches the list of current windows from Ratpoison, presents them
-in dmenu for selection, and then tells Ratpoison to switch to the chosen window.
-It is updated for Python 3 and aims for robustness.
-&quot;&quot;&quot;
-
-import subprocess
-import sys
-import shlex # For safer command construction if needed, though not strictly required here
-
-# --- Configuration ---
-
-# Separator string used internally to parse Ratpoison output.
-# IMPORTANT: This exact string MUST NOT appear in any window number, class, or title.
-# Using a complex, unlikely sequence to minimize collision risk.
-SEP = &quot;~!@#DRATMENU_SEP#@!~&quot;
-
-# Separator used *within dmenu* to separate the hidden window number from the visible text.
-# A tab character is often a good choice as it&#39;s unlikely to be the *first* character
-# in the formatted display string and easy to split on.
-DMENU_SEP = &#39;\t&#39;
-
-# dmenu appearance settings (adjust as needed)
-# Font examples:
-# FONT = &quot;-*-terminus-*-r-*-*-14-*-*-*-*-*-*-*&quot;
-# FONT = &quot;-*-jetbrains mono-*-r-*-*-14-*-*-*-*-*-*-*&quot;
-FONT = &#39;Intel One Mono:size=13&#39; # Default Terminus
-NORMAL_BG = &#39;#002b36&#39;      # Solarized Dark base03
-SELECTED_BG = &#39;#859900&#39;    # Solarized Dark green
-NUM_LINES = &#39;20&#39;           # Number of lines dmenu shows vertically
-
-# --- Helper Function ---
-
-def run_subprocess(command_list, input_data=None):
-    &quot;&quot;&quot;
-    Runs a subprocess, handling text encoding/decoding and errors.
-
-    Args:
-        command_list (list): The command and its arguments.
-        input_data (str, optional): String data to pass to the command&#39;s stdin. Defaults to None.
-
-    Returns:
-        subprocess.CompletedProcess: The result object from subprocess.run.
-
-    Raises:
-        FileNotFoundError: If the command is not found.
-        subprocess.CalledProcessError: If the command returns a non-zero exit code.
-        Exception: For other unexpected errors during execution.
-    &quot;&quot;&quot;
-    try:
-        result = subprocess.run(
-            command_list,
-            input=input_data,
-            capture_output=True, # Capture stdout and stderr
-            text=True,           # Work with text (auto encodes input, decodes output)
-            check=True,          # Raise CalledProcessError on non-zero exit codes
-            encoding=&#39;utf-8&#39;     # Explicitly use UTF-8
-        )
-        return result
-    except FileNotFoundError:
-        print(f&quot;Error: Command &#39;{command_list[0]}&#39; not found. Is it installed and in your PATH?&quot;, file=sys.stderr)
-        raise # Re-raise the exception to be caught by the main logic
-    except subprocess.CalledProcessError as e:
-        # check=True raises this, stderr is part of the exception object
-        print(f&quot;Error running command: {&#39; &#39;.join(e.cmd)}&quot;, file=sys.stderr)
-        print(f&quot;Return code: {e.returncode}&quot;, file=sys.stderr)
-        if e.stderr:
-            print(f&quot;Stderr: {e.stderr.strip()}&quot;, file=sys.stderr)
-        # Don&#39;t raise here if we want to handle specific return codes (like dmenu cancel) later
-        # For now, let the main logic handle specific cases if needed, otherwise re-raise
-        raise
-    except Exception as e:
-        print(f&quot;An unexpected error occurred running {&#39; &#39;.join(command_list)}: {e}&quot;, file=sys.stderr)
-        raise
-
-# --- Main Logic ---
-
-def main():
-    # 1. Get window list from Ratpoison
-    # Format: %n&lt;SEP&gt;%c&lt;SEP&gt;%t (number, class, title)
-    rp_list_cmd = [&#39;ratpoison&#39;, &#39;-c&#39;, f&quot;windows %n{SEP}%c{SEP}%t&quot;]
-    try:
-        rp_result = run_subprocess(rp_list_cmd)
-    except (FileNotFoundError, subprocess.CalledProcessError, Exception):
-        sys.exit(1) # Error message already printed by run_subprocess
-
-    # Process the output from Ratpoison
-    stdout_str = rp_result.stdout.strip()
-    if not stdout_str:
-        print(&quot;No ratpoison windows found.&quot;, file=sys.stderr)
-        sys.exit(0)
-
-    lines = stdout_str.split(&#39;\n&#39;)
-    windows_data = [] # Store tuples of (number, class, title)
-    for i, ln in enumerate(lines):
-        parts = ln.split(SEP)
-        if len(parts) == 3:
-            windows_data.append(parts)
-        else:
-            print(f&quot;Warning: Skipping malformed line {i+1} from ratpoison (separator issue?): {ln}&quot;, file=sys.stderr)
-
-    if not windows_data:
-        print(&quot;No valid window data parsed from ratpoison.&quot;, file=sys.stderr)
-        sys.exit(1)
-
-    # 2. Format window list for dmenu
-    # Format for dmenu input: &quot;&lt;number&gt;&lt;DMENU_SEP&gt;&lt;formatted_display_string&gt;&quot;
-    # The &lt;number&gt; part is hidden by dmenu but used for selection later.
-    dmenu_input_lines = []
-    for num, current, title in windows_data:
-        # Format the part visible in dmenu
-        display_str = f&quot;{num.rjust(3)} {current.ljust(10)[:10]} {title}&quot;
-        # Prepend the raw number and the dmenu separator
-        dmenu_input_lines.append(f&quot;{num}{DMENU_SEP}{display_str}&quot;)
-
-    dmenu_input_text = &#39;\n&#39;.join(dmenu_input_lines)
-
-    # 3. Pipe the list to dmenu and get the selection
-    dmenu_cmd = [&#39;dmenu&#39;, &#39;-i&#39;,                # Case-insensitive
-                 &#39;-sb&#39;, SELECTED_BG,         # Selected background
-                 &#39;-nb&#39;, NORMAL_BG,           # Normal background
-                 &#39;-fn&#39;, FONT,                # Font
-                 &#39;-l&#39;, NUM_LINES]            # Lines to display
-
-    try:
-        # We expect dmenu might return 1 if the user cancels (e.g., Esc)
-        # So, we temporarily disable check=True and handle return codes manually
-        dmenu_result = subprocess.run(
-            dmenu_cmd,
-            input=dmenu_input_text,
-            capture_output=True,
-            text=True,
-            encoding=&#39;utf-8&#39;
-            # check=False # Default, handle return code below
-        )
-
-        if dmenu_result.returncode == 1:
-            # User cancelled dmenu (e.g., pressed Esc)
-            print(&quot;dmenu cancelled by user.&quot;, file=sys.stderr)
-            sys.exit(0)
-        elif dmenu_result.returncode != 0:
-            # Other dmenu error
-            print(f&quot;Error running dmenu.&quot;, file=sys.stderr)
-            print(f&quot;Return code: {dmenu_result.returncode}&quot;, file=sys.stderr)
-            if dmenu_result.stderr:
-                print(f&quot;Stderr: {dmenu_result.stderr.strip()}&quot;, file=sys.stderr)
-            sys.exit(1)
-
-        selection = dmenu_result.stdout.strip()
-
-    except FileNotFoundError:
-        print(f&quot;Error: Command &#39;dmenu&#39; not found. Is it installed and in your PATH?&quot;, file=sys.stderr)
-        sys.exit(1)
-    except Exception as e:
-        print(f&quot;An unexpected error occurred running dmenu: {e}&quot;, file=sys.stderr)
-        sys.exit(1)
-
-    # 4. Extract the *actual* window number from the selection
-    if not selection:
-        # Should not happen if return code was 0, but check anyway
-        print(&quot;dmenu returned success but selection is empty.&quot;, file=sys.stderr)
-        sys.exit(1)
-
-    try:
-        # Split the selected line ONLY at the first dmenu separator
-        # The first part is the raw window number we embedded
-        sel_number = selection.split(DMENU_SEP, 1)[0]
-
-        # Basic validation that it looks like a number
-        if not sel_number.isdigit():
-             raise ValueError(&quot;Extracted selection number is not a digit.&quot;)
-
-    except (IndexError, ValueError) as e:
-        print(f&quot;Error: Could not parse window number from dmenu selection.&quot;, file=sys.stderr)
-        print(f&quot;Selected line: &#39;{selection}&#39;&quot;, file=sys.stderr)
-        print(f&quot;Reason: {e}&quot;, file=sys.stderr)
-        sys.exit(1)
-
-    # 5. Tell Ratpoison to select the chosen window
-    rp_select_cmd = [&#39;ratpoison&#39;, &#39;-c&#39;, f&#39;select {sel_number}&#39;]
-    try:
-        run_subprocess(rp_select_cmd)
-    except (FileNotFoundError, subprocess.CalledProcessError, Exception):
-        # Error message already printed by run_subprocess
-        sys.exit(1)
-
-    # Success!
-    sys.exit(0)
-
-if __name__ == &quot;__main__&quot;:
-    main()</code>
-</section>
-
-<h4 id="configure-ratpoisonpy-homelinarolocalbinratpoisonpy"><strong>Configure ratpoison.py (/home/linaro/.local/bin/ratpoison.py)</strong></h4>
-
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="n">os</span>
-<span class="n">ratpoison</span> <span class="o">=</span> <span class="n">os</span><span class="p">.</span><span class="nf">getenv</span><span class="p">(</span><span class="sh">'</span><span class="s">RATPOISON</span><span class="sh">'</span><span class="p">)</span> <span class="ow">or</span> <span class="sh">'</span><span class="s">ratpoison</span><span class="sh">'</span>
-<span class="k">def</span> <span class="nf">rp_command</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span>
-    <span class="n">p</span> <span class="o">=</span> <span class="n">os</span><span class="p">.</span><span class="nf">popen</span><span class="p">(</span> <span class="n">ratpoison</span> <span class="o">+</span> <span class="sh">'</span><span class="s"> -c </span><span class="sh">'</span> <span class="o">+</span> <span class="sh">'"'</span> <span class="o">+</span> <span class="p">(</span><span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span>  <span class="n">args</span>  <span class="p">)</span> <span class="p">)</span> <span class="o">+</span> <span class="sh">'"'</span><span class="p">,</span> <span class="sh">'</span><span class="s">r</span><span class="sh">'</span> <span class="p">)</span>
-    <span class="n">r</span> <span class="o">=</span> <span class="n">p</span><span class="p">.</span><span class="nf">readlines</span><span class="p">();</span>
-    <span class="n">p</span><span class="p">.</span><span class="nf">close</span><span class="p">();</span>
-    <span class="k">return</span> <span class="n">r</span>
-
-
-<span class="k">def</span> <span class="nf">rp_abort</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">abort </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_addhook</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">addhook </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_alias</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">alias </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_banish</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">banish </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_chdir</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">chdir </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_clrunmanaged</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">clrunmanaged </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_colon</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">colon </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_curframe</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">curframe </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_definekey</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">definekey </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_undefinekey</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">undefinekey </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_delete</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">delete </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_delkmap</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">delkmap </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_echo</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">echo </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_escape</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">escape </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_exec</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">exec </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_execa</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">execa </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_execf</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">execf </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_fdump</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">fdump </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_focus</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">focus </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_focusprev</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">focusprev </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_focusdown</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">focusdown </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_exchangeup</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">exchangeup </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_exchangedown</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">exchangedown </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_exchangeleft</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">exchangeleft </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_exchangeright</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">exchangeright </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_swap</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">swap </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_focuslast</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">focuslast </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_focusleft</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">focusleft </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_focusright</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">focusright </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_focusup</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">focusup </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_frestore</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">frestore </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_fselect</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">fselect </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_gdelete</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">gdelete </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_getenv</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">getenv </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_gmerge</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">gmerge </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_gmove</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">gmove </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_gnew</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">gnew </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_gnewbg</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">gnewbg </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_gnumber</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">gnumber </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_grename</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">grename </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_gnext</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">gnext </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_gprev</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">gprev </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_gother</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">gother </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_gravity</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">gravity </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_groups</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">groups </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_gselect</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">gselect </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_help</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">help </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_hsplit</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">hsplit </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_info</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">info </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_kill</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">kill </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_lastmsg</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">lastmsg </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_license</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">license </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_link</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">link </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_listhook</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">listhook </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_meta</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">meta </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_msgwait</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">msgwait </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_newkmap</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">newkmap </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_newwm</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">newwm </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_next</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">next </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_nextscreen</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">nextscreen </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_number</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">number </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_only</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">only </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_other</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">other </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_prev</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">prev </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_prevscreen</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">prevscreen </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_quit</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">quit </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_ratinfo</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">ratinfo </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_ratrelinfo</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">ratrelinfo </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_banishrel</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">banishrel </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_ratwarp</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">ratwarp </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_ratrelwarp</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">ratrelwarp </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_ratclick</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">ratclick </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_rathold</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">rathold </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_readkey</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">readkey </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_redisplay</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">redisplay </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_remhook</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">remhook </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_remove</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">remove </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_removeup</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">removeup </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_removedown</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">removedown </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_removeleft</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">removeleft </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_removeright</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">removeright </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_resize</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">resize </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_restart</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">restart </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_rudeness</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">rudeness </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_select</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">select </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_set</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">set </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_setenv</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">setenv </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_shrink</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">shrink </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_sfrestore</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">sfrestore </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_source</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">source </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_sselect</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">sselect </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_startup_message</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">startup_message </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_time</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">time </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_title</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">title </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_tmpwm</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">tmpwm </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_unalias</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">unalias </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_unmanage</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">unmanage </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_unsetenv</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">unsetenv </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_verbexec</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">verbexec </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_version</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">version </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_vsplit</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">vsplit </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_warp</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">warp </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_windows</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">windows </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_cnext</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">cnext </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_cother</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">cother </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_cprev</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">cprev </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_dedicate</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">dedicate </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_describekey</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">describekey </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_inext</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">inext </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_iother</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">iother </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_iprev</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">iprev </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_prompt</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">prompt </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_sdump</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">sdump </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_sfdump</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">sfdump </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_undo</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">undo </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_redo</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">redo </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_putsel</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">putsel </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_getsel</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">getsel </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-<span class="k">def</span> <span class="nf">rp_commands</span><span class="p">(</span> <span class="o">*</span><span class="n">args</span> <span class="p">):</span> <span class="k">return</span> <span class="nf">rp_command </span><span class="p">(</span> <span class="sh">'</span><span class="s">commands </span><span class="sh">'</span> <span class="o">+</span>  <span class="sh">'</span><span class="s"> </span><span class="sh">'</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="p">)</span>
-</code></pre></div></div>
-
-<h4 id="xresources">.Xresources</h4>
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-! title      Nord XResources                                    +
-! project    nord-xresources                                    +
-! version    0.1.0                                              +
-! repository https://github.com/arcticicestudio/nord-xresources +
-! author     Arctic Ice Studio                                  +
-! email      development@arcticicestudio.com                    +
-! copyright  Copyright (C) 2016                                 +
-! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-#define nord0 #2E3440
-#define nord1 #3B4252
-#define nord2 #434C5E
-#define nord3 #4C566A
-#define nord4 #D8DEE9
-#define nord5 #E5E9F0
-#define nord6 #ECEFF4
-#define nord7 #8FBCBB
-#define nord8 #88C0D0
-#define nord9 #81A1C1
-#define nord10 #5E81AC
-#define nord11 #BF616A
-#define nord12 #D08770
-#define nord13 #EBCB8B
-#define nord14 #A3BE8C
-#define nord15 #B48EAD
-
-*.foreground:   nord4
-*.background:   nord0
-*.cursorColor:  nord4
-*fading: 0
-*fadeColor: nord3
-
-*.color0: nord1
-*.color1: nord11
-*.color2: nord14
-*.color3: nord13
-*.color4: nord9
-*.color5: nord15
-*.color6: nord8
-*.color7: nord5
-*.color8: nord3
-*.color9: nord11
-*.color10: nord14
-*.color11: nord13
-*.color12: nord9
-*.color13: nord15
-*.color14: nord7
-*.color15: nord6
-</code></pre></div></div>
-<h4 id="setting-up-rpws-for-desktop-switching">Setting Up <code class="language-plaintext highlighter-rouge">rpws</code> for Desktop Switching</h4>
-
-<p>To configure desktop switching with <code class="language-plaintext highlighter-rouge">rpws</code>, you will need to add the following line to your <code class="language-plaintext highlighter-rouge">~/.ratpoisonrc</code> file:</p>
-
-<div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">exec </span>rpws init N <span class="nt">-k</span>
-</code></pre></div></div>
-
-<p>Where <code class="language-plaintext highlighter-rouge">N</code> is the number of desktops you wish to create (at least 2). The <code class="language-plaintext highlighter-rouge">-k</code> flag is optional and is only necessary if you want to use predefined keybindings for switching desktops and managing windows.</p>
-
-<p>When <code class="language-plaintext highlighter-rouge">rpws</code> is initialized, it will create <code class="language-plaintext highlighter-rouge">N</code> desktops, and by default, it assigns the following keybindings:</p>
-
-<ul>
-  <li><code class="language-plaintext highlighter-rouge">Alt+F(N)</code> - Switch to desktop <code class="language-plaintext highlighter-rouge">N</code> (e.g., <code class="language-plaintext highlighter-rouge">Alt+F1</code> switches to the first desktop).</li>
-  <li><code class="language-plaintext highlighter-rouge">Ctrl+Alt+Right</code> - Go to the next desktop.</li>
-  <li><code class="language-plaintext highlighter-rouge">Ctrl+Alt+Left</code> - Go to the previous desktop.</li>
-  <li><code class="language-plaintext highlighter-rouge">Ctrl+Alt+Windows+F(N)</code> - Move the current window to desktop <code class="language-plaintext highlighter-rouge">N</code>.</li>
-  <li><code class="language-plaintext highlighter-rouge">Ctrl+Alt+&gt;</code> - Move the window to the next desktop.</li>
-  <li><code class="language-plaintext highlighter-rouge">Ctrl+Alt+&lt;</code> - Move the window to the previous desktop.</li>
-</ul>
-
-<p>However, you may find these keybindings inconvenient or difficult to use. In that case, you can customize them to suit your preferences.</p>
-
-<h4 id="customizing-rpws-hotkeys">Customizing <code class="language-plaintext highlighter-rouge">rpws</code> Hotkeys</h4>
-
-<p>To customize the keybindings, add the following lines to your <code class="language-plaintext highlighter-rouge">~/.ratpoisonrc</code> file:</p>
-
-<div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Initialize 6 desktops</span>
-<span class="nb">exec </span>rpws init 6
-
-<span class="c"># Switch desktops with the Windows+digit combination</span>
-definekey top s-1 <span class="nb">exec </span>rpws 1
-definekey top s-2 <span class="nb">exec </span>rpws 2
-definekey top s-3 <span class="nb">exec </span>rpws 3
-definekey top s-4 <span class="nb">exec </span>rpws 4
-definekey top s-5 <span class="nb">exec </span>rpws 5
-definekey top s-6 <span class="nb">exec </span>rpws 6
-
-<span class="c"># Move windows to desktops using Windows+F(N)</span>
-definekey top s-F1 <span class="nb">exec </span>rpws move1
-definekey top s-F2 <span class="nb">exec </span>rpws move2
-definekey top s-F3 <span class="nb">exec </span>rpws move3
-definekey top s-F4 <span class="nb">exec </span>rpws move4
-definekey top s-F5 <span class="nb">exec </span>rpws move5
-definekey top s-F6 <span class="nb">exec </span>rpws move6
-
-<span class="c"># Move between desktops with Windows+Right/Left</span>
-definekey top s-Right <span class="nb">exec </span>rpws next
-definekey top s-Left <span class="nb">exec </span>rpws prev
-
-<span class="c"># Move window to next/previous desktop using Windows+Up/Down</span>
-definekey top s-Up <span class="nb">exec </span>rpws movenext
-definekey top s-Down <span class="nb">exec </span>rpws moveprev
-</code></pre></div></div>
-
-<h5 id="keybinding-legend">Keybinding Legend:</h5>
-<ul>
-  <li><code class="language-plaintext highlighter-rouge">C</code> stands for <strong>Ctrl</strong></li>
-  <li><code class="language-plaintext highlighter-rouge">S</code> stands for the <strong>Windows</strong> key</li>
-  <li><code class="language-plaintext highlighter-rouge">M</code> stands for <strong>Alt</strong></li>
-</ul>
-
-<p>For example, <code class="language-plaintext highlighter-rouge">C-S-M-q</code> represents pressing <code class="language-plaintext highlighter-rouge">Ctrl + Windows + Alt + q</code> in sequence.</p>
-
-<h3 id="step-5-configure-user-specific-x-settings-xsessionrc"><strong>Step 5: Configure User-Specific X Settings (~/.xsessionrc)</strong></h3>
-
-<p>The ~/.xsessionrc file (in /home/linaro/) is executed when your X session starts via LightDM. It’s useful for setting environment variables or running commands like xrandr before Ratpoison loads. This file must be executable.<br />
-<code class="language-plaintext highlighter-rouge">nano /home/linaro/.xsessionrc</code></p>
-
-<p>Add your configurations, for example:</p>
-<section class="code-block-container" role="group" aria-label=" Code Block" data-filename="_code_block.txt" data-code="#!/bin/sh
-
-# Exit immediately if a command exits with a non-zero status.
-# set -e
-
-# Optional: Uncomment to log script execution for debugging
-LOG_FILE=~/xsessionrc_debug.log
-echo &quot;$(date): .xsessionrc started&quot; &gt;&gt; &quot;$LOG_FILE&quot;
-
-# Define custom mode for DP-1 (1152x864 @ 60Hz)
-# Ensure standard spaces are used in the modeline string.
-# Modeline: &quot;1152x864_60.00&quot; 81.75 1152 1216 1336 1520 864 867 871 897 -hsync +vsync
-xrandr --newmode &quot;1152x864_60.00&quot; 81.75 1152 1216 1336 1520 864 867 871 897 -hsync +vsync # 2&gt;&amp;1 | tee -a &quot;$LOG_FILE&quot;
-
-# Define custom mode for HDMI-1 (2560x1080 @ 60Hz)
-# Modeline: &quot;2560x1080_60.00&quot; 230.00 2560 2720 2992 3424 1080 1083 1093 1120 -hsync +vsync
-xrandr --newmode &quot;2560x1080_60.00&quot; 230.00 2560 2720 2992 3424 1080 1083 1093 1120 -hsync +vsync # 2&gt;&amp;1 | tee -a &quot;$LOG_FILE&quot;
-
-# Add the new modes to the respective outputs
-xrandr --addmode DP-1 &quot;1152x864_60.00&quot; # 2&gt;&amp;1 | tee -a &quot;$LOG_FILE&quot;
-xrandr --addmode HDMI-1 &quot;2560x1080_60.00&quot; # 2&gt;&amp;1 | tee -a &quot;$LOG_FILE&quot;
-
-# Apply the modes and set the layout.
-# NOTE: The command below sets DP-1 as primary.
-# Your comment &quot;# makes HDMI-1 primary&quot; conflicts with this.
-# Adjust --primary flag if HDMI-1 should be the primary display.
-xrandr \
-    --output DP-1 --primary --mode &quot;1152x864_60.00&quot; --below HDMI-1 \
-    --output HDMI-1 --mode &quot;2560x1080_60.00&quot; # 2&gt;&amp;1 | tee -a &quot;$LOG_FILE&quot;
-
-# Example: Start a key remapper or other background utility
-# xmodmap /home/ linaro/.Xmodmap
-
-# Example: Set an environment variable
-# export QT_QPA_PLATFORMTHEME=qt5ct
-
-echo &quot;$(date): .xsessionrc finished successfully&quot; &gt;&gt; &quot;$LOG_FILE&quot;" data-download-link="" data-download-label="Download ">
-  <code class="language-">#!/bin/sh
-
-# Exit immediately if a command exits with a non-zero status.
-# set -e
-
-# Optional: Uncomment to log script execution for debugging
-LOG_FILE=~/xsessionrc_debug.log
-echo &quot;$(date): .xsessionrc started&quot; &gt;&gt; &quot;$LOG_FILE&quot;
-
-# Define custom mode for DP-1 (1152x864 @ 60Hz)
-# Ensure standard spaces are used in the modeline string.
-# Modeline: &quot;1152x864_60.00&quot; 81.75 1152 1216 1336 1520 864 867 871 897 -hsync +vsync
-xrandr --newmode &quot;1152x864_60.00&quot; 81.75 1152 1216 1336 1520 864 867 871 897 -hsync +vsync # 2&gt;&amp;1 | tee -a &quot;$LOG_FILE&quot;
-
-# Define custom mode for HDMI-1 (2560x1080 @ 60Hz)
-# Modeline: &quot;2560x1080_60.00&quot; 230.00 2560 2720 2992 3424 1080 1083 1093 1120 -hsync +vsync
-xrandr --newmode &quot;2560x1080_60.00&quot; 230.00 2560 2720 2992 3424 1080 1083 1093 1120 -hsync +vsync # 2&gt;&amp;1 | tee -a &quot;$LOG_FILE&quot;
-
-# Add the new modes to the respective outputs
-xrandr --addmode DP-1 &quot;1152x864_60.00&quot; # 2&gt;&amp;1 | tee -a &quot;$LOG_FILE&quot;
-xrandr --addmode HDMI-1 &quot;2560x1080_60.00&quot; # 2&gt;&amp;1 | tee -a &quot;$LOG_FILE&quot;
-
-# Apply the modes and set the layout.
-# NOTE: The command below sets DP-1 as primary.
-# Your comment &quot;# makes HDMI-1 primary&quot; conflicts with this.
-# Adjust --primary flag if HDMI-1 should be the primary display.
-xrandr \
-    --output DP-1 --primary --mode &quot;1152x864_60.00&quot; --below HDMI-1 \
-    --output HDMI-1 --mode &quot;2560x1080_60.00&quot; # 2&gt;&amp;1 | tee -a &quot;$LOG_FILE&quot;
-
-# Example: Start a key remapper or other background utility
-# xmodmap /home/ linaro/.Xmodmap
-
-# Example: Set an environment variable
-# export QT_QPA_PLATFORMTHEME=qt5ct
-
-echo &quot;$(date): .xsessionrc finished successfully&quot; &gt;&gt; &quot;$LOG_FILE&quot;</code>
-</section>
-
-<p>Make it executable:<br />
-<code class="language-plaintext highlighter-rouge">chmod +x /home/linaro/.xsessionrc</code></p>
-
-<h3 id="step-6-optional-but-recommended-remove-xfce4"><strong>Step 6: (Optional but Recommended) Remove XFCE4</strong></h3>
-
-<p>If you no longer need XFCE4 and want to free up disk space, you can remove its packages. <strong>Be cautious</strong> and review the packages to be removed before confirming.<br />
-<code class="language-plaintext highlighter-rouge"># Identify XFCE4 meta-packages and components</code><br />
-<code class="language-plaintext highlighter-rouge">sudo apt purge xfce4 xfce4-goodies libxfce4ui-utils xfce4-panel xfce4-session xfce4-settings xfconf xfdesktop4 xfwm4 thunar mousepad parole ristretto</code><br />
-<code class="language-plaintext highlighter-rouge"># This list might need adjustment based on your specific XFCE4 installation.</code><br />
-<code class="language-plaintext highlighter-rouge"># Always review the list of packages apt proposes to remove.</code><br />
-<code class="language-plaintext highlighter-rouge">sudo apt autoremove</code><br />
-<code class="language-plaintext highlighter-rouge">sudo apt clean</code></p>
-
-<h3 id="step-7-verify-the-setup"><strong>Step 7: Verify the Setup</strong></h3>
-
-<p>Reboot your system or restart LightDM to apply changes:<br />
-<code class="language-plaintext highlighter-rouge">sudo systemctl restart lightdm</code></p>
-
-<p>Your system should automatically log in linaro directly into a Ratpoison session.<br />
-<strong>Troubleshooting:</strong></p>
-
-<ul>
-  <li>LightDM logs: /var/log/lightdm/lightdm.log and seat-specific logs (e.g., /var/log/lightdm/seat0-greeter.log).</li>
-  <li>Xorg logs: ~/.local/share/xorg/Xorg.0.log (for user sessions) or /var/log/Xorg.0.log.</li>
-  <li>Session errors: Check ~/.xsession-errors (in /home/linaro/) for issues from ~/.xsessionrc or session startup.</li>
-</ul>
-
-<h3 id="alternative-manual-start-with-startx-if-not-using-lightdm"><strong>Alternative: Manual Start with startx (If Not Using LightDM)</strong></h3>
-
-<p>If you choose not to use LightDM or wish to start Ratpoison manually from a TTY (console login):</p>
-
-<ol>
-  <li>Ensure xinit is installed: sudo apt install xinit.</li>
-  <li>Create or edit ~/.xinitrc (in /home/linaro/.xinitrc):<br />
-<code class="language-plaintext highlighter-rouge">nano /home/linaro/.xinitrc</code><br />
-Add:</li>
-</ol>
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>#!/bin/sh
-# ~/.xinitrc for linaro
-
-# Source user-specific X settings if desired (contents similar to .xsessionrc)
-# if [ -f /home/linaro/.xprofile_custom ]; then
-#  . /home/linaro/.xprofile_custom
-# fi
-# For xrandr, etc., you might call them directly here or source .xsessionrc
-if [ -f /home/linaro/.xsessionrc ]; then
-  . /home/linaro/.xsessionrc
-fi
-
-exec ratpoison
-</code></pre></div></div>
-
-<ol>
-  <li>Make it executable: <code class="language-plaintext highlighter-rouge">chmod +x /home/linaro/.xinitrc</code></li>
-  <li>Log in to a TTY as linaro and run startx.</li>
-</ol>
-
-<p>This approach bypasses LightDM. The primary focus of this guide is the LightDM autologin method.</p>]]></content><author><name></name></author><category term="aid&gt;linux&gt;software&gt;dotfile" /></entry></feed>
+{% endcodeblock %}</p>]]></content><author><name></name></author><category term="linux&gt;software&gt;dotfile" /></entry></feed>
