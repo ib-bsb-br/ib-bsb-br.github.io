@@ -1,7 +1,7 @@
 ---
 title: Organize files by type
 date: 2024-05-30
-tags: [scripts>rust, scripts>python]
+tags: [software>rust, scripts>python]
 info: aberto.
 type: post
 layout: post
