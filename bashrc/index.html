@@ -67,8 +67,8 @@
         
           <span class="post-updated">
             ↣
-            <time datetime="2025-05-09T21:14:29+00:00">
-              09 May 2025
+            <time datetime="2025-05-17T23:06:10+00:00">
+              17 May 2025
             </time>
           </span>
         
@@ -90,11 +90,11 @@
         <div class="page-stats mt-3" role="status" aria-label="Page statistics">
       
       <span class="badge bg-primary">
-        45111 characters
+        57951 characters
       </span>
         <span class="separator mx-2" aria-hidden="true">•</span>
         <span class="badge bg-primary">
-        5790 words
+        7287 words
       </span>
       </div>
         <div class="action-buttons d-flex flex-wrap gap-2">
@@ -510,6 +510,253 @@ fix_ownership_preserve_permissions_final<span class="o">()</span> <span class="o
 
 <span class="c"># Alias to call the enhanced function</span>
 <span class="nb">alias </span><span class="nv">fixmyhome</span><span class="o">=</span><span class="s1">'fix_ownership_preserve_permissions_final'</span>
+<span class="nb">.</span> <span class="s2">"</span><span class="nv">$HOME</span><span class="s2">/.cargo/env"</span>
+<span class="nb">source</span> ~/.bash_completion/alacritty
+
+<span class="c"># restic backup function: resto /path/to/backup</span>
+resto<span class="o">()</span> <span class="o">{</span>
+    <span class="c"># --- Configuration ---</span>
+    <span class="nb">local </span><span class="nv">restic_cmd</span><span class="o">=</span><span class="s2">"restic_0.18"</span>
+    <span class="nb">local </span><span class="nv">repository_location</span><span class="o">=</span><span class="s2">"rclone:storj:rest-3588"</span>
+    <span class="nb">local </span><span class="nv">hardcoded_password</span><span class="o">=</span><span class="s2">"&lt;!-- placeholder --&gt;"</span>
+
+    <span class="c"># --- Argument Validation ---</span>
+    <span class="k">if</span> <span class="o">[</span> <span class="nt">-z</span> <span class="s2">"</span><span class="nv">$1</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then
+        </span><span class="nb">echo</span> <span class="s2">"Error: You must specify the path to back up."</span> <span class="o">&gt;</span>&amp;2
+        <span class="nb">echo</span> <span class="s2">"Usage: resto /path/to/your/data"</span> <span class="o">&gt;</span>&amp;2
+        <span class="k">return </span>1 <span class="c"># Return an error code</span>
+    <span class="k">fi</span>
+
+    <span class="c"># --- Variable Setup ---</span>
+    <span class="nb">local </span><span class="nv">backup_path</span><span class="o">=</span><span class="s2">"</span><span class="nv">$1</span><span class="s2">"</span>
+    <span class="nb">local </span>current_date_tag
+    <span class="nv">current_date_tag</span><span class="o">=</span><span class="si">$(</span><span class="nb">date</span> +%Y%m%d<span class="si">)</span> <span class="c"># Generates tag like YYYYMMDD (e.g., 20250516)</span>
+
+    <span class="c"># --- User Feedback ---</span>
+    <span class="nb">echo</span> <span class="s2">"--------------------------------------------------"</span>
+    <span class="nb">echo</span> <span class="s2">"Attempting restic backup:"</span>
+    <span class="nb">echo</span> <span class="s2">"  Source:      </span><span class="k">${</span><span class="nv">backup_path</span><span class="k">}</span><span class="s2">"</span>
+    <span class="nb">echo</span> <span class="s2">"  Repository:  </span><span class="k">${</span><span class="nv">repository_location</span><span class="k">}</span><span class="s2">"</span>
+    <span class="nb">echo</span> <span class="s2">"  Tag:         </span><span class="k">${</span><span class="nv">current_date_tag</span><span class="k">}</span><span class="s2">"</span>
+    <span class="nb">echo</span> <span class="s2">"  Restic cmd:  </span><span class="k">${</span><span class="nv">restic_cmd</span><span class="k">}</span><span class="s2">"</span>
+    <span class="nb">echo</span> <span class="s2">"  Auth Method: Hardcoded password (WARNING: SERIOUS SECURITY RISK!)"</span> <span class="c"># Emphasize risk</span>
+    <span class="nb">echo</span> <span class="s2">"--------------------------------------------------"</span>
+
+    <span class="c"># --- Command Execution ---</span>
+    <span class="c"># The RESTIC_PASSWORD environment variable is set *only* for this specific command's environment.</span>
+    <span class="c"># It does not persist in the current shell session afterwards.</span>
+    <span class="c"># Quotes around "${hardcoded_password}" are crucial, especially since your password</span>
+    <span class="c"># contains '&amp;', a special shell metacharacter (used for backgrounding processes).</span>
+    <span class="c"># The backslashes (\) at the end of lines are for line continuation, allowing</span>
+    <span class="c"># a single command to be split across multiple lines for readability.</span>
+    <span class="nv">RESTIC_PASSWORD</span><span class="o">=</span><span class="s2">"</span><span class="k">${</span><span class="nv">hardcoded_password</span><span class="k">}</span><span class="s2">"</span> <span class="s2">"</span><span class="k">${</span><span class="nv">restic_cmd</span><span class="k">}</span><span class="s2">"</span> <span class="se">\</span>
+        <span class="nt">-r</span> <span class="s2">"</span><span class="k">${</span><span class="nv">repository_location</span><span class="k">}</span><span class="s2">"</span> <span class="se">\</span>
+        <span class="nt">-o</span> rclone.connections<span class="o">=</span>8 <span class="se">\</span>
+        backup <span class="s2">"</span><span class="k">${</span><span class="nv">backup_path</span><span class="k">}</span><span class="s2">"</span> <span class="se">\</span>
+        <span class="nt">--verbose</span> <span class="se">\</span>
+        <span class="nt">--pack-size</span><span class="o">=</span>60 <span class="se">\</span>
+        <span class="nt">--tag</span> <span class="s2">"</span><span class="k">${</span><span class="nv">current_date_tag</span><span class="k">}</span><span class="s2">"</span>
+
+    <span class="c"># --- Post-Execution Feedback ---</span>
+    <span class="nb">local </span><span class="nv">exit_status</span><span class="o">=</span><span class="nv">$?</span>
+    <span class="k">if</span> <span class="o">[</span> <span class="k">${</span><span class="nv">exit_status</span><span class="k">}</span> <span class="nt">-eq</span> 0 <span class="o">]</span><span class="p">;</span> <span class="k">then
+        </span><span class="nb">echo</span> <span class="s2">"--------------------------------------------------"</span>
+        <span class="nb">echo</span> <span class="s2">"SUCCESS: Backup completed for: </span><span class="k">${</span><span class="nv">backup_path</span><span class="k">}</span><span class="s2">"</span>
+        <span class="nb">echo</span> <span class="s2">"--------------------------------------------------"</span>
+    <span class="k">else
+        </span><span class="nb">echo</span> <span class="s2">"--------------------------------------------------"</span>
+        <span class="nb">echo</span> <span class="s2">"ERROR: Backup FAILED for: </span><span class="k">${</span><span class="nv">backup_path</span><span class="k">}</span><span class="s2"> (Exit status: </span><span class="k">${</span><span class="nv">exit_status</span><span class="k">}</span><span class="s2">)"</span> <span class="o">&gt;</span>&amp;2
+        <span class="nb">echo</span> <span class="s2">"  (Verify repository settings, password, rclone configuration, and target path.)"</span>
+        <span class="nb">echo</span> <span class="s2">"--------------------------------------------------"</span>
+    <span class="k">fi
+    return</span> <span class="k">${</span><span class="nv">exit_status</span><span class="k">}</span>
+<span class="o">}</span>
+
+<span class="c"># fpsync wrapper 'cesto' for Debian Bullseye</span>
+<span class="c"># Purpose: Simplifies running fpsync. If multiple source files/items or a single file</span>
+<span class="c">#          is given, they are bundled into a temporary TAR archive, which is then synced.</span>
+<span class="c">#          Extraction is attempted for local destinations.</span>
+<span class="c"># Usage: cesto &lt;source_item_1&gt; [source_item_2...] &lt;destination_directory/&gt;</span>
+<span class="c">#        cesto &lt;single_source_directory&gt; &lt;destination_directory&gt;</span>
+
+cesto<span class="o">()</span> <span class="o">{</span>
+  <span class="c"># --- Argument Validation ---</span>
+  <span class="k">if</span> <span class="o">[</span> <span class="s2">"$#"</span> <span class="nt">-lt</span> 2 <span class="o">]</span><span class="p">;</span> <span class="k">then
+    </span><span class="nb">echo</span> <span class="s2">"Error: At least one source item and a destination directory are required."</span> <span class="o">&gt;</span>&amp;2
+    <span class="nb">echo</span> <span class="s2">"Usage: cesto &lt;source_item_1&gt; [source_item_2...] &lt;destination_directory/&gt;"</span> <span class="o">&gt;</span>&amp;2
+    <span class="nb">echo</span> <span class="s2">"   or: cesto &lt;single_source_directory&gt; &lt;destination_directory&gt;"</span> <span class="o">&gt;</span>&amp;2
+    <span class="nb">echo</span> <span class="s2">"Example (multiple files): cesto file1.txt docs/*.pdf ./backup/archived_files"</span> <span class="o">&gt;</span>&amp;2
+    <span class="nb">echo</span> <span class="s2">"Example (single dir): cesto ./my_project_source/ ./backup_location/project_data"</span> <span class="o">&gt;</span>&amp;2
+    <span class="k">return </span>1
+  <span class="k">fi
+
+  </span><span class="nb">local </span><span class="nv">user_dest_dir</span><span class="o">=</span><span class="s2">"</span><span class="k">${</span><span class="p">!#</span><span class="k">}</span><span class="s2">"</span> <span class="c"># Last argument is the destination</span>
+  <span class="nb">local </span><span class="nv">sources_array</span><span class="o">=(</span><span class="s2">"</span><span class="k">${</span><span class="p">@</span>:1:<span class="nv">$#-1</span><span class="k">}</span><span class="s2">"</span><span class="o">)</span> <span class="c"># All args except the last are sources</span>
+  <span class="nb">local </span><span class="nv">num_sources</span><span class="o">=</span><span class="s2">"</span><span class="k">${#</span><span class="nv">sources_array</span><span class="p">[@]</span><span class="k">}</span><span class="s2">"</span>
+
+  <span class="c"># fpsync configurations from your original request</span>
+  <span class="nb">local </span><span class="nv">num_workers</span><span class="o">=</span>4
+  <span class="nb">local </span><span class="nv">fpsync_opts</span><span class="o">=</span><span class="s2">"-v"</span>
+
+  <span class="c"># Path to the temporary tar file created on the source; initialized for cleanup trap</span>
+  <span class="c"># This variable is local to this function call.</span>
+  <span class="nb">local </span><span class="nv">tmp_source_tar_file_path</span><span class="o">=</span><span class="s2">""</span>
+
+  <span class="c"># Setup a trap to clean up the temporary source tar file on exit or signal.</span>
+  <span class="c"># The command string is in single quotes, so $tmp_source_tar_file_path is evaluated when the trap runs.</span>
+  <span class="c"># The 'trap - ...' part attempts to make the trap self-disabling after its first execution.</span>
+  <span class="nb">trap</span> <span class="s1">'if [ -n "$tmp_source_tar_file_path" ] &amp;&amp; [ -f "$tmp_source_tar_file_path" ]; then echo "INFO: (Trap) Cleaning up temporary source tar: $tmp_source_tar_file_path"; rm -f "$tmp_source_tar_file_path"; fi; trap - EXIT HUP INT QUIT TERM'</span> EXIT HUP INT QUIT TERM
+
+  <span class="c"># --- Destination Path Preparation ---</span>
+  <span class="nb">echo</span> <span class="s2">"INFO: Preparing destination directory: </span><span class="se">\"</span><span class="nv">$user_dest_dir</span><span class="se">\"</span><span class="s2">"</span>
+  <span class="k">if</span> <span class="o">!</span> <span class="nb">mkdir</span> <span class="nt">-p</span> <span class="s2">"</span><span class="nv">$user_dest_dir</span><span class="s2">"</span><span class="p">;</span> <span class="k">then
+    </span><span class="nb">echo</span> <span class="s2">"Error: Failed to create or access directory structure for destination </span><span class="se">\"</span><span class="nv">$user_dest_dir</span><span class="se">\"</span><span class="s2">."</span> <span class="o">&gt;</span>&amp;2
+    <span class="k">return </span>1
+  <span class="k">fi
+  </span><span class="nb">local </span>abs_dest_dir <span class="c"># Will hold the absolute path to the destination directory</span>
+  <span class="nv">abs_dest_dir</span><span class="o">=</span><span class="si">$(</span><span class="nb">readlink</span> <span class="nt">-f</span> <span class="s2">"</span><span class="nv">$user_dest_dir</span><span class="s2">"</span><span class="si">)</span>
+  <span class="k">if</span> <span class="o">[</span> <span class="nt">-z</span> <span class="s2">"</span><span class="nv">$abs_dest_dir</span><span class="s2">"</span> <span class="o">]</span> <span class="o">||</span> <span class="o">[</span> <span class="o">!</span> <span class="nt">-d</span> <span class="s2">"</span><span class="nv">$abs_dest_dir</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then
+      </span><span class="nb">echo</span> <span class="s2">"Error: Could not resolve destination </span><span class="se">\"</span><span class="nv">$user_dest_dir</span><span class="se">\"</span><span class="s2"> to an absolute directory path, or it's not a directory after 'mkdir -p'."</span> <span class="o">&gt;</span>&amp;2
+      <span class="k">return </span>1
+  <span class="k">fi</span>
+  <span class="c"># This is the directory INTO which fpsync will place files or the tarball.</span>
+  <span class="nb">local </span><span class="nv">final_dest_dir_for_fpsync</span><span class="o">=</span><span class="s2">"</span><span class="k">${</span><span class="nv">abs_dest_dir</span><span class="p">%/</span><span class="k">}</span><span class="s2">/"</span>
+
+
+  <span class="c"># --- Source Path Handling ---</span>
+  <span class="nb">local </span>path_to_sync_via_fpsync <span class="c"># This will be the path (dir or tar file) fpsync uses as its source</span>
+
+  <span class="c"># Case 1: Single source item, AND it's a directory (after resolving symlinks)</span>
+  <span class="k">if</span> <span class="o">[</span> <span class="s2">"</span><span class="nv">$num_sources</span><span class="s2">"</span> <span class="nt">-eq</span> 1 <span class="o">]</span><span class="p">;</span> <span class="k">then
+    </span><span class="nb">local </span><span class="nv">single_src_item_orig</span><span class="o">=</span><span class="s2">"</span><span class="k">${</span><span class="nv">sources_array</span><span class="p">[0]</span><span class="k">}</span><span class="s2">"</span>
+    <span class="nb">local </span>single_src_item_abs <span class="c"># Will hold absolute path of the single source</span>
+    <span class="nv">single_src_item_abs</span><span class="o">=</span><span class="si">$(</span><span class="nb">readlink</span> <span class="nt">-f</span> <span class="s2">"</span><span class="nv">$single_src_item_orig</span><span class="s2">"</span><span class="si">)</span>
+
+    <span class="k">if</span> <span class="o">[</span> <span class="nt">-z</span> <span class="s2">"</span><span class="nv">$single_src_item_abs</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then
+      </span><span class="nb">echo</span> <span class="s2">"Error: Source </span><span class="se">\"</span><span class="nv">$single_src_item_orig</span><span class="se">\"</span><span class="s2"> could not be resolved to an absolute path."</span> <span class="o">&gt;</span>&amp;2
+      <span class="k">return </span>1
+    <span class="k">fi
+
+    if</span> <span class="o">[</span> <span class="nt">-d</span> <span class="s2">"</span><span class="nv">$single_src_item_abs</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then
+      </span><span class="nb">echo</span> <span class="s2">"INFO: Mode: Single source directory detected. Preparing for direct fpsync."</span>
+      <span class="nv">path_to_sync_via_fpsync</span><span class="o">=</span><span class="s2">"</span><span class="k">${</span><span class="nv">single_src_item_abs</span><span class="p">%/</span><span class="k">}</span><span class="s2">/"</span> <span class="c"># Ensure trailing slash</span>
+    <span class="c"># else: single source item is a file, path_to_sync_via_fpsync remains unset</span>
+    <span class="c"># and will be handled by the tar aggregation logic below.</span>
+    <span class="k">fi
+  fi</span>
+
+  <span class="c"># Case 2: Multiple sources OR a single source item that is a file</span>
+  <span class="c"># (i.e., path_to_sync_via_fpsync is still unset).</span>
+  <span class="c"># Sources will be aggregated into a temporary TAR archive.</span>
+  <span class="k">if</span> <span class="o">[</span> <span class="nt">-z</span> <span class="s2">"</span><span class="nv">$path_to_sync_via_fpsync</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then
+    </span><span class="nb">echo</span> <span class="s2">"INFO: Mode: Multiple sources or single file source detected. Aggregating into a temporary TAR archive for fpsync."</span>
+    
+    <span class="c"># Attempt to create a temporary file for the tar archive</span>
+    <span class="nv">tmp_source_tar_file_path</span><span class="o">=</span><span class="si">$(</span><span class="nb">mktemp</span> <span class="s2">"</span><span class="k">${</span><span class="nv">TMPDIR</span><span class="k">:-</span><span class="p">/tmp</span><span class="k">}</span><span class="s2">/cesto_aggregate.XXXXXXXXXX.tar"</span><span class="si">)</span>
+    <span class="c"># Check mktemp's success and if the file was created.</span>
+    <span class="k">if</span> <span class="o">[</span> <span class="nv">$?</span> <span class="nt">-ne</span> 0 <span class="o">]</span> <span class="o">||</span> <span class="o">[</span> <span class="nt">-z</span> <span class="s2">"</span><span class="nv">$tmp_source_tar_file_path</span><span class="s2">"</span> <span class="o">]</span> <span class="o">||</span> <span class="o">[</span> <span class="o">!</span> <span class="nt">-f</span> <span class="s2">"</span><span class="nv">$tmp_source_tar_file_path</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then
+      </span><span class="nb">echo</span> <span class="s2">"Error: Failed to create temporary source TAR archive path using mktemp."</span> <span class="o">&gt;</span>&amp;2
+      <span class="nv">tmp_source_tar_file_path</span><span class="o">=</span><span class="s2">""</span> <span class="c"># Ensure var is empty so trap does nothing for this path</span>
+      <span class="k">return </span>1
+    <span class="k">fi</span>
+    <span class="c"># The trap is already set and will use the new value of tmp_source_tar_file_path when it executes.</span>
+
+    <span class="nb">local </span><span class="nv">files_to_tar_array</span><span class="o">=()</span>
+    <span class="nb">local </span><span class="nv">item_prepared_for_tar</span><span class="o">=</span>0
+    <span class="k">for </span>src_item_orig <span class="k">in</span> <span class="s2">"</span><span class="k">${</span><span class="nv">sources_array</span><span class="p">[@]</span><span class="k">}</span><span class="s2">"</span><span class="p">;</span> <span class="k">do
+      </span><span class="nb">local </span>src_item_abs <span class="c"># Will hold absolute path of the current source item</span>
+      <span class="nv">src_item_abs</span><span class="o">=</span><span class="si">$(</span><span class="nb">readlink</span> <span class="nt">-f</span> <span class="s2">"</span><span class="nv">$src_item_orig</span><span class="s2">"</span><span class="si">)</span>
+
+      <span class="k">if</span> <span class="o">[</span> <span class="nt">-z</span> <span class="s2">"</span><span class="nv">$src_item_abs</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then
+        </span><span class="nb">echo</span> <span class="s2">"Warning: Could not resolve source item </span><span class="se">\"</span><span class="nv">$src_item_orig</span><span class="se">\"</span><span class="s2"> to an absolute path. Skipping."</span> <span class="o">&gt;</span>&amp;2
+        <span class="k">continue
+      fi
+      if</span> <span class="o">[</span> <span class="o">!</span> <span class="nt">-e</span> <span class="s2">"</span><span class="nv">$src_item_abs</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then</span> <span class="c"># Check if it exists after full resolution</span>
+        <span class="nb">echo</span> <span class="s2">"Warning: Source item </span><span class="se">\"</span><span class="nv">$src_item_orig</span><span class="se">\"</span><span class="s2"> (resolved to </span><span class="se">\"</span><span class="nv">$src_item_abs</span><span class="se">\"</span><span class="s2">) does not exist. Skipping."</span> <span class="o">&gt;</span>&amp;2
+        <span class="k">continue
+      fi</span>
+      <span class="c"># If a source item is a directory, tar will include it recursively.</span>
+      files_to_tar_array+<span class="o">=(</span><span class="s2">"</span><span class="nv">$src_item_abs</span><span class="s2">"</span><span class="o">)</span>
+      <span class="nv">item_prepared_for_tar</span><span class="o">=</span>1
+    <span class="k">done
+
+    if</span> <span class="o">[</span> <span class="s2">"</span><span class="nv">$item_prepared_for_tar</span><span class="s2">"</span> <span class="nt">-eq</span> 0 <span class="o">]</span><span class="p">;</span> <span class="k">then
+      </span><span class="nb">echo</span> <span class="s2">"Error: No valid source items were found to add to the TAR archive."</span> <span class="o">&gt;</span>&amp;2
+      <span class="c"># The trap will clean up the empty mktemp-created tar file.</span>
+      <span class="k">return </span>1
+    <span class="k">fi
+
+    </span><span class="nb">echo</span> <span class="s2">"INFO: Creating temporary TAR archive: </span><span class="k">${</span><span class="nv">tmp_source_tar_file_path</span><span class="k">}</span><span class="s2">"</span>
+    <span class="nb">echo</span> <span class="s2">"      Archiving the following absolute paths (leading '/' typically stripped by GNU tar within archive):"</span>
+    <span class="nb">printf</span> <span class="s2">"      - %s</span><span class="se">\n</span><span class="s2">"</span> <span class="s2">"</span><span class="k">${</span><span class="nv">files_to_tar_array</span><span class="p">[@]</span><span class="k">}</span><span class="s2">"</span>
+    
+    <span class="c"># Using absolute paths; GNU tar by default strips leading '/' when archiving.</span>
+    <span class="c"># e.g., /home/user/file.txt becomes home/user/file.txt in the archive.</span>
+    <span class="c"># This is generally desirable for extraction into a target directory.</span>
+    <span class="k">if</span> <span class="o">!</span> <span class="nb">tar</span> <span class="nt">-cf</span> <span class="s2">"</span><span class="nv">$tmp_source_tar_file_path</span><span class="s2">"</span> <span class="s2">"</span><span class="k">${</span><span class="nv">files_to_tar_array</span><span class="p">[@]</span><span class="k">}</span><span class="s2">"</span><span class="p">;</span> <span class="k">then
+      </span><span class="nb">echo</span> <span class="s2">"Error: Failed to create temporary TAR archive with source items."</span> <span class="o">&gt;</span>&amp;2
+      <span class="c"># The trap will attempt to clean up tmp_source_tar_file_path.</span>
+      <span class="k">return </span>1
+    <span class="k">fi
+    </span><span class="nv">path_to_sync_via_fpsync</span><span class="o">=</span><span class="s2">"</span><span class="nv">$tmp_source_tar_file_path</span><span class="s2">"</span>
+  <span class="k">fi</span>
+
+  <span class="c"># --- Execution ---</span>
+  <span class="nb">echo</span> <span class="s2">"INFO: Running fpsync: </span><span class="se">\"</span><span class="k">${</span><span class="nv">path_to_sync_via_fpsync</span><span class="k">}</span><span class="se">\"</span><span class="s2"> -&gt; </span><span class="se">\"</span><span class="k">${</span><span class="nv">final_dest_dir_for_fpsync</span><span class="k">}</span><span class="se">\"</span><span class="s2">"</span>
+  <span class="c"># If path_to_sync_via_fpsync is a tar file, fpsync transfers it into final_dest_dir_for_fpsync</span>
+  <span class="c"># If path_to_sync_via_fpsync is a dir/, fpsync syncs its content into final_dest_dir_for_fpsync</span>
+  fpsync <span class="nt">-n</span> <span class="s2">"</span><span class="k">${</span><span class="nv">num_workers</span><span class="k">}</span><span class="s2">"</span> <span class="k">${</span><span class="nv">fpsync_opts</span><span class="k">}</span> <span class="s2">"</span><span class="k">${</span><span class="nv">path_to_sync_via_fpsync</span><span class="k">}</span><span class="s2">"</span> <span class="s2">"</span><span class="k">${</span><span class="nv">final_dest_dir_for_fpsync</span><span class="k">}</span><span class="s2">"</span>
+
+  <span class="nb">local </span><span class="nv">fpsync_status</span><span class="o">=</span><span class="nv">$?</span>
+
+  <span class="k">if</span> <span class="o">[</span> <span class="k">${</span><span class="nv">fpsync_status</span><span class="k">}</span> <span class="nt">-ne</span> 0 <span class="o">]</span><span class="p">;</span> <span class="k">then
+    </span><span class="nb">echo</span> <span class="s2">"Warning: fpsync operation completed with errors (status: </span><span class="k">${</span><span class="nv">fpsync_status</span><span class="k">}</span><span class="s2">)."</span> <span class="o">&gt;</span>&amp;2
+    <span class="k">if</span> <span class="o">[</span> <span class="nt">-n</span> <span class="s2">"</span><span class="nv">$tmp_source_tar_file_path</span><span class="s2">"</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="o">[</span> <span class="nt">-f</span> <span class="s2">"</span><span class="nv">$path_to_sync_via_fpsync</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then</span> <span class="c"># Check if we were in tar mode</span>
+        <span class="nb">local </span>tar_basename <span class="c"># For messaging about destination</span>
+        <span class="nv">tar_basename</span><span class="o">=</span><span class="si">$(</span><span class="nb">basename</span> <span class="s2">"</span><span class="nv">$tmp_source_tar_file_path</span><span class="s2">"</span><span class="si">)</span>
+        <span class="nb">echo</span> <span class="s2">"INFO: The source tar archive </span><span class="se">\"</span><span class="k">${</span><span class="nv">tar_basename</span><span class="k">}</span><span class="se">\"</span><span class="s2"> may have been partially transferred or may exist at the destination."</span>
+    <span class="k">fi
+  else
+    </span><span class="nb">echo</span> <span class="s2">"INFO: fpsync operation completed successfully."</span>
+    <span class="c"># If a temporary source TAR was used (i.e., path_to_sync_via_fpsync == tmp_source_tar_file_path),</span>
+    <span class="c"># attempt to extract it on the destination.</span>
+    <span class="k">if</span> <span class="o">[</span> <span class="nt">-n</span> <span class="s2">"</span><span class="nv">$tmp_source_tar_file_path</span><span class="s2">"</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="o">[</span> <span class="s2">"</span><span class="nv">$path_to_sync_via_fpsync</span><span class="s2">"</span> <span class="o">==</span> <span class="s2">"</span><span class="nv">$tmp_source_tar_file_path</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then
+      </span><span class="nb">local </span>tar_basename <span class="c"># Basename of the source tar file</span>
+      <span class="nv">tar_basename</span><span class="o">=</span><span class="si">$(</span><span class="nb">basename</span> <span class="s2">"</span><span class="nv">$tmp_source_tar_file_path</span><span class="s2">"</span><span class="si">)</span>
+      <span class="c"># Expected full path of the tar file on the destination side</span>
+      <span class="nb">local </span><span class="nv">dest_tar_archive_full_path</span><span class="o">=</span><span class="s2">"</span><span class="k">${</span><span class="nv">final_dest_dir_for_fpsync</span><span class="p">%/</span><span class="k">}</span><span class="s2">/</span><span class="k">${</span><span class="nv">tar_basename</span><span class="k">}</span><span class="s2">"</span>
+
+      <span class="c"># Basic check if destination path looks remote (user@host:path or protocol://...)</span>
+      <span class="k">if</span> <span class="o">[[</span> <span class="s2">"</span><span class="nv">$user_dest_dir</span><span class="s2">"</span> <span class="o">==</span> <span class="k">*</span>@<span class="k">*</span>:<span class="k">*</span> <span class="o">]]</span> <span class="o">||</span> <span class="o">[[</span> <span class="s2">"</span><span class="nv">$user_dest_dir</span><span class="s2">"</span> <span class="o">==</span> <span class="k">*</span>://<span class="k">*</span> <span class="o">]]</span><span class="p">;</span> <span class="k">then
+        </span><span class="nb">echo</span> <span class="s2">"INFO: Destination </span><span class="se">\"</span><span class="nv">$user_dest_dir</span><span class="se">\"</span><span class="s2"> appears to be remote."</span>
+        <span class="nb">echo</span> <span class="s2">"      IMPORTANT: Please manually extract </span><span class="se">\"</span><span class="k">${</span><span class="nv">tar_basename</span><span class="k">}</span><span class="se">\"</span><span class="s2"> within directory </span><span class="se">\"</span><span class="k">${</span><span class="nv">final_dest_dir_for_fpsync</span><span class="k">}</span><span class="se">\"</span><span class="s2">"</span>
+        <span class="nb">echo</span> <span class="s2">"      on the destination host, and then remove the tarball </span><span class="se">\"</span><span class="k">${</span><span class="nv">dest_tar_archive_full_path</span><span class="k">}</span><span class="se">\"</span><span class="s2"> from the destination if desired."</span>
+      <span class="k">else
+        </span><span class="nb">echo</span> <span class="s2">"INFO: Attempting to extract archive at local destination: </span><span class="se">\"</span><span class="k">${</span><span class="nv">dest_tar_archive_full_path</span><span class="k">}</span><span class="se">\"</span><span class="s2">"</span>
+        <span class="k">if</span> <span class="o">[</span> <span class="nt">-f</span> <span class="s2">"</span><span class="nv">$dest_tar_archive_full_path</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then</span>
+          <span class="c"># Extract into the final destination directory.</span>
+          <span class="c"># Using -C "${final_dest_dir_for_fpsync%/}" ensures paths from tar are relative to this dir.</span>
+          <span class="nb">echo</span> <span class="s2">"      Extracting using: tar -xf </span><span class="se">\"</span><span class="k">${</span><span class="nv">dest_tar_archive_full_path</span><span class="k">}</span><span class="se">\"</span><span class="s2"> -C </span><span class="se">\"</span><span class="k">${</span><span class="nv">final_dest_dir_for_fpsync</span><span class="p">%/</span><span class="k">}</span><span class="se">\"</span><span class="s2">"</span>
+          <span class="k">if </span><span class="nb">tar</span> <span class="nt">-xf</span> <span class="s2">"</span><span class="nv">$dest_tar_archive_full_path</span><span class="s2">"</span> <span class="nt">-C</span> <span class="s2">"</span><span class="k">${</span><span class="nv">final_dest_dir_for_fpsync</span><span class="p">%/</span><span class="k">}</span><span class="s2">"</span><span class="p">;</span> <span class="k">then
+            </span><span class="nb">echo</span> <span class="s2">"INFO: Archive extracted successfully into </span><span class="se">\"</span><span class="k">${</span><span class="nv">final_dest_dir_for_fpsync</span><span class="p">%/</span><span class="k">}</span><span class="se">\"</span><span class="s2">."</span>
+            <span class="nb">echo</span> <span class="s2">"INFO: Removing temporary archive from destination: </span><span class="se">\"</span><span class="k">${</span><span class="nv">dest_tar_archive_full_path</span><span class="k">}</span><span class="se">\"</span><span class="s2">"</span>
+            <span class="k">if</span> <span class="o">!</span> <span class="nb">rm</span> <span class="nt">-f</span> <span class="s2">"</span><span class="nv">$dest_tar_archive_full_path</span><span class="s2">"</span><span class="p">;</span> <span class="k">then
+              </span><span class="nb">echo</span> <span class="s2">"Warning: Failed to remove archive from destination: </span><span class="se">\"</span><span class="k">${</span><span class="nv">dest_tar_archive_full_path</span><span class="k">}</span><span class="se">\"</span><span class="s2">."</span>
+            <span class="k">fi
+          else
+            </span><span class="nb">echo</span> <span class="s2">"Error: Failed to extract archive at destination. Archive remains: </span><span class="se">\"</span><span class="k">${</span><span class="nv">dest_tar_archive_full_path</span><span class="k">}</span><span class="se">\"</span><span class="s2">."</span>
+          <span class="k">fi
+        else
+          </span><span class="nb">echo</span> <span class="s2">"Error: Transferred TAR archive not found at destination for extraction: </span><span class="se">\"</span><span class="k">${</span><span class="nv">dest_tar_archive_full_path</span><span class="k">}</span><span class="se">\"</span><span class="s2">."</span>
+          <span class="nb">echo</span> <span class="s2">"       This might indicate that fpsync failed to transfer the file completely or an issue with paths."</span>
+        <span class="k">fi
+      fi
+    fi
+  fi</span>
+  
+  <span class="c"># The EXIT trap will handle cleaning $tmp_source_tar_file_path (source side) if it was set and the file exists.</span>
+  <span class="k">return</span> <span class="k">${</span><span class="nv">fpsync_status</span><span class="k">}</span>
+<span class="o">}</span>
 </code></section></div></div><hr />
   <h2 id="4-systemd-user-ssh-agent-service-user">
     
@@ -1428,7 +1675,7 @@ p <span class="c"># Should attempt to ping example.com</span>
         
         
         <a href="https://ib.bsb.br/404" aria-label="404">
-          2025-05-17 19:51:04
+          2025-05-17 20:09:20
         </a>
         &#x23;
     
@@ -1496,7 +1743,7 @@ p <span class="c"># Should attempt to ping example.com</span>
         "headline": "/.bashrc",
         "description": "",
         "datePublished": "2024-04-14T00:00:00+00:00",
-        "dateModified": "2025-05-09T21:14:29+00:00",
+        "dateModified": "2025-05-17T23:06:10+00:00",
         "author": {
           "@type": "Person",
           "name": "Author"
