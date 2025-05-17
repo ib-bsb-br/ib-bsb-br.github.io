@@ -12,6 +12,34 @@ title: 'SBNB linux within Ubuntu Ansible Playbook'
 2.  **Provided Raw OS Image:** The bootable raw operating system image (e.g., created by mkosi or similar tools) MUST be present at the location specified by `provided_raw_image_path` (default: `/root/IncusOS.raw`) on the target machine. This image should contain a complete filesystem ready to be booted.
 3.  **Provided Incus Metadata Archive:** An Incus metadata archive (typically `metadata.tar.xz`) MUST be present at the location specified by `provided_metadata_path` (default: `/root/metadata.tar.xz`) on the target machine. This file describes the image properties to Incus, such as architecture, creation date, and OS details, which are crucial for `incus image import`. (Alternatively, a `metadata.yaml` file can sometimes be used, depending on how the image and metadata were originally packaged, though this playbook assumes `metadata.tar.xz` as per the original context).
 
+```yaml
+# Incus metadata for SBNB Linux VM Image
+architecture: "x86_64"
+creation_date: 1747850911 # Unix timestamp (seconds since epoch, UTC) for: Sat, 17 May 2025 12:48:31 GMT
+expiry_date: 0 # 0 means the image does not expire
+type: "virtual-machine" # Specifies that this image is for a virtual machine
+
+properties:
+  os: "SBNB Linux"
+  distribution: "sbnb-linux" # Often lowercase version of os property
+  release: "20250517" # Release identifier, YYYYMMDD format is common. Can be "rolling" or a specific version.
+  variant: "default"
+  architecture: "x86_64"
+  name: "sbnb-linux-20250517" # A descriptive name: os-release-variant
+  description: "SBNB Linux is a revolutionary minimalist Linux distribution designed to boot bare-metal servers and enable remote connections through fast tunnels. It is ideal for environments ranging from home labs to distributed data centers. SBNB Linux is simplified, automated, and resilient to power outages, supporting confidential computing to ensure secure operations in untrusted locations."
+  serial: "{{ image.serial }}" # Incus will populate this
+  requirements.secureboot: "false" # SBNB Linux's build.yml makes sbnb.efi, implies UEFI. Assume no explicit Secure Boot support.
+  requirements.csm: "false" # UEFI is expected.
+
+# For VM images, the 'templates' section is typically not used for guest file templating
+# as it is for containers. It can be omitted or left empty.
+templates: {}
+
+# The 'files' section lists files from the metadata archive itself that Incus processes.
+# For basic VM images, this is usually empty.
+files: []
+```
+
 —
 - name: Setup Incus and Start VM from Provided Image
   hosts: localhost * Designed to be run directly on the target bare-metal Ubuntu 24.04.
