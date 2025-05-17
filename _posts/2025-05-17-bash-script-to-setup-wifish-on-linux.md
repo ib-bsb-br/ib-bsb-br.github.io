@@ -6,7 +6,7 @@ type: post
 layout: post
 published: true
 slug: bash-script-to-setup-wifish-on-linux
-title: 'bash script to setup 'wifish' on Linux'
+title: "bash script to setup 'wifish' on Linux"
 ---
 {% codeblock bash %}
 #!/bin/bash
