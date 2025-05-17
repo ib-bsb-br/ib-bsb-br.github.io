@@ -1,4 +1,649 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2025-05-17T12:55:57+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">SBNB linux within Ubuntu Ansible Playbook</title><link href="https://ib.bsb.br/sbnb-ansible-ubuntu/" rel="alternate" type="text/html" title="SBNB linux within Ubuntu Ansible Playbook" /><published>2025-05-17T00:00:00+00:00</published><updated>2025-05-17T12:52:41+00:00</updated><id>https://ib.bsb.br/sbnb-ansible-ubuntu</id><content type="html" xml:base="https://ib.bsb.br/sbnb-ansible-ubuntu/"><![CDATA[<ol>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2025-05-17T22:51:04+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">bash script to setup ‘wifish’ on Linux</title><link href="https://ib.bsb.br/bash-script-to-setup-wifish-on-linux/" rel="alternate" type="text/html" title="bash script to setup ‘wifish’ on Linux" /><published>2025-05-17T00:00:00+00:00</published><updated>2025-05-17T22:44:46+00:00</updated><id>https://ib.bsb.br/bash-script-to-setup-wifish-on-linux</id><content type="html" xml:base="https://ib.bsb.br/bash-script-to-setup-wifish-on-linux/"><![CDATA[<section class="code-block-container" role="group" aria-label="Bash Code Block" data-filename="bash_code_block.sh" data-code="#!/bin/bash
+# This script automates the setup of &#39;wifish&#39; on a Debian Bullseye system.
+# Version 2: Improved backup, idempotency, and interface detection.
+#
+# IMPORTANT: This script makes certain assumptions:
+# 1. It should be run as root.
+# 2. It attempts to auto-detect the Wi-Fi interface. If detection fails or is
+#    incorrect, the default &quot;wlan0&quot; is used, or you may need to edit the script
+#    or use wifish with the -i flag.
+# 3. The active wpa_supplicant configuration file is assumed to be
+#    &#39;/etc/wpa_supplicant/wpa_supplicant.conf&#39;. If different, this needs to be changed.
+# 4. It will attempt to identify the primary non-root user (UID 1000 or SUDO_USER)
+#    to add to the &#39;netdev&#39; group.
+#
+# Review these assumptions and the script content before execution.
+
+set -e # Exit immediately if a command exits with a non-zero status.
+
+# --- Configuration ---
+DEFAULT_WIFI_INTERFACE=&quot;wlan0&quot;
+WPA_SUPPLICANT_CONF_FILE=&quot;/etc/wpa_supplicant/wpa_supplicant.conf&quot;
+WIFI_INTERFACE=&quot;&quot; # Will be auto-detected or fall back to DEFAULT_WIFI_INTERFACE
+
+# Determine the primary non-root user to add to the &#39;netdev&#39; group.
+PRIMARY_USER=&quot;&quot;
+if [ -n &quot;$SUDO_USER&quot; ] &amp;&amp; [ &quot;$SUDO_USER&quot; != &quot;root&quot; ]; then # Prefer SUDO_USER if available and not root
+    PRIMARY_USER=&quot;$SUDO_USER&quot;
+elif command -v id &gt;/dev/null &amp;&amp; id -u 1000 &amp;&gt;/dev/null; then # Try UID 1000
+    PRIMARY_USER_UID1000=$(id -un 1000)
+    if [ &quot;$PRIMARY_USER_UID1000&quot; != &quot;root&quot; ]; then # Ensure user 1000 is not root
+        PRIMARY_USER=&quot;$PRIMARY_USER_UID1000&quot;
+    fi
+fi
+# Fallback to parsing /etc/passwd if PRIMARY_USER is still not set
+if [ -z &quot;$PRIMARY_USER&quot; ]; then
+    PRIMARY_USER=$(awk -F: &#39;($3&gt;=1000 &amp;&amp; $1 != &quot;root&quot; &amp;&amp; $1 != &quot;&quot; &amp;&amp; $1 != &quot;nobody&quot;){print $1; exit}&#39; /etc/passwd)
+fi
+
+
+# --- Helper Functions ---
+log_action() {
+    echo &quot;[INFO] $1&quot;
+}
+
+log_warning() {
+    echo &quot;[WARNING] $1&quot;
+}
+
+log_error() {
+    echo &quot;[ERROR] $1&quot; &gt;&amp;2
+}
+
+# --- Wi-Fi Interface Detection ---
+detect_wifi_interface() {
+    log_action &quot;Attempting to auto-detect Wi-Fi interface...&quot;
+    local detected_iface=&quot;&quot;
+    # Try with &#39;iw dev&#39; first, common for Wi-Fi specific tools
+    if command -v iw &gt;/dev/null; then
+        detected_iface=$(iw dev | awk &#39;$1==&quot;Interface&quot;{print $2; exit}&#39;)
+    fi
+
+    # If &#39;iw dev&#39; didn&#39;t yield a result, try with &#39;ip link&#39; for wlan*
+    if [ -z &quot;$detected_iface&quot; ] &amp;&amp; command -v ip &gt;/dev/null; then
+        detected_iface=$(ip -o link show type wlan | awk -F&#39;: &#39; &#39;{print $2; exit}&#39; | awk &#39;{print $1}&#39;)
+    fi
+
+    # If still no result, try &#39;ip link&#39; for wlp* (common alternative naming)
+    if [ -z &quot;$detected_iface&quot; ] &amp;&amp; command -v ip &gt;/dev/null; then
+        detected_iface=$(ip -o link show | grep -Eo &#39;wlp[0-9]+s[0-9]+&#39; | head -n1)
+    fi
+
+    if [ -n &quot;$detected_iface&quot; ]; then
+        WIFI_INTERFACE=&quot;$detected_iface&quot;
+        log_action &quot;Detected Wi-Fi interface: $WIFI_INTERFACE. Using this.&quot;
+    else
+        WIFI_INTERFACE=&quot;$DEFAULT_WIFI_INTERFACE&quot;
+        log_warning &quot;Could not auto-detect Wi-Fi interface. Using default: $WIFI_INTERFACE.&quot;
+        log_warning &quot;If this is incorrect, review script or use wifish with the &#39;-i &lt;your_interface&gt;&#39; option.&quot;
+    fi
+}
+
+
+# --- Main Script ---
+
+# Check if running as root
+if [ &quot;$(id -u)&quot; -ne 0 ]; then
+  log_error &quot;This script must be run as root. Please use &#39;sudo $0&#39; or run as the root user.&quot;
+  exit 1
+fi
+
+detect_wifi_interface # Call detection function
+
+log_action &quot;Starting wifish setup script (v2)...&quot;
+log_action &quot;Using Wi-Fi Interface: ${WIFI_INTERFACE}&quot;
+log_action &quot;Targeting wpa_supplicant config: ${WPA_SUPPLICANT_CONF_FILE}&quot;
+
+if [ -n &quot;$PRIMARY_USER&quot; ]; then
+    log_action &quot;Primary non-root user identified for &#39;netdev&#39; group: ${PRIMARY_USER}&quot;
+else
+    log_warning &quot;Could not automatically detect a primary non-root user. Manual &#39;usermod -a -G netdev youruser&#39; might be required.&quot;
+fi
+echo &quot;---------------------------------------------------------------------&quot;
+
+# Phase 1: Prerequisites and Getting wifish
+log_action &quot;Phase 1: Installing prerequisites and getting wifish...&quot;
+log_action &quot;Updating package lists (apt update)...&quot;
+if ! apt update -qq; then
+    log_error &quot;apt update failed. Please check your network connection and apt sources.&quot;
+    exit 1
+fi
+
+log_action &quot;Installing gawk, dialog, git...&quot;
+if ! apt install -y gawk dialog git; then
+    log_error &quot;Failed to install required packages. Please check apt output for errors.&quot;
+    exit 1
+fi
+
+TEMP_WIFISH_DIR=&quot;/tmp/bougyman-wifish_install_temp_$(date +%Y%m%d%H%M%S)&quot;
+log_action &quot;Cloning wifish repository to $TEMP_WIFISH_DIR...&quot;
+rm -rf &quot;$TEMP_WIFISH_DIR&quot; # Clean up if exists
+if ! git clone https://github.com/bougyman/wifish.git &quot;$TEMP_WIFISH_DIR&quot;; then
+    log_error &quot;Failed to clone wifish repository. Check internet connection and git.&quot;
+    exit 1
+fi
+
+log_action &quot;Setting execute permissions for scripts in repository...&quot;
+(
+    cd &quot;$TEMP_WIFISH_DIR&quot;
+    chmod +x wifish install.sh test/test.sh
+    chmod +x sv/wpa_supplicant/run sv/wpa_supplicant/log/run
+)
+log_action &quot;Phase 1 complete.&quot;
+echo &quot;---------------------------------------------------------------------&quot;
+
+# Phase 2: Configuring wpa_supplicant
+log_action &quot;Phase 2: Configuring wpa_supplicant...&quot;
+log_action &quot;Ensuring wpa_supplicant configuration file directory exists: $(dirname &quot;$WPA_SUPPLICANT_CONF_FILE&quot;)&quot;
+mkdir -p &quot;$(dirname &quot;$WPA_SUPPLICANT_CONF_FILE&quot;)&quot;
+
+if [ ! -f &quot;$WPA_SUPPLICANT_CONF_FILE&quot; ]; then
+    log_action &quot;Creating empty wpa_supplicant configuration file: $WPA_SUPPLICANT_CONF_FILE&quot;
+    touch &quot;$WPA_SUPPLICANT_CONF_FILE&quot;
+fi
+
+TIMESTAMP=$(date +%Y%m%d%H%M%S)
+BACKUP_FILE=&quot;${WPA_SUPPLICANT_CONF_FILE}.${TIMESTAMP}.bak&quot;
+log_action &quot;Backing up current $WPA_SUPPLICANT_CONF_FILE to $BACKUP_FILE...&quot;
+if cp &quot;$WPA_SUPPLICANT_CONF_FILE&quot; &quot;$BACKUP_FILE&quot;; then
+    log_action &quot;Backup successful: $BACKUP_FILE&quot;
+else
+    log_warning &quot;Failed to create backup of $WPA_SUPPLICANT_CONF_FILE. Proceeding with caution.&quot;
+fi
+
+log_action &quot;Configuring &#39;ctrl_interface&#39; and &#39;update_config&#39; in $WPA_SUPPLICANT_CONF_FILE for idempotency...&quot;
+
+# Comment out any existing ctrl_interface lines to avoid conflicts
+sed -i -E &#39;s/^[[:space:]]*ctrl_interface=.*$/#&amp; (old_ctrl_interface, commented by wifish_setup.sh)/&#39; &quot;$WPA_SUPPLICANT_CONF_FILE&quot;
+# Add the correct ctrl_interface line if it&#39;s not already present (uncommented)
+if ! grep -qFx &quot;ctrl_interface=DIR=/run/wpa_supplicant GROUP=netdev&quot; &quot;$WPA_SUPPLICANT_CONF_FILE&quot;; then
+    log_action &quot;Adding &#39;ctrl_interface=DIR=/run/wpa_supplicant GROUP=netdev&#39; to $WPA_SUPPLICANT_CONF_FILE.&quot;
+    echo &quot;ctrl_interface=DIR=/run/wpa_supplicant GROUP=netdev&quot; &gt;&gt; &quot;$WPA_SUPPLICANT_CONF_FILE&quot;
+else
+    log_action &quot;&#39;ctrl_interface=DIR=/run/wpa_supplicant GROUP=netdev&#39; already present or re-added.&quot;
+fi
+
+# Comment out any existing update_config lines
+sed -i -E &#39;s/^[[:space:]]*update_config=.*$/#&amp; (old_update_config, commented by wifish_setup.sh)/&#39; &quot;$WPA_SUPPLICANT_CONF_FILE&quot;
+# Add the correct update_config line if it&#39;s not already present (uncommented)
+if ! grep -qFx &quot;update_config=1&quot; &quot;$WPA_SUPPLICANT_CONF_FILE&quot;; then
+    log_action &quot;Adding &#39;update_config=1&#39; to $WPA_SUPPLICANT_CONF_FILE.&quot;
+    echo &quot;update_config=1&quot; &gt;&gt; &quot;$WPA_SUPPLICANT_CONF_FILE&quot;
+else
+    log_action &quot;&#39;update_config=1&#39; already present or re-added.&quot;
+fi
+
+log_action &quot;Securing $WPA_SUPPLICANT_CONF_FILE permissions (chmod 600)...&quot;
+chmod 600 &quot;$WPA_SUPPLICANT_CONF_FILE&quot;
+
+USER_MODIFIED_LOGIN_MESSAGE=&quot;&quot;
+if [ -n &quot;$PRIMARY_USER&quot; ]; then
+    log_action &quot;Ensuring &#39;netdev&#39; group exists and adding user &#39;$PRIMARY_USER&#39; to it...&quot;
+    if ! getent group netdev &gt;/dev/null; then
+        log_action &quot;Group &#39;netdev&#39; does not exist. Creating it...&quot;
+        if ! groupadd --system netdev; then # Use --system for system groups if appropriate
+            log_warning &quot;Could not create group &#39;netdev&#39;. Manual creation (groupadd netdev) might be needed.&quot;
+        else
+            log_action &quot;Group &#39;netdev&#39; created.&quot;
+        fi
+    fi
+    # Check if user is already in group to avoid unnecessary usermod message
+    if ! groups &quot;$PRIMARY_USER&quot; | grep -q &#39;\bnetdev\b&#39;; then
+        if ! usermod -a -G netdev &quot;$PRIMARY_USER&quot;; then
+             log_warning &quot;Failed to add user &#39;$PRIMARY_USER&#39; to &#39;netdev&#39; group. Check permissions or do it manually.&quot;
+        else
+            USER_MODIFIED_LOGIN_MESSAGE=&quot;User &#39;$PRIMARY_USER&#39; has been added to the &#39;netdev&#39; group. IMPORTANT: &#39;$PRIMARY_USER&#39; MUST log out and log back in for this change to take effect.&quot;
+            log_action &quot;$USER_MODIFIED_LOGIN_MESSAGE&quot;
+        fi
+    else
+        log_action &quot;User &#39;$PRIMARY_USER&#39; is already a member of the &#39;netdev&#39; group.&quot;
+        USER_MODIFIED_LOGIN_MESSAGE=&quot;User &#39;$PRIMARY_USER&#39; is a member of &#39;netdev&#39;. If this membership is recent, a logout/login might still be needed for all services to recognize it.&quot;
+
+    fi
+else
+    USER_MODIFIED_LOGIN_MESSAGE=&quot;IMPORTANT: Could not automatically determine a primary non-root user. Please manually add your regular user to the &#39;netdev&#39; group (e.g., &#39;sudo usermod -a -G netdev yourusername&#39;) and then log out and log back in.&quot;
+    log_warning &quot;$USER_MODIFIED_LOGIN_MESSAGE&quot;
+fi
+
+log_action &quot;Attempting to restart wpa_supplicant for interface &#39;$WIFI_INTERFACE&#39;...&quot;
+WPA_RESTARTED_MANUALLY_MSG=&quot;If wpa_supplicant was restarted, it should pick up the new configuration. If not, a manual restart of wpa_supplicant or a system reboot might be necessary.&quot;
+
+SERVICE_NAME=&quot;wpa_supplicant@${WIFI_INTERFACE}.service&quot;
+SERVICE_EXISTS=false
+if systemctl list-unit-files | grep -q &quot;^${SERVICE_NAME}&quot;; then # More precise grep
+    SERVICE_EXISTS=true
+fi
+
+if [ &quot;$SERVICE_EXISTS&quot; = true ]; then
+    log_action &quot;${SERVICE_NAME} found.&quot;
+    if systemctl is-active --quiet &quot;${SERVICE_NAME}&quot;; then
+        log_action &quot;Restarting ${SERVICE_NAME} via systemd...&quot;
+        if ! systemctl restart &quot;${SERVICE_NAME}&quot;; then
+            log_warning &quot;Failed to restart ${SERVICE_NAME}. Check &#39;systemctl status ${SERVICE_NAME}&#39; and &#39;journalctl -u ${SERVICE_NAME}&#39;.&quot;
+        fi
+    else
+        log_action &quot;${SERVICE_NAME} exists but is not active. Attempting to enable and start it...&quot;
+        if ! systemctl enable &quot;${SERVICE_NAME}&quot; --now; then
+             log_warning &quot;Failed to enable and start ${SERVICE_NAME}. Check status and journal.&quot;
+        fi
+    fi
+elif [ -f &quot;/etc/network/interfaces&quot; ] &amp;&amp; grep -q &quot;iface ${WIFI_INTERFACE} inet&quot; /etc/network/interfaces; then # More specific grep
+    log_action &quot;Attempting to restart network interface ${WIFI_INTERFACE} via ifdown/ifup...&quot;
+    ifdown &quot;${WIFI_INTERFACE}&quot; &gt;/dev/null 2&gt;&amp;1 || true # Ignore errors if already down
+    if ! ifup &quot;${WIFI_INTERFACE}&quot;; then
+        log_warning &quot;ifup ${WIFI_INTERFACE} failed. Manual network reconfiguration might be needed. Check /etc/network/interfaces configuration.&quot;
+    fi
+else
+    WPA_RESTARTED_MANUALLY_MSG=&quot;Could not determine how wpa_supplicant is managed for &#39;${WIFI_INTERFACE}&#39; (no specific systemd service or /etc/network/interfaces entry found). A manual restart of wpa_supplicant or a system reboot might be necessary to apply configuration changes.&quot;
+    log_warning &quot;$WPA_RESTARTED_MANUALLY_MSG&quot;
+fi
+log_action &quot;Phase 2 complete.&quot;
+echo &quot;---------------------------------------------------------------------&quot;
+
+# Phase 3: Implementing wifish (System-Wide Installation)
+log_action &quot;Phase 3: Installing wifish system-wide...&quot;
+(
+    cd &quot;$TEMP_WIFISH_DIR&quot;
+    log_action &quot;Running install.sh from wifish repository (current directory: $(pwd))...&quot;
+    if ! ./install.sh; then
+        log_error &quot;wifish install.sh script failed. Please check output for errors.&quot;
+        log_action &quot;Cleaning up temporary directory $TEMP_WIFISH_DIR...&quot;
+        rm -rf &quot;$TEMP_WIFISH_DIR&quot;
+        exit 1
+    fi
+)
+log_action &quot;wifish&#39;s install.sh completed.&quot;
+if [ -f &quot;$TEMP_WIFISH_DIR/test/test.sh&quot; ]; then
+    log_action &quot;The wifish repository includes a test script: $TEMP_WIFISH_DIR/test/test.sh&quot;
+    log_action &quot;You can explore running it manually from the &#39;$TEMP_WIFISH_DIR&#39; directory if desired (e.g., &#39;./test/test.sh&#39;).&quot;
+    log_action &quot;Note: This test script typically mocks wpa_cli and runs its own checks.&quot;
+fi
+log_action &quot;Phase 3 complete.&quot;
+echo &quot;---------------------------------------------------------------------&quot;
+
+# Phase 4: Using wifish (Information for the user)
+log_action &quot;Phase 4: Information on using wifish...&quot;
+log_action &quot;wifish should now be installed and available as the &#39;wifish&#39; command.&quot;
+log_action &quot;Example usage (as the non-root user, AFTER they have logged back in if their group membership was changed):&quot;
+log_action &quot;  wifish list&quot;
+log_action &quot;  wifish menu&quot;
+log_action &quot;  wifish connect \&quot;Your_Network_SSID\&quot;&quot;
+log_action &quot; &quot;
+log_action &quot;If wifish needs to target a specific interface (detected/defaulted to &#39;${WIFI_INTERFACE}&#39;), use:&quot;
+log_action &quot;  wifish -i ${WIFI_INTERFACE} menu&quot;
+log_action &quot;or set the environment variable for the session:&quot;
+log_action &quot;  export WPA_CLI_INTERFACE=${WIFI_INTERFACE}  (unset with &#39;unset WPA_CLI_INTERFACE&#39;)&quot;
+log_action &quot; &quot;
+log_action &quot;IMPORTANT NOTE ON IP ADDRESS:&quot;
+log_action &quot;wifish handles the Wi-Fi connection (association). After connecting,&quot;
+log_action &quot;your system still needs an IP address to access the internet.&quot;
+log_action &quot;If not configured automatically, run as root (or with sudo):&quot;
+log_action &quot;  dhclient ${WIFI_INTERFACE}&quot;
+log_action &quot;(Or use another DHCP client like &#39;dhcpcd5&#39; if installed and preferred, or check &#39;systemd-networkd&#39; if active).&quot;
+log_action &quot;Phase 4 complete.&quot;
+echo &quot;---------------------------------------------------------------------&quot;
+
+# Final messages
+log_action &quot;wifish setup script finished.&quot;
+if [ -n &quot;$USER_MODIFIED_LOGIN_MESSAGE&quot; ]; then
+    log_action &quot;$USER_MODIFIED_LOGIN_MESSAGE&quot;
+fi
+log_action &quot;$WPA_RESTARTED_MANUALLY_MSG&quot;
+log_action &quot; &quot;
+log_action &quot;To test, AFTER the designated user (&#39;${PRIMARY_USER:-your regular user}&#39;) has potentially logged out and back in:&quot;
+log_action &quot;1. Open a new terminal as that user.&quot;
+log_action &quot;2. Run &#39;wpa_cli status&#39;. It should show connection details without needing sudo.&quot;
+log_action &quot;3. Run &#39;wifish list&#39; or &#39;wifish menu&#39;.&quot;
+log_action &quot; &quot;
+log_action &quot;The script used Wi-Fi interface &#39;${WIFI_INTERFACE}&#39;. If this was incorrect,&quot;
+log_action &quot;use wifish with the &#39;-i &lt;your_actual_interface&gt;&#39; flag.&quot;
+
+log_action &quot;Cleaning up temporary directory $TEMP_WIFISH_DIR...&quot;
+rm -rf &quot;$TEMP_WIFISH_DIR&quot;
+
+log_action &quot;Setup complete. Backup of wpa_supplicant config (if it existed) is at: $BACKUP_FILE&quot;
+echo &quot;---------------------------------------------------------------------&quot;
+
+exit 0" data-download-link="" data-download-label="Download Bash">
+  <code class="language-bash">#!/bin/bash
+# This script automates the setup of &#39;wifish&#39; on a Debian Bullseye system.
+# Version 2: Improved backup, idempotency, and interface detection.
+#
+# IMPORTANT: This script makes certain assumptions:
+# 1. It should be run as root.
+# 2. It attempts to auto-detect the Wi-Fi interface. If detection fails or is
+#    incorrect, the default &quot;wlan0&quot; is used, or you may need to edit the script
+#    or use wifish with the -i flag.
+# 3. The active wpa_supplicant configuration file is assumed to be
+#    &#39;/etc/wpa_supplicant/wpa_supplicant.conf&#39;. If different, this needs to be changed.
+# 4. It will attempt to identify the primary non-root user (UID 1000 or SUDO_USER)
+#    to add to the &#39;netdev&#39; group.
+#
+# Review these assumptions and the script content before execution.
+
+set -e # Exit immediately if a command exits with a non-zero status.
+
+# --- Configuration ---
+DEFAULT_WIFI_INTERFACE=&quot;wlan0&quot;
+WPA_SUPPLICANT_CONF_FILE=&quot;/etc/wpa_supplicant/wpa_supplicant.conf&quot;
+WIFI_INTERFACE=&quot;&quot; # Will be auto-detected or fall back to DEFAULT_WIFI_INTERFACE
+
+# Determine the primary non-root user to add to the &#39;netdev&#39; group.
+PRIMARY_USER=&quot;&quot;
+if [ -n &quot;$SUDO_USER&quot; ] &amp;&amp; [ &quot;$SUDO_USER&quot; != &quot;root&quot; ]; then # Prefer SUDO_USER if available and not root
+    PRIMARY_USER=&quot;$SUDO_USER&quot;
+elif command -v id &gt;/dev/null &amp;&amp; id -u 1000 &amp;&gt;/dev/null; then # Try UID 1000
+    PRIMARY_USER_UID1000=$(id -un 1000)
+    if [ &quot;$PRIMARY_USER_UID1000&quot; != &quot;root&quot; ]; then # Ensure user 1000 is not root
+        PRIMARY_USER=&quot;$PRIMARY_USER_UID1000&quot;
+    fi
+fi
+# Fallback to parsing /etc/passwd if PRIMARY_USER is still not set
+if [ -z &quot;$PRIMARY_USER&quot; ]; then
+    PRIMARY_USER=$(awk -F: &#39;($3&gt;=1000 &amp;&amp; $1 != &quot;root&quot; &amp;&amp; $1 != &quot;&quot; &amp;&amp; $1 != &quot;nobody&quot;){print $1; exit}&#39; /etc/passwd)
+fi
+
+
+# --- Helper Functions ---
+log_action() {
+    echo &quot;[INFO] $1&quot;
+}
+
+log_warning() {
+    echo &quot;[WARNING] $1&quot;
+}
+
+log_error() {
+    echo &quot;[ERROR] $1&quot; &gt;&amp;2
+}
+
+# --- Wi-Fi Interface Detection ---
+detect_wifi_interface() {
+    log_action &quot;Attempting to auto-detect Wi-Fi interface...&quot;
+    local detected_iface=&quot;&quot;
+    # Try with &#39;iw dev&#39; first, common for Wi-Fi specific tools
+    if command -v iw &gt;/dev/null; then
+        detected_iface=$(iw dev | awk &#39;$1==&quot;Interface&quot;{print $2; exit}&#39;)
+    fi
+
+    # If &#39;iw dev&#39; didn&#39;t yield a result, try with &#39;ip link&#39; for wlan*
+    if [ -z &quot;$detected_iface&quot; ] &amp;&amp; command -v ip &gt;/dev/null; then
+        detected_iface=$(ip -o link show type wlan | awk -F&#39;: &#39; &#39;{print $2; exit}&#39; | awk &#39;{print $1}&#39;)
+    fi
+
+    # If still no result, try &#39;ip link&#39; for wlp* (common alternative naming)
+    if [ -z &quot;$detected_iface&quot; ] &amp;&amp; command -v ip &gt;/dev/null; then
+        detected_iface=$(ip -o link show | grep -Eo &#39;wlp[0-9]+s[0-9]+&#39; | head -n1)
+    fi
+
+    if [ -n &quot;$detected_iface&quot; ]; then
+        WIFI_INTERFACE=&quot;$detected_iface&quot;
+        log_action &quot;Detected Wi-Fi interface: $WIFI_INTERFACE. Using this.&quot;
+    else
+        WIFI_INTERFACE=&quot;$DEFAULT_WIFI_INTERFACE&quot;
+        log_warning &quot;Could not auto-detect Wi-Fi interface. Using default: $WIFI_INTERFACE.&quot;
+        log_warning &quot;If this is incorrect, review script or use wifish with the &#39;-i &lt;your_interface&gt;&#39; option.&quot;
+    fi
+}
+
+
+# --- Main Script ---
+
+# Check if running as root
+if [ &quot;$(id -u)&quot; -ne 0 ]; then
+  log_error &quot;This script must be run as root. Please use &#39;sudo $0&#39; or run as the root user.&quot;
+  exit 1
+fi
+
+detect_wifi_interface # Call detection function
+
+log_action &quot;Starting wifish setup script (v2)...&quot;
+log_action &quot;Using Wi-Fi Interface: ${WIFI_INTERFACE}&quot;
+log_action &quot;Targeting wpa_supplicant config: ${WPA_SUPPLICANT_CONF_FILE}&quot;
+
+if [ -n &quot;$PRIMARY_USER&quot; ]; then
+    log_action &quot;Primary non-root user identified for &#39;netdev&#39; group: ${PRIMARY_USER}&quot;
+else
+    log_warning &quot;Could not automatically detect a primary non-root user. Manual &#39;usermod -a -G netdev youruser&#39; might be required.&quot;
+fi
+echo &quot;---------------------------------------------------------------------&quot;
+
+# Phase 1: Prerequisites and Getting wifish
+log_action &quot;Phase 1: Installing prerequisites and getting wifish...&quot;
+log_action &quot;Updating package lists (apt update)...&quot;
+if ! apt update -qq; then
+    log_error &quot;apt update failed. Please check your network connection and apt sources.&quot;
+    exit 1
+fi
+
+log_action &quot;Installing gawk, dialog, git...&quot;
+if ! apt install -y gawk dialog git; then
+    log_error &quot;Failed to install required packages. Please check apt output for errors.&quot;
+    exit 1
+fi
+
+TEMP_WIFISH_DIR=&quot;/tmp/bougyman-wifish_install_temp_$(date +%Y%m%d%H%M%S)&quot;
+log_action &quot;Cloning wifish repository to $TEMP_WIFISH_DIR...&quot;
+rm -rf &quot;$TEMP_WIFISH_DIR&quot; # Clean up if exists
+if ! git clone https://github.com/bougyman/wifish.git &quot;$TEMP_WIFISH_DIR&quot;; then
+    log_error &quot;Failed to clone wifish repository. Check internet connection and git.&quot;
+    exit 1
+fi
+
+log_action &quot;Setting execute permissions for scripts in repository...&quot;
+(
+    cd &quot;$TEMP_WIFISH_DIR&quot;
+    chmod +x wifish install.sh test/test.sh
+    chmod +x sv/wpa_supplicant/run sv/wpa_supplicant/log/run
+)
+log_action &quot;Phase 1 complete.&quot;
+echo &quot;---------------------------------------------------------------------&quot;
+
+# Phase 2: Configuring wpa_supplicant
+log_action &quot;Phase 2: Configuring wpa_supplicant...&quot;
+log_action &quot;Ensuring wpa_supplicant configuration file directory exists: $(dirname &quot;$WPA_SUPPLICANT_CONF_FILE&quot;)&quot;
+mkdir -p &quot;$(dirname &quot;$WPA_SUPPLICANT_CONF_FILE&quot;)&quot;
+
+if [ ! -f &quot;$WPA_SUPPLICANT_CONF_FILE&quot; ]; then
+    log_action &quot;Creating empty wpa_supplicant configuration file: $WPA_SUPPLICANT_CONF_FILE&quot;
+    touch &quot;$WPA_SUPPLICANT_CONF_FILE&quot;
+fi
+
+TIMESTAMP=$(date +%Y%m%d%H%M%S)
+BACKUP_FILE=&quot;${WPA_SUPPLICANT_CONF_FILE}.${TIMESTAMP}.bak&quot;
+log_action &quot;Backing up current $WPA_SUPPLICANT_CONF_FILE to $BACKUP_FILE...&quot;
+if cp &quot;$WPA_SUPPLICANT_CONF_FILE&quot; &quot;$BACKUP_FILE&quot;; then
+    log_action &quot;Backup successful: $BACKUP_FILE&quot;
+else
+    log_warning &quot;Failed to create backup of $WPA_SUPPLICANT_CONF_FILE. Proceeding with caution.&quot;
+fi
+
+log_action &quot;Configuring &#39;ctrl_interface&#39; and &#39;update_config&#39; in $WPA_SUPPLICANT_CONF_FILE for idempotency...&quot;
+
+# Comment out any existing ctrl_interface lines to avoid conflicts
+sed -i -E &#39;s/^[[:space:]]*ctrl_interface=.*$/#&amp; (old_ctrl_interface, commented by wifish_setup.sh)/&#39; &quot;$WPA_SUPPLICANT_CONF_FILE&quot;
+# Add the correct ctrl_interface line if it&#39;s not already present (uncommented)
+if ! grep -qFx &quot;ctrl_interface=DIR=/run/wpa_supplicant GROUP=netdev&quot; &quot;$WPA_SUPPLICANT_CONF_FILE&quot;; then
+    log_action &quot;Adding &#39;ctrl_interface=DIR=/run/wpa_supplicant GROUP=netdev&#39; to $WPA_SUPPLICANT_CONF_FILE.&quot;
+    echo &quot;ctrl_interface=DIR=/run/wpa_supplicant GROUP=netdev&quot; &gt;&gt; &quot;$WPA_SUPPLICANT_CONF_FILE&quot;
+else
+    log_action &quot;&#39;ctrl_interface=DIR=/run/wpa_supplicant GROUP=netdev&#39; already present or re-added.&quot;
+fi
+
+# Comment out any existing update_config lines
+sed -i -E &#39;s/^[[:space:]]*update_config=.*$/#&amp; (old_update_config, commented by wifish_setup.sh)/&#39; &quot;$WPA_SUPPLICANT_CONF_FILE&quot;
+# Add the correct update_config line if it&#39;s not already present (uncommented)
+if ! grep -qFx &quot;update_config=1&quot; &quot;$WPA_SUPPLICANT_CONF_FILE&quot;; then
+    log_action &quot;Adding &#39;update_config=1&#39; to $WPA_SUPPLICANT_CONF_FILE.&quot;
+    echo &quot;update_config=1&quot; &gt;&gt; &quot;$WPA_SUPPLICANT_CONF_FILE&quot;
+else
+    log_action &quot;&#39;update_config=1&#39; already present or re-added.&quot;
+fi
+
+log_action &quot;Securing $WPA_SUPPLICANT_CONF_FILE permissions (chmod 600)...&quot;
+chmod 600 &quot;$WPA_SUPPLICANT_CONF_FILE&quot;
+
+USER_MODIFIED_LOGIN_MESSAGE=&quot;&quot;
+if [ -n &quot;$PRIMARY_USER&quot; ]; then
+    log_action &quot;Ensuring &#39;netdev&#39; group exists and adding user &#39;$PRIMARY_USER&#39; to it...&quot;
+    if ! getent group netdev &gt;/dev/null; then
+        log_action &quot;Group &#39;netdev&#39; does not exist. Creating it...&quot;
+        if ! groupadd --system netdev; then # Use --system for system groups if appropriate
+            log_warning &quot;Could not create group &#39;netdev&#39;. Manual creation (groupadd netdev) might be needed.&quot;
+        else
+            log_action &quot;Group &#39;netdev&#39; created.&quot;
+        fi
+    fi
+    # Check if user is already in group to avoid unnecessary usermod message
+    if ! groups &quot;$PRIMARY_USER&quot; | grep -q &#39;\bnetdev\b&#39;; then
+        if ! usermod -a -G netdev &quot;$PRIMARY_USER&quot;; then
+             log_warning &quot;Failed to add user &#39;$PRIMARY_USER&#39; to &#39;netdev&#39; group. Check permissions or do it manually.&quot;
+        else
+            USER_MODIFIED_LOGIN_MESSAGE=&quot;User &#39;$PRIMARY_USER&#39; has been added to the &#39;netdev&#39; group. IMPORTANT: &#39;$PRIMARY_USER&#39; MUST log out and log back in for this change to take effect.&quot;
+            log_action &quot;$USER_MODIFIED_LOGIN_MESSAGE&quot;
+        fi
+    else
+        log_action &quot;User &#39;$PRIMARY_USER&#39; is already a member of the &#39;netdev&#39; group.&quot;
+        USER_MODIFIED_LOGIN_MESSAGE=&quot;User &#39;$PRIMARY_USER&#39; is a member of &#39;netdev&#39;. If this membership is recent, a logout/login might still be needed for all services to recognize it.&quot;
+
+    fi
+else
+    USER_MODIFIED_LOGIN_MESSAGE=&quot;IMPORTANT: Could not automatically determine a primary non-root user. Please manually add your regular user to the &#39;netdev&#39; group (e.g., &#39;sudo usermod -a -G netdev yourusername&#39;) and then log out and log back in.&quot;
+    log_warning &quot;$USER_MODIFIED_LOGIN_MESSAGE&quot;
+fi
+
+log_action &quot;Attempting to restart wpa_supplicant for interface &#39;$WIFI_INTERFACE&#39;...&quot;
+WPA_RESTARTED_MANUALLY_MSG=&quot;If wpa_supplicant was restarted, it should pick up the new configuration. If not, a manual restart of wpa_supplicant or a system reboot might be necessary.&quot;
+
+SERVICE_NAME=&quot;wpa_supplicant@${WIFI_INTERFACE}.service&quot;
+SERVICE_EXISTS=false
+if systemctl list-unit-files | grep -q &quot;^${SERVICE_NAME}&quot;; then # More precise grep
+    SERVICE_EXISTS=true
+fi
+
+if [ &quot;$SERVICE_EXISTS&quot; = true ]; then
+    log_action &quot;${SERVICE_NAME} found.&quot;
+    if systemctl is-active --quiet &quot;${SERVICE_NAME}&quot;; then
+        log_action &quot;Restarting ${SERVICE_NAME} via systemd...&quot;
+        if ! systemctl restart &quot;${SERVICE_NAME}&quot;; then
+            log_warning &quot;Failed to restart ${SERVICE_NAME}. Check &#39;systemctl status ${SERVICE_NAME}&#39; and &#39;journalctl -u ${SERVICE_NAME}&#39;.&quot;
+        fi
+    else
+        log_action &quot;${SERVICE_NAME} exists but is not active. Attempting to enable and start it...&quot;
+        if ! systemctl enable &quot;${SERVICE_NAME}&quot; --now; then
+             log_warning &quot;Failed to enable and start ${SERVICE_NAME}. Check status and journal.&quot;
+        fi
+    fi
+elif [ -f &quot;/etc/network/interfaces&quot; ] &amp;&amp; grep -q &quot;iface ${WIFI_INTERFACE} inet&quot; /etc/network/interfaces; then # More specific grep
+    log_action &quot;Attempting to restart network interface ${WIFI_INTERFACE} via ifdown/ifup...&quot;
+    ifdown &quot;${WIFI_INTERFACE}&quot; &gt;/dev/null 2&gt;&amp;1 || true # Ignore errors if already down
+    if ! ifup &quot;${WIFI_INTERFACE}&quot;; then
+        log_warning &quot;ifup ${WIFI_INTERFACE} failed. Manual network reconfiguration might be needed. Check /etc/network/interfaces configuration.&quot;
+    fi
+else
+    WPA_RESTARTED_MANUALLY_MSG=&quot;Could not determine how wpa_supplicant is managed for &#39;${WIFI_INTERFACE}&#39; (no specific systemd service or /etc/network/interfaces entry found). A manual restart of wpa_supplicant or a system reboot might be necessary to apply configuration changes.&quot;
+    log_warning &quot;$WPA_RESTARTED_MANUALLY_MSG&quot;
+fi
+log_action &quot;Phase 2 complete.&quot;
+echo &quot;---------------------------------------------------------------------&quot;
+
+# Phase 3: Implementing wifish (System-Wide Installation)
+log_action &quot;Phase 3: Installing wifish system-wide...&quot;
+(
+    cd &quot;$TEMP_WIFISH_DIR&quot;
+    log_action &quot;Running install.sh from wifish repository (current directory: $(pwd))...&quot;
+    if ! ./install.sh; then
+        log_error &quot;wifish install.sh script failed. Please check output for errors.&quot;
+        log_action &quot;Cleaning up temporary directory $TEMP_WIFISH_DIR...&quot;
+        rm -rf &quot;$TEMP_WIFISH_DIR&quot;
+        exit 1
+    fi
+)
+log_action &quot;wifish&#39;s install.sh completed.&quot;
+if [ -f &quot;$TEMP_WIFISH_DIR/test/test.sh&quot; ]; then
+    log_action &quot;The wifish repository includes a test script: $TEMP_WIFISH_DIR/test/test.sh&quot;
+    log_action &quot;You can explore running it manually from the &#39;$TEMP_WIFISH_DIR&#39; directory if desired (e.g., &#39;./test/test.sh&#39;).&quot;
+    log_action &quot;Note: This test script typically mocks wpa_cli and runs its own checks.&quot;
+fi
+log_action &quot;Phase 3 complete.&quot;
+echo &quot;---------------------------------------------------------------------&quot;
+
+# Phase 4: Using wifish (Information for the user)
+log_action &quot;Phase 4: Information on using wifish...&quot;
+log_action &quot;wifish should now be installed and available as the &#39;wifish&#39; command.&quot;
+log_action &quot;Example usage (as the non-root user, AFTER they have logged back in if their group membership was changed):&quot;
+log_action &quot;  wifish list&quot;
+log_action &quot;  wifish menu&quot;
+log_action &quot;  wifish connect \&quot;Your_Network_SSID\&quot;&quot;
+log_action &quot; &quot;
+log_action &quot;If wifish needs to target a specific interface (detected/defaulted to &#39;${WIFI_INTERFACE}&#39;), use:&quot;
+log_action &quot;  wifish -i ${WIFI_INTERFACE} menu&quot;
+log_action &quot;or set the environment variable for the session:&quot;
+log_action &quot;  export WPA_CLI_INTERFACE=${WIFI_INTERFACE}  (unset with &#39;unset WPA_CLI_INTERFACE&#39;)&quot;
+log_action &quot; &quot;
+log_action &quot;IMPORTANT NOTE ON IP ADDRESS:&quot;
+log_action &quot;wifish handles the Wi-Fi connection (association). After connecting,&quot;
+log_action &quot;your system still needs an IP address to access the internet.&quot;
+log_action &quot;If not configured automatically, run as root (or with sudo):&quot;
+log_action &quot;  dhclient ${WIFI_INTERFACE}&quot;
+log_action &quot;(Or use another DHCP client like &#39;dhcpcd5&#39; if installed and preferred, or check &#39;systemd-networkd&#39; if active).&quot;
+log_action &quot;Phase 4 complete.&quot;
+echo &quot;---------------------------------------------------------------------&quot;
+
+# Final messages
+log_action &quot;wifish setup script finished.&quot;
+if [ -n &quot;$USER_MODIFIED_LOGIN_MESSAGE&quot; ]; then
+    log_action &quot;$USER_MODIFIED_LOGIN_MESSAGE&quot;
+fi
+log_action &quot;$WPA_RESTARTED_MANUALLY_MSG&quot;
+log_action &quot; &quot;
+log_action &quot;To test, AFTER the designated user (&#39;${PRIMARY_USER:-your regular user}&#39;) has potentially logged out and back in:&quot;
+log_action &quot;1. Open a new terminal as that user.&quot;
+log_action &quot;2. Run &#39;wpa_cli status&#39;. It should show connection details without needing sudo.&quot;
+log_action &quot;3. Run &#39;wifish list&#39; or &#39;wifish menu&#39;.&quot;
+log_action &quot; &quot;
+log_action &quot;The script used Wi-Fi interface &#39;${WIFI_INTERFACE}&#39;. If this was incorrect,&quot;
+log_action &quot;use wifish with the &#39;-i &lt;your_actual_interface&gt;&#39; flag.&quot;
+
+log_action &quot;Cleaning up temporary directory $TEMP_WIFISH_DIR...&quot;
+rm -rf &quot;$TEMP_WIFISH_DIR&quot;
+
+log_action &quot;Setup complete. Backup of wpa_supplicant config (if it existed) is at: $BACKUP_FILE&quot;
+echo &quot;---------------------------------------------------------------------&quot;
+
+exit 0</code>
+</section>]]></content><author><name></name></author><category term="scripts&gt;bash" /><category term="software&gt;linux" /></entry><entry><title type="html">czkawka dedup workflow</title><link href="https://ib.bsb.br/czkawka-dedup-workflow/" rel="alternate" type="text/html" title="czkawka dedup workflow" /><published>2025-05-17T00:00:00+00:00</published><updated>2025-05-17T22:29:37+00:00</updated><id>https://ib.bsb.br/czkawka-dedup-workflow</id><content type="html" xml:base="https://ib.bsb.br/czkawka-dedup-workflow/"><![CDATA[<ol>
+  <li>
+    <p><strong>!!! BACKUP YOUR ENTIRE TARGET DIRECTORY !!!</strong></p>
+  </li>
+  <li>
+    <p>Carefully identify your <code class="language-plaintext highlighter-rouge">TARGET_DIR</code> (and any <code class="language-plaintext highlighter-rouge">-r</code> reference directories).</p>
+  </li>
+  <li><strong>Duplicate File Management (Czkawka CLI):</strong>
+    <ul>
+      <li><strong>Dry Run:</strong> <code class="language-plaintext highlighter-rouge">czkawka dup -d /your/target/dir [-r /your/reference/dir] -s HASH -D AEO --dry-run</code> (adjust <code class="language-plaintext highlighter-rouge">-m</code>, <code class="language-plaintext highlighter-rouge">-t</code>, <code class="language-plaintext highlighter-rouge">-D &lt;method&gt;</code> as needed).</li>
+      <li>Review output carefully.</li>
+      <li><strong>Actual Deletion:</strong>
+        <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>czkawka dup -d /mnt/my_data_drive/repository_to_clean -s HASH -t BLAKE3 -m 8192 -D AEO
+</code></pre></div>        </div>
+      </li>
+    </ul>
+  </li>
+  <li><strong>Empty File Deletion (Czkawka CLI):</strong>
+    <ul>
+      <li>Find: <code class="language-plaintext highlighter-rouge">czkawka empty-files -d /your/target/dir</code></li>
+      <li>Review.</li>
+      <li>Delete: <code class="language-plaintext highlighter-rouge">czkawka empty-files -d /mnt/my_data_drive/repository_to_clean -D</code></li>
+    </ul>
+  </li>
+  <li><strong>Empty Folder Deletion (Czkawka CLI):</strong>
+    <ul>
+      <li>Find: <code class="language-plaintext highlighter-rouge">czkawka empty-folders -d /your/target/dir</code></li>
+      <li>Review.</li>
+      <li>Delete: <code class="language-plaintext highlighter-rouge">czkawka empty-folders -d /mnt/my_data_drive/repository_to_clean -D</code></li>
+    </ul>
+  </li>
+</ol>]]></content><author><name></name></author><category term="scratchpad" /></entry><entry><title type="html">SBNB linux within Ubuntu Ansible Playbook</title><link href="https://ib.bsb.br/sbnb-ansible-ubuntu/" rel="alternate" type="text/html" title="SBNB linux within Ubuntu Ansible Playbook" /><published>2025-05-17T00:00:00+00:00</published><updated>2025-05-17T12:52:41+00:00</updated><id>https://ib.bsb.br/sbnb-ansible-ubuntu</id><content type="html" xml:base="https://ib.bsb.br/sbnb-ansible-ubuntu/"><![CDATA[<ol>
   <li><strong>Python 3 Installation:</strong> This playbook assumes the target Ubuntu 24.04 machine has Python 3 installed. Ansible is written in Python, and its modules are executed on the managed node (even if it’s <code class="language-plaintext highlighter-rouge">localhost</code>) using the system’s Python interpreter. Ubuntu 24.04 server typically includes Python 3 by default.</li>
   <li><strong>Provided Raw OS Image:</strong> The bootable raw operating system image (e.g., created by mkosi or similar tools) MUST be present at the location specified by <code class="language-plaintext highlighter-rouge">provided_raw_image_path</code> (default: <code class="language-plaintext highlighter-rouge">/root/IncusOS.raw</code>) on the target machine. This image should contain a complete filesystem ready to be booted.</li>
   <li><strong>Provided Incus Metadata Archive:</strong> An Incus metadata archive (typically <code class="language-plaintext highlighter-rouge">metadata.tar.xz</code>) MUST be present at the location specified by <code class="language-plaintext highlighter-rouge">provided_metadata_path</code> (default: <code class="language-plaintext highlighter-rouge">/root/metadata.tar.xz</code>) on the target machine. This file describes the image properties to Incus, such as architecture, creation date, and OS details, which are crucial for <code class="language-plaintext highlighter-rouge">incus image import</code>. (Alternatively, a <code class="language-plaintext highlighter-rouge">metadata.yaml</code> file can sometimes be used, depending on how the image and metadata were originally packaged, though this playbook assumes <code class="language-plaintext highlighter-rouge">metadata.tar.xz</code> as per the original context).</li>
@@ -404,6 +1049,322 @@ If you’ve configured <code class="language-plaintext highlighter-rouge">hosts<
   <li><strong>Prerequisite Validation:</strong> Explicit <code class="language-plaintext highlighter-rouge">ansible.builtin.stat</code> tasks are included at the beginning to verify the existence of the crucial <code class="language-plaintext highlighter-rouge">IncusOS.raw</code> and <code class="language-plaintext highlighter-rouge">metadata.tar.xz</code> files. The playbook will fail early with a clear message if these prerequisites are not met, which significantly improves usability and aids in rapid error diagnosis.</li>
   <li><strong>Variable Simplification:</strong> The <code class="language-plaintext highlighter-rouge">vars</code> section is streamlined, primarily defining the paths to the pre-existing image and metadata files, making it easy for the user to configure these critical inputs.</li>
   <li><strong>Optional Cleanup:</strong> A tagged task for cleaning up the intermediate <code class="language-plaintext highlighter-rouge">os-image.qcow2</code> file is included. This is good practice as Incus makes its own copy of the image in its storage pool, so the temporary qcow2 file may no longer be needed and can be removed to save disk space. The use of tags gives the user fine-grained control over this step.</li>
+</ul>]]></content><author><name></name></author><category term="scratchpad" /></entry><entry><title type="html">TestDisk/PhotoRec to Recover Partitions/Files</title><link href="https://ib.bsb.br/testdiskphotorec-to-recover-partitionsfiles/" rel="alternate" type="text/html" title="TestDisk/PhotoRec to Recover Partitions/Files" /><published>2025-05-17T00:00:00+00:00</published><updated>2025-05-17T22:10:18+00:00</updated><id>https://ib.bsb.br/testdiskphotorec-to-recover-partitionsfiles</id><content type="html" xml:base="https://ib.bsb.br/testdiskphotorec-to-recover-partitionsfiles/"><![CDATA[<p><strong>Critically Important Disclaimers:</strong></p>
+
+<ul>
+  <li><strong>Data Loss Risk:</strong> Any operation on a damaged or corrupted drive carries an inherent risk of further data loss, especially if incorrect options are chosen. Proceed with extreme caution.</li>
+  <li><strong>No Guarantee of Success:</strong> Data recovery is not guaranteed. Success depends on the nature and extent of the corruption and the physical health of the SD card.</li>
+  <li><strong>Patience is Key:</strong> Some scanning processes, particularly <code class="language-plaintext highlighter-rouge">Deeper Search</code>, can take many hours, or even days for very large or slow/damaged drives. Do not interrupt them unnecessarily.</li>
+  <li><strong>Command-Line Familiarity:</strong> This guide assumes a basic comfort level with the Linux command-line interface.</li>
+</ul>
+
+<hr />
+
+<h3 id="phase-1-preparation--utmost-safety"><strong>Phase 1: Preparation &amp; Utmost Safety</strong></h3>
+
+<p><strong>1. Install TestDisk:</strong>
+If TestDisk is not already installed on your system, open a terminal and install it.</p>
+<ul>
+  <li>For Debian/Ubuntu-based systems (like Linaro):
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>apt update
+<span class="nb">sudo </span>apt <span class="nb">install </span>testdisk
+</code></pre></div>    </div>
+  </li>
+  <li>For Fedora/CentOS/RHEL-based systems:
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>dnf <span class="nb">install </span>testdisk
+</code></pre></div>    </div>
+  </li>
+</ul>
+
+<p><strong>2. CRITICAL - Create a Disk Image (Highly Recommended):</strong>
+Operating directly on a potentially failing or corrupted SD card can worsen the situation or lead to irreversible data loss. The <strong>safest approach</strong> is to create a bit-by-bit image of the SD card on another healthy storage device. You will then run TestDisk on this image file.</p>
+
+<ul>
+  <li><strong>Storage Requirement:</strong> You need enough free space on another drive (e.g., your <code class="language-plaintext highlighter-rouge">/mnt/mSATA</code> drive) to store the image. The image file will be the same size as your SD card (approximately 477.5 GiB).</li>
+  <li><strong>Identify Your SD Card:</strong> Your logs confirm it as <code class="language-plaintext highlighter-rouge">/dev/sdb</code>. <strong>Double-check this device name (<code class="language-plaintext highlighter-rouge">lsblk</code> can help confirm) before proceeding to avoid imaging the wrong drive!</strong></li>
+  <li><strong>Unmount SD Card Partitions (if any are mounted):</strong>
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>umount /dev/sdb<span class="k">*</span>
+</code></pre></div>    </div>
+    <p>(The <code class="language-plaintext highlighter-rouge">*</code> acts as a wildcard for any partitions like <code class="language-plaintext highlighter-rouge">/dev/sdb1</code>).</p>
+  </li>
+  <li><strong>Create the Image using <code class="language-plaintext highlighter-rouge">dd</code>:</strong>
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo dd </span><span class="k">if</span><span class="o">=</span>/dev/sdb <span class="nv">of</span><span class="o">=</span>/mnt/mSATA/sdb_image.img <span class="nv">bs</span><span class="o">=</span>4M <span class="nv">status</span><span class="o">=</span>progress <span class="nv">conv</span><span class="o">=</span>noerror,sync
+</code></pre></div>    </div>
+    <ul>
+      <li><code class="language-plaintext highlighter-rouge">if=/dev/sdb</code>: <strong>Input File</strong> (your SD card). Verify this is correct!</li>
+      <li><code class="language-plaintext highlighter-rouge">of=/mnt/mSATA/sdb_image.img</code>: <strong>Output File</strong> (the image). Choose a path and filename that makes sense for you.</li>
+      <li><code class="language-plaintext highlighter-rouge">bs=4M</code>: Sets the block size, which can improve copying speed.</li>
+      <li><code class="language-plaintext highlighter-rouge">status=progress</code>: Shows the progress of the <code class="language-plaintext highlighter-rouge">dd</code> command.</li>
+      <li><code class="language-plaintext highlighter-rouge">conv=noerror,sync</code>: This is crucial. <code class="language-plaintext highlighter-rouge">noerror</code> tells <code class="language-plaintext highlighter-rouge">dd</code> to continue if it encounters read errors on the source drive. <code class="language-plaintext highlighter-rouge">sync</code> fills input blocks with zeros if there were read errors, ensuring the output image maintains correct offsets.</li>
+      <li>This process will take a significant amount of time. Be patient.</li>
+    </ul>
+
+    <p><strong>If you successfully create and use an image, all subsequent <code class="language-plaintext highlighter-rouge">testdisk</code> commands in this guide should target the image file (e.g., <code class="language-plaintext highlighter-rouge">sudo testdisk /mnt/mSATA/sdb_image.img</code>) instead of <code class="language-plaintext highlighter-rouge">/dev/sdb</code>.</strong></p>
+  </li>
+</ul>
+
+<p><strong>3. If Not Using an Image (Significantly Riskier):</strong>
+If you choose to operate directly on <code class="language-plaintext highlighter-rouge">/dev/sdb</code> (not recommended):</p>
+<ul>
+  <li>Ensure all its partitions are unmounted: <code class="language-plaintext highlighter-rouge">sudo umount /dev/sdb*</code></li>
+  <li>Be aware that any mistake or further drive degradation could lead to permanent data loss.</li>
+</ul>
+
+<hr />
+
+<h3 id="phase-2-launching-testdisk--initial-setup"><strong>Phase 2: Launching TestDisk &amp; Initial Setup</strong></h3>
+
+<p><strong>1. Launch TestDisk:</strong>
+Open your terminal.</p>
+<ul>
+  <li>If working on the <strong>SD card directly</strong> (riskier):
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>testdisk
+</code></pre></div>    </div>
+  </li>
+  <li>If working on the <strong>disk image</strong> (recommended):
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>testdisk /mnt/mSATA/sdb_image.img
+</code></pre></div>    </div>
+  </li>
+</ul>
+
+<p><strong>2. Log File Creation:</strong>
+TestDisk will first ask about log file creation.</p>
+<ul>
+  <li>Use the arrow keys to select <code class="language-plaintext highlighter-rouge">[ Create ]</code> (to create a new log file). This is generally recommended for troubleshooting.</li>
+  <li>Press <code class="language-plaintext highlighter-rouge">Enter</code> to confirm.</li>
+</ul>
+
+<p><strong>3. Disk Selection:</strong>
+A list of detected storage media will be displayed.</p>
+<ul>
+  <li>Use the <code class="language-plaintext highlighter-rouge">Up/Down</code> arrow keys to navigate and highlight your target:
+    <ul>
+      <li><code class="language-plaintext highlighter-rouge">/dev/sdb</code> (should show its size, approx. 477 GiB, and model “Storage Device”).</li>
+      <li>Or, if using an image, <code class="language-plaintext highlighter-rouge">/mnt/mSATA/sdb_image.img</code>.</li>
+    </ul>
+  </li>
+  <li><strong>Verify your selection carefully.</strong></li>
+  <li>Ensure <code class="language-plaintext highlighter-rouge">[ Proceed ]</code> is highlighted at the bottom and press <code class="language-plaintext highlighter-rouge">Enter</code>.</li>
+</ul>
+
+<p><strong>4. Partition Table Type Selection:</strong>
+TestDisk will attempt to auto-detect the partition table type. Your <code class="language-plaintext highlighter-rouge">fdisk -l</code> log indicated <code class="language-plaintext highlighter-rouge">Disklabel type: dos</code>, which means an MBR (Master Boot Record) partition table.</p>
+<ul>
+  <li>Even if TestDisk defaults to <code class="language-plaintext highlighter-rouge">[None]</code> due to severe corruption, manually select <code class="language-plaintext highlighter-rouge">[ Intel ] Intel/PC partition</code> (this is for MBR-style partition tables).</li>
+  <li>Press <code class="language-plaintext highlighter-rouge">Enter</code>.</li>
+</ul>
+
+<hr />
+
+<h3 id="phase-3-searching-for-lost-partitions"><strong>Phase 3: Searching for Lost Partitions</strong></h3>
+
+<p><strong>1. Main Menu - Analyse:</strong>
+You are now at TestDisk’s main menu.</p>
+<ul>
+  <li>Select <code class="language-plaintext highlighter-rouge">[ Analyse ]</code> (Analyse current partition structure and search for lost partitions).</li>
+  <li>Press <code class="language-plaintext highlighter-rouge">Enter</code>.</li>
+</ul>
+
+<p><strong>2. Current Partition Structure &amp; Quick Search:</strong>
+TestDisk will display the current partition structure it can read. Given the logs, this will likely show errors, “No partition found,” or the nonsensical partitions from your <code class="language-plaintext highlighter-rouge">fdisk</code> output.</p>
+<ul>
+  <li>Ensure <code class="language-plaintext highlighter-rouge">[ Quick Search ]</code> is highlighted at the bottom and press <code class="language-plaintext highlighter-rouge">Enter</code>.</li>
+  <li>TestDisk might ask: “Search for partitions created under Windows Vista or later? (Y/N)”. This question helps TestDisk look for MBR partition signatures that might be placed according to newer standards or by specific operating systems. For exFAT (which your <code class="language-plaintext highlighter-rouge">lsblk -f</code> log indicated for <code class="language-plaintext highlighter-rouge">sdb</code>), answering <code class="language-plaintext highlighter-rouge">Y</code> (Yes) is generally a good starting point. Press <code class="language-plaintext highlighter-rouge">Y</code>.</li>
+  <li>The Quick Search will begin. This may take some time.</li>
+</ul>
+
+<p><strong>3. Interpreting Quick Search Results:</strong>
+Once the scan completes, TestDisk will list any potential partition candidates it found.</p>
+<ul>
+  <li><strong>Look for a partition that matches your expected exFAT partition:</strong>
+    <ul>
+      <li>It should be marked as <code class="language-plaintext highlighter-rouge">P</code> (Primary). Other types include <code class="language-plaintext highlighter-rouge">*</code> (Primary, bootable), <code class="language-plaintext highlighter-rouge">L</code> (Logical), <code class="language-plaintext highlighter-rouge">E</code> (Extended), <code class="language-plaintext highlighter-rouge">D</code> (Deleted).</li>
+      <li>It should span a significant portion of your ~477.5 GiB card.</li>
+      <li>The filesystem type might be identified as <code class="language-plaintext highlighter-rouge">HPFS/NTFS/exFAT</code> or similar. The partition label (e.g., “samsung500G”) might not be directly visible in this partition list but can be confirmed if you successfully list files.</li>
+    </ul>
+  </li>
+  <li><strong>CRUCIAL STEP - Verify by Listing Files:</strong>
+    <ul>
+      <li>Use the <code class="language-plaintext highlighter-rouge">Up/Down</code> arrow keys to highlight a promising partition candidate.</li>
+      <li>Press <code class="language-plaintext highlighter-rouge">P</code> on your keyboard. This attempts to list the files and folders within that found partition.</li>
+      <li><strong>If you see your expected files and directory structure:</strong> This is a very positive sign! The partition and its filesystem are likely recoverable. Press <code class="language-plaintext highlighter-rouge">Q</code> to return to the partition list.</li>
+      <li><strong>If the file listing is empty, shows garbage, or you get an error like “Can’t open filesystem”:</strong> This partition candidate is likely incorrect, or the filesystem within it is also severely damaged. Press <code class="language-plaintext highlighter-rouge">Q</code> to return to the partition list and try another candidate if available.</li>
+    </ul>
+  </li>
+  <li><strong>If multiple candidates are found:</strong> Use your judgment. For a typical SD card used for storage, you’re usually looking for a single, large <code class="language-plaintext highlighter-rouge">P</code> (Primary) partition. Avoid small, overlapping, or ‘Extended’ partitions unless you specifically created such a layout. Check start/end sectors for plausibility.</li>
+</ul>
+
+<p><strong>4. Deeper Search (If Quick Search is Insufficient):</strong>
+If <code class="language-plaintext highlighter-rouge">Quick Search</code> doesn’t find your main partition, or if listing files (<code class="language-plaintext highlighter-rouge">P</code>) doesn’t show your data for any found candidates:</p>
+<ul>
+  <li>Ensure you are on the screen listing the (Quick Search) found partitions (or the screen that says no partitions were found).</li>
+  <li>Select <code class="language-plaintext highlighter-rouge">[ Deeper Search ]</code> from the options at the bottom.</li>
+  <li>Press <code class="language-plaintext highlighter-rouge">Enter</code>.</li>
+  <li><code class="language-plaintext highlighter-rouge">Deeper Search</code> scans the drive much more thoroughly, sector by sector. <strong>This process will take considerably longer (potentially many hours).</strong> Be patient.</li>
+  <li>Once <code class="language-plaintext highlighter-rouge">Deeper Search</code> completes, it will present another list of partition candidates. Again, for each promising candidate, highlight it and press <code class="language-plaintext highlighter-rouge">P</code> to list files and verify it’s your data. Press <code class="language-plaintext highlighter-rouge">Q</code> to return from the file listing.</li>
+</ul>
+
+<hr />
+
+<h3 id="phase-4-recovering-data-by-copying-files-primary--safest-goal"><strong>Phase 4: Recovering Data by Copying Files (Primary &amp; Safest Goal)</strong></h3>
+
+<p>This is the <strong>most recommended first step</strong> to retrieve your data, as it does not modify the source drive/image.</p>
+
+<ol>
+  <li><strong>Access File Listing:</strong>
+    <ul>
+      <li>After a <code class="language-plaintext highlighter-rouge">Quick Search</code> or <code class="language-plaintext highlighter-rouge">Deeper Search</code> has found a partition candidate, and you have verified with <code class="language-plaintext highlighter-rouge">P</code> that it lists your files correctly:
+        <ul>
+          <li>Ensure that correct partition is highlighted in the list.</li>
+          <li>If you are not already viewing the files (i.e., you pressed <code class="language-plaintext highlighter-rouge">Q</code> to go back to the partition list), press <code class="language-plaintext highlighter-rouge">P</code> again to re-enter the file listing for that partition.</li>
+        </ul>
+      </li>
+    </ul>
+  </li>
+  <li><strong>Navigate and Select Files/Folders:</strong>
+    <ul>
+      <li>Inside the file listing:
+        <ul>
+          <li>Use <code class="language-plaintext highlighter-rouge">Up/Down</code> arrow keys to navigate.</li>
+          <li>Select <code class="language-plaintext highlighter-rouge">.</code> to stay in the current directory, <code class="language-plaintext highlighter-rouge">..</code> (or press the <code class="language-plaintext highlighter-rouge">Left</code> arrow key) to go to the parent directory.</li>
+          <li>Press <code class="language-plaintext highlighter-rouge">Right</code> arrow key or <code class="language-plaintext highlighter-rouge">Enter</code> to enter a highlighted directory.</li>
+        </ul>
+      </li>
+      <li><strong>To select items for copying:</strong>
+        <ul>
+          <li>Highlight a single file or folder you want to copy.</li>
+          <li>Press <code class="language-plaintext highlighter-rouge">:</code> (colon) to select the currently highlighted item. Selected items usually change color.</li>
+          <li>Repeat for other individual items if needed.</li>
+          <li>To select <strong>all</strong> items in the current directory listing, press <code class="language-plaintext highlighter-rouge">a</code>.</li>
+        </ul>
+      </li>
+    </ul>
+  </li>
+  <li><strong>Copy Selected Files/Folders:</strong>
+    <ul>
+      <li>Once you have selected the desired file(s) or folder(s):
+        <ul>
+          <li>Press <code class="language-plaintext highlighter-rouge">C</code> (uppercase C) to initiate the copy process for the selected items.</li>
+        </ul>
+      </li>
+      <li>TestDisk will then switch to a file browser showing your system’s <em>other</em> mounted filesystems. This is where you choose the <strong>destination</strong> for your recovered data.
+        <ul>
+          <li>Navigate to a safe location on a different drive (e.g., a folder like <code class="language-plaintext highlighter-rouge">/mnt/mSATA/recovered_data_from_sdcard/</code>). <strong>Do NOT save to the original SD card or its image!</strong></li>
+          <li>Once you are in the correct destination directory in this browser view, press <code class="language-plaintext highlighter-rouge">C</code> (uppercase C) <strong>again</strong>. This confirms the destination and starts the actual copying process.</li>
+        </ul>
+      </li>
+      <li>You should see “Copy done!” messages for successfully copied items. If errors occur, note them.</li>
+      <li>Repeat this process (navigate, select, copy) for all data you need to recover.</li>
+    </ul>
+  </li>
+  <li><strong>Exiting File Listing/Copy Mode:</strong>
+    <ul>
+      <li>Press <code class="language-plaintext highlighter-rouge">Q</code> to go back from the file listing to the partition list.</li>
+    </ul>
+  </li>
+</ol>
+
+<hr />
+
+<h3 id="phase-5-attempting-to-write-partition-table-optional-secondary-riskier-goal"><strong>Phase 5: Attempting to Write Partition Table (Optional, Secondary, Riskier Goal)</strong></h3>
+
+<p><strong>Only attempt this phase if:</strong></p>
+<ul>
+  <li>You have <strong>already successfully copied all your important files</strong> to a safe location using Phase 4.</li>
+  <li>OR you are working on a <strong>disk image</strong> and are comfortable with the risk of potentially making the image unreadable if the wrong structure is written.</li>
+  <li>This step attempts to repair the SD card’s (or image’s) partition table so it might be recognized by the system normally.</li>
+</ul>
+
+<ol>
+  <li><strong>Select the Correct Partition(s) for Writing:</strong>
+    <ul>
+      <li>In the list of partitions found by TestDisk (after Quick or Deeper Search), ensure the partition(s) that correctly showed your files with <code class="language-plaintext highlighter-rouge">P</code> are highlighted.</li>
+      <li>The status should typically be <code class="language-plaintext highlighter-rouge">P</code> (Primary). If TestDisk misidentified a partition type (e.g., a Linux partition as FAT), you could <em>cautiously</em> use <code class="language-plaintext highlighter-rouge">T</code> to change its type, but for a standard exFAT data drive, this is usually not necessary and best avoided unless you are certain.</li>
+    </ul>
+  </li>
+  <li><strong>Proceed to Write:</strong>
+    <ul>
+      <li>Once you are confident in the selected partition structure, press <code class="language-plaintext highlighter-rouge">Enter</code> to continue from the partition list screen (if you are not already on the screen with the <code class="language-plaintext highlighter-rouge">[ Write ]</code> option).</li>
+    </ul>
+  </li>
+  <li><strong>Write the Partition Table:</strong>
+    <ul>
+      <li>Select <code class="language-plaintext highlighter-rouge">[ Write ]</code> from the options at the bottom and press <code class="language-plaintext highlighter-rouge">Enter</code>.</li>
+      <li>TestDisk will ask for confirmation: “Write partition table, confirm? (Y/N)”.</li>
+      <li><strong>Think carefully.</strong> If you are sure, press <code class="language-plaintext highlighter-rouge">Y</code> to confirm and write the new partition table.</li>
+    </ul>
+  </li>
+  <li><strong>Post-Write Action:</strong>
+    <ul>
+      <li>TestDisk will usually advise that you need to reboot your computer for the changes to take effect if you operated on <code class="language-plaintext highlighter-rouge">/dev/sdb</code> directly.</li>
+      <li>Select <code class="language-plaintext highlighter-rouge">[ Quit ]</code> and exit TestDisk.</li>
+    </ul>
+  </li>
+</ol>
+
+<hr />
+
+<h3 id="phase-6-post-recovery-actions"><strong>Phase 6: Post-Recovery Actions</strong></h3>
+
+<ol>
+  <li><strong>Verify Recovered Data:</strong>
+    <ul>
+      <li>Thoroughly check the files you copied (from Phase 4) to your recovery drive. Open various file types to ensure they are intact and not corrupted.</li>
+    </ul>
+  </li>
+  <li><strong>If You Wrote a New Partition Table (Phase 5):</strong>
+    <ul>
+      <li><strong>If working on <code class="language-plaintext highlighter-rouge">/dev/sdb</code> directly:</strong> Reboot your computer.</li>
+      <li>After rebooting (or if working on an image, you might try to mount it using loopback devices), check if the system now recognizes the SD card and its partition(s).</li>
+      <li>If accessible, <strong>immediately back up any remaining data you couldn’t copy via TestDisk’s file copy, if any.</strong></li>
+      <li><strong>Run <code class="language-plaintext highlighter-rouge">fsck</code> (Filesystem Check):</strong>
+        <ul>
+          <li>Identify the partition (e.g., <code class="language-plaintext highlighter-rouge">/dev/sdb1</code>).</li>
+          <li>Unmount it if mounted: <code class="language-plaintext highlighter-rouge">sudo umount /dev/sdb1</code></li>
+          <li>Run the filesystem check for exFAT:
+            <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>fsck.exfat /dev/sdb1
+</code></pre></div>            </div>
+            <p>(or <code class="language-plaintext highlighter-rouge">sudo exfatfsck /dev/sdb1</code> depending on your system’s exFAT utilities).</p>
+          </li>
+          <li>Follow any prompts. This can repair minor filesystem inconsistencies.</li>
+        </ul>
+      </li>
+    </ul>
+  </li>
+  <li><strong>Future of the SD Card:</strong>
+    <ul>
+      <li><strong>If data recovery was successful but the card showed severe corruption:</strong> This SD card is highly suspect. Its reliability is questionable.</li>
+      <li><strong>Consider a Full Reformat:</strong> After ensuring all data is safe, you might try a full (low-level) reformat of the SD card to see if it can be made stable. This involves deleting all partitions, creating a new partition table, and then formatting. Tools like <code class="language-plaintext highlighter-rouge">gparted</code> (GUI) or <code class="language-plaintext highlighter-rouge">fdisk</code>/<code class="language-plaintext highlighter-rouge">mkfs.exfat</code> (CLI) can be used.
+        <ul>
+          <li><strong>Example of zeroing out (ERASES EVERYTHING ON /dev/sdb - EXTREME CAUTION):</strong>
+            <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># sudo dd if=/dev/zero of=/dev/sdb bs=4M status=progress</span>
+</code></pre></div>            </div>
+            <p><strong>TRIPLE CHECK <code class="language-plaintext highlighter-rouge">of=/dev/sdb</code> IS CORRECT BEFORE RUNNING!</strong></p>
+          </li>
+          <li>Then create a new partition table (e.g., MBR with <code class="language-plaintext highlighter-rouge">fdisk</code>) and format (e.g., <code class="language-plaintext highlighter-rouge">mkfs.exfat</code>).</li>
+        </ul>
+      </li>
+      <li><strong>If the card continues to exhibit problems:</strong> Discard it to prevent future data loss. It’s likely at the end of its life or has irreparable hardware issues.</li>
+    </ul>
+  </li>
+</ol>
+
+<hr />
+
+<h3 id="phase-7-if-testdisk-fails-to-recover-partitions-or-list-files"><strong>Phase 7: If TestDisk Fails to Recover Partitions or List Files</strong></h3>
+
+<p>If TestDisk’s <code class="language-plaintext highlighter-rouge">[ Analyse ]</code> features (even <code class="language-plaintext highlighter-rouge">Deeper Search</code>) cannot find a usable partition structure, or if the filesystem within a found partition is too damaged to list files:</p>
+
+<ul>
+  <li><strong>Consider PhotoRec:</strong>
+    <ul>
+      <li>PhotoRec is a file data recovery software that comes bundled with TestDisk (you can usually run it with <code class="language-plaintext highlighter-rouge">sudo photorec</code>).</li>
+      <li>It works differently: it ignores the filesystem and carves files directly from the raw data based on known file headers and footers.</li>
+      <li><strong>Pros:</strong> Can often recover files even when the filesystem is completely destroyed.</li>
+      <li><strong>Cons:</strong> Recovers files without their original filenames, directory structure, or timestamps. Files are typically renamed and sorted by type into output directories.</li>
+      <li>PhotoRec is also menu-driven. You’ll select the disk/image, choose file types to search for (you can often select all or specific ones like .jpg, .doc, etc.), and specify a destination directory for recovered files.</li>
+    </ul>
+  </li>
 </ul>]]></content><author><name></name></author><category term="scratchpad" /></entry><entry><title type="html">installing rescatux/rescapp on Debian</title><link href="https://ib.bsb.br/installing-rescatuxrescapp-on-debian/" rel="alternate" type="text/html" title="installing rescatux/rescapp on Debian" /><published>2025-05-16T00:00:00+00:00</published><updated>2025-05-16T06:59:31+00:00</updated><id>https://ib.bsb.br/installing-rescatuxrescapp-on-debian</id><content type="html" xml:base="https://ib.bsb.br/installing-rescatuxrescapp-on-debian/"><![CDATA[<h1 id="1-update-your-system">1. Update Your System</h1>
 
 <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>apt update
@@ -7692,1065 +8653,4 @@ Periodically verify the repository’s consistency.
       <li>Always refer to the <a href="https://storj.io/dcs/pricing">official Storj pricing page</a> for current details. Restic’s efficiency helps in making Storj a cost-effective option for long-term, secure backups.</li>
     </ul>
   </li>
-</ul>]]></content><author><name></name></author><category term="aid&gt;software" /></entry><entry><title type="html">backup bash script</title><link href="https://ib.bsb.br/backup-bash-script/" rel="alternate" type="text/html" title="backup bash script" /><published>2025-05-12T00:00:00+00:00</published><updated>2025-05-12T18:04:46+00:00</updated><id>https://ib.bsb.br/backup-bash-script</id><content type="html" xml:base="https://ib.bsb.br/backup-bash-script/"><![CDATA[<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>#!/bin/bash
-
-# ==============================================================================
-# Script Name: comprehensive_backup_v2.sh
-# Description: Archives (tar) and compresses (zstd) files from a source
-#              directory to a destination file. Offers configuration for
-#              compression level, progress view (pv), I/O buffering (mbuffer),
-#              and exclusions. Includes pre-checks and basic verification steps.
-# Author:      AI Assistant
-# Version:     2.0
-# Usage:       sudo bash comprehensive_backup_v2.sh
-# Requirements: bash, sudo, tar, zstd, pv, mbuffer, coreutils (du, df, awk, numfmt, stat)
-# ==============================================================================
-
-# --- Script Setup ---
-# Exit immediately if a command exits with a non-zero status.
-# set -e
-# Treat unset variables as an error when substituting.
-# set -u
-# Cause pipelines to return the exit status of the last command that exited with a non-zero status,
-# or zero if no command exited with a non-zero status.
-set -o pipefail
-
-# --- Configuration ---
-DEFAULT_SOURCE_DIR="/media/usb0"
-DEFAULT_DEST_DIR="/media/usb5"
-DEFAULT_FILENAME_BASE="backup_usb0"
-DEFAULT_COMPRESSION_LEVEL=9 # Good balance (1-19)
-DEFAULT_USE_PV="y"
-DEFAULT_USE_MBUFFER="y"
-DEFAULT_MBUFFER_SIZE="6G" # e.g., 128M, 256M, 512M, 1G
-DEFAULT_EXCLUDE_PATTERNS=() # Add patterns like: ('./cache/*' '*.tmp')
-
-# --- Helper Functions ---
-check_command() {
-  if ! command -v "$1" &amp;&gt; /dev/null; then
-    echo "Error: Required command '$1' not found. Please install it (e.g., using 'sudo apt install $1')." &gt;&amp;2
-    exit 1
-  fi
-}
-
-print_separator() {
-  printf -- '-%.0s' {1..70}; printf '\n'
-}
-
-# --- Root Check ---
-if [[ $EUID -ne 0 ]]; then
-   echo "Error: This script must be run with sudo privileges for accurate size checks and potentially writing to protected locations." &gt;&amp;2
-   exit 1
-fi
-
-# --- Dependency Check ---
-print_separator
-echo "Checking required commands..."
-check_command tar
-check_command zstd
-check_command pv
-check_command mbuffer
-check_command du
-check_command df
-check_command awk
-check_command numfmt
-check_command stat
-echo "All required commands found."
-
-# --- User Input / Configuration Override ---
-print_separator
-echo "Configure Backup Parameters (Press Enter for defaults):"
-
-read -p "Source directory [${DEFAULT_SOURCE_DIR}]: " SOURCE_DIR
-SOURCE_DIR=${SOURCE_DIR:-$DEFAULT_SOURCE_DIR}
-
-read -p "Destination directory [${DEFAULT_DEST_DIR}]: " DEST_DIR
-DEST_DIR=${DEST_DIR:-$DEFAULT_DEST_DIR}
-
-read -p "Base filename for archive [${DEFAULT_FILENAME_BASE}]: " FILENAME_BASE
-FILENAME_BASE=${FILENAME_BASE:-$DEFAULT_FILENAME_BASE}
-
-read -p "Compression level (1=fastest, 19=best, default=${DEFAULT_COMPRESSION_LEVEL}): " COMPRESSION_LEVEL
-COMPRESSION_LEVEL=${COMPRESSION_LEVEL:-$DEFAULT_COMPRESSION_LEVEL}
-# Basic validation for compression level
-if ! [[ "$COMPRESSION_LEVEL" =~ ^[1-9]$|^1[0-9]$ ]]; then # Regex for 1-19
-  echo "Invalid compression level. Using default: ${DEFAULT_COMPRESSION_LEVEL}"
-  COMPRESSION_LEVEL=$DEFAULT_COMPRESSION_LEVEL
-fi
-
-read -p "Use 'pv' for progress monitoring? (Y/n) [${DEFAULT_USE_PV}]: " USE_PV
-USE_PV=${USE_PV:-$DEFAULT_USE_PV}
-
-read -p "Use 'mbuffer' for I/O buffering? (y/N) [${DEFAULT_USE_MBUFFER}]: " USE_MBUFFER
-USE_MBUFFER=${USE_MBUFFER:-$DEFAULT_USE_MBUFFER}
-MBUFFER_SIZE=$DEFAULT_MBUFFER_SIZE
-if [[ "${USE_MBUFFER,,}" == "y" ]]; then
-  read -p "mbuffer size (e.g., 256M, 1G) [${DEFAULT_MBUFFER_SIZE}]: " MBUFFER_SIZE_INPUT
-  MBUFFER_SIZE=${MBUFFER_SIZE_INPUT:-$DEFAULT_MBUFFER_SIZE}
-fi
-
-# Exclude pattern input
-echo "Enter exclude patterns one by one (relative to source, e.g., './cache/*', '*.tmp'). Press Enter on empty line to finish."
-EXCLUDE_PATTERNS=()
-while true; do
-    read -p "Exclude pattern (or Enter to finish): " pattern
-    if [[ -z "$pattern" ]]; then
-        break
-    fi
-    EXCLUDE_PATTERNS+=("$pattern")
-done
-if [ ${#EXCLUDE_PATTERNS[@]} -eq 0 ]; then
-    EXCLUDE_PATTERNS=("${DEFAULT_EXCLUDE_PATTERNS[@]}") # Use default if none entered
-fi
-
-
-# --- Pre-Checks ---
-print_separator
-echo "Performing Pre-Checks..."
-
-# Check directories
-if [ ! -d "$SOURCE_DIR" ]; then
-  echo "Error: Source directory '$SOURCE_DIR' not found or not a directory." &gt;&amp;2
-  exit 1
-fi
-if [ ! -d "$DEST_DIR" ]; then
-  echo "Error: Destination directory '$DEST_DIR' not found or not a directory." &gt;&amp;2
-  exit 1
-fi
-# Optional: Check if they are mount points (informational)
-if ! mountpoint -q "$SOURCE_DIR"; then
-    echo "Info: Source directory '$SOURCE_DIR' does not appear to be a distinct mount point."
-fi
-if ! mountpoint -q "$DEST_DIR"; then
-    echo "Info: Destination directory '$DEST_DIR' does not appear to be a distinct mount point."
-fi
-
-# Check source size
-echo "Calculating source size (this may take a while)..."
-SRC_SIZE_BYTES=$(du -sb "$SOURCE_DIR" 2&gt;/dev/null)
-DU_EXIT_CODE=$?
-if [ $DU_EXIT_CODE -ne 0 ] || [ -z "$SRC_SIZE_BYTES" ]; then
-    echo "Error: Could not determine source size (du exit code: $DU_EXIT_CODE). Check permissions for '$SOURCE_DIR'." &gt;&amp;2
-    exit 1
-fi
-SRC_SIZE_BYTES=$(echo "$SRC_SIZE_BYTES" | awk '{print $1}') # Extract number
-SRC_SIZE_HUMAN=$(numfmt --to=iec $SRC_SIZE_BYTES)
-echo "Source size: ${SRC_SIZE_HUMAN} (${SRC_SIZE_BYTES} bytes)"
-
-# Check if source seems empty
-if [ "$SRC_SIZE_BYTES" -le 4096 ]; then # 4096 is typical size of an empty directory metadata
-    echo "Warning: Source directory size is very small. It might be empty or contain only empty subdirectories."
-fi
-
-# Check destination space
-DEST_AVAIL_BYTES=$(df --output=avail -B1 "$DEST_DIR" 2&gt;/dev/null | awk 'NR==2{print $1}')
-DF_EXIT_CODE=$?
-if [ $DF_EXIT_CODE -ne 0 ] || [ -z "$DEST_AVAIL_BYTES" ]; then
-    echo "Error: Could not determine destination available space (df exit code: $DF_EXIT_CODE). Check path '$DEST_DIR'." &gt;&amp;2
-    exit 1
-fi
-DEST_AVAIL_HUMAN=$(numfmt --to=iec $DEST_AVAIL_BYTES)
-echo "Destination available space: ${DEST_AVAIL_HUMAN} (${DEST_AVAIL_BYTES} bytes)"
-
-# Space warning
-if [ "$SRC_SIZE_BYTES" -gt "$DEST_AVAIL_BYTES" ]; then
-  print_separator
-  echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
-  echo "!!! WARNING: Source size (${SRC_SIZE_HUMAN}) is LARGER than available"
-  echo "!!!          destination space (${DEST_AVAIL_HUMAN})."
-  echo "!!! This operation will ONLY succeed if the data compresses"
-  echo "!!! significantly (below ${DEST_AVAIL_HUMAN}). Consider using a higher"
-  echo "!!! compression level (current: ${COMPRESSION_LEVEL}) or freeing up space."
-  echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
-  print_separator
-elif [ "$DEST_AVAIL_BYTES" -lt "$((SRC_SIZE_BYTES / 2))" ]; then # Heuristic: Warn if available space is less than half the source size
-  echo "Warning: Available destination space (${DEST_AVAIL_HUMAN}) is less than half the source size. Ensure compression is effective."
-fi
-
-# Construct final destination path and check for collision
-TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-DEST_FILENAME="${FILENAME_BASE}_L${COMPRESSION_LEVEL}_${TIMESTAMP}.tar.zst"
-DEST_FILE_PATH="${DEST_DIR}/${DEST_FILENAME}"
-
-if [ -e "$DEST_FILE_PATH" ]; then
-    echo "Error: Destination file '$DEST_FILE_PATH' already exists." &gt;&amp;2
-    read -p "Do you want to overwrite it? (y/N): " OVERWRITE_CONFIRM
-    if [[ "${OVERWRITE_CONFIRM,,}" != "y" ]]; then
-        echo "Aborted by user."
-        exit 0
-    fi
-    echo "Overwriting existing file."
-fi
-
-# Final confirmation
-print_separator
-echo "Backup Summary:"
-echo "  Source:      $SOURCE_DIR ($SRC_SIZE_HUMAN)"
-echo "  Destination: $DEST_FILE_PATH"
-echo "  Compression: Level $COMPRESSION_LEVEL"
-echo "  Progress View: ${USE_PV}"
-echo "  IO Buffering: ${USE_MBUFFER} (Size: $MBUFFER_SIZE)"
-if [ ${#EXCLUDE_PATTERNS[@]} -gt 0 ]; then
-    echo "  Exclusions:  ${EXCLUDE_PATTERNS[*]}"
-fi
-print_separator
-
-read -p "Do you want to proceed with the backup? (y/N): " CONFIRM_PROCEED
-if [[ "${CONFIRM_PROCEED,,}" != "y" ]]; then
-  echo "Aborted by user."
-  exit 0
-fi
-
-# --- Build and Execute the Command Pipeline ---
-print_separator
-echo "Building and executing the command pipeline..."
-
-# Start with tar command (relative paths within archive)
-TAR_CMD=("tar" "-cf" "-")
-
-# Add exclude patterns
-for pattern in "${EXCLUDE_PATTERNS[@]}"; do
-    TAR_CMD+=("--exclude=${pattern}")
-done
-
-# Specify source directory context and content
-TAR_CMD+=("-C" "$SOURCE_DIR" ".")
-
-# Build the pipeline string array for clarity and execution
-PIPELINE_STAGES=()
-PIPELINE_STAGES+=("$(printf '%q ' "${TAR_CMD[@]}")") # Stage 0: tar
-
-# Add pv if requested
-if [[ "${USE_PV,,}" == "y" ]]; then
-  PIPELINE_STAGES+=("| pv -s $SRC_SIZE_BYTES") # Stage 1: pv
-fi
-
-# Add mbuffer if requested
-if [[ "${USE_MBUFFER,,}" == "y" ]]; then
-  PIPELINE_STAGES+=("| mbuffer -m $MBUFFER_SIZE") # Stage 2 (or 1 if no pv): mbuffer
-fi
-
-# Add zstd command
-PIPELINE_STAGES+=("| zstd -T0 -${COMPRESSION_LEVEL} -o '${DEST_FILE_PATH}'") # Final Stage: zstd
-
-# Combine stages into a single command string for execution
-FULL_PIPELINE_CMD="${PIPELINE_STAGES[*]}"
-
-# Check if running inside screen/tmux
-if [[ -z "$STY" &amp;&amp; -z "$TMUX" ]]; then
-    echo "Warning: Not running inside screen or tmux."
-    echo "For long operations, it's highly recommended to run this script"
-    echo "within a 'screen' or 'tmux' session to prevent interruptions."
-    read -p "Press Enter to continue anyway, or Ctrl+C to stop and restart in screen/tmux."
-fi
-
-echo "Starting backup process... This may take a very long time."
-echo "Executing: ${FULL_PIPELINE_CMD}"
-
-# Execute the pipeline using bash -c
-# Capture PIPESTATUS immediately after execution
-bash -c "$FULL_PIPELINE_CMD"; PIPE_STATUS=("${PIPESTATUS[@]}")
-EXECUTION_EXIT_CODE=$? # Overall exit code (affected by pipefail)
-
-# --- Post-Execution ---
-print_separator
-echo "Backup process finished."
-
-# Check exit codes from the pipeline
-FINAL_EXIT_CODE=0
-STAGE_NAMES=("tar") # Start with tar
-if [[ "${USE_PV,,}" == "y" ]]; then STAGE_NAMES+=("pv"); fi
-if [[ "${USE_MBUFFER,,}" == "y" ]]; then STAGE_NAMES+=("mbuffer"); fi
-STAGE_NAMES+=("zstd")
-
-echo "Checking pipeline exit codes: ${PIPE_STATUS[*]}"
-for i in "${!PIPE_STATUS[@]}"; do
-    stage_name=${STAGE_NAMES[$i]:-"unknown_stage_$i"}
-    exit_code=${PIPE_STATUS[$i]}
-    if [ "$exit_code" -ne 0 ]; then
-        echo "Error: Pipeline stage '${stage_name}' failed with exit code $exit_code." &gt;&amp;2
-        FINAL_EXIT_CODE=$exit_code # Report the first non-zero exit code
-    fi
-done
-
-# Double check overall exit code if pipefail was active
-if [ "$FINAL_EXIT_CODE" -eq 0 ] &amp;&amp; [ "$EXECUTION_EXIT_CODE" -ne 0 ]; then
-     echo "Warning: Overall pipeline check reported failure (exit code $EXECUTION_EXIT_CODE), but individual stages seemed okay. Check results carefully." &gt;&amp;2
-     # Use the overall code if it indicates failure and individual checks didn't
-     FINAL_EXIT_CODE=$EXECUTION_EXIT_CODE
-fi
-
-
-if [ "$FINAL_EXIT_CODE" -eq 0 ]; then
-    echo "Pipeline completed successfully (basic check)."
-    COMPRESSED_SIZE_BYTES=$(stat -c%s "$DEST_FILE_PATH" 2&gt;/dev/null)
-    COMPRESSED_SIZE_HUMAN=$(numfmt --to=iec $COMPRESSED_SIZE_BYTES 2&gt;/dev/null || echo "N/A")
-    echo "Archive saved to: ${DEST_FILE_PATH}"
-    echo "Compressed size:  ${COMPRESSED_SIZE_HUMAN} (${COMPRESSED_SIZE_BYTES:-N/A} bytes)"
-    print_separator
-    echo "IMPORTANT: Please verify the integrity of the archive:"
-    echo "1. Test compression: zstd -t '${DEST_FILE_PATH}'"
-    echo "2. List contents (optional, takes time/CPU): tar --list -I zstd -f '${DEST_FILE_PATH}' | less"
-    print_separator
-else
-    echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" &gt;&amp;2
-    echo "!!! ERRORS DETECTED during the backup process (Exit Code: ${FINAL_EXIT_CODE})." &gt;&amp;2
-    echo "!!! The archive file '${DEST_FILE_PATH}' may be incomplete or corrupt." &gt;&amp;2
-    echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" &gt;&amp;2
-    exit $FINAL_EXIT_CODE
-fi
-
-exit 0
-</code></pre></div></div>]]></content><author><name></name></author><category term="scratchpad" /></entry><entry><title type="html">Fixing rk3588 Init Scripts</title><link href="https://ib.bsb.br/fixing-rk3588-init-scripts/" rel="alternate" type="text/html" title="Fixing rk3588 Init Scripts" /><published>2025-05-12T00:00:00+00:00</published><updated>2025-05-12T21:01:34+00:00</updated><id>https://ib.bsb.br/fixing-rk3588-init-scripts</id><content type="html" xml:base="https://ib.bsb.br/fixing-rk3588-init-scripts/"><![CDATA[<h2 id="whats-happening">What’s Happening</h2>
-
-<p>You encountered warnings about two scripts in your <code class="language-plaintext highlighter-rouge">/etc/init.d/</code> directory:</p>
-<ul>
-  <li><code class="language-plaintext highlighter-rouge">mount_usb.sh</code></li>
-  <li><code class="language-plaintext highlighter-rouge">gobinet_boot.sh</code></li>
-</ul>
-
-<p>These warnings occurred because:</p>
-
-<ol>
-  <li>When enabling a service, Debian uses a tool called <code class="language-plaintext highlighter-rouge">insserv</code> to analyze all init scripts and determine their proper boot order.</li>
-  <li>This tool requires LSB (Linux Standard Base) headers in each script to understand dependencies and run order.</li>
-  <li>Your scripts lack these headers, causing the warnings.</li>
-</ol>
-
-<p><strong>Understanding the Core Problem</strong></p>
-
-<ul>
-  <li><strong>LSB Tags:</strong> SysV init scripts (those in <code class="language-plaintext highlighter-rouge">/etc/init.d/</code>) use special comment blocks (<code class="language-plaintext highlighter-rouge">### BEGIN INIT INFO ... ### END INIT INFO</code>) called LSB headers. These headers tell the system (via tools like <code class="language-plaintext highlighter-rouge">insserv</code> or <code class="language-plaintext highlighter-rouge">systemd</code>’s compatibility layer) about the service’s dependencies, what runlevels it should start/stop in, and provide descriptions. The warnings you saw mean these headers are missing or incomplete.</li>
-  <li><strong><code class="language-plaintext highlighter-rouge">mount_usb.sh</code>:</strong> This script’s logic (<code class="language-plaintext highlighter-rouge">if [ $ACTION == "add" ]</code>) indicates it’s designed to react to dynamic hardware events (USB stick plugged in/out). This is the job of <code class="language-plaintext highlighter-rouge">udev</code>, not the static boot sequence managed by init scripts.</li>
-  <li><strong><code class="language-plaintext highlighter-rouge">gobinet_boot.sh</code>:</strong> This script, which runs <code class="language-plaintext highlighter-rouge">quectel-CM</code> after a delay, is a more traditional candidate for a boot service, but it needs the proper LSB structure.</li>
-</ul>
-
-<hr />
-
-<p><strong>Part 1: Refactoring <code class="language-plaintext highlighter-rouge">mount_usb.sh</code> (The <code class="language-plaintext highlighter-rouge">udev</code> Approach)</strong></p>
-
-<p>This script should not be in <code class="language-plaintext highlighter-rouge">/etc/init.d/</code>. We’ll move its logic to a helper script called by a <code class="language-plaintext highlighter-rouge">udev</code> rule.</p>
-
-<p><strong>Step 1.1: Create/Move the Helper Script</strong></p>
-
-<p>Let’s place the helper script in <code class="language-plaintext highlighter-rouge">/usr/local/sbin/</code>, a standard location for locally installed system administration scripts.</p>
-
-<p>Original script location: <code class="language-plaintext highlighter-rouge">/etc/init.d/mount_usb.sh</code>
-New helper script location: <code class="language-plaintext highlighter-rouge">/usr/local/sbin/mount_usb_helper.sh</code></p>
-
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo mv</span> /etc/init.d/mount_usb.sh /usr/local/sbin/mount_usb_helper.sh
-<span class="nb">sudo chmod</span> +x /usr/local/sbin/mount_usb_helper.sh
-</code></pre></div></div>
-
-<p>Now, replace the content of <code class="language-plaintext highlighter-rouge">/usr/local/sbin/mount_usb_helper.sh</code> with this improved version:</p>
-
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c">#!/bin/bash</span>
-
-<span class="c"># Helper script to auto-mount/unmount USB VFAT drives, intended to be called by udev.</span>
-<span class="c"># $1 (DEVNAME): Device name (e.g., sdb1) passed by the udev rule via %k.</span>
-<span class="c"># $ACTION:      Environment variable (add/remove) set by udev.</span>
-
-<span class="nv">DEVNAME</span><span class="o">=</span><span class="s2">"</span><span class="k">${</span><span class="nv">1</span><span class="k">}</span><span class="s2">"</span>
-<span class="nv">MOUNT_BASE</span><span class="o">=</span><span class="s2">"/mnt/media"</span> <span class="c"># Or your preferred base path</span>
-<span class="nv">MOUNT_POINT</span><span class="o">=</span><span class="s2">"</span><span class="k">${</span><span class="nv">MOUNT_BASE</span><span class="k">}</span><span class="s2">/</span><span class="k">${</span><span class="nv">DEVNAME</span><span class="k">}</span><span class="s2">"</span>
-<span class="nv">LOG_TAG</span><span class="o">=</span><span class="s2">"usb-mount-helper"</span> <span class="c"># For syslog</span>
-
-<span class="c"># Function for logging to syslog (and optionally a dedicated file)</span>
-log_message<span class="o">()</span> <span class="o">{</span>
-    logger <span class="nt">-t</span> <span class="s2">"</span><span class="k">${</span><span class="nv">LOG_TAG</span><span class="k">}</span><span class="s2">"</span> <span class="nt">--</span> <span class="s2">"</span><span class="nv">$1</span><span class="s2">"</span> <span class="c"># -- ensures message isn't mistaken for options</span>
-    <span class="c"># Optional: echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" &gt;&gt; "/var/log/${LOG_TAG}.log"</span>
-<span class="o">}</span>
-
-<span class="k">if</span> <span class="o">[</span> <span class="nt">-z</span> <span class="s2">"</span><span class="nv">$DEVNAME</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then
-    </span>log_message <span class="s2">"Error: Device name not provided. Exiting."</span>
-    <span class="nb">exit </span>1
-<span class="k">fi</span>
-
-<span class="c"># Create the base mount directory if it doesn't exist</span>
-<span class="k">if</span> <span class="o">[</span> <span class="o">!</span> <span class="nt">-d</span> <span class="s2">"</span><span class="k">${</span><span class="nv">MOUNT_BASE</span><span class="k">}</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then
-    </span><span class="nb">mkdir</span> <span class="nt">-p</span> <span class="s2">"</span><span class="k">${</span><span class="nv">MOUNT_BASE</span><span class="k">}</span><span class="s2">"</span>
-    <span class="k">if</span> <span class="o">[</span> <span class="nv">$?</span> <span class="nt">-ne</span> 0 <span class="o">]</span><span class="p">;</span> <span class="k">then
-        </span>log_message <span class="s2">"Error: Could not create base mount directory </span><span class="k">${</span><span class="nv">MOUNT_BASE</span><span class="k">}</span><span class="s2">. Exiting."</span>
-        <span class="nb">exit </span>1
-    <span class="k">fi
-fi
-
-if</span> <span class="o">[</span> <span class="s2">"</span><span class="nv">$ACTION</span><span class="s2">"</span> <span class="o">==</span> <span class="s2">"add"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then
-    </span>log_message <span class="s2">"Add event for /dev/</span><span class="k">${</span><span class="nv">DEVNAME</span><span class="k">}</span><span class="s2">."</span>
-
-    <span class="c"># Check if already mounted using findmnt for reliability</span>
-    <span class="k">if </span>findmnt <span class="nt">--source</span> <span class="s2">"/dev/</span><span class="k">${</span><span class="nv">DEVNAME</span><span class="k">}</span><span class="s2">"</span> <span class="nt">--target</span> <span class="s2">"</span><span class="k">${</span><span class="nv">MOUNT_POINT</span><span class="k">}</span><span class="s2">"</span> <span class="o">&gt;</span> /dev/null<span class="p">;</span> <span class="k">then
-        </span>log_message <span class="s2">"/dev/</span><span class="k">${</span><span class="nv">DEVNAME</span><span class="k">}</span><span class="s2"> already mounted at </span><span class="k">${</span><span class="nv">MOUNT_POINT</span><span class="k">}</span><span class="s2">. Skipping."</span>
-        <span class="nb">exit </span>0
-    <span class="k">fi
-
-    if</span> <span class="o">[</span> <span class="o">!</span> <span class="nt">-d</span> <span class="s2">"</span><span class="k">${</span><span class="nv">MOUNT_POINT</span><span class="k">}</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then
-        </span><span class="nb">mkdir</span> <span class="nt">-p</span> <span class="s2">"</span><span class="k">${</span><span class="nv">MOUNT_POINT</span><span class="k">}</span><span class="s2">"</span>
-        <span class="k">if</span> <span class="o">[</span> <span class="nv">$?</span> <span class="nt">-ne</span> 0 <span class="o">]</span><span class="p">;</span> <span class="k">then
-            </span>log_message <span class="s2">"Error: Could not create mount point </span><span class="k">${</span><span class="nv">MOUNT_POINT</span><span class="k">}</span><span class="s2">. Exiting."</span>
-            <span class="nb">exit </span>1
-        <span class="k">fi
-    fi</span>
-
-    <span class="c"># Give the system a moment if needed (sometimes helpful for newly appeared devices)</span>
-    <span class="nb">sleep </span>1
-
-    <span class="c"># Mount options:</span>
-    <span class="c"># - iocharset=utf8: For correct filename encoding.</span>
-    <span class="c"># - uid=$(id -u linaro), gid=$(id -g linaro): Mounts as user 'linaro'.</span>
-    <span class="c">#   Replace 'linaro' with your desired username or a system user.</span>
-    <span class="c">#   Alternatively, use gid=plugdev (if users are in plugdev group) and appropriate fmask/dmask.</span>
-    <span class="c"># - fmask=0137, dmask=0027: File/Dir permissions.</span>
-    <span class="c">#   fmask=0137 -&gt; owner=rw, group=r, other= --- (640)</span>
-    <span class="c">#   dmask=0027 -&gt; owner=rwx, group=rx, other= --- (750)</span>
-    <span class="c">#   Adjust as needed. E.g., fmask=0117, dmask=0007 for rwx for owner, rwx for group.</span>
-    <span class="c"># - nofail: Prevents boot errors if USB device is problematic or not mountable.</span>
-    <span class="c"># - flush: Mounts VFAT with frequent flushing, good for removable media.</span>
-    <span class="c"># - sync: Can be used, but 'flush' is often preferred for VFAT on removable media.</span>
-    <span class="c">#         Using 'sync' for all I/O can slow things down significantly.</span>
-    <span class="c">#         The original script used 'sync' *after* mount, which is less effective.</span>
-    <span class="nv">USER_NAME</span><span class="o">=</span><span class="s2">"linaro"</span> <span class="c"># CHANGE THIS to your target user if needed</span>
-    <span class="nv">USER_ID</span><span class="o">=</span><span class="si">$(</span><span class="nb">id</span> <span class="nt">-u</span> <span class="s2">"</span><span class="nv">$USER_NAME</span><span class="s2">"</span><span class="si">)</span>
-    <span class="nv">GROUP_ID</span><span class="o">=</span><span class="si">$(</span><span class="nb">id</span> <span class="nt">-g</span> <span class="s2">"</span><span class="nv">$USER_NAME</span><span class="s2">"</span><span class="si">)</span>
-
-    <span class="k">if</span> <span class="o">[</span> <span class="nt">-z</span> <span class="s2">"</span><span class="nv">$USER_ID</span><span class="s2">"</span> <span class="o">]</span> <span class="o">||</span> <span class="o">[</span> <span class="nt">-z</span> <span class="s2">"</span><span class="nv">$GROUP_ID</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then
-        </span>log_message <span class="s2">"Error: Could not determine UID/GID for user '</span><span class="nv">$USER_NAME</span><span class="s2">'. Mounting with defaults."</span>
-        mount <span class="nt">-t</span> vfat <span class="nt">-o</span> <span class="s2">"iocharset=utf8,nofail,flush"</span> <span class="s2">"/dev/</span><span class="k">${</span><span class="nv">DEVNAME</span><span class="k">}</span><span class="s2">"</span> <span class="s2">"</span><span class="k">${</span><span class="nv">MOUNT_POINT</span><span class="k">}</span><span class="s2">"</span>
-    <span class="k">else
-        </span>mount <span class="nt">-t</span> vfat <span class="nt">-o</span> <span class="s2">"iocharset=utf8,uid=</span><span class="k">${</span><span class="nv">USER_ID</span><span class="k">}</span><span class="s2">,gid=</span><span class="k">${</span><span class="nv">GROUP_ID</span><span class="k">}</span><span class="s2">,fmask=0137,dmask=0027,nofail,flush"</span> <span class="s2">"/dev/</span><span class="k">${</span><span class="nv">DEVNAME</span><span class="k">}</span><span class="s2">"</span> <span class="s2">"</span><span class="k">${</span><span class="nv">MOUNT_POINT</span><span class="k">}</span><span class="s2">"</span>
-    <span class="k">fi
-
-    if</span> <span class="o">[</span> <span class="nv">$?</span> <span class="nt">-eq</span> 0 <span class="o">]</span><span class="p">;</span> <span class="k">then
-        </span>log_message <span class="s2">"Successfully mounted /dev/</span><span class="k">${</span><span class="nv">DEVNAME</span><span class="k">}</span><span class="s2"> to </span><span class="k">${</span><span class="nv">MOUNT_POINT</span><span class="k">}</span><span class="s2">."</span>
-    <span class="k">else
-        </span>log_message <span class="s2">"Error: Failed to mount /dev/</span><span class="k">${</span><span class="nv">DEVNAME</span><span class="k">}</span><span class="s2"> to </span><span class="k">${</span><span class="nv">MOUNT_POINT</span><span class="k">}</span><span class="s2">. Cleaning up directory."</span>
-        <span class="nb">rmdir</span> <span class="s2">"</span><span class="k">${</span><span class="nv">MOUNT_POINT</span><span class="k">}</span><span class="s2">"</span> 2&gt;/dev/null <span class="c"># Attempt to remove if empty</span>
-        <span class="nb">exit </span>1
-    <span class="k">fi
-
-elif</span> <span class="o">[</span> <span class="s2">"</span><span class="nv">$ACTION</span><span class="s2">"</span> <span class="o">==</span> <span class="s2">"remove"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then
-    </span>log_message <span class="s2">"Remove event for device that might be mounted at </span><span class="k">${</span><span class="nv">MOUNT_POINT</span><span class="k">}</span><span class="s2"> (was /dev/</span><span class="k">${</span><span class="nv">DEVNAME</span><span class="k">}</span><span class="s2">)."</span>
-
-    <span class="c"># Check if the specific device is mounted at the expected point</span>
-    <span class="k">if </span>findmnt <span class="nt">--source</span> <span class="s2">"/dev/</span><span class="k">${</span><span class="nv">DEVNAME</span><span class="k">}</span><span class="s2">"</span> <span class="nt">--target</span> <span class="s2">"</span><span class="k">${</span><span class="nv">MOUNT_POINT</span><span class="k">}</span><span class="s2">"</span> <span class="o">&gt;</span> /dev/null<span class="p">;</span> <span class="k">then
-        </span>umount <span class="nt">-f</span> <span class="s2">"</span><span class="k">${</span><span class="nv">MOUNT_POINT</span><span class="k">}</span><span class="s2">"</span> <span class="c"># Force unmount</span>
-        <span class="k">if</span> <span class="o">[</span> <span class="nv">$?</span> <span class="nt">-eq</span> 0 <span class="o">]</span><span class="p">;</span> <span class="k">then
-            </span>log_message <span class="s2">"Successfully unmounted </span><span class="k">${</span><span class="nv">MOUNT_POINT</span><span class="k">}</span><span class="s2">."</span>
-        <span class="k">else
-            </span>log_message <span class="s2">"Warning: Failed to unmount </span><span class="k">${</span><span class="nv">MOUNT_POINT</span><span class="k">}</span><span class="s2">. Attempting lazy unmount."</span>
-            umount <span class="nt">-l</span> <span class="s2">"</span><span class="k">${</span><span class="nv">MOUNT_POINT</span><span class="k">}</span><span class="s2">"</span> <span class="c"># Lazy unmount as a fallback</span>
-            <span class="k">if</span> <span class="o">[</span> <span class="nv">$?</span> <span class="nt">-eq</span> 0 <span class="o">]</span><span class="p">;</span> <span class="k">then
-                </span>log_message <span class="s2">"Successfully lazy unmounted </span><span class="k">${</span><span class="nv">MOUNT_POINT</span><span class="k">}</span><span class="s2">."</span>
-            <span class="k">else
-                </span>log_message <span class="s2">"Error: Failed to lazy unmount </span><span class="k">${</span><span class="nv">MOUNT_POINT</span><span class="k">}</span><span class="s2">."</span>
-            <span class="k">fi
-        fi
-    elif </span>findmnt <span class="s2">"</span><span class="k">${</span><span class="nv">MOUNT_POINT</span><span class="k">}</span><span class="s2">"</span> <span class="o">&gt;</span> /dev/null<span class="p">;</span> <span class="k">then</span>
-        <span class="c"># The mount point exists but isn't our device, or our device was already unmounted.</span>
-        log_message <span class="s2">"Mount point </span><span class="k">${</span><span class="nv">MOUNT_POINT</span><span class="k">}</span><span class="s2"> is in use by another device or /dev/</span><span class="k">${</span><span class="nv">DEVNAME</span><span class="k">}</span><span class="s2"> already unmounted. Won't force unmount other devices."</span>
-    <span class="k">else
-        </span>log_message <span class="s2">"Mount point </span><span class="k">${</span><span class="nv">MOUNT_POINT</span><span class="k">}</span><span class="s2"> not found or not mounted. Skipping unmount logic."</span>
-    <span class="k">fi</span>
-
-    <span class="c"># Remove the directory if it exists and is empty</span>
-    <span class="k">if</span> <span class="o">[</span> <span class="nt">-d</span> <span class="s2">"</span><span class="k">${</span><span class="nv">MOUNT_POINT</span><span class="k">}</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then
-        if</span> <span class="o">[</span> <span class="nt">-z</span> <span class="s2">"</span><span class="si">$(</span><span class="nb">ls</span> <span class="nt">-A</span> <span class="s2">"</span><span class="k">${</span><span class="nv">MOUNT_POINT</span><span class="k">}</span><span class="s2">"</span><span class="si">)</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then</span> <span class="c"># Check if directory is empty</span>
-            <span class="nb">rmdir</span> <span class="s2">"</span><span class="k">${</span><span class="nv">MOUNT_POINT</span><span class="k">}</span><span class="s2">"</span>
-            <span class="k">if</span> <span class="o">[</span> <span class="nv">$?</span> <span class="nt">-eq</span> 0 <span class="o">]</span><span class="p">;</span> <span class="k">then
-                </span>log_message <span class="s2">"Successfully removed directory </span><span class="k">${</span><span class="nv">MOUNT_POINT</span><span class="k">}</span><span class="s2">."</span>
-            <span class="k">else
-                </span>log_message <span class="s2">"Note: Directory </span><span class="k">${</span><span class="nv">MOUNT_POINT</span><span class="k">}</span><span class="s2"> not empty after unmount or error removing."</span>
-            <span class="k">fi
-        else
-            </span>log_message <span class="s2">"Note: Directory </span><span class="k">${</span><span class="nv">MOUNT_POINT</span><span class="k">}</span><span class="s2"> is not empty. Not removing."</span>
-        <span class="k">fi
-    fi
-else
-    </span>log_message <span class="s2">"Warning: Unknown or no ACTION ('</span><span class="nv">$ACTION</span><span class="s2">') for device /dev/</span><span class="nv">$DEVNAME</span><span class="s2">. Nothing to do."</span>
-<span class="k">fi
-
-</span><span class="nb">exit </span>0
-</code></pre></div></div>
-
-<p><strong>Step 1.2: Create the <code class="language-plaintext highlighter-rouge">udev</code> Rule</strong></p>
-
-<p>Create a new file named <code class="language-plaintext highlighter-rouge">/etc/udev/rules.d/85-automount-usb-vfat.rules</code>:</p>
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code># Udev rule for automatically mounting/unmounting VFAT USB block devices
-
-# Match USB block devices (e.g., partitions on USB sticks) that are VFAT
-# SUBSYSTEMS=="usb": Ensures the device is on the USB bus.
-# SUBSYSTEM=="block": Ensures it's a block device.
-# DRIVERS=="sd": Further refinement for SCSI-like devices (common for USB storage).
-# KERNEL=="sd[a-z]*[0-9]": Matches partitions like sdb1, sdc1. Using sd[a-z]* instead of sd[b-z] for more generality if system disk is nvme.
-# ENV{ID_FS_TYPE}=="vfat": Only act on VFAT filesystems.
-# ACTION=="add": Trigger on device addition.
-# RUN+="/usr/local/sbin/mount_usb_helper.sh %k": Execute helper. %k is kernel name (e.g., sdb1).
-ACTION=="add", SUBSYSTEMS=="usb", SUBSYSTEM=="block", DRIVERS=="sd", KERNEL=="sd[a-z]*[0-9]", ENV{ID_FS_TYPE}=="vfat", RUN+="/usr/local/sbin/mount_usb_helper.sh %k"
-
-# Rule for removal. Simpler match as we mainly care about the KERNEL name passed to the script.
-ACTION=="remove", SUBSYSTEMS=="usb", SUBSYSTEM=="block", DRIVERS=="sd", KERNEL=="sd[a-z]*[0-9]", RUN+="/usr/local/sbin/mount_usb_helper.sh %k"
-
-</code></pre></div></div>
-<p><em>Self-correction:</em> The <code class="language-plaintext highlighter-rouge">KERNEL=="sd[a-z]*[0-9]"</code> combined with <code class="language-plaintext highlighter-rouge">SUBSYSTEMS=="usb"</code> is generally safe. If your main system disk is also USB and named e.g. <code class="language-plaintext highlighter-rouge">sda</code>, you might add <code class="language-plaintext highlighter-rouge">ATTRS{removable}=="1"</code> to only target removable USB block devices, or refine the <code class="language-plaintext highlighter-rouge">KERNEL</code> pattern like <code class="language-plaintext highlighter-rouge">sd[b-z]*[0-9]</code>.</p>
-
-<p><strong>Step 1.3: Apply <code class="language-plaintext highlighter-rouge">udev</code> Changes</strong></p>
-<ol>
-  <li>Reload <code class="language-plaintext highlighter-rouge">udev</code> rules:
-    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>udevadm control <span class="nt">--reload-rules</span>
-</code></pre></div>    </div>
-  </li>
-  <li>Trigger <code class="language-plaintext highlighter-rouge">udev</code> for existing devices (or just re-plug your USB device):
-    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>udevadm trigger
-</code></pre></div>    </div>
-    <p>Now, when you plug in a VFAT USB drive, it should be automatically mounted by your user <code class="language-plaintext highlighter-rouge">linaro</code> (or the user you configured) under <code class="language-plaintext highlighter-rouge">/mnt/media/DEVICE_NAME</code>. Logs will go to syslog tagged with <code class="language-plaintext highlighter-rouge">usb-mount-helper</code>.</p>
-  </li>
-</ol>
-
-<hr />
-
-<p><strong>Part 2: Refactoring <code class="language-plaintext highlighter-rouge">gobinet_boot.sh</code> (SysV init script with LSB)</strong></p>
-
-<p>This script will remain in <code class="language-plaintext highlighter-rouge">/etc/init.d/</code> but will be made LSB-compliant.</p>
-
-<p><strong>Step 2.1: Edit <code class="language-plaintext highlighter-rouge">/etc/init.d/gobinet_boot.sh</code></strong></p>
-
-<p>Replace its content with:</p>
-
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c">#!/bin/sh</span>
-<span class="c">### BEGIN INIT INFO</span>
-<span class="c"># Provides:          gobinet-boot</span>
-<span class="c"># Required-Start:    $remote_fs $syslog</span>
-<span class="c"># Required-Stop:     $remote_fs $syslog</span>
-<span class="c"># Should-Start:      $network # If quectel-CM *needs* basic networking already up.</span>
-<span class="c"># Default-Start:     2 3 4 5</span>
-<span class="c"># Default-Stop:      0 1 6</span>
-<span class="c"># Short-Description: Initialize Quectel GobiNet device</span>
-<span class="c"># Description:       This service waits for a specified time and then runs</span>
-<span class="c">#                    the quectel-CM command to initialize GobiNet hardware.</span>
-<span class="c">#                    The Quectel module might provide network connectivity.</span>
-<span class="c">### END INIT INFO</span>
-
-<span class="c"># PATH should only include /usr/* if it runs after the mountnfs.sh script</span>
-<span class="nv">PATH</span><span class="o">=</span>/sbin:/usr/sbin:/bin:/usr/bin
-<span class="nv">DESC</span><span class="o">=</span><span class="s2">"Quectel GobiNet initialization"</span>
-<span class="nv">NAME</span><span class="o">=</span>gobinet-boot <span class="c"># LSB 'Provides' name</span>
-<span class="nv">DAEMON_COMMAND</span><span class="o">=</span>/sbin/quectel-CM <span class="c"># The command to run</span>
-<span class="nv">SCRIPTNAME</span><span class="o">=</span>/etc/init.d/gobinet_boot.sh <span class="c"># Actual script name</span>
-<span class="nv">PIDFILE</span><span class="o">=</span>/var/run/<span class="k">${</span><span class="nv">NAME</span><span class="k">}</span>.pid
-<span class="nv">LOGFILE</span><span class="o">=</span>/var/log/<span class="k">${</span><span class="nv">NAME</span><span class="k">}</span>.log
-<span class="nv">SLEEP_DURATION</span><span class="o">=</span>60 <span class="c"># Original sleep duration</span>
-
-<span class="c"># Exit if the command is not installed</span>
-<span class="o">[</span> <span class="nt">-x</span> <span class="s2">"</span><span class="nv">$DAEMON_COMMAND</span><span class="s2">"</span> <span class="o">]</span> <span class="o">||</span> <span class="o">{</span> <span class="nb">echo</span> <span class="s2">"</span><span class="nv">$DAEMON_COMMAND</span><span class="s2"> not found or not executable."</span><span class="p">;</span> <span class="nb">exit </span>1<span class="p">;</span> <span class="o">}</span>
-
-<span class="c"># Read configuration variable file if it is present</span>
-<span class="o">[</span> <span class="nt">-r</span> /etc/default/<span class="nv">$NAME</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="nb">.</span> /etc/default/<span class="nv">$NAME</span>
-
-<span class="c"># Load the VERBOSE setting and other rcS variables</span>
-<span class="nb">.</span> /lib/init/vars.sh
-
-<span class="c"># Define LSB log_* functions.</span>
-<span class="nb">.</span> /lib/lsb/init-functions
-
-<span class="c"># Function to log messages with timestamp</span>
-_log_msg<span class="o">()</span> <span class="o">{</span>
-    <span class="nb">echo</span> <span class="s2">"</span><span class="si">$(</span><span class="nb">date</span> <span class="s1">'+%Y-%m-%d %H:%M:%S'</span><span class="si">)</span><span class="s2"> - </span><span class="nv">$1</span><span class="s2">"</span> <span class="o">&gt;&gt;</span> <span class="s2">"</span><span class="nv">$LOGFILE</span><span class="s2">"</span>
-    log_action_msg <span class="s2">"</span><span class="nv">$1</span><span class="s2">"</span> <span class="c"># For console via LSB</span>
-<span class="o">}</span>
-
-<span class="c">#</span>
-<span class="c"># Function that starts the service</span>
-<span class="c">#</span>
-do_start<span class="o">()</span>
-<span class="o">{</span>
-    <span class="c"># Check if already running based on PID file and process</span>
-    <span class="k">if</span> <span class="o">[</span> <span class="nt">-f</span> <span class="s2">"</span><span class="nv">$PIDFILE</span><span class="s2">"</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> ps <span class="nt">-p</span> <span class="s2">"</span><span class="si">$(</span><span class="nb">cat</span> <span class="s2">"</span><span class="nv">$PIDFILE</span><span class="s2">"</span><span class="si">)</span><span class="s2">"</span> <span class="o">&gt;</span> /dev/null 2&gt;&amp;1<span class="p">;</span> <span class="k">then
-        </span>_log_msg <span class="s2">"</span><span class="nv">$DESC</span><span class="s2"> (</span><span class="nv">$NAME</span><span class="s2">) is already running (PID </span><span class="si">$(</span><span class="nb">cat</span> <span class="nv">$PIDFILE</span><span class="si">)</span><span class="s2">)."</span>
-        <span class="k">return </span>1 <span class="c"># LSB code for already running</span>
-    <span class="k">fi
-
-    </span>_log_msg <span class="s2">"Starting </span><span class="nv">$DESC</span><span class="s2"> (</span><span class="nv">$NAME</span><span class="s2">)..."</span>
-
-    <span class="c"># This subshell runs the sleep and the command in the background.</span>
-    <span class="c"># IMPORTANT: This PID management is basic. If quectel-CM is a true daemon,</span>
-    <span class="c"># it should create its own PID file. If it does, modify this script to use that.</span>
-    <span class="o">(</span>
-        _log_msg <span class="s2">"Subshell: Sleeping for </span><span class="nv">$SLEEP_DURATION</span><span class="s2"> seconds before running </span><span class="nv">$DAEMON_COMMAND</span><span class="s2">."</span>
-        <span class="nb">sleep</span> <span class="s2">"</span><span class="nv">$SLEEP_DURATION</span><span class="s2">"</span>
-        _log_msg <span class="s2">"Subshell: Executing </span><span class="nv">$DAEMON_COMMAND</span><span class="s2">."</span>
-        <span class="c"># Redirect quectel-CM's stdout and stderr to the log file</span>
-        <span class="s2">"</span><span class="nv">$DAEMON_COMMAND</span><span class="s2">"</span> <span class="o">&gt;&gt;</span> <span class="s2">"</span><span class="nv">$LOGFILE</span><span class="s2">"</span> 2&gt;&amp;1
-        _log_msg <span class="s2">"Subshell: </span><span class="nv">$DAEMON_COMMAND</span><span class="s2"> finished or daemonized. Subshell exiting."</span>
-        <span class="c"># If quectel-CM daemonizes and creates its own PID, this outer PID is not useful after this point.</span>
-    <span class="o">)</span> &amp;
-    <span class="c"># Store the PID of the backgrounded subshell</span>
-    <span class="nb">echo</span> <span class="nv">$!</span> <span class="o">&gt;</span> <span class="s2">"</span><span class="nv">$PIDFILE</span><span class="s2">"</span>
-
-    <span class="k">if</span> <span class="o">[</span> <span class="nv">$?</span> <span class="nt">-eq</span> 0 <span class="o">]</span><span class="p">;</span> <span class="k">then
-        </span>_log_msg <span class="s2">"</span><span class="nv">$DESC</span><span class="s2"> (</span><span class="nv">$NAME</span><span class="s2">) started (subshell PID </span><span class="nv">$!</span><span class="s2">). Check </span><span class="nv">$LOGFILE</span><span class="s2"> for </span><span class="nv">$DAEMON_COMMAND</span><span class="s2"> output."</span>
-        <span class="k">return </span>0 <span class="c"># Success</span>
-    <span class="k">else
-        </span>_log_msg <span class="s2">"Failed to start </span><span class="nv">$DESC</span><span class="s2"> (</span><span class="nv">$NAME</span><span class="s2">) subshell."</span>
-        <span class="nb">rm</span> <span class="nt">-f</span> <span class="s2">"</span><span class="nv">$PIDFILE</span><span class="s2">"</span> <span class="c"># Clean up PID file on failure</span>
-        <span class="k">return </span>2 <span class="c"># LSB code for generic error</span>
-    <span class="k">fi</span>
-<span class="o">}</span>
-
-<span class="c">#</span>
-<span class="c"># Function that stops the service</span>
-<span class="c">#</span>
-do_stop<span class="o">()</span>
-<span class="o">{</span>
-    _log_msg <span class="s2">"Stopping </span><span class="nv">$DESC</span><span class="s2"> (</span><span class="nv">$NAME</span><span class="s2">)..."</span>
-
-    <span class="k">if</span> <span class="o">[</span> <span class="o">!</span> <span class="nt">-f</span> <span class="s2">"</span><span class="nv">$PIDFILE</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then
-        </span>_log_msg <span class="s2">"</span><span class="nv">$DESC</span><span class="s2"> (</span><span class="nv">$NAME</span><span class="s2">) PID file not found. Assuming not running or already stopped."</span>
-        <span class="k">return </span>1 <span class="c"># LSB code for not running</span>
-    <span class="k">fi
-
-    </span><span class="nv">PID_TO_KILL</span><span class="o">=</span><span class="si">$(</span><span class="nb">cat</span> <span class="s2">"</span><span class="nv">$PIDFILE</span><span class="s2">"</span><span class="si">)</span>
-    <span class="k">if</span> <span class="o">!</span> ps <span class="nt">-p</span> <span class="s2">"</span><span class="nv">$PID_TO_KILL</span><span class="s2">"</span> <span class="o">&gt;</span> /dev/null 2&gt;&amp;1<span class="p">;</span> <span class="k">then
-        </span>_log_msg <span class="s2">"</span><span class="nv">$DESC</span><span class="s2"> (</span><span class="nv">$NAME</span><span class="s2">) (PID </span><span class="nv">$PID_TO_KILL</span><span class="s2"> from PID file) not running. Removing stale PID file."</span>
-        <span class="nb">rm</span> <span class="nt">-f</span> <span class="s2">"</span><span class="nv">$PIDFILE</span><span class="s2">"</span>
-        <span class="k">return </span>1 <span class="c"># LSB code for not running</span>
-    <span class="k">fi</span>
-
-    <span class="c"># Attempt to stop the process found in the PID file.</span>
-    <span class="c"># This will kill the subshell. If quectel-CM daemonized and detached,</span>
-    <span class="c"># this won't stop the actual quectel-CM daemon unless it's a child of the subshell</span>
-    <span class="c"># and gets killed when the subshell (its parent) is terminated.</span>
-    <span class="c"># For a true daemon, you'd need to know its actual PID or have it respond to signals.</span>
-    <span class="c"># The `start-stop-daemon --stop` utility is more robust if the process behaves like a daemon.</span>
-    <span class="c"># However, we are targeting the subshell's PID here.</span>
-    <span class="nb">kill</span> <span class="s2">"</span><span class="nv">$PID_TO_KILL</span><span class="s2">"</span>
-    <span class="c"># Allow some time for the process to terminate</span>
-    <span class="nb">sleep </span>2
-
-    <span class="k">if</span> <span class="o">!</span> ps <span class="nt">-p</span> <span class="s2">"</span><span class="nv">$PID_TO_KILL</span><span class="s2">"</span> <span class="o">&gt;</span> /dev/null 2&gt;&amp;1<span class="p">;</span> <span class="k">then
-        </span>_log_msg <span class="s2">"</span><span class="nv">$DESC</span><span class="s2"> (</span><span class="nv">$NAME</span><span class="s2">) (PID </span><span class="nv">$PID_TO_KILL</span><span class="s2">) stopped successfully."</span>
-        <span class="nb">rm</span> <span class="nt">-f</span> <span class="s2">"</span><span class="nv">$PIDFILE</span><span class="s2">"</span>
-        <span class="k">return </span>0 <span class="c"># Success</span>
-    <span class="k">else
-        </span>_log_msg <span class="s2">"Failed to stop </span><span class="nv">$DESC</span><span class="s2"> (</span><span class="nv">$NAME</span><span class="s2">) (PID </span><span class="nv">$PID_TO_KILL</span><span class="s2">) with SIGTERM. Sending SIGKILL."</span>
-        <span class="nb">kill</span> <span class="nt">-9</span> <span class="s2">"</span><span class="nv">$PID_TO_KILL</span><span class="s2">"</span>
-        <span class="nb">sleep </span>1
-        <span class="k">if</span> <span class="o">!</span> ps <span class="nt">-p</span> <span class="s2">"</span><span class="nv">$PID_TO_KILL</span><span class="s2">"</span> <span class="o">&gt;</span> /dev/null 2&gt;&amp;1<span class="p">;</span> <span class="k">then
-            </span>_log_msg <span class="s2">"</span><span class="nv">$DESC</span><span class="s2"> (</span><span class="nv">$NAME</span><span class="s2">) (PID </span><span class="nv">$PID_TO_KILL</span><span class="s2">) killed successfully."</span>
-            <span class="nb">rm</span> <span class="nt">-f</span> <span class="s2">"</span><span class="nv">$PIDFILE</span><span class="s2">"</span>
-            <span class="k">return </span>0 <span class="c"># Success</span>
-        <span class="k">else
-            </span>_log_msg <span class="s2">"Error: Failed to kill </span><span class="nv">$DESC</span><span class="s2"> (</span><span class="nv">$NAME</span><span class="s2">) (PID </span><span class="nv">$PID_TO_KILL</span><span class="s2">) even with SIGKILL."</span>
-            <span class="k">return </span>2 <span class="c"># LSB code for generic error</span>
-        <span class="k">fi
-    fi</span>
-<span class="o">}</span>
-
-<span class="c">#</span>
-<span class="c"># Function that gets the status of the service</span>
-<span class="c">#</span>
-do_status<span class="o">()</span>
-<span class="o">{</span>
-    <span class="c"># status_of_proc -p "$PIDFILE" "$DAEMON_COMMAND" "$NAME"</span>
-    <span class="c"># The above LSB function is good if DAEMON_COMMAND is the actual long-running process name.</span>
-    <span class="c"># Since we are managing a subshell, we'll check the PID from the file.</span>
-    <span class="k">if</span> <span class="o">[</span> <span class="nt">-f</span> <span class="s2">"</span><span class="nv">$PIDFILE</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then
-        </span><span class="nv">SERVICE_PID</span><span class="o">=</span><span class="si">$(</span><span class="nb">cat</span> <span class="s2">"</span><span class="nv">$PIDFILE</span><span class="s2">"</span><span class="si">)</span>
-        <span class="k">if </span>ps <span class="nt">-p</span> <span class="s2">"</span><span class="nv">$SERVICE_PID</span><span class="s2">"</span> <span class="o">&gt;</span> /dev/null 2&gt;&amp;1<span class="p">;</span> <span class="k">then
-            </span>log_success_msg <span class="s2">"</span><span class="nv">$DESC</span><span class="s2"> (</span><span class="nv">$NAME</span><span class="s2">) is running with PID </span><span class="nv">$SERVICE_PID</span><span class="s2">."</span>
-            <span class="c"># You could add more info here, e.g., check if quectel-CM is also running if it's a child.</span>
-            <span class="nb">exit </span>0 <span class="c"># LSB code for running</span>
-        <span class="k">else
-            </span>log_failure_msg <span class="s2">"</span><span class="nv">$DESC</span><span class="s2"> (</span><span class="nv">$NAME</span><span class="s2">) PID file exists, but process </span><span class="nv">$SERVICE_PID</span><span class="s2"> is not running. Stale PID file?"</span>
-            <span class="nb">exit </span>1 <span class="c"># LSB code for not running but PID file exists (stale)</span>
-        <span class="k">fi
-    else
-        </span>log_failure_msg <span class="s2">"</span><span class="nv">$DESC</span><span class="s2"> (</span><span class="nv">$NAME</span><span class="s2">) is not running (no PID file)."</span>
-        <span class="nb">exit </span>3 <span class="c"># LSB code for not running</span>
-    <span class="k">fi</span>
-<span class="o">}</span>
-
-
-<span class="k">case</span> <span class="s2">"</span><span class="nv">$1</span><span class="s2">"</span> <span class="k">in
-  </span>start<span class="p">)</span>
-    do_start
-    <span class="nb">exit</span> <span class="nv">$?</span>
-    <span class="p">;;</span>
-  stop<span class="p">)</span>
-    do_stop
-    <span class="nb">exit</span> <span class="nv">$?</span>
-    <span class="p">;;</span>
-  status<span class="p">)</span>
-    do_status
-    <span class="p">;;</span>
-  restart|force-reload<span class="p">)</span>
-    _log_msg <span class="s2">"Restarting </span><span class="nv">$DESC</span><span class="s2"> (</span><span class="nv">$NAME</span><span class="s2">)..."</span>
-    do_stop
-    <span class="c"># Allow some time for graceful shutdown before restarting</span>
-    <span class="nb">sleep </span>2
-    do_start
-    <span class="nb">exit</span> <span class="nv">$?</span>
-    <span class="p">;;</span>
-  <span class="k">*</span><span class="p">)</span>
-    <span class="nb">echo</span> <span class="s2">"Usage: </span><span class="nv">$SCRIPTNAME</span><span class="s2"> {start|stop|status|restart}"</span> <span class="o">&gt;</span>&amp;2
-    <span class="nb">exit </span>3
-    <span class="p">;;</span>
-<span class="k">esac</span>
-
-<span class="nb">exit </span>0
-</code></pre></div></div>
-
-<p><strong>Step 2.2: Make the script executable</strong></p>
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo chmod</span> +x /etc/init.d/gobinet_boot.sh
-</code></pre></div></div>
-
-<p><strong>Step 2.3: Test the script</strong></p>
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo</span> /etc/init.d/gobinet_boot.sh start
-<span class="nb">sudo</span> /etc/init.d/gobinet_boot.sh status
-<span class="c"># Wait for more than SLEEP_DURATION to see if quectel-CM runs</span>
-<span class="nb">sudo</span> /etc/init.d/gobinet_boot.sh status
-<span class="nb">sudo</span> /etc/init.d/gobinet_boot.sh stop
-</code></pre></div></div>
-<p>Check <code class="language-plaintext highlighter-rouge">/var/log/gobinet-boot.log</code> for output.</p>
-
-<p><strong>Step 2.4: Update System’s Understanding of the Service</strong>
-If you had previously enabled it with <code class="language-plaintext highlighter-rouge">systemd-sysv-install</code> or <code class="language-plaintext highlighter-rouge">update-rc.d</code>, systemd might still have an old version of its generated unit.</p>
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>systemctl daemon-reload
-<span class="c"># If you want to ensure it's enabled for boot (using systemd's SysV generator):</span>
-<span class="nb">sudo </span>systemctl <span class="nb">enable </span>gobinet_boot.sh <span class="c"># Or it might be gobinet-boot based on 'Provides'</span>
-</code></pre></div></div>
-<p>The <code class="language-plaintext highlighter-rouge">insserv</code> warnings for <code class="language-plaintext highlighter-rouge">gobinet_boot.sh</code> should now be gone.</p>
-
-<p><strong>Important Notes for <code class="language-plaintext highlighter-rouge">gobinet_boot.sh</code>:</strong></p>
-<ul>
-  <li><strong><code class="language-plaintext highlighter-rouge">quectel-CM</code> Behavior:</strong> The provided script assumes <code class="language-plaintext highlighter-rouge">quectel-CM</code> is a command that either:
-    <ol>
-      <li>Initializes hardware and then exits.</li>
-      <li>Starts its own daemon process and detaches correctly (in which case the PID in <code class="language-plaintext highlighter-rouge">/var/run/gobinet-boot.pid</code> is only for the initial subshell).
-If <code class="language-plaintext highlighter-rouge">quectel-CM</code> is meant to run continuously as a foreground process <em>managed by the init script</em>, the init script would need to be more complex, likely using <code class="language-plaintext highlighter-rouge">start-stop-daemon</code> to manage it directly.</li>
-    </ol>
-  </li>
-  <li><strong>Dependencies (<code class="language-plaintext highlighter-rouge">Required-Start</code>, <code class="language-plaintext highlighter-rouge">Should-Start</code>):</strong>
-    <ul>
-      <li><code class="language-plaintext highlighter-rouge">$remote_fs $syslog</code>: Standard, almost always needed.</li>
-      <li><code class="language-plaintext highlighter-rouge">$network</code>: Added as <code class="language-plaintext highlighter-rouge">Should-Start</code>. If <code class="language-plaintext highlighter-rouge">/sbin/quectel-CM</code> <em>needs</em> the network to be up before it can configure the Quectel modem, this is appropriate. If the Quectel modem <em>provides</em> a primary network interface, then this script should likely start <em>before</em> the generic <code class="language-plaintext highlighter-rouge">$network</code> target, or it might be part of a more specific modem management service. You might need to remove <code class="language-plaintext highlighter-rouge">$network</code> or change it to something like <code class="language-plaintext highlighter-rouge">Before=network.target</code> in a systemd unit.</li>
-    </ul>
-  </li>
-  <li><strong><code class="language-plaintext highlighter-rouge">sleep 60</code>:</strong> This mimics the original script’s delay. In a production environment, especially with systemd, you’d ideally look for ways to trigger <code class="language-plaintext highlighter-rouge">quectel-CM</code> based on device availability or other events rather than a fixed sleep, if possible.</li>
-</ul>
-
-<hr />
-
-<p><strong>Part 3: The Systemd Native Unit Approach (Recommended for Debian Bullseye)</strong></p>
-
-<p>While the above steps fix the LSB warnings for your SysV init scripts, Debian Bullseye uses <code class="language-plaintext highlighter-rouge">systemd</code> as its primary init system. Creating native <code class="language-plaintext highlighter-rouge">systemd</code> unit files is the modern, more robust, and flexible way to manage services.</p>
-
-<p><strong>3.1 For <code class="language-plaintext highlighter-rouge">gobinet_boot.sh</code> functionality -&gt; <code class="language-plaintext highlighter-rouge">gobinet-boot.service</code></strong></p>
-
-<p>Create <code class="language-plaintext highlighter-rouge">/etc/systemd/system/gobinet-boot.service</code>:</p>
-
-<div class="language-ini highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nn">[Unit]</span>
-<span class="py">Description</span><span class="p">=</span><span class="s">Quectel GobiNet Initialization Service</span>
-<span class="py">Documentation</span><span class="p">=</span><span class="s">man:quectel-CM(8) # If a man page exists</span>
-<span class="c"># If it needs to run after basic network configuration is attempted:
-# After=network.target syslog.target
-# If it needs to run before network-online.target is reached:
-# Before=network-online.target
-# If the GobiNet modem *provides* network, dependencies might be more complex
-# or it might be better integrated with ModemManager or netplan/ifupdown.
-# For now, let's assume it runs after basic system services are up.
-</span><span class="py">After</span><span class="p">=</span><span class="s">syslog.target local-fs.target</span>
-
-<span class="nn">[Service]</span>
-<span class="py">Type</span><span class="p">=</span><span class="s">oneshot # Assumes quectel-CM initializes and exits, or is a self-daemonizing script.</span>
-<span class="py">RemainAfterExit</span><span class="p">=</span><span class="s">yes # If Type=oneshot, and we consider the 'service' up after the command.</span>
-<span class="py">ExecStartPre</span><span class="p">=</span><span class="s">/bin/sleep 60 # The original delay</span>
-<span class="py">ExecStart</span><span class="p">=</span><span class="s">/sbin/quectel-CM</span>
-<span class="py">StandardOutput</span><span class="p">=</span><span class="s">journal+console # Log to systemd journal and console</span>
-<span class="py">StandardError</span><span class="p">=</span><span class="s">journal+console</span>
-
-<span class="c"># If quectel-CM is a true daemon that forks and manages its own PID:
-# Type=forking
-# PIDFile=/var/run/quectel-cm.pid # Path to the PID file quectel-CM creates
-# ExecStart=/sbin/quectel-CM &lt;options_if_any&gt;
-# GuessMainPID=no # If PIDFile is accurate
-</span>
-<span class="c"># If quectel-CM runs in foreground and systemd should manage it:
-# Type=simple
-# ExecStart=/sbin/quectel-CM
-# Restart=on-failure # Optional: restart if it fails
-</span>
-<span class="nn">[Install]</span>
-<span class="py">WantedBy</span><span class="p">=</span><span class="s">multi-user.target # Start when multi-user target is reached</span>
-</code></pre></div></div>
-
-<p><strong>To use this systemd service:</strong></p>
-<ol>
-  <li>Create the file <code class="language-plaintext highlighter-rouge">/etc/systemd/system/gobinet-boot.service</code> with the content above.</li>
-  <li><strong>Disable the SysV init script if you previously enabled it:</strong>
-    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>systemctl disable gobinet_boot.sh <span class="c"># Or update-rc.d gobinet_boot.sh remove</span>
-<span class="nb">sudo rm</span> /etc/init.d/gobinet_boot.sh <span class="c"># Optionally remove the old script</span>
-</code></pre></div>    </div>
-  </li>
-  <li>Reload systemd: <code class="language-plaintext highlighter-rouge">sudo systemctl daemon-reload</code></li>
-  <li>Enable the new service: <code class="language-plaintext highlighter-rouge">sudo systemctl enable gobinet-boot.service</code></li>
-  <li>Start it: <code class="language-plaintext highlighter-rouge">sudo systemctl start gobinet-boot.service</code></li>
-  <li>Check status: <code class="language-plaintext highlighter-rouge">sudo systemctl status gobinet-boot.service</code> and <code class="language-plaintext highlighter-rouge">journalctl -u gobinet-boot.service</code></li>
-</ol>
-
-<p><strong>Advantages of systemd unit for <code class="language-plaintext highlighter-rouge">gobinet-boot</code>:</strong></p>
-<ul>
-  <li><strong>Clearer Dependencies:</strong> <code class="language-plaintext highlighter-rouge">After=</code>, <code class="language-plaintext highlighter-rouge">Before=</code>, <code class="language-plaintext highlighter-rouge">Wants=</code>, <code class="language-plaintext highlighter-rouge">Requires=</code> offer fine-grained control.</li>
-  <li><strong>Better Process Management:</strong> <code class="language-plaintext highlighter-rouge">Type=</code> (simple, forking, oneshot, etc.) correctly defines how systemd handles the process.</li>
-  <li><strong>Resource Control:</strong> Can set CPU/memory limits, etc.</li>
-  <li><strong>Integrated Logging:</strong> Output goes directly to the systemd journal.</li>
-  <li><strong>Simpler Syntax:</strong> Often more straightforward than complex shell scripting for service management.</li>
-</ul>
-
-<p><strong>3.2 For <code class="language-plaintext highlighter-rouge">mount_usb.sh</code> functionality (udev is still key)</strong></p>
-
-<p>The <code class="language-plaintext highlighter-rouge">udev</code> approach for <code class="language-plaintext highlighter-rouge">mount_usb.sh</code> is already good and leverages <code class="language-plaintext highlighter-rouge">systemd-udevd.service</code>. You don’t typically create a separate <code class="language-plaintext highlighter-rouge">.service</code> file for each <code class="language-plaintext highlighter-rouge">udev</code> <code class="language-plaintext highlighter-rouge">RUN+=</code> script unless the script needs to start a long-running service managed by systemd. Your helper script is short-lived, so the current udev method is fine.</p>
-
-<p><em>Advanced Systemd Automount:</em>
-For truly on-demand mounting managed by systemd (where the mount only happens when the directory is accessed), you could explore systemd <code class="language-plaintext highlighter-rouge">.automount</code> and <code class="language-plaintext highlighter-rouge">.mount</code> units. This is more complex to set up than the udev script but offers different benefits. For your current VFAT use case, the udev + helper script is a good balance of simplicity and functionality.</p>
-
-<hr />
-
-<p><strong>Summary of Recommendations:</strong></p>
-
-<ol>
-  <li><strong>For <code class="language-plaintext highlighter-rouge">mount_usb.sh</code>:</strong>
-    <ul>
-      <li>Definitely move it out of <code class="language-plaintext highlighter-rouge">/etc/init.d/</code>.</li>
-      <li>Use the <code class="language-plaintext highlighter-rouge">udev</code> rule and the improved <code class="language-plaintext highlighter-rouge">/usr/local/sbin/mount_usb_helper.sh</code> script provided above. This addresses the LSB warnings by removing the script from <code class="language-plaintext highlighter-rouge">insserv</code>’s scope and makes it function correctly.</li>
-    </ul>
-  </li>
-  <li><strong>For <code class="language-plaintext highlighter-rouge">gobinet_boot.sh</code>:</strong>
-    <ul>
-      <li><strong>Option A (Improved SysV):</strong> Use the refactored <code class="language-plaintext highlighter-rouge">/etc/init.d/gobinet_boot.sh</code> provided. This will fix the LSB warnings.</li>
-      <li><strong>Option B (Recommended - Systemd Native):</strong> Create the <code class="language-plaintext highlighter-rouge">gobinet-boot.service</code> unit file as described. Disable/remove the old SysV script. This is the more modern and robust solution for Debian Bullseye.</li>
-    </ul>
-  </li>
-</ol>
-
-<p>By implementing these changes, your system will be cleaner, the <code class="language-plaintext highlighter-rouge">insserv</code> warnings will be resolved, and your scripts (or their systemd equivalents) will function more reliably and correctly. Remember to carefully test the behavior of <code class="language-plaintext highlighter-rouge">quectel-CM</code> to choose the best <code class="language-plaintext highlighter-rouge">Type=</code> and PID management strategy if you opt for the systemd unit.</p>]]></content><author><name></name></author><category term="aid&gt;linux&gt;hardware&gt;rockchip" /></entry><entry><title type="html">compare</title><link href="https://ib.bsb.br/compare/" rel="alternate" type="text/html" title="compare" /><published>2025-05-10T00:00:00+00:00</published><updated>2025-05-10T17:22:49+00:00</updated><id>https://ib.bsb.br/compare</id><content type="html" xml:base="https://ib.bsb.br/compare/"><![CDATA[<section class="code-block-container" role="group" aria-label="Markdown Code Block" data-filename="markdown_code_block.md" data-code="The task is to compare several scripts for their &quot;robustness&quot; and &quot;featurefullness&quot; and then identify the &quot;best one, the most effective one.&quot;
-
-To perform the requested comparison and identify the most effective script, here it is the content of those scripts:
-
-```script1
-
-```
-
-~~~script2
-
-~~~
-
-```script3
-
-```
-
-~~~script4
-
-~~~
-
-Here it is the outline of the methodology for you, the AI ASSISTANT, to employ to approach that task. Your analysis must focus on the following key criteria and extend to other critical aspects of script quality:
-
-**1. Assessing Robustness:**
-
-Robustness refers to how well a script handles errors, unexpected inputs, and varying operational conditions without failing, producing incorrect results, or causing unintended side effects. The AI ASSITANT must examine:
-
-*   **Error Handling and Propagation:**
-    *   Does the script explicitly check for command execution failures (e.g., using `if ! command; then ...` or checking the exit status `$?`)?
-    *   Does it utilize options like `set -e` (exit immediately if a command exits with a non-zero status), `set -u` (treat unset variables as an error when performing expansion), and `set -o pipefail` (a pipeline&#39;s return status is the value of the last command to exit with a non-zero status, or zero if all commands exit successfully)?
-    *   Are `trap` commands used effectively for cleanup (e.g., removing temporary files) on script exit, interruption, or specific signals?
-*   **Input Validation:**
-    *   If the script accepts arguments or user input, does it rigorously validate them? This includes checking for the correct number of arguments, expected data types/formats, valid value ranges, and sanitizing inputs to prevent security issues (see Security section).
-    *   How does it behave with missing, malformed, excessive, or unexpected inputs? Does it provide clear error messages and exit gracefully?
-*   **Edge Case and Boundary Condition Handling:**
-    *   Does the script account for potential edge cases, such as empty input files, files with special characters in names, zero-value inputs, or specific environmental conditions that might affect its logic?
-*   **Idempotence (if applicable):**
-    *   If the script is intended to make system changes (e.g., configuration, file creation), can it be run multiple times with the same initial state and produce the same end state without causing errors or unintended cumulative effects on subsequent runs?
-*   **Resource Management:**
-    *   If the script handles resources like temporary files, network connections, or background processes, does it manage them correctly, ensuring they are released or cleaned up appropriately to prevent leaks or conflicts?
-
-**2. Assessing Featurefullness:**
-
-Featurefullness relates to the breadth, depth, and relevance of the script&#39;s capabilities in relation to its intended purpose. The AI ASSITANT must evaluate:
-
-*   **Scope and Relevance of Functionality:**
-    *   What specific tasks does the script perform? How many distinct operations or functionalities does it offer?
-    *   Does the feature set directly support the script&#39;s core purpose, or does it include extraneous features that add complexity without significant value?
-    *   Does it comprehensively address the problem it&#39;s designed to solve?
-*   **Flexibility and Configurability:**
-    *   Does the script offer command-line options or arguments to modify its behavior in meaningful ways?
-    *   Can its operation be customized through well-documented configuration files or environment variables?
-*   **User Experience (UX):**
-    *   If interactive, are prompts clear and unambiguous?
-    *   Does it provide helpful output, status messages, and clear usage instructions (e.g., a `--help` or `-h` option)?
-*   **Integration Capabilities:**
-    *   Can the script easily integrate with other tools or workflows? For example, does it correctly handle standard input (stdin), produce parseable standard output (stdout), and use standard error (stderr) appropriately for diagnostic messages?
-
-**3. Assessing Readability and Maintainability:**
-
-A script that is difficult to understand is also difficult to debug, modify, and verify for correctness, impacting its long-term robustness and utility.
-
-*   **Code Structure and Organization:**
-    *   Is the script logically structured, perhaps using functions for modularity and to avoid code duplication?
-    *   Is the flow of execution easy to follow?
-*   **Clarity of Naming:**
-    *   Are variable names, function names, and comments clear, descriptive, and consistent?
-*   **Use of Comments:**
-    *   Are there sufficient comments to explain complex logic, non-obvious operations, or the purpose of different sections, without cluttering the code?
-*   **Consistency in Style:**
-    *   Does the script follow a consistent coding style (indentation, spacing, quoting)?
-*   **Simplicity:**
-    *   Does the script achieve its goals in a straightforward manner, or is it overly complex and convoluted?
-
-**4. Assessing Performance and Efficiency:**
-
-Depending on the script&#39;s purpose (e.g., processing large datasets, running frequently in automated systems), performance can be a critical factor.
-
-*   **Choice of Commands and Techniques:**
-    *   Does it use efficient commands and code-native builtins where appropriate (e.g., avoiding unnecessary external process forks by using code-native builtins like `read` or parameter expansions instead of `sed`/`awk` for simple tasks)?
-    *   For text processing, are efficient tools like `awk`, `sed`, or `grep` used effectively, rather than less efficient shell loops for large data?
-*   **Handling of Large Data/Files:**
-    *   If the script processes large files or data volumes, does it do so in a memory-efficient way (e.g., processing line-by-line instead of reading entire files into memory if not needed)?
-*   **Resource Consumption:**
-    *   Are there any obvious bottlenecks or excessive consumption of CPU, memory, or I/O resources?
-
-**5. Assessing Portability and Dependencies:**
-
-A script&#39;s utility can be enhanced if it can run reliably across different environments.
-
-*   **Dependency Management:**
-    *   Does the script clearly state its dependencies on external commands or tools?
-    *   Does it check for the existence and (if necessary) the correct version of these dependencies at runtime, providing informative errors if they are not met?
-    *   Does it rely on common utilities or more obscure ones that might not be universally available?
-
-**Determining the &quot;Best&quot; or &quot;Most Effective&quot; Script:**
-
-After assessing each script against these criteria, determining the &quot;best&quot; or &quot;most effective&quot; one is not always an absolute judgment. It heavily depends on the **specific requirements, priorities, and context** for which the script is intended.
-
-*   **Criticality:** For a script running in a critical production system, **robustness and security** would likely be the highest priorities, even if it means sacrificing some featurefullness or development speed.
-*   **User Expertise &amp; Use Case:** A quick utility script for personal use by an expert might prioritize development speed and featurefullness for a specific task, with less emphasis on exhaustive error handling for every conceivable edge case.
-*   **Lifespan and Maintenance:** For a script intended for long-term use and potential modification by multiple people, **readability and maintainability** become crucial.
-*   **Performance Needs:** If a script processes large data volumes or runs very frequently, **performance and efficiency** might outweigh other factors, provided core correctness is maintained.
-
-Generally, the &quot;most effective&quot; script is one that:
-*   Reliably and securely performs its intended functions.
-*   Offers a feature set that is well-aligned with its purpose without unnecessary complexity.
-*   Is understandable, maintainable, and performs adequately for its context.
-*   Handles errors gracefully and provides useful feedback.
-
-To provide a definitive comparison, the AI ASSITANT might also conceptually involve the use of static analysis tools and a systematic testing strategy, if possible." data-download-link="" data-download-label="Download Markdown">
-  <code class="language-markdown">The task is to compare several scripts for their &quot;robustness&quot; and &quot;featurefullness&quot; and then identify the &quot;best one, the most effective one.&quot;
-
-To perform the requested comparison and identify the most effective script, here it is the content of those scripts:
-
-```script1
-
-```
-
-~~~script2
-
-~~~
-
-```script3
-
-```
-
-~~~script4
-
-~~~
-
-Here it is the outline of the methodology for you, the AI ASSISTANT, to employ to approach that task. Your analysis must focus on the following key criteria and extend to other critical aspects of script quality:
-
-**1. Assessing Robustness:**
-
-Robustness refers to how well a script handles errors, unexpected inputs, and varying operational conditions without failing, producing incorrect results, or causing unintended side effects. The AI ASSITANT must examine:
-
-*   **Error Handling and Propagation:**
-    *   Does the script explicitly check for command execution failures (e.g., using `if ! command; then ...` or checking the exit status `$?`)?
-    *   Does it utilize options like `set -e` (exit immediately if a command exits with a non-zero status), `set -u` (treat unset variables as an error when performing expansion), and `set -o pipefail` (a pipeline&#39;s return status is the value of the last command to exit with a non-zero status, or zero if all commands exit successfully)?
-    *   Are `trap` commands used effectively for cleanup (e.g., removing temporary files) on script exit, interruption, or specific signals?
-*   **Input Validation:**
-    *   If the script accepts arguments or user input, does it rigorously validate them? This includes checking for the correct number of arguments, expected data types/formats, valid value ranges, and sanitizing inputs to prevent security issues (see Security section).
-    *   How does it behave with missing, malformed, excessive, or unexpected inputs? Does it provide clear error messages and exit gracefully?
-*   **Edge Case and Boundary Condition Handling:**
-    *   Does the script account for potential edge cases, such as empty input files, files with special characters in names, zero-value inputs, or specific environmental conditions that might affect its logic?
-*   **Idempotence (if applicable):**
-    *   If the script is intended to make system changes (e.g., configuration, file creation), can it be run multiple times with the same initial state and produce the same end state without causing errors or unintended cumulative effects on subsequent runs?
-*   **Resource Management:**
-    *   If the script handles resources like temporary files, network connections, or background processes, does it manage them correctly, ensuring they are released or cleaned up appropriately to prevent leaks or conflicts?
-
-**2. Assessing Featurefullness:**
-
-Featurefullness relates to the breadth, depth, and relevance of the script&#39;s capabilities in relation to its intended purpose. The AI ASSITANT must evaluate:
-
-*   **Scope and Relevance of Functionality:**
-    *   What specific tasks does the script perform? How many distinct operations or functionalities does it offer?
-    *   Does the feature set directly support the script&#39;s core purpose, or does it include extraneous features that add complexity without significant value?
-    *   Does it comprehensively address the problem it&#39;s designed to solve?
-*   **Flexibility and Configurability:**
-    *   Does the script offer command-line options or arguments to modify its behavior in meaningful ways?
-    *   Can its operation be customized through well-documented configuration files or environment variables?
-*   **User Experience (UX):**
-    *   If interactive, are prompts clear and unambiguous?
-    *   Does it provide helpful output, status messages, and clear usage instructions (e.g., a `--help` or `-h` option)?
-*   **Integration Capabilities:**
-    *   Can the script easily integrate with other tools or workflows? For example, does it correctly handle standard input (stdin), produce parseable standard output (stdout), and use standard error (stderr) appropriately for diagnostic messages?
-
-**3. Assessing Readability and Maintainability:**
-
-A script that is difficult to understand is also difficult to debug, modify, and verify for correctness, impacting its long-term robustness and utility.
-
-*   **Code Structure and Organization:**
-    *   Is the script logically structured, perhaps using functions for modularity and to avoid code duplication?
-    *   Is the flow of execution easy to follow?
-*   **Clarity of Naming:**
-    *   Are variable names, function names, and comments clear, descriptive, and consistent?
-*   **Use of Comments:**
-    *   Are there sufficient comments to explain complex logic, non-obvious operations, or the purpose of different sections, without cluttering the code?
-*   **Consistency in Style:**
-    *   Does the script follow a consistent coding style (indentation, spacing, quoting)?
-*   **Simplicity:**
-    *   Does the script achieve its goals in a straightforward manner, or is it overly complex and convoluted?
-
-**4. Assessing Performance and Efficiency:**
-
-Depending on the script&#39;s purpose (e.g., processing large datasets, running frequently in automated systems), performance can be a critical factor.
-
-*   **Choice of Commands and Techniques:**
-    *   Does it use efficient commands and code-native builtins where appropriate (e.g., avoiding unnecessary external process forks by using code-native builtins like `read` or parameter expansions instead of `sed`/`awk` for simple tasks)?
-    *   For text processing, are efficient tools like `awk`, `sed`, or `grep` used effectively, rather than less efficient shell loops for large data?
-*   **Handling of Large Data/Files:**
-    *   If the script processes large files or data volumes, does it do so in a memory-efficient way (e.g., processing line-by-line instead of reading entire files into memory if not needed)?
-*   **Resource Consumption:**
-    *   Are there any obvious bottlenecks or excessive consumption of CPU, memory, or I/O resources?
-
-**5. Assessing Portability and Dependencies:**
-
-A script&#39;s utility can be enhanced if it can run reliably across different environments.
-
-*   **Dependency Management:**
-    *   Does the script clearly state its dependencies on external commands or tools?
-    *   Does it check for the existence and (if necessary) the correct version of these dependencies at runtime, providing informative errors if they are not met?
-    *   Does it rely on common utilities or more obscure ones that might not be universally available?
-
-**Determining the &quot;Best&quot; or &quot;Most Effective&quot; Script:**
-
-After assessing each script against these criteria, determining the &quot;best&quot; or &quot;most effective&quot; one is not always an absolute judgment. It heavily depends on the **specific requirements, priorities, and context** for which the script is intended.
-
-*   **Criticality:** For a script running in a critical production system, **robustness and security** would likely be the highest priorities, even if it means sacrificing some featurefullness or development speed.
-*   **User Expertise &amp; Use Case:** A quick utility script for personal use by an expert might prioritize development speed and featurefullness for a specific task, with less emphasis on exhaustive error handling for every conceivable edge case.
-*   **Lifespan and Maintenance:** For a script intended for long-term use and potential modification by multiple people, **readability and maintainability** become crucial.
-*   **Performance Needs:** If a script processes large data volumes or runs very frequently, **performance and efficiency** might outweigh other factors, provided core correctness is maintained.
-
-Generally, the &quot;most effective&quot; script is one that:
-*   Reliably and securely performs its intended functions.
-*   Offers a feature set that is well-aligned with its purpose without unnecessary complexity.
-*   Is understandable, maintainable, and performs adequately for its context.
-*   Handles errors gracefully and provides useful feedback.
-
-To provide a definitive comparison, the AI ASSITANT might also conceptually involve the use of static analysis tools and a systematic testing strategy, if possible.</code>
-</section>]]></content><author><name></name></author><category term="AI&gt;prompt" /></entry></feed>
+</ul>]]></content><author><name></name></author><category term="aid&gt;software" /></entry></feed>
