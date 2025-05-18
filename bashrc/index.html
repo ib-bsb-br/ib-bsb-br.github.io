@@ -67,8 +67,8 @@
         
           <span class="post-updated">
             ↣
-            <time datetime="2025-05-17T23:28:28+00:00">
-              17 May 2025
+            <time datetime="2025-05-18T01:38:11+00:00">
+              18 May 2025
             </time>
           </span>
         
@@ -90,11 +90,11 @@
         <div class="page-stats mt-3" role="status" aria-label="Page statistics">
       
       <span class="badge bg-primary">
-        69174 characters
+        58139 characters
       </span>
         <span class="separator mx-2" aria-hidden="true">•</span>
         <span class="badge bg-primary">
-        8954 words
+        7441 words
       </span>
       </div>
         <div class="action-buttons d-flex flex-wrap gap-2">
@@ -572,303 +572,181 @@ resto<span class="o">()</span> <span class="o">{</span>
     return</span> <span class="k">${</span><span class="nv">exit_status</span><span class="k">}</span>
 <span class="o">}</span>
 
+<span class="c">#!/bin/bash</span>
 <span class="c"># fpsync wrapper 'cesto' for Debian Bullseye</span>
-<span class="c"># Purpose: Simplifies running fpsync. If multiple source files/items or a single file</span>
-<span class="c">#          is given, they are bundled into a TAR archive. This archive is placed</span>
-<span class="c">#          within a temporary payload wrapper directory, which is then synced by fpsync.</span>
-<span class="c">#          Extraction of the TAR archive is attempted for local destinations.</span>
-<span class="c"># Usage: cesto &lt;source_item_1&gt; [source_item_2...] &lt;destination_directory/&gt;</span>
-<span class="c">#        cesto &lt;single_source_directory&gt; &lt;destination_directory&gt;</span>
+<span class="c"># Designed to maximize fpsync's parallel transfer capabilities by ensuring</span>
+<span class="c"># fpsync always operates on a directory whose contents can be partitioned by fpart.</span>
+<span class="c">#</span>
+<span class="c"># - If a single directory is provided as source, it's passed directly to fpsync.</span>
+<span class="c"># - If multiple files/directories or a single file are provided as sources,</span>
+<span class="c">#   they are copied into a temporary aggregation directory. This aggregation</span>
+<span class="c">#   directory is then passed to fpsync, allowing fpart to see all individual</span>
+<span class="c">#   items and partition them effectively for parallel rsync workers.</span>
 
 cesto<span class="o">()</span> <span class="o">{</span>
   <span class="c"># --- Argument Validation ---</span>
-  <span class="c"># This initial check ensures that the function receives at least two arguments:</span>
-  <span class="c"># one or more source items (which can be files or directories themselves) and</span>
-  <span class="c"># one final argument specifying the destination directory. Without these, the</span>
-  <span class="c"># core synchronization operation cannot be meaningfully performed.</span>
+  <span class="c"># Ensures at least two arguments: one or more sources, and one destination.</span>
   <span class="k">if</span> <span class="o">[</span> <span class="s2">"$#"</span> <span class="nt">-lt</span> 2 <span class="o">]</span><span class="p">;</span> <span class="k">then
-    </span><span class="nb">echo</span> <span class="s2">"Error: Exactly two arguments are required at a minimum: at least one source item and a destination directory."</span> <span class="o">&gt;</span>&amp;2
+    </span><span class="nb">echo</span> <span class="s2">"Error: At least one source item and a destination directory are required."</span> <span class="o">&gt;</span>&amp;2
     <span class="nb">echo</span> <span class="s2">"Usage: cesto &lt;source_item_1&gt; [source_item_2...] &lt;destination_directory/&gt;"</span> <span class="o">&gt;</span>&amp;2
     <span class="nb">echo</span> <span class="s2">"   or: cesto &lt;single_source_directory&gt; &lt;destination_directory&gt;"</span> <span class="o">&gt;</span>&amp;2
-    <span class="nb">echo</span> <span class="s2">"Detailed Examples:"</span> <span class="o">&gt;</span>&amp;2
-    <span class="nb">echo</span> <span class="s2">"  1. Sync multiple specific files: cesto report.txt image.jpg ~/my_archives/"</span> <span class="o">&gt;</span>&amp;2
-    <span class="nb">echo</span> <span class="s2">"  2. Sync files using a shell glob pattern: cesto *.log /mnt/app_backups/logs/"</span> <span class="o">&gt;</span>&amp;2
-    <span class="nb">echo</span> <span class="s2">"  3. Sync a single important file: cesto financial_summary.pdf ./secure_department_backup/"</span> <span class="o">&gt;</span>&amp;2
-    <span class="nb">echo</span> <span class="s2">"  4. Sync an entire directory's contents (classic fpsync usage): cesto ./project_alpha_data/ /srv/central_storage/project_alpha/"</span> <span class="o">&gt;</span>&amp;2
-    <span class="nb">echo</span> <span class="s2">"  5. Sync using relative paths for sources and destination: cesto ../src_code/*.java ../../builds/java_app_output/"</span> <span class="o">&gt;</span>&amp;2
-    <span class="k">return </span>1 <span class="c"># Exit the function with an error status, indicating failure.</span>
+    <span class="nb">echo</span> <span class="s2">"Example (multiple files for aggregation): cesto report.pdf image.png data_files/*.csv ./backup/aggregated_reports_images_data"</span> <span class="o">&gt;</span>&amp;2
+    <span class="nb">echo</span> <span class="s2">"Example (single large directory for direct sync): cesto ./my_entire_dataset/ /mnt/archive/dataset_backup/"</span> <span class="o">&gt;</span>&amp;2
+    <span class="k">return </span>1
   <span class="k">fi</span>
 
-  <span class="c"># The last argument provided to the function is always interpreted as the destination directory path.</span>
-  <span class="nb">local </span><span class="nv">user_dest_dir</span><span class="o">=</span><span class="s2">"</span><span class="k">${</span><span class="p">!#</span><span class="k">}</span><span class="s2">"</span> <span class="c"># Bash indirect expansion to get the last argument.</span>
-  <span class="c"># All arguments preceding the last one are collected into a bash array named 'sources_array'.</span>
-  <span class="c"># This allows the function to gracefully handle a variable number of source items.</span>
-  <span class="nb">local </span><span class="nv">sources_array</span><span class="o">=(</span><span class="s2">"</span><span class="k">${</span><span class="p">@</span>:1:<span class="nv">$#-1</span><span class="k">}</span><span class="s2">"</span><span class="o">)</span> <span class="c"># Bash slicing of positional parameters.</span>
-  <span class="nb">local </span><span class="nv">num_sources</span><span class="o">=</span><span class="s2">"</span><span class="k">${#</span><span class="nv">sources_array</span><span class="p">[@]</span><span class="k">}</span><span class="s2">"</span> <span class="c"># The total count of source items to process.</span>
+  <span class="c"># --- Variable Initialization ---</span>
+  <span class="nb">local </span><span class="nv">user_dest_dir</span><span class="o">=</span><span class="s2">"</span><span class="k">${</span><span class="p">!#</span><span class="k">}</span><span class="s2">"</span>          <span class="c"># Last argument is the destination directory path provided by the user.</span>
+  <span class="nb">local </span><span class="nv">sources_array</span><span class="o">=(</span><span class="s2">"</span><span class="k">${</span><span class="p">@</span>:1:<span class="nv">$#-1</span><span class="k">}</span><span class="s2">"</span><span class="o">)</span>  <span class="c"># All arguments except the last are considered source items.</span>
+  <span class="nb">local </span><span class="nv">num_sources</span><span class="o">=</span><span class="s2">"</span><span class="k">${#</span><span class="nv">sources_array</span><span class="p">[@]</span><span class="k">}</span><span class="s2">"</span> <span class="c"># Count of source items.</span>
 
-  <span class="c"># fpsync configurations based on your original request when first defining an alias.</span>
-  <span class="c"># 'num_workers=4' instructs fpsync to attempt using 4 parallel rsync transfer jobs.</span>
-  <span class="nb">local </span><span class="nv">num_workers</span><span class="o">=</span>4
-  <span class="c"># 'fpsync_opts="-v"' enables verbose mode for fpsync. This provides more detailed output</span>
-  <span class="c"># from fpsync and the underlying rsync processes, which is very helpful for monitoring</span>
-  <span class="c"># the transfer progress and for diagnosing any potential issues during the operation.</span>
-  <span class="nb">local </span><span class="nv">fpsync_opts</span><span class="o">=</span><span class="s2">"-v"</span>
-  <span class="c"># 'tar_file_basename' defines a consistent name for the tarball. When aggregation occurs,</span>
-  <span class="c"># the tarball will be named this on the source (inside the wrapper) and on the destination.</span>
-  <span class="c"># This predictability can be useful if manual intervention or inspection is needed.</span>
-  <span class="nb">local </span><span class="nv">tar_file_basename</span><span class="o">=</span><span class="s2">"cesto_payload.tar"</span>
+  <span class="nb">local </span><span class="nv">num_workers</span><span class="o">=</span>4                 <span class="c"># Number of parallel fpsync workers (as per original alias request).</span>
+  <span class="nb">local </span><span class="nv">fpsync_opts</span><span class="o">=</span><span class="s2">"-v"</span>              <span class="c"># Default options for fpsync (verbose).</span>
 
-  <span class="c"># This variable will store the path to the temporary wrapper directory if it's created.</span>
-  <span class="c"># Initialized to empty; it's crucial that this variable is local to each function call</span>
-  <span class="c"># to ensure that concurrent or sequential calls to 'cesto' don't interfere with each other's</span>
-  <span class="c"># temporary file management, especially concerning the trap.</span>
-  <span class="nb">local </span><span class="nv">tmp_payload_wrapper_dir</span><span class="o">=</span><span class="s2">""</span>
+  <span class="c"># Path for the temporary aggregation directory, if needed. Local to this function call.</span>
+  <span class="nb">local </span><span class="nv">tmp_aggregation_dir</span><span class="o">=</span><span class="s2">""</span>
 
-  <span class="c"># Setup a 'trap' to ensure cleanup of the temporary wrapper directory if one is created.</span>
-  <span class="c"># This command will execute when the cesto function exits, for any reason:</span>
-  <span class="c"># - EXIT: Normal function completion or exit due to an error (e.g., 'return 1').</span>
-  <span class="c"># - HUP (Hangup): Typically when the controlling terminal is closed.</span>
-  <span class="c"># - INT (Interrupt): Typically from Ctrl+C.</span>
-  <span class="c"># - QUIT (Quit): Typically from Ctrl+\.</span>
-  <span class="c"># - TERM (Terminate): Default signal for process termination (e.g., from 'kill' command).</span>
-  <span class="c"># The command string for the trap is enclosed in *single quotes*. This is critical because it means</span>
-  <span class="c"># that the variable '$tmp_payload_wrapper_dir' inside the command string is expanded *at the time</span>
-  <span class="c"># the trap is triggered (i.e., upon exit/signal)*, not when the trap is initially set.</span>
-  <span class="c"># This ensures the trap acts on the correct, potentially populated, value of the variable for the current function call.</span>
-  <span class="c"># The 'trap - EXIT HUP INT QUIT TERM' at the end of the trap's command string is an attempt</span>
-  <span class="c"># to make the trap "one-shot" or self-disabling for these signals after it has executed once.</span>
-  <span class="c"># This can prevent it from interfering with other traps if the shell environment persists.</span>
-  <span class="nb">trap</span> <span class="s1">'if [ -n "$tmp_payload_wrapper_dir" ] &amp;&amp; [ -d "$tmp_payload_wrapper_dir" ]; then echo "INFO: (Trap) Cleaning up temporary payload wrapper directory: $tmp_payload_wrapper_dir"; rm -rf "$tmp_payload_wrapper_dir"; fi; trap - EXIT HUP INT QUIT TERM'</span> EXIT HUP INT QUIT TERM
+  <span class="c"># Setup a 'trap' for robust cleanup of the temporary aggregation directory.</span>
+  <span class="c"># This command executes when the function exits (EXIT signal) or on common interrupt signals.</span>
+  <span class="c"># The command string is in single quotes, so '$tmp_aggregation_dir' is evaluated</span>
+  <span class="c"># *when the trap is triggered*, using its value at that moment.</span>
+  <span class="c"># 'trap - ...' at the end of the trap command aims to make it a self-disabling one-shot trap.</span>
+  <span class="nb">trap</span> <span class="s1">'if [ -n "$tmp_aggregation_dir" ] &amp;&amp; [ -d "$tmp_aggregation_dir" ]; then echo "INFO: (Trap) Cleaning up temporary aggregation directory: $tmp_aggregation_dir"; rm -rf "$tmp_aggregation_dir"; fi; trap - EXIT HUP INT QUIT TERM'</span> EXIT HUP INT QUIT TERM
 
   <span class="c"># --- Destination Path Preparation ---</span>
-  <span class="c"># This section ensures the destination path is valid, absolute, and correctly formatted for fpsync.</span>
+  <span class="c"># This section ensures the destination path is an absolute directory path with a trailing slash.</span>
   <span class="nb">echo</span> <span class="s2">"INFO: Preparing destination directory: </span><span class="se">\"</span><span class="nv">$user_dest_dir</span><span class="se">\"</span><span class="s2">"</span>
-  <span class="c"># 'mkdir -p' creates the destination directory.</span>
-  <span class="c">#   - The '-p' option is vital: it creates any necessary parent directories and, importantly,</span>
-  <span class="c">#     it does not produce an error if the target directory already exists. This makes the</span>
-  <span class="c">#     command idempotent and robust, suitable for scripting.</span>
+  <span class="c"># 'mkdir -p' creates the directory including any necessary parent directories.</span>
+  <span class="c"># It doesn't error if the directory already exists, making it idempotent.</span>
   <span class="k">if</span> <span class="o">!</span> <span class="nb">mkdir</span> <span class="nt">-p</span> <span class="s2">"</span><span class="nv">$user_dest_dir</span><span class="s2">"</span><span class="p">;</span> <span class="k">then
     </span><span class="nb">echo</span> <span class="s2">"Error: Failed to create or access directory structure for destination </span><span class="se">\"</span><span class="nv">$user_dest_dir</span><span class="se">\"</span><span class="s2">."</span> <span class="o">&gt;</span>&amp;2
     <span class="k">return </span>1
   <span class="k">fi
-  </span><span class="nb">local </span>abs_dest_dir <span class="c"># This variable will hold the fully resolved, absolute (canonical) path.</span>
-  <span class="c"># 'readlink -f' is a powerful utility that resolves all symbolic links at every component</span>
-  <span class="c"># of the given path recursively, resolves '..' and '.', and makes the path absolute.</span>
-  <span class="c"># For 'readlink -f' to succeed on a path, typically all components of the path except</span>
-  <span class="c"># possibly the last must exist. Since 'mkdir -p' just ran, '$user_dest_dir' should point to an</span>
-  <span class="c"># existing directory structure, making 'readlink -f' reliable here.</span>
+  </span><span class="nb">local </span>abs_dest_dir <span class="c"># Will hold the canonical, absolute path to the destination.</span>
+  <span class="c"># 'readlink -f' resolves all symlinks, '..' and '.', making the path absolute.</span>
+  <span class="c"># This requires the path (or its components up to the symlink target) to exist.</span>
   <span class="nv">abs_dest_dir</span><span class="o">=</span><span class="si">$(</span><span class="nb">readlink</span> <span class="nt">-f</span> <span class="s2">"</span><span class="nv">$user_dest_dir</span><span class="s2">"</span><span class="si">)</span>
-  <span class="k">if</span> <span class="o">[</span> <span class="nt">-z</span> <span class="s2">"</span><span class="nv">$abs_dest_dir</span><span class="s2">"</span> <span class="o">]</span> <span class="o">||</span> <span class="o">[</span> <span class="o">!</span> <span class="nt">-d</span> <span class="s2">"</span><span class="nv">$abs_dest_dir</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then</span> <span class="c"># Double-check it resolved and is a directory</span>
-      <span class="nb">echo</span> <span class="s2">"Error: Could not resolve destination </span><span class="se">\"</span><span class="nv">$user_dest_dir</span><span class="se">\"</span><span class="s2"> to an absolute directory path, or it's not a directory after 'mkdir -p'."</span> <span class="o">&gt;</span>&amp;2
+  <span class="k">if</span> <span class="o">[</span> <span class="nt">-z</span> <span class="s2">"</span><span class="nv">$abs_dest_dir</span><span class="s2">"</span> <span class="o">]</span> <span class="o">||</span> <span class="o">[</span> <span class="o">!</span> <span class="nt">-d</span> <span class="s2">"</span><span class="nv">$abs_dest_dir</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then
+      </span><span class="nb">echo</span> <span class="s2">"Error: Could not resolve destination </span><span class="se">\"</span><span class="nv">$user_dest_dir</span><span class="se">\"</span><span class="s2"> to an absolute directory path, or it's not a directory after 'mkdir -p'."</span> <span class="o">&gt;</span>&amp;2
       <span class="k">return </span>1
   <span class="k">fi</span>
-  <span class="c"># 'final_dest_dir_for_fpsync' is the precise path string that will be passed as the destination to fpsync.</span>
-  <span class="c"># The shell parameter expansion '${abs_dest_dir%/}/' is used:</span>
-  <span class="c">#   '${abs_dest_dir%/}' removes a single trailing slash from '$abs_dest_dir' if one exists.</span>
-  <span class="c">#   Then, a literal '/' is appended.</span>
-  <span class="c"># This ensures the path always ends with exactly one trailing slash, which for rsync (and thus fpsync)</span>
-  <span class="c"># typically signifies "treat this as a directory and synchronize the source contents *into* this directory."</span>
+  <span class="c"># Ensures a single trailing slash, signifying to fpsync/rsync to sync *into* this directory.</span>
   <span class="nb">local </span><span class="nv">final_dest_dir_for_fpsync</span><span class="o">=</span><span class="s2">"</span><span class="k">${</span><span class="nv">abs_dest_dir</span><span class="p">%/</span><span class="k">}</span><span class="s2">/"</span>
 
 
   <span class="c"># --- Source Path Handling ---</span>
-  <span class="c"># 'path_to_sync_via_fpsync' will store the final source path (always a directory path ending in '/')</span>
-  <span class="c"># to be given to fpsync. This might be the user's original source directory or our temporary wrapper directory.</span>
+  <span class="c"># This variable will hold the final, absolute source directory path (with trailing slash) for fpsync.</span>
   <span class="nb">local </span>path_to_sync_via_fpsync
 
-  <span class="c"># Case 1: User provided a single source item. We need to check if it's a directory.</span>
-  <span class="c"># This is the "native" mode for fpsync and generally the most efficient.</span>
+  <span class="c"># Case 1: A single source item is provided by the user.</span>
+  <span class="c"># We check if this single item is a directory. If so, it's used directly.</span>
+  <span class="c"># This is the most straightforward and often most performant case for fpsync.</span>
   <span class="k">if</span> <span class="o">[</span> <span class="s2">"</span><span class="nv">$num_sources</span><span class="s2">"</span> <span class="nt">-eq</span> 1 <span class="o">]</span><span class="p">;</span> <span class="k">then
     </span><span class="nb">local </span><span class="nv">single_src_item_orig</span><span class="o">=</span><span class="s2">"</span><span class="k">${</span><span class="nv">sources_array</span><span class="p">[0]</span><span class="k">}</span><span class="s2">"</span>
-    <span class="nb">local </span>single_src_item_abs <span class="c"># Will hold the absolute, canonical path of this single source.</span>
-    <span class="c"># Resolve the user-provided source path to its absolute form using readlink -f.</span>
-    <span class="c"># This is important because fpsync explicitly errored previously on relative paths for its source.</span>
+    <span class="nb">local </span>single_src_item_abs <span class="c"># Will hold the absolute path of the single source.</span>
     <span class="nv">single_src_item_abs</span><span class="o">=</span><span class="si">$(</span><span class="nb">readlink</span> <span class="nt">-f</span> <span class="s2">"</span><span class="nv">$single_src_item_orig</span><span class="s2">"</span><span class="si">)</span>
 
-    <span class="k">if</span> <span class="o">[</span> <span class="nt">-z</span> <span class="s2">"</span><span class="nv">$single_src_item_abs</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then</span>
-      <span class="c"># This can occur if readlink -f cannot resolve the path (e.g., path doesn't exist or</span>
-      <span class="c"># intermediate components are missing and it's not a symlink that can resolve it).</span>
-      <span class="nb">echo</span> <span class="s2">"Error: Source </span><span class="se">\"</span><span class="nv">$single_src_item_orig</span><span class="se">\"</span><span class="s2"> could not be resolved to an absolute path."</span> <span class="o">&gt;</span>&amp;2
+    <span class="k">if</span> <span class="o">[</span> <span class="nt">-z</span> <span class="s2">"</span><span class="nv">$single_src_item_abs</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then
+      </span><span class="nb">echo</span> <span class="s2">"Error: Source </span><span class="se">\"</span><span class="nv">$single_src_item_orig</span><span class="se">\"</span><span class="s2"> could not be resolved to an absolute path."</span> <span class="o">&gt;</span>&amp;2
       <span class="k">return </span>1
-    <span class="k">fi</span>
+    <span class="k">fi
 
-    <span class="c"># If this single, resolved source item is indeed a directory, we'll use it directly for fpsync.</span>
-    <span class="k">if</span> <span class="o">[</span> <span class="nt">-d</span> <span class="s2">"</span><span class="nv">$single_src_item_abs</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then
-      </span><span class="nb">echo</span> <span class="s2">"INFO: Mode: Single source directory detected (</span><span class="se">\"</span><span class="k">${</span><span class="nv">single_src_item_abs</span><span class="k">}</span><span class="se">\"</span><span class="s2">). Preparing for direct fpsync."</span>
-      <span class="c"># Ensure a trailing slash for content synchronization behavior with fpsync.</span>
-      <span class="nv">path_to_sync_via_fpsync</span><span class="o">=</span><span class="s2">"</span><span class="k">${</span><span class="nv">single_src_item_abs</span><span class="p">%/</span><span class="k">}</span><span class="s2">/"</span>
+    if</span> <span class="o">[</span> <span class="nt">-d</span> <span class="s2">"</span><span class="nv">$single_src_item_abs</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then
+      </span><span class="nb">echo</span> <span class="s2">"INFO: Mode: Single source directory detected (</span><span class="se">\"</span><span class="k">${</span><span class="nv">single_src_item_abs</span><span class="k">}</span><span class="se">\"</span><span class="s2">). Using direct fpsync for maximum parallelism of its contents."</span>
+      <span class="nv">path_to_sync_via_fpsync</span><span class="o">=</span><span class="s2">"</span><span class="k">${</span><span class="nv">single_src_item_abs</span><span class="p">%/</span><span class="k">}</span><span class="s2">/"</span> <span class="c"># Ensure trailing slash.</span>
     <span class="c"># If the single source item is not a directory (e.g., it's a file),</span>
-    <span class="c"># 'path_to_sync_via_fpsync' remains unset at this point. The script will then fall through</span>
-    <span class="c"># to the aggregation logic below, treating the single file as an item to be tarred.</span>
+    <span class="c"># 'path_to_sync_via_fpsync' remains unset. The script will then proceed to the</span>
+    <span class="c"># aggregation logic (Case 2) to handle this single file.</span>
     <span class="k">fi
   fi</span>
 
-  <span class="c"># Case 2: Multiple source items were provided by the user, OR it was a single source item</span>
-  <span class="c"># that was not a directory (meaning 'path_to_sync_via_fpsync' is still empty).</span>
-  <span class="c"># The strategy here is to aggregate all specified sources into a single TAR archive.</span>
-  <span class="c"># This TAR archive is then placed *inside* a temporary wrapper directory, because fpsync</span>
-  <span class="c"># requires its source argument to be a directory. This wrapper directory then becomes</span>
-  <span class="c"># the source for fpsync.</span>
+  <span class="c"># Case 2: Multiple source items were provided, OR it was a single source item that was not a directory.</span>
+  <span class="c"># (This is triggered if 'path_to_sync_via_fpsync' was not set in Case 1).</span>
+  <span class="c"># In this scenario, all specified source items are copied into a temporary aggregation directory.</span>
+  <span class="c"># This aggregation directory then becomes the source for fpsync.</span>
   <span class="k">if</span> <span class="o">[</span> <span class="nt">-z</span> <span class="s2">"</span><span class="nv">$path_to_sync_via_fpsync</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then
-    </span><span class="nb">echo</span> <span class="s2">"INFO: Mode: Multiple sources or single file source detected. Aggregating into a TAR archive within a temporary payload directory."</span>
-    <span class="nb">echo</span> <span class="s2">"      This workaround is necessary because fpsync requires its primary source to be a directory."</span>
+    </span><span class="nb">echo</span> <span class="s2">"INFO: Mode: Multiple sources or single file source detected. Aggregating into a temporary directory to enable optimal fpsync parallelism."</span>
     
-    <span class="c"># Create a unique temporary directory. This directory will act as a temporary "payload carrier"</span>
-    <span class="c"># for the TAR file, making it suitable for fpsync.</span>
-    <span class="c"># '${TMPDIR:-/tmp}' uses the system's temporary directory (TMPDIR environment variable if set, else /tmp).</span>
-    <span class="c"># The 'XXXXXXXXXX' is a template for mktemp, ensuring a unique and unpredictable directory name,</span>
-    <span class="c"># which is good for security and avoiding collisions.</span>
-    <span class="nv">tmp_payload_wrapper_dir</span><span class="o">=</span><span class="si">$(</span><span class="nb">mktemp</span> <span class="nt">-d</span> <span class="s2">"</span><span class="k">${</span><span class="nv">TMPDIR</span><span class="k">:-</span><span class="p">/tmp</span><span class="k">}</span><span class="s2">/cesto_payload.XXXXXXXXXX"</span><span class="si">)</span>
-    <span class="c"># Check if mktemp succeeded. It returns a non-zero exit status on failure or an empty string.</span>
-    <span class="k">if</span> <span class="o">[</span> <span class="nv">$?</span> <span class="nt">-ne</span> 0 <span class="o">]</span> <span class="o">||</span> <span class="o">[</span> <span class="nt">-z</span> <span class="s2">"</span><span class="nv">$tmp_payload_wrapper_dir</span><span class="s2">"</span> <span class="o">]</span> <span class="o">||</span> <span class="o">[</span> <span class="o">!</span> <span class="nt">-d</span> <span class="s2">"</span><span class="nv">$tmp_payload_wrapper_dir</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then
-      </span><span class="nb">echo</span> <span class="s2">"Error: Failed to create temporary payload wrapper directory using mktemp."</span> <span class="o">&gt;</span>&amp;2
-      <span class="nv">tmp_payload_wrapper_dir</span><span class="o">=</span><span class="s2">""</span> <span class="c"># Crucial: ensure var is empty so trap doesn't act on a potentially invalid path.</span>
+    <span class="c"># Create a unique temporary directory.</span>
+    <span class="c"># Uses $TMPDIR if set (standard practice), otherwise defaults to /tmp.</span>
+    <span class="c"># The XXXXXX template ensures mktemp generates a unique, secure name.</span>
+    <span class="c"># Note: This temporary directory may consume significant disk space if source items are large.</span>
+    <span class="nv">tmp_aggregation_dir</span><span class="o">=</span><span class="si">$(</span><span class="nb">mktemp</span> <span class="nt">-d</span> <span class="s2">"</span><span class="k">${</span><span class="nv">TMPDIR</span><span class="k">:-</span><span class="p">/tmp</span><span class="k">}</span><span class="s2">/cesto_aggregate_src.XXXXXXXXXX"</span><span class="si">)</span>
+    <span class="c"># Check if mktemp was successful and created a directory.</span>
+    <span class="k">if</span> <span class="o">[</span> <span class="nv">$?</span> <span class="nt">-ne</span> 0 <span class="o">]</span> <span class="o">||</span> <span class="o">[</span> <span class="nt">-z</span> <span class="s2">"</span><span class="nv">$tmp_aggregation_dir</span><span class="s2">"</span> <span class="o">]</span> <span class="o">||</span> <span class="o">[</span> <span class="o">!</span> <span class="nt">-d</span> <span class="s2">"</span><span class="nv">$tmp_aggregation_dir</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then
+      </span><span class="nb">echo</span> <span class="s2">"Error: Failed to create temporary aggregation directory using mktemp."</span> <span class="o">&gt;</span>&amp;2
+      <span class="nv">tmp_aggregation_dir</span><span class="o">=</span><span class="s2">""</span> <span class="c"># Ensure var is empty for the trap's conditional check.</span>
       <span class="k">return </span>1
     <span class="k">fi</span>
-    <span class="c"># The trap for cleanup (set earlier) will now use this specific '$tmp_payload_wrapper_dir' path</span>
-    <span class="c"># when the function exits due to the trap command string being in single quotes.</span>
+    <span class="c"># The trap (set earlier) will now be responsible for cleaning up this specific '$tmp_aggregation_dir' path.</span>
 
-    <span class="nb">local </span><span class="nv">files_to_tar_array</span><span class="o">=()</span> <span class="c"># Array to hold absolute paths of all valid source items for tarring.</span>
-    <span class="nb">local </span><span class="nv">item_prepared_for_tar</span><span class="o">=</span>0 <span class="c"># Flag to check if at least one source item is successfully prepared.</span>
-    <span class="nb">echo</span> <span class="s2">"INFO: Resolving and collecting source items for TAR archive..."</span>
+    <span class="nb">local </span><span class="nv">item_copied_successfully</span><span class="o">=</span>0 <span class="c"># Flag to track if any items were actually copied.</span>
+    <span class="nb">echo</span> <span class="s2">"INFO: Populating temporary aggregation directory: </span><span class="k">${</span><span class="nv">tmp_aggregation_dir</span><span class="k">}</span><span class="s2">"</span>
     <span class="k">for </span>src_item_orig <span class="k">in</span> <span class="s2">"</span><span class="k">${</span><span class="nv">sources_array</span><span class="p">[@]</span><span class="k">}</span><span class="s2">"</span><span class="p">;</span> <span class="k">do
       </span><span class="nb">local </span>src_item_abs <span class="c"># Absolute path of the current source item.</span>
-      <span class="c"># Resolve each user-provided source item to its absolute, canonical path.</span>
-      <span class="c"># This is vital for tar to correctly locate the files, regardless of the script's</span>
-      <span class="c"># current working directory when tar is invoked.</span>
       <span class="nv">src_item_abs</span><span class="o">=</span><span class="si">$(</span><span class="nb">readlink</span> <span class="nt">-f</span> <span class="s2">"</span><span class="nv">$src_item_orig</span><span class="s2">"</span><span class="si">)</span>
 
       <span class="k">if</span> <span class="o">[</span> <span class="nt">-z</span> <span class="s2">"</span><span class="nv">$src_item_abs</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then
         </span><span class="nb">echo</span> <span class="s2">"Warning: Could not resolve source item </span><span class="se">\"</span><span class="nv">$src_item_orig</span><span class="se">\"</span><span class="s2"> to an absolute path. Skipping."</span> <span class="o">&gt;</span>&amp;2
-        <span class="k">continue</span> <span class="c"># Skip to the next source item.</span>
-      <span class="k">fi
-      if</span> <span class="o">[</span> <span class="o">!</span> <span class="nt">-e</span> <span class="s2">"</span><span class="nv">$src_item_abs</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then</span> <span class="c"># Check if the resolved path actually exists on the filesystem.</span>
+        <span class="k">continue
+      fi
+      if</span> <span class="o">[</span> <span class="o">!</span> <span class="nt">-e</span> <span class="s2">"</span><span class="nv">$src_item_abs</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then</span> <span class="c"># Check if the resolved path actually exists.</span>
         <span class="nb">echo</span> <span class="s2">"Warning: Source item </span><span class="se">\"</span><span class="nv">$src_item_orig</span><span class="se">\"</span><span class="s2"> (resolved to </span><span class="se">\"</span><span class="nv">$src_item_abs</span><span class="se">\"</span><span class="s2">) does not exist. Skipping."</span> <span class="o">&gt;</span>&amp;2
-        <span class="k">continue</span> <span class="c"># Skip to the next source item.</span>
-      <span class="k">fi</span>
-      <span class="c"># If a source item specified by the user is itself a directory (e.g., 'cesto mydir1 file.txt ./dest'),</span>
-      <span class="c"># 'tar -c' will include that directory and its contents recursively by default.</span>
-      <span class="c"># Special files like device files or sockets would also be handled by tar according to its capabilities,</span>
-      <span class="c"># though their transfer and use via fpsync/rsync would typically require specific handling not covered here.</span>
-      files_to_tar_array+<span class="o">=(</span><span class="s2">"</span><span class="nv">$src_item_abs</span><span class="s2">"</span><span class="o">)</span>
-      <span class="nv">item_prepared_for_tar</span><span class="o">=</span>1
-    <span class="k">done
+        <span class="k">continue
+      fi</span>
 
-    if</span> <span class="o">[</span> <span class="s2">"</span><span class="nv">$item_prepared_for_tar</span><span class="s2">"</span> <span class="nt">-eq</span> 0 <span class="o">]</span><span class="p">;</span> <span class="k">then
-      </span><span class="nb">echo</span> <span class="s2">"Error: No valid source items were found or could be resolved to add to the TAR archive."</span> <span class="o">&gt;</span>&amp;2
-      <span class="c"># The EXIT trap will handle cleaning up the (empty) tmp_payload_wrapper_dir.</span>
+      <span class="c"># Use 'cp -aL' to copy items into the aggregation directory:</span>
+      <span class="c">#   -a (archive mode): Equivalent to -dR --preserve=all.</span>
+      <span class="c">#     -d: same as --no-dereference --preserve=links (preserves symlinks as symlinks).</span>
+      <span class="c">#     -R: copy directories recursively.</span>
+      <span class="c">#     --preserve=all: preserves mode, ownership, timestamps, links, context, xattr.</span>
+      <span class="c">#   -L (dereference): When copying, if a source argument is a symbolic link,</span>
+      <span class="c">#     copy the file or directory it points to, rather than the link itself.</span>
+      <span class="c"># This ensures the actual data/directory structures are placed into the aggregation directory.</span>
+      <span class="c"># If 'src_item_abs' is a directory, it will be copied recursively into 'tmp_aggregation_dir'.</span>
+      <span class="nb">echo</span> <span class="s2">"      Copying </span><span class="se">\"</span><span class="nv">$src_item_orig</span><span class="se">\"</span><span class="s2"> (as </span><span class="se">\"</span><span class="nv">$src_item_abs</span><span class="se">\"</span><span class="s2">) into temporary aggregation directory..."</span>
+      <span class="k">if </span><span class="nb">cp</span> <span class="nt">-aL</span> <span class="s2">"</span><span class="nv">$src_item_abs</span><span class="s2">"</span> <span class="s2">"</span><span class="nv">$tmp_aggregation_dir</span><span class="s2">/"</span><span class="p">;</span> <span class="k">then
+        </span><span class="nv">item_copied_successfully</span><span class="o">=</span>1
+      <span class="k">else
+        </span><span class="nb">echo</span> <span class="s2">"Warning: Failed to copy </span><span class="se">\"</span><span class="nv">$src_item_orig</span><span class="se">\"</span><span class="s2"> (resolved to </span><span class="se">\"</span><span class="nv">$src_item_abs</span><span class="se">\"</span><span class="s2">) to temporary aggregation directory. Skipping."</span> <span class="o">&gt;</span>&amp;2
+      <span class="k">fi
+    done
+
+    if</span> <span class="o">[</span> <span class="s2">"</span><span class="nv">$item_copied_successfully</span><span class="s2">"</span> <span class="nt">-eq</span> 0 <span class="o">]</span><span class="p">;</span> <span class="k">then
+      </span><span class="nb">echo</span> <span class="s2">"Error: No source items were successfully copied to the temporary aggregation directory."</span> <span class="o">&gt;</span>&amp;2
+      <span class="c"># The EXIT trap will handle cleaning up the (empty or partially filled) tmp_aggregation_dir.</span>
       <span class="k">return </span>1
     <span class="k">fi</span>
-
-    <span class="c"># Define the full path for the tarball *inside* the temporary wrapper directory.</span>
-    <span class="nb">local </span><span class="nv">actual_tar_file_path</span><span class="o">=</span><span class="s2">"</span><span class="k">${</span><span class="nv">tmp_payload_wrapper_dir</span><span class="p">%/</span><span class="k">}</span><span class="s2">/</span><span class="k">${</span><span class="nv">tar_file_basename</span><span class="k">}</span><span class="s2">"</span>
-    <span class="nb">echo</span> <span class="s2">"INFO: Creating TAR archive: </span><span class="k">${</span><span class="nv">actual_tar_file_path</span><span class="k">}</span><span class="s2">"</span>
-    <span class="nb">echo</span> <span class="s2">"      (Note: If aggregating very large files/directories, this may require significant temporary disk space in </span><span class="k">${</span><span class="nv">TMPDIR</span><span class="k">:-</span><span class="p">/tmp</span><span class="k">}</span><span class="s2">)"</span>
-    <span class="nb">echo</span> <span class="s2">"      Archiving the following resolved absolute paths (leading '/' is typically stripped by GNU tar within the archive, meaning paths are stored relative to root):"</span>
-    <span class="nb">printf</span> <span class="s2">"      - %s</span><span class="se">\n</span><span class="s2">"</span> <span class="s2">"</span><span class="k">${</span><span class="nv">files_to_tar_array</span><span class="p">[@]</span><span class="k">}</span><span class="s2">"</span> <span class="c"># Show what's being tarred for clarity.</span>
-    
-    <span class="c"># Create the uncompressed tar archive using 'tar -cf'.</span>
-    <span class="c">#   -c: create a new archive.</span>
-    <span class="c">#   -f TARFILE: specify the archive filename.</span>
-    <span class="c"># No compression options (like -z for gzip, -j for bzip2) are used, as per explicit earlier request.</span>
-    <span class="c"># This results in faster tar creation/extraction locally but a larger file for transfer.</span>
-    <span class="c"># rsync (which fpsync uses) may still efficiently transfer parts of it if the tarball changes slightly between syncs.</span>
-    <span class="c"># The current umask will affect the permissions of the tarball file itself, while permissions *within*</span>
-    <span class="c"># the tarball are typically preserved from the source files by default with 'tar -c'.</span>
-    <span class="c"># We are passing absolute paths (from readlink -f) to tar. For GNU tar (standard on Debian Bullseye):</span>
-    <span class="c">#   - It strips the leading '/' from member names by default (unless -P or --absolute-names is used).</span>
-    <span class="c">#   - Example: If an item is '/home/user/file.txt', it's stored as 'home/user/file.txt' in the archive.</span>
-    <span class="c">#   - If an item is '../src/foo.c' which resolves to '/opt/project/src/foo.c', it's stored as 'opt/project/src/foo.c'.</span>
-    <span class="c"># This behavior is generally desirable as it makes the archive more portable and allows extraction</span>
-    <span class="c"># into any target directory without trying to recreate absolute paths from root.</span>
-    <span class="k">if</span> <span class="o">!</span> <span class="nb">tar</span> <span class="nt">-cf</span> <span class="s2">"</span><span class="nv">$actual_tar_file_path</span><span class="s2">"</span> <span class="s2">"</span><span class="k">${</span><span class="nv">files_to_tar_array</span><span class="p">[@]</span><span class="k">}</span><span class="s2">"</span><span class="p">;</span> <span class="k">then
-      </span><span class="nb">echo</span> <span class="s2">"Error: Failed to create TAR archive </span><span class="se">\"</span><span class="k">${</span><span class="nv">actual_tar_file_path</span><span class="k">}</span><span class="se">\"</span><span class="s2"> with source items."</span> <span class="o">&gt;</span>&amp;2
-      <span class="c"># The EXIT trap will attempt to clean up tmp_payload_wrapper_dir and its partial/failed contents.</span>
-      <span class="k">return </span>1
-    <span class="k">fi</span>
-    <span class="c"># The source for fpsync will be the temporary wrapper directory, which now contains the single tarball.</span>
-    <span class="c"># A trailing slash is critical for fpsync to sync the *contents* of this directory (i.e., the tarball itself).</span>
-    <span class="nv">path_to_sync_via_fpsync</span><span class="o">=</span><span class="s2">"</span><span class="k">${</span><span class="nv">tmp_payload_wrapper_dir</span><span class="p">%/</span><span class="k">}</span><span class="s2">/"</span>
+    <span class="c"># The source for fpsync will be this populated temporary aggregation directory.</span>
+    <span class="c"># A trailing slash is crucial for fpsync to synchronize the *contents* of this directory.</span>
+    <span class="nv">path_to_sync_via_fpsync</span><span class="o">=</span><span class="s2">"</span><span class="k">${</span><span class="nv">tmp_aggregation_dir</span><span class="p">%/</span><span class="k">}</span><span class="s2">/"</span>
   <span class="k">fi</span>
 
   <span class="c"># --- Execution ---</span>
   <span class="nb">echo</span> <span class="s2">"INFO: Running fpsync with source </span><span class="se">\"</span><span class="k">${</span><span class="nv">path_to_sync_via_fpsync</span><span class="k">}</span><span class="se">\"</span><span class="s2"> and destination </span><span class="se">\"</span><span class="k">${</span><span class="nv">final_dest_dir_for_fpsync</span><span class="k">}</span><span class="se">\"</span><span class="s2">"</span>
-  <span class="c"># Behavior of fpsync:</span>
-  <span class="c"># 1. If 'path_to_sync_via_fpsync' is the temporary wrapper directory (e.g., /tmp/cesto_payload.XYZ/),</span>
-  <span class="c">#    fpsync (via fpart) will list its contents. This will be the single 'cesto_payload.tar' file.</span>
-  <span class="c">#    fpsync will then effectively transfer this single tarball into 'final_dest_dir_for_fpsync'.</span>
-  <span class="c">#    The result on the destination will be: final_dest_dir_for_fpsync/cesto_payload.tar.</span>
-  <span class="c">#    In this mode (single file in source dir), fpsync's parallelization benefit is minimal for this</span>
-  <span class="c">#    tarball itself, but it fulfills the "use fpsync for transfer" requirement.</span>
-  <span class="c"># 2. If 'path_to_sync_via_fpsync' is a user's actual source directory (e.g., /home/user/projects/),</span>
-  <span class="c">#    fpsync synchronizes its content directly into 'final_dest_dir_for_fpsync' using its</span>
-  <span class="c">#    standard parallel rsync process, which is its primary design strength.</span>
+  <span class="c"># fpsync will now operate on 'path_to_sync_via_fpsync'.</span>
+  <span class="c"># If this is a user's single source directory, fpsync processes it directly.</span>
+  <span class="c"># If this is the temporary aggregation directory, fpsync processes all the items copied into it.</span>
+  <span class="c"># In both scenarios, fpart (within fpsync) can see a directory structure containing all</span>
+  <span class="c"># individual files and sub-directories, allowing it to partition the workload effectively</span>
+  <span class="c"># for the parallel rsync workers, thus maximizing parallelism.</span>
+  <span class="c"># rsync (used by fpsync) can also provide benefits like delta-transfer if files are being updated.</span>
   fpsync <span class="nt">-n</span> <span class="s2">"</span><span class="k">${</span><span class="nv">num_workers</span><span class="k">}</span><span class="s2">"</span> <span class="k">${</span><span class="nv">fpsync_opts</span><span class="k">}</span> <span class="s2">"</span><span class="k">${</span><span class="nv">path_to_sync_via_fpsync</span><span class="k">}</span><span class="s2">"</span> <span class="s2">"</span><span class="k">${</span><span class="nv">final_dest_dir_for_fpsync</span><span class="k">}</span><span class="s2">"</span>
 
-  <span class="nb">local </span><span class="nv">fpsync_status</span><span class="o">=</span><span class="nv">$?</span> <span class="c"># Capture the exit status of fpsync for robust error handling.</span>
+  <span class="nb">local </span><span class="nv">fpsync_status</span><span class="o">=</span><span class="nv">$?</span> <span class="c"># Capture the exit status of fpsync for reliable error checking.</span>
 
   <span class="k">if</span> <span class="o">[</span> <span class="k">${</span><span class="nv">fpsync_status</span><span class="k">}</span> <span class="nt">-ne</span> 0 <span class="o">]</span><span class="p">;</span> <span class="k">then
     </span><span class="nb">echo</span> <span class="s2">"Warning: fpsync operation completed with errors (status: </span><span class="k">${</span><span class="nv">fpsync_status</span><span class="k">}</span><span class="s2">)."</span> <span class="o">&gt;</span>&amp;2
-    <span class="c"># If aggregation mode was used (i.e., tmp_payload_wrapper_dir is set),</span>
-    <span class="c"># the tarball might be partially on the destination, or not there at all if fpsync failed early.</span>
-    <span class="k">if</span> <span class="o">[</span> <span class="nt">-n</span> <span class="s2">"</span><span class="nv">$tmp_payload_wrapper_dir</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then
-        </span><span class="nb">echo</span> <span class="s2">"INFO: The payload tar archive </span><span class="se">\"</span><span class="k">${</span><span class="nv">tar_file_basename</span><span class="k">}</span><span class="se">\"</span><span class="s2"> (which was being sent from the temporary wrapper </span><span class="se">\"</span><span class="k">${</span><span class="nv">path_to_sync_via_fpsync</span><span class="k">}</span><span class="se">\"</span><span class="s2">) may have been partially transferred or may exist at the destination </span><span class="se">\"</span><span class="k">${</span><span class="nv">final_dest_dir_for_fpsync</span><span class="k">}</span><span class="se">\"</span><span class="s2">. Manual inspection might be needed."</span>
-    <span class="k">fi
-  else
+  <span class="k">else
     </span><span class="nb">echo</span> <span class="s2">"INFO: fpsync operation completed successfully."</span>
-    <span class="c"># Post-transfer processing: If a temporary payload wrapper directory was used (meaning a tarball</span>
-    <span class="c"># was created and successfully sent), attempt to extract the tarball on the destination side.</span>
-    <span class="c"># This extraction is only attempted if the destination appears to be local.</span>
-    <span class="k">if</span> <span class="o">[</span> <span class="nt">-n</span> <span class="s2">"</span><span class="nv">$tmp_payload_wrapper_dir</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then</span> <span class="c"># Check if we were in tar aggregation mode</span>
-      <span class="c"># Expected full path of the tar file on the destination side after fpsync transferred it.</span>
-      <span class="nb">local </span><span class="nv">dest_tar_archive_full_path</span><span class="o">=</span><span class="s2">"</span><span class="k">${</span><span class="nv">final_dest_dir_for_fpsync</span><span class="p">%/</span><span class="k">}</span><span class="s2">/</span><span class="k">${</span><span class="nv">tar_file_basename</span><span class="k">}</span><span class="s2">"</span>
-
-      <span class="c"># Basic heuristic to check if the user-provided destination path looks remote.</span>
-      <span class="c"># This covers common 'user@host:path' (scp/rsync style) and 'protocol://...' syntaxes like 'rsync://' or 'ssh://'.</span>
-      <span class="c"># It is *not* an exhaustive check for all possible remote URL formats that fpsync might support.</span>
-      <span class="k">if</span> <span class="o">[[</span> <span class="s2">"</span><span class="nv">$user_dest_dir</span><span class="s2">"</span> <span class="o">==</span> <span class="k">*</span>@<span class="k">*</span>:<span class="k">*</span> <span class="o">]]</span> <span class="o">||</span> <span class="o">[[</span> <span class="s2">"</span><span class="nv">$user_dest_dir</span><span class="s2">"</span> <span class="o">==</span> <span class="k">*</span>://<span class="k">*</span> <span class="o">]]</span><span class="p">;</span> <span class="k">then
-        </span><span class="nb">echo</span> <span class="s2">"INFO: Destination </span><span class="se">\"</span><span class="nv">$user_dest_dir</span><span class="se">\"</span><span class="s2"> appears to be remote."</span>
-        <span class="nb">echo</span> <span class="s2">"      IMPORTANT: Automatic extraction of the TAR archive on remote destinations is not supported by this script."</span>
-        <span class="nb">echo</span> <span class="s2">"      Please manually perform the following steps on the destination host:"</span>
-        <span class="nb">echo</span> <span class="s2">"      1. Navigate to the destination directory: cd </span><span class="se">\"</span><span class="k">${</span><span class="nv">final_dest_dir_for_fpsync</span><span class="k">}</span><span class="se">\"</span><span class="s2">"</span>
-        <span class="nb">echo</span> <span class="s2">"      2. Verify the archive exists: ls -l </span><span class="se">\"</span><span class="k">${</span><span class="nv">tar_file_basename</span><span class="k">}</span><span class="se">\"</span><span class="s2">"</span>
-        <span class="nb">echo</span> <span class="s2">"      3. Extract the archive's contents: tar -xf </span><span class="se">\"</span><span class="k">${</span><span class="nv">tar_file_basename</span><span class="k">}</span><span class="se">\"</span><span class="s2">"</span>
-        <span class="nb">echo</span> <span class="s2">"      4. Optionally, remove the archive from the destination: rm </span><span class="se">\"</span><span class="k">${</span><span class="nv">tar_file_basename</span><span class="k">}</span><span class="se">\"</span><span class="s2">"</span>
-        <span class="nb">echo</span> <span class="s2">"      (Full expected path to archive on destination: </span><span class="se">\"</span><span class="k">${</span><span class="nv">dest_tar_archive_full_path</span><span class="k">}</span><span class="se">\"</span><span class="s2">)"</span>
-      <span class="k">else</span>
-        <span class="c"># Destination appears local; attempt extraction and cleanup.</span>
-        <span class="nb">echo</span> <span class="s2">"INFO: Attempting to extract archive at local destination: </span><span class="se">\"</span><span class="k">${</span><span class="nv">dest_tar_archive_full_path</span><span class="k">}</span><span class="se">\"</span><span class="s2">"</span>
-        <span class="k">if</span> <span class="o">[</span> <span class="nt">-f</span> <span class="s2">"</span><span class="nv">$dest_tar_archive_full_path</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then</span>
-          <span class="c"># Extract into the final destination directory.</span>
-          <span class="c"># The '-C "${final_dest_dir_for_fpsync%/}"' option for tar is critical:</span>
-          <span class="c"># it changes tar's working directory to the destination *before* extracting.</span>
-          <span class="c"># Since paths in the tarball (e.g., 'home/user/file.txt' if original was '/home/user/file.txt')</span>
-          <span class="c"># are relative to the archive's root, this ensures they are created correctly</span>
-          <span class="c"># within 'final_dest_dir_for_fpsync' (e.g., 'final_dest_dir_for_fpsync/home/user/file.txt').</span>
-          <span class="nb">echo</span> <span class="s2">"      Executing: tar -xf </span><span class="se">\"</span><span class="k">${</span><span class="nv">dest_tar_archive_full_path</span><span class="k">}</span><span class="se">\"</span><span class="s2"> -C </span><span class="se">\"</span><span class="k">${</span><span class="nv">final_dest_dir_for_fpsync</span><span class="p">%/</span><span class="k">}</span><span class="se">\"</span><span class="s2">"</span>
-          <span class="k">if </span><span class="nb">tar</span> <span class="nt">-xf</span> <span class="s2">"</span><span class="nv">$dest_tar_archive_full_path</span><span class="s2">"</span> <span class="nt">-C</span> <span class="s2">"</span><span class="k">${</span><span class="nv">final_dest_dir_for_fpsync</span><span class="p">%/</span><span class="k">}</span><span class="s2">"</span><span class="p">;</span> <span class="k">then
-            </span><span class="nb">echo</span> <span class="s2">"INFO: Archive extracted successfully into </span><span class="se">\"</span><span class="k">${</span><span class="nv">final_dest_dir_for_fpsync</span><span class="p">%/</span><span class="k">}</span><span class="se">\"</span><span class="s2">."</span>
-            <span class="nb">echo</span> <span class="s2">"INFO: Removing transferred archive from destination: </span><span class="se">\"</span><span class="k">${</span><span class="nv">dest_tar_archive_full_path</span><span class="k">}</span><span class="se">\"</span><span class="s2">"</span>
-            <span class="k">if</span> <span class="o">!</span> <span class="nb">rm</span> <span class="nt">-f</span> <span class="s2">"</span><span class="nv">$dest_tar_archive_full_path</span><span class="s2">"</span><span class="p">;</span> <span class="k">then
-              </span><span class="nb">echo</span> <span class="s2">"Warning: Failed to remove archive from destination: </span><span class="se">\"</span><span class="k">${</span><span class="nv">dest_tar_archive_full_path</span><span class="k">}</span><span class="se">\"</span><span class="s2">. Please remove it manually."</span>
-            <span class="k">fi
-          else
-            </span><span class="nb">echo</span> <span class="s2">"Error: Failed to extract archive at destination. The archive remains: </span><span class="se">\"</span><span class="k">${</span><span class="nv">dest_tar_archive_full_path</span><span class="k">}</span><span class="se">\"</span><span class="s2">. Please check permissions or archive integrity."</span>
-          <span class="k">fi
-        else
-          </span><span class="nb">echo</span> <span class="s2">"Error: Transferred TAR archive not found at expected destination path for extraction: </span><span class="se">\"</span><span class="k">${</span><span class="nv">dest_tar_archive_full_path</span><span class="k">}</span><span class="se">\"</span><span class="s2">."</span>
-          <span class="nb">echo</span> <span class="s2">"       This might indicate that fpsync failed to transfer the file completely, there's an issue with expected paths, or the tarball name is unexpected."</span>
-        <span class="k">fi
-      fi
-    fi
-  fi</span>
+  <span class="k">fi</span>
   
-  <span class="c"># The EXIT trap (if tmp_payload_wrapper_dir was set and contains a path) will handle cleaning up</span>
-  <span class="c"># the source-side temporary wrapper directory and the tarball it contained.</span>
-  <span class="c"># The function returns fpsync's exit status, allowing the caller to check for success/failure.</span>
+  <span class="c"># The EXIT trap (if '$tmp_aggregation_dir' was set and points to a created directory)</span>
+  <span class="c"># will automatically clean up the source-side temporary aggregation directory.</span>
+  <span class="c"># The function returns fpsync's exit status, allowing the caller (e.g., another script)</span>
+  <span class="c"># to check for success or failure of the cesto command.</span>
   <span class="k">return</span> <span class="k">${</span><span class="nv">fpsync_status</span><span class="k">}</span>
 <span class="o">}</span>
-
 </code></section></div></div><hr />
   <h2 id="4-systemd-user-ssh-agent-service-user">
     
@@ -1787,7 +1665,7 @@ p <span class="c"># Should attempt to ping example.com</span>
         
         
         <a href="https://ib.bsb.br/404" aria-label="404">
-          2025-05-17 20:31:55
+          2025-05-17 22:41:18
         </a>
         &#x23;
     
@@ -1855,7 +1733,7 @@ p <span class="c"># Should attempt to ping example.com</span>
         "headline": "/.bashrc",
         "description": "",
         "datePublished": "2024-04-14T00:00:00+00:00",
-        "dateModified": "2025-05-17T23:28:28+00:00",
+        "dateModified": "2025-05-18T01:38:11+00:00",
         "author": {
           "@type": "Person",
           "name": "Author"
