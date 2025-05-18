@@ -40,7 +40,9 @@ templates: {}
 files: []
 ```
 
-—
+# ansible playbook yml
+
+{% codeblock yaml %}
 - name: Setup Incus and Start VM from Provided Image
   hosts: localhost * Designed to be run directly on the target bare-metal Ubuntu 24.04.
                    * Change to your specific host or group name if targeting remote machines.
@@ -255,7 +257,7 @@ files: []
       when: true * Set to ‘false’ or remove this task if you want to keep the qcow2 image for debugging.
       tags:
         - cleanup * Allows skipping this task with —skip-tags cleanup or running only it with —tags cleanup.
-```
+{% endcodeblock %}
 
 **Explanation of How to Use (Expanded):**
 
