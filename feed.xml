@@ -1,4 +1,365 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2025-05-18T01:41:18+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">bash script to setup ‘wifish’ on Linux</title><link href="https://ib.bsb.br/bash-script-to-setup-wifish-on-linux/" rel="alternate" type="text/html" title="bash script to setup ‘wifish’ on Linux" /><published>2025-05-17T00:00:00+00:00</published><updated>2025-05-17T22:44:46+00:00</updated><id>https://ib.bsb.br/bash-script-to-setup-wifish-on-linux</id><content type="html" xml:base="https://ib.bsb.br/bash-script-to-setup-wifish-on-linux/"><![CDATA[<section class="code-block-container" role="group" aria-label="Bash Code Block" data-filename="bash_code_block.sh" data-code="#!/bin/bash
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2025-05-18T13:11:06+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">sharing files with `miniserve` HTTP server and `netbird`</title><link href="https://ib.bsb.br/sharing-files-with-miniserve-http-server-and-netbird/" rel="alternate" type="text/html" title="sharing files with `miniserve` HTTP server and `netbird`" /><published>2025-05-18T00:00:00+00:00</published><updated>2025-05-18T13:08:07+00:00</updated><id>https://ib.bsb.br/sharing-files-with-miniserve-http-server-and-netbird</id><content type="html" xml:base="https://ib.bsb.br/sharing-files-with-miniserve-http-server-and-netbird/"><![CDATA[<h3 id="1-introduction-to-miniserve">1. Introduction to <code class="language-plaintext highlighter-rouge">miniserve</code></h3>
+
+<p>As detailed in its <code class="language-plaintext highlighter-rouge">README.md</code>, <code class="language-plaintext highlighter-rouge">miniserve</code> is a “CLI tool to serve files and dirs over HTTP.” It’s designed to be small, self-contained, and cross-platform, making it ideal for quickly sharing files. Built in Rust, it offers good performance. Key features include serving single files or entire directories, MIME type handling, authentication, folder downloads, file uploading, directory creation, themes, QR code support, TLS, and read-only WebDAV support.</p>
+
+<h3 id="2-prerequisites">2. Prerequisites</h3>
+
+<ul>
+  <li><strong>RK3588 Device</strong>: An ARM64 device (e.g., Orange Pi 5, Rock 5B).</li>
+  <li><strong>Operating System</strong>: Debian Bullseye (or compatible) installed.</li>
+  <li><strong>Basic Linux Knowledge</strong>: Command line, package installation, file editing.</li>
+  <li><strong>Root/Sudo Access</strong>.</li>
+  <li><strong>Internet Connectivity</strong>.</li>
+  <li><strong><code class="language-plaintext highlighter-rouge">netbird</code> Account</strong>: You’ll need a <code class="language-plaintext highlighter-rouge">netbird.io</code> account.</li>
+</ul>
+
+<hr />
+
+<h3 id="3-phase-1-rk3588-debian-bullseye-preparation">3. Phase 1: RK3588 Debian Bullseye Preparation</h3>
+
+<p>Ensure your Debian Bullseye system is ready.</p>
+
+<h4 id="system-update">System Update</h4>
+<p>Log in via SSH and run:</p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>apt update
+<span class="nb">sudo </span>apt full-upgrade <span class="nt">-y</span>
+<span class="nb">sudo </span>apt autoremove <span class="nt">-y</span>
+<span class="nb">sudo </span>apt clean
+<span class="c"># Consider a reboot if kernel updates occurred: sudo reboot</span>
+</code></pre></div></div>
+
+<h4 id="essential-tools">Essential Tools</h4>
+<p>Install common utilities if not already present:</p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>apt <span class="nb">install</span> <span class="nt">-y</span> curl wget git ca-certificates gnupg
+</code></pre></div></div>
+
+<hr />
+
+<h3 id="4-phase-2-netbird-installation-and-configuration">4. Phase 2: <code class="language-plaintext highlighter-rouge">netbird</code> Installation and Configuration</h3>
+
+<p><code class="language-plaintext highlighter-rouge">netbird</code> creates a secure peer-to-peer VPN.</p>
+
+<h4 id="install-netbird-client">Install <code class="language-plaintext highlighter-rouge">netbird</code> Client</h4>
+<p>The recommended way to install <code class="language-plaintext highlighter-rouge">netbird</code> on Linux is using their installation script:</p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>curl <span class="nt">-fsSL</span> https://pkgs.netbird.io/install.sh | <span class="nb">sudo </span>bash
+</code></pre></div></div>
+<p>This script will typically detect your OS (Debian), add the necessary repository and GPG key, and install the <code class="language-plaintext highlighter-rouge">netbird</code> package.</p>
+
+<p>Alternatively, for manual installation, refer to the <a href="https://netbird.io/docs/installation/overview">official Netbird documentation</a>, as steps can change.</p>
+
+<h4 id="log-in-to-netbird">Log in to <code class="language-plaintext highlighter-rouge">netbird</code></h4>
+<p>Once installed, connect your RK3588 to your <code class="language-plaintext highlighter-rouge">netbird</code> network:</p>
+
+<ul>
+  <li><strong>Method 1: Interactive Login (if you have easy browser access):</strong>
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>netbird up
+</code></pre></div>    </div>
+    <p>This will provide a URL. Open it in a browser on any device, log in to your <code class="language-plaintext highlighter-rouge">netbird</code> account, and authorize the RK3588.</p>
+  </li>
+  <li><strong>Method 2: Setup Key (Recommended for headless servers):</strong>
+    <ol>
+      <li>In your <code class="language-plaintext highlighter-rouge">netbird</code> admin dashboard (app.netbird.io), go to “Setup Keys.”</li>
+      <li>Create a new key (reusable or one-time, as needed). Copy the generated key.</li>
+      <li>On your RK3588, run:
+        <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>netbird up <span class="nt">--setup-key</span> YOUR_COPIED_SETUP_KEY
+</code></pre></div>        </div>
+      </li>
+    </ol>
+  </li>
+</ul>
+
+<h4 id="verify-netbird-connection--identify-ip">Verify <code class="language-plaintext highlighter-rouge">netbird</code> Connection &amp; Identify IP</h4>
+<p>Check the <code class="language-plaintext highlighter-rouge">netbird</code> status on your RK3588:</p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>netbird status
+</code></pre></div></div>
+<p>This command will show if the client is connected and will display its <code class="language-plaintext highlighter-rouge">netbird</code> IP address (e.g., <code class="language-plaintext highlighter-rouge">100.x.y.z</code>). Note this IP.
+You can also use:</p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>ip addr show netbird0 <span class="c"># Or the interface name shown by 'netbird status'</span>
+</code></pre></div></div>
+
+<h4 id="enable-netbird-service">Enable <code class="language-plaintext highlighter-rouge">netbird</code> Service</h4>
+<p>Ensure <code class="language-plaintext highlighter-rouge">netbird</code> starts on boot:</p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>systemctl <span class="nb">enable</span> <span class="nt">--now</span> netbird
+</code></pre></div></div>
+
+<hr />
+
+<h3 id="5-phase-3-miniserve-installation-on-arm64">5. Phase 3: <code class="language-plaintext highlighter-rouge">miniserve</code> Installation on ARM64</h3>
+
+<h4 id="option-a-using-pre-compiled-binaries-recommended">Option A: Using Pre-compiled Binaries (Recommended)</h4>
+<p><code class="language-plaintext highlighter-rouge">miniserve</code> provides pre-built <code class="language-plaintext highlighter-rouge">aarch64-unknown-linux-musl</code> (statically linked, good portability) or <code class="language-plaintext highlighter-rouge">aarch64-unknown-linux-gnu</code> binaries.</p>
+
+<ol>
+  <li><strong>Find the Latest Release:</strong> Go to <code class="language-plaintext highlighter-rouge">https://github.com/svenstaro/miniserve/releases</code>.</li>
+  <li><strong>Download the ARM64 Binary:</strong>
+On your RK3588 (replace <code class="language-plaintext highlighter-rouge">&lt;VERSION&gt;</code> and adjust binary name if needed):
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">VERSION</span><span class="o">=</span><span class="s2">"0.29.0"</span> <span class="c"># Check for the actual latest version!</span>
+<span class="c"># Choose musl for static linking or gnu</span>
+<span class="nv">BINARY_FILENAME</span><span class="o">=</span><span class="s2">"miniserve-</span><span class="k">${</span><span class="nv">VERSION</span><span class="k">}</span><span class="s2">-aarch64-unknown-linux-musl"</span>
+<span class="c"># BINARY_FILENAME="miniserve-${VERSION}-aarch64-unknown-linux-gnu"</span>
+
+<span class="nb">cd</span> /tmp
+wget <span class="s2">"https://github.com/svenstaro/miniserve/releases/download/v</span><span class="k">${</span><span class="nv">VERSION</span><span class="k">}</span><span class="s2">/</span><span class="k">${</span><span class="nv">BINARY_FILENAME</span><span class="k">}</span><span class="s2">"</span> <span class="nt">-O</span> miniserve-arm64
+</code></pre></div>    </div>
+  </li>
+  <li><strong>Make Executable and Install:</strong>
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">chmod</span> +x miniserve-arm64
+<span class="nb">sudo mv </span>miniserve-arm64 /usr/local/bin/miniserve
+</code></pre></div>    </div>
+  </li>
+  <li><strong>Verify:</strong> <code class="language-plaintext highlighter-rouge">miniserve --version</code></li>
+</ol>
+
+<h4 id="option-b-building-from-source-with-cargo">Option B: Building from Source with <code class="language-plaintext highlighter-rouge">cargo</code></h4>
+<ol>
+  <li><strong>Install Rust &amp; Build Tools:</strong>
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>curl <span class="nt">--proto</span> <span class="s1">'=https'</span> <span class="nt">--tlsv1</span>.2 <span class="nt">-sSf</span> https://sh.rustup.rs | sh
+<span class="nb">source</span> <span class="s2">"</span><span class="nv">$HOME</span><span class="s2">/.cargo/env"</span> <span class="c"># Or re-login/open new terminal</span>
+<span class="nb">sudo </span>apt <span class="nb">install</span> <span class="nt">-y</span> build-essential pkg-config libssl-dev <span class="c"># For GNU target</span>
+</code></pre></div>    </div>
+  </li>
+  <li><strong>Install <code class="language-plaintext highlighter-rouge">miniserve</code>:</strong>
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>cargo <span class="nb">install</span> <span class="nt">--locked</span> miniserve
+</code></pre></div>    </div>
+    <p>The binary will be in <code class="language-plaintext highlighter-rouge">$HOME/.cargo/bin/miniserve</code>. Ensure this is in your <code class="language-plaintext highlighter-rouge">PATH</code> or move the binary to <code class="language-plaintext highlighter-rouge">/usr/local/bin/</code>.</p>
+  </li>
+  <li><strong>Verify:</strong> <code class="language-plaintext highlighter-rouge">$HOME/.cargo/bin/miniserve --version</code> (or <code class="language-plaintext highlighter-rouge">miniserve --version</code> if in PATH).</li>
+</ol>
+
+<h4 id="option-c-using-docker">Option C: Using Docker</h4>
+<p><code class="language-plaintext highlighter-rouge">miniserve</code> offers multi-arch Docker images.</p>
+<ol>
+  <li><strong>Install Docker:</strong>
+The simplest way is often the convenience script:
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>curl <span class="nt">-fsSL</span> https://get.docker.com <span class="nt">-o</span> get-docker.sh
+<span class="nb">sudo </span>sh get-docker.sh
+<span class="nb">sudo </span>usermod <span class="nt">-aG</span> docker your_user <span class="c"># Add your user to docker group, re-login after</span>
+</code></pre></div>    </div>
+    <p>Alternatively, follow manual instructions from the <a href="https://docs.docker.com/engine/install/debian/">Docker Debian documentation</a>.</p>
+  </li>
+  <li><strong>Run <code class="language-plaintext highlighter-rouge">miniserve</code>:</strong>
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Replace /host/path/to/share with the actual path on your RK3588</span>
+docker run <span class="nt">-d</span> <span class="nt">--name</span> my-miniserve <span class="se">\</span>
+  <span class="nt">-v</span> /host/path/to/share:/data:ro <span class="se">\</span>
+  <span class="nt">-p</span> &lt;YOUR_NETBIRD_IP&gt;:&lt;PORT&gt;:8080 <span class="se">\</span>
+  <span class="nt">--restart</span> unless-stopped <span class="se">\</span>
+  docker.io/svenstaro/miniserve /data <span class="nt">-p</span> 8080
+</code></pre></div>    </div>
+    <ul>
+      <li><code class="language-plaintext highlighter-rouge">-d</code>: Run detached.</li>
+      <li><code class="language-plaintext highlighter-rouge">--name my-miniserve</code>: Name the container.</li>
+      <li><code class="language-plaintext highlighter-rouge">-v /host/path/to/share:/data:ro</code>: Mounts your host directory read-only (<code class="language-plaintext highlighter-rouge">:ro</code>) into the container. Remove <code class="language-plaintext highlighter-rouge">:ro</code> for uploads.</li>
+      <li><code class="language-plaintext highlighter-rouge">-p &lt;YOUR_NETBIRD_IP&gt;:&lt;PORT&gt;:8080</code>: Binds <code class="language-plaintext highlighter-rouge">miniserve</code>’s port <code class="language-plaintext highlighter-rouge">8080</code> inside the container to a specific <code class="language-plaintext highlighter-rouge">&lt;PORT&gt;</code> on your RK3588’s <code class="language-plaintext highlighter-rouge">&lt;YOUR_NETBIRD_IP&gt;</code>.</li>
+      <li><code class="language-plaintext highlighter-rouge">--restart unless-stopped</code>: For persistence.</li>
+      <li><code class="language-plaintext highlighter-rouge">/data -p 8080</code>: Tells <code class="language-plaintext highlighter-rouge">miniserve</code> inside the container to serve <code class="language-plaintext highlighter-rouge">/data</code> on port <code class="language-plaintext highlighter-rouge">8080</code>.</li>
+      <li><strong>Note on Volume Permissions:</strong> If <code class="language-plaintext highlighter-rouge">miniserve</code> inside Docker (often runs as non-root) can’t read <code class="language-plaintext highlighter-rouge">/host/path/to/share</code>, ensure the host path has appropriate read permissions for the user/group ID <code class="language-plaintext highlighter-rouge">miniserve</code> runs as in the container, or explore Docker’s user mapping options.</li>
+    </ul>
+  </li>
+</ol>
+
+<p><em>(The rest of this tutorial focuses on non-Docker systemd setup for <code class="language-plaintext highlighter-rouge">miniserve</code>)</em></p>
+
+<hr />
+
+<h3 id="6-phase-4-running-miniserve">6. Phase 4: Running <code class="language-plaintext highlighter-rouge">miniserve</code></h3>
+
+<h4 id="create-a-directory-to-serve">Create a Directory to Serve</h4>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">mkdir</span> <span class="nt">-p</span> /srv/miniserve_data <span class="c"># Or your preferred location</span>
+<span class="nb">echo</span> <span class="s2">"Hello from miniserve on RK3588 via Netbird!"</span> <span class="o">&gt;</span> /srv/miniserve_data/index.html
+<span class="nb">sudo chown</span> <span class="nt">-R</span> your_user:your_user /srv/miniserve_data <span class="c"># Change 'your_user' if needed</span>
+</code></pre></div></div>
+
+<h4 id="manual-test-run-binding-to-netbird-ip">Manual Test Run (Binding to <code class="language-plaintext highlighter-rouge">netbird</code> IP)</h4>
+<p>Replace <code class="language-plaintext highlighter-rouge">&lt;YOUR_NETBIRD_IP&gt;</code> and <code class="language-plaintext highlighter-rouge">&lt;PORT&gt;</code> (e.g., 8080).</p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>miniserve <span class="nt">-i</span> &lt;YOUR_NETBIRD_IP&gt; <span class="nt">-p</span> &lt;PORT&gt; /srv/miniserve_data
+</code></pre></div></div>
+<p>Test access from another <code class="language-plaintext highlighter-rouge">netbird</code> device: <code class="language-plaintext highlighter-rouge">http://&lt;YOUR_NETBIRD_IP&gt;:&lt;PORT&gt;</code>. Press <code class="language-plaintext highlighter-rouge">CTRL+C</code> to stop.</p>
+
+<h4 id="setting-up-miniserve-as-a-systemd-service">Setting up <code class="language-plaintext highlighter-rouge">miniserve</code> as a <code class="language-plaintext highlighter-rouge">systemd</code> Service</h4>
+
+<ol>
+  <li><strong>Obtain and Place the <code class="language-plaintext highlighter-rouge">systemd</code> Unit File:</strong>
+Create <code class="language-plaintext highlighter-rouge">/etc/systemd/system/miniserve@.service</code> (ensure <code class="language-plaintext highlighter-rouge">miniserve</code> binary path is correct):
+    <div class="language-ini highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nn">[Unit]</span>
+<span class="py">Description</span><span class="p">=</span><span class="s">miniserve for %i</span>
+<span class="py">After</span><span class="p">=</span><span class="s">network-online.target netbird.service</span>
+<span class="py">Wants</span><span class="p">=</span><span class="s">network-online.target netbird.service</span>
+
+<span class="nn">[Service]</span>
+<span class="py">ExecStart</span><span class="p">=</span><span class="s">/usr/local/bin/miniserve -- %I # Verify this path to miniserve</span>
+
+<span class="c"># Security Hardening
+</span><span class="py">IPAccounting</span><span class="p">=</span><span class="s">yes</span>
+<span class="c"># IPAddressAllow/Deny are removed here as miniserve will bind to a specific IP.
+# If miniserve were to bind 0.0.0.0, you'd use IPAddressAllow for Netbird subnet.
+</span><span class="py">DynamicUser</span><span class="p">=</span><span class="s">yes</span>
+<span class="py">PrivateTmp</span><span class="p">=</span><span class="s">yes</span>
+<span class="py">PrivateUsers</span><span class="p">=</span><span class="s">yes</span>
+<span class="py">PrivateDevices</span><span class="p">=</span><span class="s">yes</span>
+<span class="py">NoNewPrivileges</span><span class="p">=</span><span class="s">true</span>
+<span class="py">ProtectSystem</span><span class="p">=</span><span class="s">strict</span>
+<span class="py">ProtectHome</span><span class="p">=</span><span class="s">read-only # Change to 'no' or use a dedicated user if serving from /home</span>
+<span class="py">ProtectClock</span><span class="p">=</span><span class="s">yes</span>
+<span class="py">ProtectControlGroups</span><span class="p">=</span><span class="s">yes</span>
+<span class="py">ProtectKernelLogs</span><span class="p">=</span><span class="s">yes</span>
+<span class="py">ProtectKernelModules</span><span class="p">=</span><span class="s">yes</span>
+<span class="py">ProtectKernelTunables</span><span class="p">=</span><span class="s">yes</span>
+<span class="py">ProtectProc</span><span class="p">=</span><span class="s">invisible</span>
+<span class="py">CapabilityBoundingSet</span><span class="p">=</span><span class="s">CAP_NET_BIND_SERVICE CAP_DAC_READ_SEARCH</span>
+
+<span class="nn">[Install]</span>
+<span class="py">WantedBy</span><span class="p">=</span><span class="s">multi-user.target</span>
+</code></pre></div>    </div>
+  </li>
+  <li><strong>Dedicated User for <code class="language-plaintext highlighter-rouge">miniserve</code> (Optional but Recommended):</strong>
+If <code class="language-plaintext highlighter-rouge">DynamicUser=yes</code> is problematic for permissions, or you prefer explicit control:
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>groupadd <span class="nt">--system</span> miniserve-runner
+<span class="nb">sudo </span>useradd <span class="nt">--system</span> <span class="nt">-g</span> miniserve-runner <span class="nt">-d</span> /var/empty <span class="nt">-s</span> /bin/false miniserve-runner
+</code></pre></div>    </div>
+    <p>Then, in your systemd override (next step), you’ll add <code class="language-plaintext highlighter-rouge">User=miniserve-runner</code> and <code class="language-plaintext highlighter-rouge">Group=miniserve-runner</code>.</p>
+  </li>
+  <li><strong>Determine and Escape the Path to Serve:</strong>
+Example: For <code class="language-plaintext highlighter-rouge">/srv/miniserve_data</code>:
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>systemd-escape /srv/miniserve_data
+</code></pre></div>    </div>
+    <p>This might output <code class="language-plaintext highlighter-rouge">srv-miniserve_data</code>. This is your <code class="language-plaintext highlighter-rouge">&lt;escaped-path&gt;</code>.</p>
+  </li>
+  <li><strong>Create <code class="language-plaintext highlighter-rouge">systemd</code> Override File for Custom Options:</strong>
+Use <code class="language-plaintext highlighter-rouge">sudo systemctl edit miniserve@&lt;escaped-path&gt;.service</code>. Add:
+    <div class="language-ini highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nn">[Service]</span>
+<span class="c"># If using a dedicated user:
+# User=miniserve-runner
+# Group=miniserve-runner
+</span>
+<span class="c"># Clear default ExecStart
+</span><span class="py">ExecStart</span><span class="p">=</span>
+<span class="c"># Set our custom ExecStart. Replace &lt;YOUR_NETBIRD_IP&gt; and &lt;PORT&gt;.
+# Add other miniserve flags as needed (e.g., --auth, -u, --tls-cert).
+</span><span class="py">ExecStart</span><span class="p">=</span><span class="s">/usr/local/bin/miniserve -i &lt;YOUR_NETBIRD_IP&gt; -p &lt;PORT&gt; --title "RK3588 Files" -- %I</span>
+</code></pre></div>    </div>
+    <p>Ensure <code class="language-plaintext highlighter-rouge">/usr/local/bin/miniserve</code> is the correct absolute path to your <code class="language-plaintext highlighter-rouge">miniserve</code> binary.</p>
+  </li>
+  <li><strong>File System Permissions for the Served Directory:</strong>
+The user <code class="language-plaintext highlighter-rouge">miniserve</code> runs as (either dynamic or <code class="language-plaintext highlighter-rouge">miniserve-runner</code>) needs read access to <code class="language-plaintext highlighter-rouge">/srv/miniserve_data</code> and its contents.
+If using <code class="language-plaintext highlighter-rouge">miniserve-runner</code>:
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo chown</span> <span class="nt">-R</span> miniserve-runner:miniserve-runner /srv/miniserve_data
+<span class="nb">sudo chmod</span> <span class="nt">-R</span> <span class="nv">u</span><span class="o">=</span>rX,g<span class="o">=</span>rX,o-rwx /srv/miniserve_data <span class="c"># Read/execute for user/group</span>
+</code></pre></div>    </div>
+    <p>If <code class="language-plaintext highlighter-rouge">DynamicUser=yes</code> and serving from outside standard system paths (like <code class="language-plaintext highlighter-rouge">/srv</code>), you might need <code class="language-plaintext highlighter-rouge">setfacl</code> for more granular permissions if <code class="language-plaintext highlighter-rouge">chown</code> is not desired, or ensure the path is world-readable (less secure).</p>
+  </li>
+  <li><strong>Reload <code class="language-plaintext highlighter-rouge">systemd</code>, Enable, and Start the Service:</strong>
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>systemctl daemon-reload
+<span class="nb">sudo </span>systemctl <span class="nb">enable</span> <span class="nt">--now</span> miniserve@&lt;escaped-path&gt;.service
+</code></pre></div>    </div>
+  </li>
+  <li><strong>Check Service Status:</strong>
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>systemctl status miniserve@&lt;escaped-path&gt;.service
+<span class="nb">sudo </span>journalctl <span class="nt">-u</span> miniserve@&lt;escaped-path&gt;.service <span class="nt">-f</span>
+</code></pre></div>    </div>
+  </li>
+</ol>
+
+<hr />
+
+<h3 id="7-phase-5-accessing-miniserve-and-other-services-via-netbird">7. Phase 5: Accessing <code class="language-plaintext highlighter-rouge">miniserve</code> and Other Services via <code class="language-plaintext highlighter-rouge">netbird</code></h3>
+
+<h4 id="accessing-miniserve">Accessing <code class="language-plaintext highlighter-rouge">miniserve</code></h4>
+<p>From another device on your <code class="language-plaintext highlighter-rouge">netbird</code> network, use your browser:
+<code class="language-plaintext highlighter-rouge">http://&lt;YOUR_NETBIRD_IP&gt;:&lt;PORT&gt;</code> (or <code class="language-plaintext highlighter-rouge">https://</code> if you configured TLS).</p>
+
+<h4 id="accessing-ssh-ftp-etc">Accessing SSH, FTP, etc.</h4>
+<p>Services like SSH on your RK3588 are now accessible via its <code class="language-plaintext highlighter-rouge">netbird</code> IP from other peers in your <code class="language-plaintext highlighter-rouge">netbird</code> network:</p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>ssh your_rk3588_user@&lt;YOUR_NETBIRD_IP&gt;
+</code></pre></div></div>
+<p>Similarly for FTP or other services configured to listen on the <code class="language-plaintext highlighter-rouge">netbird</code> IP or <code class="language-plaintext highlighter-rouge">0.0.0.0</code>.</p>
+
+<hr />
+
+<h3 id="8-phase-6-advanced-miniserve-configuration--security">8. Phase 6: Advanced <code class="language-plaintext highlighter-rouge">miniserve</code> Configuration &amp; Security</h3>
+
+<h4 id="key-miniserve-features">Key <code class="language-plaintext highlighter-rouge">miniserve</code> Features</h4>
+<p>Consult <code class="language-plaintext highlighter-rouge">miniserve --help</code> and the <code class="language-plaintext highlighter-rouge">README.md</code>.</p>
+<ul>
+  <li><strong>Authentication:</strong> <code class="language-plaintext highlighter-rouge">--auth username:password</code> or <code class="language-plaintext highlighter-rouge">--auth-file /path/auth.txt</code>. Highly recommended.
+Example for systemd override: <code class="language-plaintext highlighter-rouge">ExecStart=... --auth "admin:$(openssl passwd -1 'securepass')" -- %I</code></li>
+  <li><strong>TLS (HTTPS):</strong> <code class="language-plaintext highlighter-rouge">--tls-cert /path/cert.pem --tls-key /path/key.pem</code>.
+See “TLS Certificate Generation with SAN” below.</li>
+  <li><strong>File Uploads:</strong> <code class="language-plaintext highlighter-rouge">-u</code> or <code class="language-plaintext highlighter-rouge">-u /allowed/subdir</code>. Use with caution regarding permissions.</li>
+  <li><strong>Directory Creation:</strong> <code class="language-plaintext highlighter-rouge">--mkdir</code> (requires uploads).</li>
+  <li><strong>WebDAV:</strong> <code class="language-plaintext highlighter-rouge">--enable-webdav</code> for read-only WebDAV access. This can be a good alternative to FTP for file management over HTTP.</li>
+</ul>
+
+<h4 id="tls-certificate-generation-with-san">TLS Certificate Generation with SAN</h4>
+<p>For self-signed certificates to work well with modern browsers (even over <code class="language-plaintext highlighter-rouge">netbird</code>), include a Subject Alternative Name (SAN) for the IP.</p>
+<ol>
+  <li>Create a directory for certs: <code class="language-plaintext highlighter-rouge">sudo mkdir -p /etc/miniserve/tls; cd /etc/miniserve/tls</code></li>
+  <li>Generate key and cert (replace <code class="language-plaintext highlighter-rouge">&lt;YOUR_NETBIRD_IP&gt;</code>):
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>openssl req <span class="nt">-x509</span> <span class="nt">-newkey</span> rsa:4096 <span class="nt">-keyout</span> key.pem <span class="nt">-out</span> cert.pem <span class="se">\</span>
+  <span class="nt">-sha256</span> <span class="nt">-days</span> 3650 <span class="nt">-nodes</span> <span class="se">\</span>
+  <span class="nt">-subj</span> <span class="s2">"/CN=&lt;YOUR_NETBIRD_IP&gt;"</span> <span class="se">\</span>
+  <span class="nt">-addext</span> <span class="s2">"subjectAltName = IP:&lt;YOUR_NETBIRD_IP&gt;"</span>
+</code></pre></div>    </div>
+  </li>
+  <li>Set permissions (if <code class="language-plaintext highlighter-rouge">miniserve</code> runs as <code class="language-plaintext highlighter-rouge">miniserve-runner</code>):
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo chown</span> <span class="nt">-R</span> miniserve-runner:miniserve-runner /etc/miniserve/tls
+<span class="nb">sudo chmod </span>600 /etc/miniserve/tls/key.pem
+<span class="nb">sudo chmod </span>644 /etc/miniserve/tls/cert.pem
+</code></pre></div>    </div>
+  </li>
+  <li>Update your systemd override <code class="language-plaintext highlighter-rouge">ExecStart</code> with:
+<code class="language-plaintext highlighter-rouge">--tls-cert /etc/miniserve/tls/cert.pem --tls-key /etc/miniserve/tls/key.pem</code></li>
+  <li>Access via <code class="language-plaintext highlighter-rouge">https://&lt;YOUR_NETBIRD_IP&gt;:&lt;PORT&gt;</code>. You’ll need to accept the self-signed certificate warning in your browser.</li>
+</ol>
+
+<h4 id="firewall-ufw-on-rk3588">Firewall (UFW on RK3588)</h4>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>apt <span class="nb">install</span> <span class="nt">-y</span> ufw
+<span class="nb">sudo </span>ufw default deny incoming
+<span class="nb">sudo </span>ufw default allow outgoing
+<span class="nb">sudo </span>ufw allow ssh <span class="c"># Essential for remote access</span>
+<span class="c"># Allow miniserve port ONLY from Netbird interface (e.g., netbird0)</span>
+<span class="nb">sudo </span>ufw allow <span class="k">in </span>on netbird0 to any port &lt;PORT&gt; proto tcp 
+<span class="nb">sudo </span>ufw <span class="nb">enable
+sudo </span>ufw status verbose
+</code></pre></div></div>
+
+<h4 id="netbird-access-controls"><code class="language-plaintext highlighter-rouge">netbird</code> Access Controls</h4>
+<p>Utilize <code class="language-plaintext highlighter-rouge">netbird</code>’s dashboard to create access policies, restricting which peers can connect to your RK3588 and on which ports/protocols for fine-grained security.</p>
+
+<h4 id="regular-updates">Regular Updates</h4>
+<p>Keep Debian, <code class="language-plaintext highlighter-rouge">netbird</code>, and <code class="language-plaintext highlighter-rouge">miniserve</code> updated.</p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>apt update <span class="o">&amp;&amp;</span> <span class="nb">sudo </span>apt full-upgrade <span class="nt">-y</span>
+<span class="c"># For miniserve from cargo: cargo install --locked miniserve</span>
+<span class="c"># For Netbird: usually updates via apt if repo was added.</span>
+</code></pre></div></div>
+
+<hr />
+
+<h3 id="9-phase-7-troubleshooting">9. Phase 7: Troubleshooting</h3>
+
+<ul>
+  <li><strong><code class="language-plaintext highlighter-rouge">miniserve</code> Service Issues:</strong>
+    <ul>
+      <li><code class="language-plaintext highlighter-rouge">sudo systemctl status miniserve@&lt;escaped-path&gt;.service</code></li>
+      <li><code class="language-plaintext highlighter-rouge">sudo journalctl -u miniserve@&lt;escaped-path&gt;.service -n 100 --no-pager --follow</code></li>
+      <li>Check <code class="language-plaintext highlighter-rouge">miniserve</code> binary path and permissions.</li>
+      <li>Manually run the <code class="language-plaintext highlighter-rouge">ExecStart</code> command from the systemd unit (as the correct user if specified) to see direct errors.</li>
+    </ul>
+  </li>
+  <li><strong><code class="language-plaintext highlighter-rouge">netbird</code> Connectivity:</strong>
+    <ul>
+      <li><code class="language-plaintext highlighter-rouge">sudo netbird status</code> on all relevant peers.</li>
+      <li>Ping <code class="language-plaintext highlighter-rouge">netbird</code> IPs between peers.</li>
+      <li>Check <code class="language-plaintext highlighter-rouge">netbird</code> admin dashboard for peer status and access rules.</li>
+    </ul>
+  </li>
+  <li><strong>Firewall:</strong>
+    <ul>
+      <li>Temporarily <code class="language-plaintext highlighter-rouge">sudo ufw disable</code> to isolate firewall issues. If it works, your UFW rules need adjustment. Re-enable UFW.</li>
+      <li>Check UFW logs: <code class="language-plaintext highlighter-rouge">sudo less /var/log/ufw.log</code>.</li>
+    </ul>
+  </li>
+  <li><strong>Permissions:</strong> Double-check that the user <code class="language-plaintext highlighter-rouge">miniserve</code> runs as has read (and write, if uploads enabled) permissions for the target directories.</li>
+</ul>]]></content><author><name></name></author><category term="scratchpad" /></entry><entry><title type="html">bash script to setup ‘wifish’ on Linux</title><link href="https://ib.bsb.br/bash-script-to-setup-wifish-on-linux/" rel="alternate" type="text/html" title="bash script to setup ‘wifish’ on Linux" /><published>2025-05-17T00:00:00+00:00</published><updated>2025-05-17T22:44:46+00:00</updated><id>https://ib.bsb.br/bash-script-to-setup-wifish-on-linux</id><content type="html" xml:base="https://ib.bsb.br/bash-script-to-setup-wifish-on-linux/"><![CDATA[<section class="code-block-container" role="group" aria-label="Bash Code Block" data-filename="bash_code_block.sh" data-code="#!/bin/bash
 # This script automates the setup of &#39;wifish&#39; on a Debian Bullseye system.
 # Version 2: Improved backup, idempotency, and interface detection.
 #
@@ -8237,420 +8598,4 @@ gh release create <span class="s2">"</span><span class="k">${</span><span class=
   <li><strong>Alternative: Containerized Builds:</strong> For higher fidelity reproduction and isolation, consider running the entire build process within a Docker or Podman container based on a <code class="language-plaintext highlighter-rouge">debian:12</code> image. This is more complex to set up but offers a cleaner environment.</li>
 </ul>
 
-<hr />]]></content><author><name></name></author><category term="scratchpad" /></entry><entry><title type="html">restic to transfer files</title><link href="https://ib.bsb.br/restic-to-transfer-files/" rel="alternate" type="text/html" title="restic to transfer files" /><published>2025-05-13T00:00:00+00:00</published><updated>2025-05-15T12:39:44+00:00</updated><id>https://ib.bsb.br/restic-to-transfer-files</id><content type="html" xml:base="https://ib.bsb.br/restic-to-transfer-files/"><![CDATA[<p>This guide uses the following specific paths:</p>
-<ul>
-  <li><strong>Source File:</strong> <code class="language-plaintext highlighter-rouge">/opt/data_files/original_large.img</code></li>
-  <li><strong>External Drive Mount Point:</strong> <code class="language-plaintext highlighter-rouge">/media/my_external_drive</code></li>
-  <li><strong>Restic Repository on External Drive:</strong> <code class="language-plaintext highlighter-rouge">/media/my_external_drive/restic_img_repo</code></li>
-  <li><strong>Final Destination for Restored File:</strong> <code class="language-plaintext highlighter-rouge">/media/my_external_drive/final_copied_image.img</code></li>
-</ul>
-
-<p>Adjust these paths to match your actual file locations and drive configuration.</p>
-
-<hr />
-
-<h1 id="using-restic-to-transfer-a-large-img-file-in-debian">Using <code class="language-plaintext highlighter-rouge">restic</code> to Transfer a Large <code class="language-plaintext highlighter-rouge">.img</code> File in Debian</h1>
-
-<h2 id="1-install-restic">1. Install <code class="language-plaintext highlighter-rouge">restic</code></h2>
-
-<p>If <code class="language-plaintext highlighter-rouge">restic</code> is not already installed:</p>
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>apt update
-<span class="nb">sudo </span>apt <span class="nb">install </span>restic <span class="nt">-y</span>
-</code></pre></div></div>
-
-<h2 id="2-set-repository-password">2. Set Repository Password</h2>
-
-<p><code class="language-plaintext highlighter-rouge">restic</code> encrypts all data in its repository. You need to set a password for it. Choose a strong, unique password and <strong>store it securely</strong>. If you lose this password, your backed-up data will be irrecoverable.</p>
-
-<p>Export the password as an environment variable for the current terminal session:</p>
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">export </span><span class="nv">RESTIC_PASSWORD</span><span class="o">=</span><span class="s1">'your-chosen-strong-password'</span>
-</code></pre></div></div>
-<p>(Replace <code class="language-plaintext highlighter-rouge">'your-chosen-strong-password'</code> with your actual password). You’ll need to do this in any new terminal or add it to your shell’s startup file (e.g., <code class="language-plaintext highlighter-rouge">~/.bashrc</code>) for persistence.</p>
-
-<h2 id="3-initialize-the-restic-repository">3. Initialize the <code class="language-plaintext highlighter-rouge">restic</code> Repository</h2>
-
-<p>Create the <code class="language-plaintext highlighter-rouge">restic</code> repository on your external drive. This only needs to be done once for a new repository.</p>
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>restic <span class="nt">-r</span> /media/my_external_drive/restic_img_repo init
-</code></pre></div></div>
-<p><strong>Expected output on success:</strong></p>
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>created restic repository XXXXXXXX at /media/my_external_drive/restic_img_repo
-
-Please note that knowledge of your password is required to access
-the repository. Losing your password means that your data is
-irreversibly lost.
-</code></pre></div></div>
-
-<h2 id="4-back-up-the-img-file-to-the-repository">4. Back Up the <code class="language-plaintext highlighter-rouge">.img</code> File to the Repository</h2>
-
-<p>This step copies the source file into the <code class="language-plaintext highlighter-rouge">restic</code> repository. <code class="language-plaintext highlighter-rouge">restic</code> shows progress and can resume if interrupted; simply re-run the same command.</p>
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>restic <span class="nt">-r</span> /media/my_external_drive/restic_img_repo backup /opt/data_files/original_large.img <span class="nt">--verbose</span>
-</code></pre></div></div>
-<ul>
-  <li><code class="language-plaintext highlighter-rouge">-r /media/my_external_drive/restic_img_repo</code>: Specifies the repository.</li>
-  <li><code class="language-plaintext highlighter-rouge">backup /opt/data_files/original_large.img</code>: Backs up the specified file.</li>
-  <li><code class="language-plaintext highlighter-rouge">--verbose</code>: Provides detailed progress (percentage, speed, ETA).</li>
-</ul>
-
-<p>Note the snapshot ID outputted upon completion (e.g., <code class="language-plaintext highlighter-rouge">snapshot abcdef01 saved</code>). You can usually use <code class="language-plaintext highlighter-rouge">latest</code> instead of the ID.</p>
-
-<h2 id="5-restore-the-img-file-from-the-repository">5. Restore the <code class="language-plaintext highlighter-rouge">.img</code> File from the Repository</h2>
-
-<p>This step extracts the file from the repository to a standard file on your external drive.
-<code class="language-plaintext highlighter-rouge">restic</code> restores files with their original path structure relative to the backup root, under the <code class="language-plaintext highlighter-rouge">--target</code> directory.</p>
-
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>restic <span class="nt">-r</span> /media/my_external_drive/restic_img_repo restore latest <span class="nt">--target</span> /media/my_external_drive/restore_temp <span class="nt">--include</span> /opt/data_files/original_large.img <span class="nt">--verbose</span>
-</code></pre></div></div>
-<ul>
-  <li><code class="language-plaintext highlighter-rouge">restore latest</code>: Restores from the most recent snapshot.</li>
-  <li><code class="language-plaintext highlighter-rouge">--target /media/my_external_drive/restore_temp</code>: Base directory for restoration. A temporary directory name is used here for clarity before the final move.</li>
-  <li><code class="language-plaintext highlighter-rouge">--include /opt/data_files/original_large.img</code>: Specifies only this file should be restored from the snapshot.</li>
-</ul>
-
-<p>This command will restore the file to: <code class="language-plaintext highlighter-rouge">/media/my_external_drive/restore_temp/opt/data_files/original_large.img</code>.</p>
-
-<h2 id="6-move-the-restored-file-to-its-final-location">6. Move the Restored File to its Final Location</h2>
-
-<p>Move the restored file from the temporary restoration path to your desired final path and name.</p>
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">mv</span> /media/my_external_drive/restore_temp/opt/data_files/original_large.img /media/my_external_drive/final_copied_image.img
-</code></pre></div></div>
-<p>After the move, you can remove the temporary directory structure if it’s empty:</p>
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">rmdir</span> <span class="nt">-p</span> /media/my_external_drive/restore_temp/opt/data_files
-</code></pre></div></div>
-<p>(The <code class="language-plaintext highlighter-rouge">-p</code> option removes parent directories if they become empty).</p>
-
-<h2 id="7-verify-file-integrity">7. Verify File Integrity</h2>
-
-<p>Compare checksums of the original source file and the final restored file.</p>
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sha256sum</span> /opt/data_files/original_large.img /media/my_external_drive/final_copied_image.img
-</code></pre></div></div>
-<p>The two checksums <strong>must match exactly</strong>. You can also use <code class="language-plaintext highlighter-rouge">md5sum</code>.</p>
-
-<h2 id="important-notes">Important Notes</h2>
-
-<ul>
-  <li><strong>Password:</strong> Your <code class="language-plaintext highlighter-rouge">RESTIC_PASSWORD</code> is vital. Loss of the password means loss of data.</li>
-  <li><strong>Disk Space:</strong> The external drive needs space for the <code class="language-plaintext highlighter-rouge">restic</code> repository (roughly the size of the <code class="language-plaintext highlighter-rouge">.img</code> file) AND for the fully restored <code class="language-plaintext highlighter-rouge">.img</code> file simultaneously during this process.</li>
-  <li><strong><code class="language-plaintext highlighter-rouge">restic</code> is a Backup Tool:</strong> This method uses backup/restore. The repository contains a versioned, deduplicated, and encrypted copy.</li>
-  <li><strong>Metadata:</strong> <code class="language-plaintext highlighter-rouge">restic</code> preserves file permissions and modification times.</li>
-  <li><strong>Interrupts:</strong> <code class="language-plaintext highlighter-rouge">restic backup</code> and <code class="language-plaintext highlighter-rouge">restic restore</code> operations are generally resumable by re-running the same command.</li>
-  <li><strong>Cleanup (Optional):</strong> If you no longer need the backup in the <code class="language-plaintext highlighter-rouge">restic</code> repository after confirming the transfer:
-    <ol>
-      <li>List snapshots: <code class="language-plaintext highlighter-rouge">restic -r /media/my_external_drive/restic_img_repo snapshots</code></li>
-      <li>Forget the snapshot(s) and prune data: <code class="language-plaintext highlighter-rouge">restic -r /media/my_external_drive/restic_img_repo forget &lt;SNAPSHOT_ID_or_latest&gt; --prune</code></li>
-      <li>To completely remove the repository: <code class="language-plaintext highlighter-rouge">rm -rf /media/my_external_drive/restic_img_repo</code> (Use <code class="language-plaintext highlighter-rouge">rm -rf</code> with extreme caution).</li>
-    </ol>
-  </li>
-</ul>
-
-<h1 id="integrating-restic-with-storj-for-decentralized-cloud-backups">Integrating Restic with Storj for Decentralized Cloud Backups</h1>
-
-<p>Storj is a decentralized cloud object storage platform that offers a compelling backend solution for Restic backups due to its distributed architecture, S3 compatibility, end-to-end encryption principles, and potentially competitive pricing. This section provides a comprehensive guide to configuring and using Restic with Storj, primarily leveraging Rclone as the intermediary.</p>
-
-<h3 id="1-introduction-to-storj-for-restic-users">1. Introduction to Storj for Restic Users</h3>
-
-<p>Storj provides enterprise-grade, globally distributed cloud object storage. Its key features relevant to Restic users include:</p>
-<ul>
-  <li><strong>Decentralization:</strong> Files are encrypted, erasure-coded, and spread across a vast network of independent storage nodes, enhancing durability and availability.</li>
-  <li><strong>Security:</strong> Storj emphasizes zero-trust security. When combined with Restic’s client-side end-to-end encryption, your backup data remains confidential even from Storj and its node operators.</li>
-  <li><strong>S3-Compatible API:</strong> Storj offers an Amazon S3-compatible API, allowing tools like Rclone (and by extension, Restic) to interact with it seamlessly.</li>
-  <li><strong>Native Integration Potential:</strong> Rclone also supports a native Storj integration (via Uplink CLI concepts), which can offer client-side erasure coding for path encryption and potentially optimized performance.</li>
-  <li><strong>Cost-Effectiveness:</strong> Storj’s pricing model (typically per GB stored and per GB downloaded) can be attractive, especially when paired with Restic’s efficient deduplication, which minimizes storage footprint.</li>
-</ul>
-
-<p>Using Restic with Storj via Rclone allows you to combine Restic’s robust backup features with Storj’s resilient and secure decentralized storage.</p>
-
-<h3 id="2-prerequisites">2. Prerequisites</h3>
-
-<p>Before you begin, ensure you have the following:</p>
-<ol>
-  <li><strong>A Storj Account:</strong> Sign up at <a href="https://storj.io/signup?partner=restic">Storj.io</a>. New accounts often come with a free trial allowance.</li>
-  <li><strong>Restic Installed:</strong> Download and install the Restic binary for your operating system from the <a href="https://github.com/restic/restic/releases">official Restic releases page</a> or via your system’s package manager. Ensure it’s in your PATH.</li>
-  <li><strong>Rclone Installed:</strong> Download and install Rclone from the <a href="https://rclone.org/install/">official Rclone website</a>. Ensure it’s in your PATH.</li>
-</ol>
-
-<h3 id="3-rclone-configuration-for-storj">3. Rclone Configuration for Storj</h3>
-
-<p>Rclone is the bridge between Restic and Storj. You need to configure an Rclone “remote” that points to your Storj account. Storj can be accessed by Rclone in two main ways. The <strong>S3-Compatible Gateway</strong> (Method 1) is often simpler to set up if you’re familiar with S3 credentials and offers broad compatibility. The <strong>Native Storj Integration</strong> (Method 2) uses Storj’s Uplink protocols, may offer client-side erasure coding for path encryption, and could have different performance characteristics. Choose the method that best fits your technical comfort and requirements.</p>
-
-<h4 id="31-method-1-configuring-rclone-for-storj-via-s3-compatible-gateway">3.1. Method 1: Configuring Rclone for Storj via S3-Compatible Gateway</h4>
-
-<p>This method uses Storj’s S3-compatible API endpoint and requires S3 credentials (access key and secret key).</p>
-
-<p><strong>Step 1: Generate S3 Credentials in Storj Console</strong></p>
-<ol>
-  <li>Log in to your Storj account.</li>
-  <li>Navigate to <strong>Access Keys</strong> (or a similarly named section for S3 credentials).</li>
-  <li>Create a new Access Key.
-    <ul>
-      <li>Give it a descriptive name (e.g., <code class="language-plaintext highlighter-rouge">restic-backup-s3-creds</code>).</li>
-      <li>Set appropriate permissions (Read, Write, List, Delete for the buckets Restic will use).</li>
-      <li>Note down the <strong>Access Key ID</strong>, <strong>Secret Access Key</strong>, and the <strong>S3 Gateway Endpoint</strong> (e.g., <code class="language-plaintext highlighter-rouge">gateway.storjshare.io</code>).</li>
-    </ul>
-  </li>
-</ol>
-
-<p><strong>Step 2: Configure Rclone Remote for S3 Gateway</strong>
-You can configure Rclone by editing its configuration file directly (find its location with <code class="language-plaintext highlighter-rouge">rclone config file</code>) or by using the interactive <code class="language-plaintext highlighter-rouge">rclone config</code> setup.</p>
-
-<ul>
-  <li><strong>Editing <code class="language-plaintext highlighter-rouge">rclone.conf</code> directly:</strong>
-Add a new remote section to your <code class="language-plaintext highlighter-rouge">rclone.conf</code> file (e.g., <code class="language-plaintext highlighter-rouge">~/.config/rclone/rclone.conf</code>):
-    <div class="language-ini highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nn">[storj_s3]</span>
-<span class="py">type</span> <span class="p">=</span> <span class="s">s3</span>
-<span class="py">provider</span> <span class="p">=</span> <span class="s">Storj</span>
-<span class="py">access_key_id</span> <span class="p">=</span> <span class="s">YOUR_STORJ_ACCESS_KEY_ID</span>
-<span class="py">secret_access_key</span> <span class="p">=</span> <span class="s">YOUR_STORJ_SECRET_ACCESS_KEY</span>
-<span class="py">endpoint</span> <span class="p">=</span> <span class="s">gateway.storjshare.io</span>
-<span class="c"># Optional: Define a specific region if needed, though often not required for Storj's global gateway
-# region = us-east-1
-# Optional: Storj docs sometimes recommend disabling checksum for S3 gateway with rclone
-# disable_checksum = true
-# Optional: Rclone's 'chunk_size' (e.g., '64M') controls how Rclone itself chunks large files (Restic packs in this case) 
-# for multipart upload to S3-compatible storage. This is distinct from Restic's '--pack-size'. 
-# Adjusting Rclone's 'chunk_size' might be relevant for optimizing uploads of very large Restic packs 
-# over unstable connections, but Restic's default pack handling is usually sufficient.
-# chunk_size = 64M 
-</span></code></pre></div>    </div>
-    <p>Replace <code class="language-plaintext highlighter-rouge">YOUR_STORJ_ACCESS_KEY_ID</code> and <code class="language-plaintext highlighter-rouge">YOUR_STORJ_SECRET_ACCESS_KEY</code> with the credentials you generated.</p>
-  </li>
-  <li><strong>Using <code class="language-plaintext highlighter-rouge">rclone config</code> (Interactive):</strong>
-    <ol>
-      <li>Run <code class="language-plaintext highlighter-rouge">rclone config</code>.</li>
-      <li>Choose <code class="language-plaintext highlighter-rouge">n</code> for a new remote.</li>
-      <li>Enter a name, e.g., <code class="language-plaintext highlighter-rouge">storj_s3</code>.</li>
-      <li>For “Type of storage to configure,” choose <code class="language-plaintext highlighter-rouge">s3</code> (Amazon S3 Compliant Storage Providers).</li>
-      <li>For “S3 Provider,” choose <code class="language-plaintext highlighter-rouge">Storj</code>.</li>
-      <li>Enter your <code class="language-plaintext highlighter-rouge">access_key_id</code> and <code class="language-plaintext highlighter-rouge">secret_access_key</code>.</li>
-      <li>For “Endpoint for S3 API,” enter the Storj S3 gateway (e.g., <code class="language-plaintext highlighter-rouge">gateway.storjshare.io</code>).</li>
-      <li>You can typically leave other options (region, location_constraint, acl) as default or blank unless you have specific requirements.</li>
-      <li>Save the configuration.</li>
-    </ol>
-  </li>
-</ul>
-
-<h4 id="32-method-2-configuring-rclone-for-native-storj-integration-uplink">3.2. Method 2: Configuring Rclone for Native Storj Integration (Uplink)</h4>
-
-<p>This method uses Storj’s native protocols via the Uplink library integrated into Rclone. It might offer client-side erasure coding and potentially different performance characteristics. It typically uses an Access Grant or an API Key and Encryption Passphrase.</p>
-
-<p><strong>Step 1: Obtain Native Access Credentials</strong></p>
-<ul>
-  <li><strong>Access Grant:</strong> This is a serialized string that bundles permissions, API key, satellite address, and encryption passphrase. You might generate this via the Uplink CLI or receive it if someone is granting you access.</li>
-  <li><strong>API Key &amp; Encryption Passphrase:</strong> You can generate an API key from the Storj console and then use it with your chosen encryption passphrase.</li>
-</ul>
-
-<p><strong>Step 2: Configure Rclone Remote for Native Storj</strong>
-Use the <code class="language-plaintext highlighter-rouge">rclone config</code> interactive setup:</p>
-<ol>
-  <li>Run <code class="language-plaintext highlighter-rouge">rclone config</code>.</li>
-  <li>Choose <code class="language-plaintext highlighter-rouge">n</code> for a new remote.</li>
-  <li>Enter a name, e.g., <code class="language-plaintext highlighter-rouge">storj_native</code>.</li>
-  <li>For “Type of storage to configure,” find and choose <code class="language-plaintext highlighter-rouge">storj</code> (Storj Decentralized Cloud Storage).</li>
-  <li>Rclone will then prompt for the authentication method:
-    <ul>
-      <li><strong>Existing Access Grant:</strong> If you have an access grant string, choose this option and paste the grant.</li>
-      <li><strong>New Access Grant (API Key &amp; Passphrase):</strong> If you have an API key and want to use a new or existing encryption passphrase:
-        <ul>
-          <li>Select the appropriate satellite address (e.g., <code class="language-plaintext highlighter-rouge">us-central-1.storj.io</code>, <code class="language-plaintext highlighter-rouge">europe-west-1.storj.io</code>, <code class="language-plaintext highlighter-rouge">asia-east-1.storj.io</code>).</li>
-          <li>Enter your API Key.</li>
-          <li>Enter your encryption passphrase (this is critical for encrypting/decrypting file paths and metadata <em>before</em> Restic’s own encryption layer).</li>
-        </ul>
-      </li>
-    </ul>
-  </li>
-  <li>Review the summary and save the configuration.
-    <ul>
-      <li><em>Note:</em> Remote-specific tuning flags for the native Storj Rclone remote (like a hypothetical <code class="language-plaintext highlighter-rouge">upload_nolarge_chunks = true</code>) would be added directly to this remote’s section in <code class="language-plaintext highlighter-rouge">rclone.conf</code> if needed, rather than typically passed via <code class="language-plaintext highlighter-rouge">restic -o rclone.args</code>.</li>
-    </ul>
-  </li>
-</ol>
-
-<p><strong>Step 3: Verify Rclone Remote</strong>
-After configuring, test your Rclone remote:</p>
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>rclone lsd storj_s3:  <span class="c"># or storj_native:</span>
-<span class="c"># This should list any buckets you have. If it's a new account, it will be empty.</span>
-</code></pre></div></div>
-
-<h3 id="4-restic-repository-setup-on-storj">4. Restic Repository Setup on Storj</h3>
-
-<p><strong>Step 1: Create a Storj Bucket</strong>
-Restic needs a bucket (and optionally a path within it) to store its repository. Use Rclone to create a bucket if it doesn’t exist.</p>
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Replace 'your-restic-bucket' with your desired bucket name</span>
-<span class="c"># Replace 'storj_s3' with your configured Rclone remote name (storj_s3 or storj_native)</span>
-rclone <span class="nb">mkdir </span>storj_s3:your-restic-bucket
-</code></pre></div></div>
-<p>Bucket names must be globally unique if using the S3 gateway, or unique within your project for native access.</p>
-
-<p><strong>Step 2: Initialize the Restic Repository</strong>
-Now, initialize the Restic repository within the bucket using the Rclone backend.
-Choose a strong, unique password for your Restic repository. <strong>Losing this Restic password means your backup data is irrecoverably lost, regardless of Storj access.</strong></p>
-
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Define your Restic repository location using the Rclone remote</span>
-<span class="c"># Format: rclone:&lt;rclone-remote-name&gt;:&lt;bucket-name&gt;/&lt;path-within-bucket&gt;</span>
-<span class="c"># The path-within-bucket is optional but recommended for organization.</span>
-<span class="nb">export </span><span class="nv">RESTIC_REPOSITORY</span><span class="o">=</span><span class="s2">"rclone:storj_s3:your-restic-bucket/my-server-backups"</span>
-
-<span class="c"># Set your Restic password (choose one method)</span>
-<span class="nb">export </span><span class="nv">RESTIC_PASSWORD</span><span class="o">=</span><span class="s1">'your-super-strong-restic-password'</span>
-<span class="c"># OR use a password file:</span>
-<span class="c"># echo 'your-super-strong-restic-password' &gt; ~/.restic-storj-pass</span>
-<span class="c"># chmod 600 ~/.restic-storj-pass</span>
-<span class="c"># export RESTIC_PASSWORD_FILE=~/.restic-storj-pass</span>
-
-<span class="c"># Initialize the repository</span>
-restic init
-</code></pre></div></div>
-<p>On success, Restic will confirm repository creation.</p>
-
-<h3 id="5-backup-operations-with-storj">5. Backup Operations with Storj</h3>
-
-<p>With the repository initialized, you can start backing up data.</p>
-
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Example: Backing up your home directory</span>
-restic backup ~/ <span class="nt">--verbose</span> <span class="nt">--tag</span> home_backup_<span class="si">$(</span><span class="nb">date</span> +%Y%m%d<span class="si">)</span>
-
-<span class="c"># Example: Backing up specific project directories</span>
-restic backup /srv/projectA /var/www/projectB <span class="nt">--verbose</span> <span class="nt">--tag</span> web_projects
-</code></pre></div></div>
-
-<p><strong>Storj-Specific Optimizations and Considerations:</strong></p>
-
-<ul>
-  <li><strong>Pack Size (<code class="language-plaintext highlighter-rouge">--pack-size</code>):</strong>
-The Storj documentation (from <code class="language-plaintext highlighter-rouge">raw_data</code>) recommends setting Restic’s pack size to 60 MiB. This is suggested because it aligns well with Storj’s underlying segment sizes (often around 64MiB), potentially minimizing padding or overhead per segment and improving storage efficiency or transfer performance on their network.
-    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>restic backup /data/to/backup <span class="nt">--pack-size</span><span class="o">=</span>60
-</code></pre></div>    </div>
-    <p>While Restic might be “not very precise” and actual pack files may be slightly larger, this is a good target.</p>
-  </li>
-  <li><strong>Rclone Options via Restic (<code class="language-plaintext highlighter-rouge">-o</code> or <code class="language-plaintext highlighter-rouge">--option</code>):</strong>
-You can pass arguments to the underlying <code class="language-plaintext highlighter-rouge">rclone serve restic</code> command that Restic invokes. These are best used for flags affecting the <code class="language-plaintext highlighter-rouge">serve</code> command itself or general Rclone behavior during that operation.
-    <ul>
-      <li><strong>Connection Parallelism (<code class="language-plaintext highlighter-rouge">rclone.connections</code>):</strong>
-The Storj documentation draft mentions: <code class="language-plaintext highlighter-rouge">Passing -o rclone.connections=1 reduces the Rclone parallelism to a single upload. The Storj backend will still open multiple connections to storage nodes. Use this option to reduce the stress on your router in case of failing uploads with the default parallelism.</code>
-        <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>restic <span class="nt">-o</span> rclone.connections<span class="o">=</span>1 backup /data/to/backup
-</code></pre></div>        </div>
-        <p>Conversely, on very stable, high-bandwidth connections, you <em>might</em> experiment with higher values (e.g., <code class="language-plaintext highlighter-rouge">rclone.connections=4</code> or <code class="language-plaintext highlighter-rouge">8</code>), but monitor for errors. The default for Restic’s Rclone backend is 5 connections.</p>
-      </li>
-      <li><strong>Bandwidth Limiting (via <code class="language-plaintext highlighter-rouge">rclone.args</code>):</strong>
-If backups saturate your internet connection or cause instability, you can limit Rclone’s bandwidth by passing the <code class="language-plaintext highlighter-rouge">--bwlimit</code> flag to Rclone:
-        <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Limit to 5 MiB/s</span>
-restic <span class="nt">-o</span> rclone.args<span class="o">=</span><span class="s2">"serve restic --stdio --bwlimit 5M"</span> backup /data/to/backup
-</code></pre></div>        </div>
-      </li>
-      <li><strong>Other Rclone Arguments (<code class="language-plaintext highlighter-rouge">rclone.args</code>):</strong>
-For other Rclone flags specific to the <code class="language-plaintext highlighter-rouge">rclone serve restic</code> command:
-        <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>restic <span class="nt">-o</span> rclone.args<span class="o">=</span><span class="s2">"serve restic --stdio --stats 1m"</span> backup /data/to/backup
-<span class="c"># --stats 1m would make rclone print transfer stats every minute during the 'serve restic' operation.</span>
-</code></pre></div>        </div>
-      </li>
-    </ul>
-  </li>
-  <li><strong>Unix Root Backups:</strong>
-When backing up the root directory (<code class="language-plaintext highlighter-rouge">/</code>) on Unix systems, always use <code class="language-plaintext highlighter-rouge">--one-file-system</code> to prevent Restic from trying to back up virtual filesystems like <code class="language-plaintext highlighter-rouge">/proc</code>, <code class="language-plaintext highlighter-rouge">/sys</code>, or other mounted filesystems you don’t intend to include:
-    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>restic backup / <span class="nt">--one-file-system</span> <span class="nt">--exclude</span> /mnt <span class="nt">--exclude</span> /media <span class="nt">--exclude</span> /var/cache <span class="nt">--exclude</span> /tmp
-</code></pre></div>    </div>
-  </li>
-</ul>
-
-<h3 id="6-restore-operations-from-storj">6. Restore Operations from Storj</h3>
-
-<p>Restoring data is straightforward:</p>
-
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Restore the latest snapshot to ~/restore_dir</span>
-restic restore latest <span class="nt">--target</span> ~/restore_dir <span class="nt">--verbose</span>
-
-<span class="c"># Restore a specific snapshot by ID</span>
-restic restore &lt;snapshot_ID&gt; <span class="nt">--target</span> ~/restore_dir
-
-<span class="c"># Restore specific files/folders from the latest snapshot</span>
-restic restore latest <span class="nt">--target</span> ~/restore_dir <span class="nt">--include</span> <span class="s2">"/path/within/snapshot/to/file.txt"</span> <span class="nt">--include</span> <span class="s2">"/another/path/*"</span>
-</code></pre></div></div>
-<p><strong>Considerations:</strong></p>
-<ul>
-  <li><strong>Egress Costs:</strong> Restoring large amounts of data from any cloud storage, including Storj, will incur download (egress) bandwidth charges. Factor this into your recovery plan.</li>
-  <li><strong>Time:</strong> Download speeds will depend on your internet connection, Storj network performance, and the number/size of files.</li>
-</ul>
-
-<h3 id="7-repository-maintenance-on-storj">7. Repository Maintenance on Storj</h3>
-
-<p>Regular maintenance is crucial for managing storage space and ensuring repository health.</p>
-
-<ul>
-  <li><strong>Forgetting Old Snapshots (<code class="language-plaintext highlighter-rouge">restic forget</code>):</strong>
-Define a retention policy to remove old, unneeded snapshots. Always use <code class="language-plaintext highlighter-rouge">--prune</code> with <code class="language-plaintext highlighter-rouge">forget</code> when interacting with cloud backends to reclaim space.
-    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Keep the last 7 daily, 4 weekly, 6 monthly, 1 yearly snapshots, and prune data</span>
-restic forget <span class="nt">--keep-daily</span> 7 <span class="nt">--keep-weekly</span> 4 <span class="nt">--keep-monthly</span> 6 <span class="nt">--keep-yearly</span> 1 <span class="nt">--prune</span>
-
-<span class="c"># Forget a specific snapshot and prune</span>
-<span class="c"># restic forget &lt;snapshot_ID&gt; --prune</span>
-</code></pre></div>    </div>
-  </li>
-  <li><strong>Checking Repository Integrity (<code class="language-plaintext highlighter-rouge">restic check</code>):</strong>
-Periodically verify the repository’s consistency.
-    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>restic check
-</code></pre></div>    </div>
-    <p>For a more thorough check that reads all data packs (slower and incurs more download operations/costs on cloud storage):</p>
-    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>restic check <span class="nt">--read-data</span>
-<span class="c"># Or check a subset of data:</span>
-<span class="c"># restic check --read-data-subset=10%</span>
-</code></pre></div>    </div>
-  </li>
-</ul>
-
-<h3 id="8-performance-considerations-and-troubleshooting-with-storj">8. Performance Considerations and Troubleshooting with Storj</h3>
-
-<p>Based on community discussions (e.g., the Storj forum thread in <code class="language-plaintext highlighter-rouge">raw_data</code>):</p>
-<ul>
-  <li><strong>“Successful puts less than success threshold” Errors:</strong> This error, sometimes seen with Rclone and Storj, indicates that Rclone couldn’t upload enough erasure-coded pieces of a segment to enough storage nodes to meet the success threshold.
-    <ul>
-      <li><strong>Possible Causes:</strong> Network instability, router issues (too many connections), very slow individual nodes, or aggressive Rclone transfer settings.</li>
-      <li><strong>Mitigation:</strong>
-        <ul>
-          <li>Try reducing Rclone’s parallelism: <code class="language-plaintext highlighter-rouge">restic -o rclone.connections=1 ...</code></li>
-          <li>Limit bandwidth: <code class="language-plaintext highlighter-rouge">restic -o rclone.args="serve restic --stdio --bwlimit &lt;rate&gt;" ...</code></li>
-          <li>Ensure your Rclone and Restic versions are up-to-date.</li>
-          <li>Check the Storj status page and community forums for any ongoing network issues.</li>
-        </ul>
-      </li>
-    </ul>
-  </li>
-  <li><strong>Upload/Download Speeds:</strong>
-    <ul>
-      <li>Heavily dependent on your internet connection’s upload/download capacity.</li>
-      <li>Storj’s decentralized nature means performance can vary.</li>
-      <li>Small files can have higher per-file overhead than large files. Restic’s packing helps, but very numerous tiny files can still be slower.</li>
-      <li>Initial backups are often slower than subsequent incremental backups due to Restic’s deduplication.</li>
-    </ul>
-  </li>
-  <li><strong>Rclone &amp; Restic Logging:</strong>
-    <ul>
-      <li>To get detailed logs from Rclone during a Restic operation, you can instruct Restic to pass logging flags to Rclone:
-        <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>restic <span class="nt">-o</span> rclone.args<span class="o">=</span><span class="s2">"serve restic --stdio -vv --log-file /tmp/rclone-restic.log"</span> backup ...
-</code></pre></div>        </div>
-        <p>This will make Rclone itself very verbose. Inspect <code class="language-plaintext highlighter-rouge">/tmp/rclone-restic.log</code>.</p>
-      </li>
-      <li>For debugging Restic’s own operations and progress, use Restic’s verbosity flags (e.g., <code class="language-plaintext highlighter-rouge">restic -vv backup ...</code>) or set <code class="language-plaintext highlighter-rouge">export RESTIC_PROGRESS_FPS=10</code> for more frequent progress updates from Restic.</li>
-    </ul>
-  </li>
-</ul>
-
-<p>Refer to the <a href="https://forum.storj.io/">Storj Community Forum</a> for ongoing discussions and support, particularly the thread mentioned in the initial draft: <a href="https://forum.storj.io/t/two-more-tech-previews-rclone-and-restic/6072">Two more Tech Previews - RClone and Restic</a> (though note this thread is from 2020 and information may have evolved).</p>
-
-<h3 id="9-security-and-cost-considerations">9. Security and Cost Considerations</h3>
-
-<ul>
-  <li><strong>Security:</strong>
-    <ul>
-      <li><strong>Restic’s End-to-End Encryption:</strong> Your data is encrypted on your machine <em>before</em> it’s sent to Rclone and then to Storj. Only you, with the Restic repository password, can decrypt it. A key benefit of Restic’s client-side encryption is that Storj (or any cloud provider used as a backend) only ever stores encrypted blobs of data. They cannot access your actual file contents or metadata, ensuring a high degree of privacy.</li>
-      <li><strong>Storj’s Security:</strong> Storj further encrypts data segments and distributes them. If using native Rclone integration with an encryption passphrase, that adds another layer for metadata path encryption.</li>
-      <li><strong>Access Credentials:</strong> Protect your Storj S3 credentials, Access Grants, API keys, and especially your Restic repository password diligently.</li>
-    </ul>
-  </li>
-  <li><strong>Cost:</strong>
-    <ul>
-      <li><strong>Storage:</strong> Storj charges for the amount of data stored per month (after erasure coding, so 1GB of your data might consume ~2.7GB on the network, but you are typically billed for the 1GB). Restic’s deduplication significantly reduces the actual data stored over time for versioned backups.</li>
-      <li><strong>Egress (Download):</strong> Storj charges for data downloaded from the network. This is relevant for restores.</li>
-      <li><strong>Operations:</strong> There might be minor charges for certain API operations, but these are usually less significant for typical Restic usage.</li>
-      <li>Always refer to the <a href="https://storj.io/dcs/pricing">official Storj pricing page</a> for current details. Restic’s efficiency helps in making Storj a cost-effective option for long-term, secure backups.</li>
-    </ul>
-  </li>
-</ul>]]></content><author><name></name></author><category term="aid&gt;software" /></entry></feed>
+<hr />]]></content><author><name></name></author><category term="scratchpad" /></entry></feed>
