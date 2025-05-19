@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2025-05-19T09:13:35+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">Maximizing VM Performance with Incus v1</title><link href="https://ib.bsb.br/maximizing-vm-performance-with-incus-v1/" rel="alternate" type="text/html" title="Maximizing VM Performance with Incus v1" /><published>2025-05-19T00:00:00+00:00</published><updated>2025-05-19T09:10:23+00:00</updated><id>https://ib.bsb.br/maximizing-vm-performance-with-incus-v1</id><content type="html" xml:base="https://ib.bsb.br/maximizing-vm-performance-with-incus-v1/"><![CDATA[<h2 id="quick-reference-guide">Quick Reference Guide</h2>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2025-05-19T09:21:39+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">Maximizing VM Performance with Incus v1</title><link href="https://ib.bsb.br/maximizing-vm-performance-with-incus-v1/" rel="alternate" type="text/html" title="Maximizing VM Performance with Incus v1" /><published>2025-05-19T00:00:00+00:00</published><updated>2025-05-19T09:10:23+00:00</updated><id>https://ib.bsb.br/maximizing-vm-performance-with-incus-v1</id><content type="html" xml:base="https://ib.bsb.br/maximizing-vm-performance-with-incus-v1/"><![CDATA[<h2 id="quick-reference-guide">Quick Reference Guide</h2>
 
 <p>This comprehensive guide helps you configure Ubuntu Server 25 and Incus to achieve near-bare-metal performance for a single virtual machine. Follow these steps systematically, testing after each major change.</p>
 
@@ -1211,7 +1211,257 @@ fio <span class="nt">--name</span><span class="o">=</span>random-rw <span class=
   <li><strong>Workload Adaptation</strong>: Be prepared to adjust optimizations as workloads change</li>
 </ol>
 
-<p>By systematically applying these optimizations to both the Ubuntu Server host and Incus VM configuration, you can achieve virtual machine performance very close to bare-metal, with minimal overhead from the virtualization layer.</p>]]></content><author><name></name></author><category term="scratchpad" /></entry><entry><title type="html">messy folder reorganizer documentation</title><link href="https://ib.bsb.br/messy-folder-reorganizer-documentation/" rel="alternate" type="text/html" title="messy folder reorganizer documentation" /><published>2025-05-19T00:00:00+00:00</published><updated>2025-05-19T08:54:40+00:00</updated><id>https://ib.bsb.br/messy-folder-reorganizer-documentation</id><content type="html" xml:base="https://ib.bsb.br/messy-folder-reorganizer-documentation/"><![CDATA[<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>&lt;!-- [![codecov](/gh/PerminovEugene/messy-folder-reorganizer-ai/branch/main/graph/badge.svg)](/gh/PerminovEugene/messy-folder-reorganizer-ai) --&gt;
+<p>By systematically applying these optimizations to both the Ubuntu Server host and Incus VM configuration, you can achieve virtual machine performance very close to bare-metal, with minimal overhead from the virtualization layer.</p>]]></content><author><name></name></author><category term="scratchpad" /></entry><entry><title type="html">Maximizing VM Performance with Incus v2</title><link href="https://ib.bsb.br/maximizing-vm-performance-with-incus-v2/" rel="alternate" type="text/html" title="Maximizing VM Performance with Incus v2" /><published>2025-05-19T00:00:00+00:00</published><updated>2025-05-19T09:10:31+00:00</updated><id>https://ib.bsb.br/maximizing-vm-performance-with-incus-v2</id><content type="html" xml:base="https://ib.bsb.br/maximizing-vm-performance-with-incus-v2/"><![CDATA[<p>Incus for Maximum Single VM Performance</p>
+
+<p><strong>IMPORTANT NOTE:</strong> This guide provides a comprehensive approach to dedicating maximum resources to a single Incus virtual machine. Many values (e.g., <code class="language-plaintext highlighter-rouge">performant-vm</code>, CPU core lists like <code class="language-plaintext highlighter-rouge">1-7</code>, memory allocations like <code class="language-plaintext highlighter-rouge">60GiB</code>, disk paths like <code class="language-plaintext highlighter-rouge">/dev/sdb1</code>, network interfaces like <code class="language-plaintext highlighter-rouge">enp3s0</code>) are <strong>examples</strong>. You <strong>MUST</strong> adapt these to your specific hardware, total resources, and virtual machine requirements. Incorrectly applying these settings, especially kernel parameters or PCI passthrough, can lead to system instability or data loss. Proceed with caution and ensure you understand each step.</p>
+
+<p><strong>I. Ubuntu Server Host Optimizations (The “Lean Hypervisor” Layer)</strong></p>
+
+<p>The goal is to minimize the host OS’s footprint and tune it for optimal resource allocation to the VM.</p>
+
+<p>1.  <strong>Minimal Installation:</strong>
+    *   Start with the most minimal Ubuntu Server 25 installation. Avoid desktop environments, graphical tools, or any server roles not strictly required for Incus or essential system management.
+    *   During installation, if prompted, deselect optional software bundles. Consider a “netboot” or “minimal ISO” if available.</p>
+
+<p>2.  <strong>Disable Unnecessary Services:</strong>
+    *   Audit and disable services that don’t contribute to running Incus or the VM.
+        <code class="language-plaintext highlighter-rouge">bash
+        sudo systemctl list-unit-files --type=service --state=enabled
+        # Example: Disable apport, snapd (if not used for Incus), motd-news
+        sudo systemctl stop apport snapd motd-news.timer
+        sudo systemctl disable apport snapd motd-news.timer
+       </code>
+    *   Be cautious and ensure you understand a service’s role before disabling it.</p>
+
+<p>3.  <strong>Kernel Boot Parameters (GRUB Configuration):</strong>
+    <em>   Modify <code class="language-plaintext highlighter-rouge">/etc/default/grub</code> and add parameters to <code class="language-plaintext highlighter-rouge">GRUB_CMDLINE_LINUX_DEFAULT</code>. These significantly impact performance and resource isolation.
+        *   <strong>Example for an 8-core CPU (0-7), reserving cores 1-7 for the VM, core 0 for the host:</strong>
+            <code class="language-plaintext highlighter-rouge">isolcpus=1-7 nohz_full=1-7 rcu_nocbs=1-7</code>
+        *   <strong>IOMMU (Essential for PCI Passthrough):</strong>
+            <code class="language-plaintext highlighter-rouge">intel_iommu=on</code> (for Intel) or <code class="language-plaintext highlighter-rouge">amd_iommu=on iommu=pt</code> (for AMD; <code class="language-plaintext highlighter-rouge">iommu=pt</code> can improve passthrough compatibility).
+        *   <strong>CPU P-State Control (for finer frequency management):</strong>
+            <code class="language-plaintext highlighter-rouge">intel_pstate=disable</code> (for Intel, to use <code class="language-plaintext highlighter-rouge">acpi-cpufreq</code>) or <code class="language-plaintext highlighter-rouge">amd_pstate=passive</code> (for AMD).
+        *   <strong>HugePages (Pre-allocation at boot):</strong>
+            <code class="language-plaintext highlighter-rouge">hugepagesz=1G hugepages=30</code> (Example for 30GB of 1GB pages) or <code class="language-plaintext highlighter-rouge">hugepagesz=2M hugepages=15360</code> (Example for 30GB of 2MB pages). Adjust <code class="language-plaintext highlighter-rouge">hugepages</code> count based on VM memory.
+        *   <strong>Security vs. Performance (Use with Extreme Caution):</strong>
+            <code class="language-plaintext highlighter-rouge">mitigations=off</code> <strong>SECURITY RISK!</strong> Disables CPU speculative execution mitigations (e.g., Spectre/Meltdown). This can significantly boost performance but makes your system vulnerable. *Only consider this if the machine is in a highly trusted, isolated environment and performance is the absolute priority over security.</em>
+    *   <strong>Combined Example for <code class="language-plaintext highlighter-rouge">GRUB_CMDLINE_LINUX_DEFAULT</code>:</strong>
+        <code class="language-plaintext highlighter-rouge">"quiet splash isolcpus=1-7 nohz_full=1-7 rcu_nocbs=1-7 intel_iommu=on intel_pstate=disable hugepagesz=1G hugepages=30"</code> (Adapt for your core count, CPU type, and HugePage needs).
+    *   After editing <code class="language-plaintext highlighter-rouge">/etc/default/grub</code>:
+        <code class="language-plaintext highlighter-rouge">bash
+        sudo update-grub
+        sudo reboot
+       </code>
+    *   <strong>NUMA Consideration:</strong> If your system has multiple NUMA nodes (check with <code class="language-plaintext highlighter-rouge">lscpu</code>), ensure the cores specified in <code class="language-plaintext highlighter-rouge">isolcpus</code> belong to the same NUMA node to which you’ll also pin the VM’s memory and, ideally, passthrough devices.</p>
+
+<p>4.  <strong>CPU Governor and Frequency:</strong>
+    *   Set the CPU frequency scaling governor to <code class="language-plaintext highlighter-rouge">performance</code> for all cores (as host activity on isolated cores will be minimal, and dedicated cores should run at max).
+        <code class="language-plaintext highlighter-rouge">bash
+        sudo apt update &amp;&amp; sudo apt install -y cpufrequtils
+        echo 'GOVERNOR="performance"' | sudo tee /etc/default/cpufrequtils
+        sudo systemctl disable ondemand # Or other conservative governors
+        sudo systemctl enable --now cpufrequtils
+        # Verify: cat /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor
+       </code></p>
+
+<p>5.  <strong>Memory: Swappiness and HugePages (Runtime):</strong>
+    *   <strong>Swappiness:</strong> Reduce the host’s tendency to swap.
+        <code class="language-plaintext highlighter-rouge">bash
+        sudo sysctl vm.swappiness=1
+        # Make permanent: echo 'vm.swappiness=1' | sudo tee -a /etc/sysctl.conf
+       </code>
+    *   <strong>HugePages (Runtime allocation if not done via kernel params or for adjustment):</strong>
+        1.  Determine hugepage size: <code class="language-plaintext highlighter-rouge">cat /proc/meminfo | grep Hugepagesize</code> (usually 2MB or 1GB)
+        2.  Allocate (example for 15360 pages of 2MB size, totaling ~30GB):
+            <code class="language-plaintext highlighter-rouge">bash
+            echo 15360 | sudo tee /proc/sys/vm/nr_hugepages
+            # Make permanent: echo 'vm.nr_hugepages=15360' | sudo tee -a /etc/sysctl.conf
+            # Ensure hugetlbfs is mounted: sudo mount -t hugetlbfs none /dev/hugepages (if not already)
+           </code></p>
+
+<p>6.  <strong>Disk I/O Scheduler:</strong>
+    *   For NVMe drives, <code class="language-plaintext highlighter-rouge">none</code> is often best. For SATA SSDs, <code class="language-plaintext highlighter-rouge">mq-deadline</code> or <code class="language-plaintext highlighter-rouge">kyber</code>.
+        <code class="language-plaintext highlighter-rouge">bash
+        # Check current scheduler for nvme0n1:
+        cat /sys/block/nvme0n1/queue/scheduler
+        # Set to none for nvme0n1:
+        echo none | sudo tee /sys/block/nvme0n1/queue/scheduler
+       </code>
+    *   <strong>Make persistent via udev rules:</strong> Create <code class="language-plaintext highlighter-rouge">/etc/udev/rules.d/60-ioschedulers.rules</code>:
+        <code class="language-plaintext highlighter-rouge">
+        ACTION=="add|change", KERNEL=="nvme[0-9]*n[0-9]*", ATTR{queue/scheduler}="none"
+        ACTION=="add|change", KERNEL=="sd[a-z]", ATTR{queue/scheduler}="mq-deadline"
+       </code>
+        Reload rules: <code class="language-plaintext highlighter-rouge">sudo udevadm control --reload-rules &amp;&amp; sudo udevadm trigger</code></p>
+
+<p>7.  <strong>IRQ Affinity (Advanced):</strong>
+    *   Pin interrupts from high-throughput devices (NICs, storage controllers for VM) to host-reserved CPU cores (e.g., core 0 if <code class="language-plaintext highlighter-rouge">isolcpus=1-7</code>).
+        1.  Identify device IRQs: <code class="language-plaintext highlighter-rouge">cat /proc/interrupts</code>
+        2.  Disable <code class="language-plaintext highlighter-rouge">irqbalance</code> service: <code class="language-plaintext highlighter-rouge">sudo systemctl disable --now irqbalance</code>
+        3.  Manually set affinity (e.g., pin IRQ <code class="language-plaintext highlighter-rouge">&lt;irq_num&gt;</code> to CPU0, mask is <code class="language-plaintext highlighter-rouge">1</code>):
+            <code class="language-plaintext highlighter-rouge">echo 1 | sudo tee /proc/irq/&lt;irq_num&gt;/smp_affinity</code> (Replace <code class="language-plaintext highlighter-rouge">&lt;irq_num&gt;</code>)</p>
+
+<p>8.  <strong>BIOS/UEFI Settings:</strong>
+    *   Enable virtualization technologies: Intel VT-x, AMD-V.
+    *   Enable IOMMU: Intel VT-d, AMD IOMMU/Vi.
+    *   Disable aggressive power-saving features (deep C-states beyond C1/C2, BIOS-controlled frequency scaling if it interferes with OS control). Set power profiles to “Maximum Performance” or “OS Controlled.”
+    *   Disable unused integrated peripherals (serial ports, audio).
+    *   For NUMA systems: Ensure settings promote locality (e.g., memory interleaving might be “NUMA-aware” or “channel specific”).</p>
+
+<p>9.  <strong>Consider <code class="language-plaintext highlighter-rouge">tuned</code> Utility:</strong>
+    *   <code class="language-plaintext highlighter-rouge">tuned</code> can apply system-wide tuning profiles.
+        <code class="language-plaintext highlighter-rouge">bash
+        sudo apt install -y tuned
+        sudo tuned-adm profile virtual-host
+       </code>
+    *   Review the profile and customize further if needed. Manual settings above might override or complement <code class="language-plaintext highlighter-rouge">tuned</code>.</p>
+
+<p><strong>II. Incus Virtual Machine Configuration (Maximizing Resource Allocation)</strong></p>
+
+<p>Configure the Incus VM (<code class="language-plaintext highlighter-rouge">performant-vm</code> in examples) to claim and efficiently use resources.</p>
+
+<p>1.  <strong>CPU Allocation, Pinning, and Model:</strong>
+    *   <strong><code class="language-plaintext highlighter-rouge">limits.cpu</code></strong>: Assign specific isolated host physical cores (e.g., host cores 1-7).
+        <code class="language-plaintext highlighter-rouge">bash
+        incus config set performant-vm limits.cpu 1-7
+       </code>
+    *   <strong><code class="language-plaintext highlighter-rouge">limits.cpu.allowance</code></strong>: Ensure 100% usage of assigned cores.
+        <code class="language-plaintext highlighter-rouge">bash
+        incus config set performant-vm limits.cpu.allowance 100%
+       </code>
+    *   <strong><code class="language-plaintext highlighter-rouge">limits.cpu.priority</code></strong>: Higher priority for VM tasks.
+        <code class="language-plaintext highlighter-rouge">bash
+        incus config set performant-vm limits.cpu.priority 10
+       </code>
+    *   <strong>CPU Model Passthrough (Expose Host CPU Features):</strong>
+        <code class="language-plaintext highlighter-rouge">bash
+        incus config set performant-vm security.guest.features.cpu.host_passthrough=true
+       </code>
+    *   <strong>NUMA Pinning (If host cores 1-7 are on NUMA node 0):</strong>
+        <code class="language-plaintext highlighter-rouge">bash
+        incus config set performant-vm limits.cpu.nodes 0
+       </code></p>
+
+<p>2.  <strong>Memory Allocation:</strong>
+    *   <strong><code class="language-plaintext highlighter-rouge">limits.memory</code></strong>: Allocate desired RAM (e.g., 60GiB for a 64GB system, leaving 4GB for host).
+        <code class="language-plaintext highlighter-rouge">bash
+        incus config set performant-vm limits.memory 60GiB
+       </code>
+    *   <strong><code class="language-plaintext highlighter-rouge">limits.memory.hugepages</code></strong>: Enable VM to use host-configured HugePages.
+        <code class="language-plaintext highlighter-rouge">bash
+        incus config set performant-vm limits.memory.hugepages true
+       </code>
+        Ensure <code class="language-plaintext highlighter-rouge">limits.memory</code> is a multiple of the hugepage size.
+    *   <strong><code class="language-plaintext highlighter-rouge">limits.memory.enforce</code></strong>: Ensure VM gets its allocated memory.
+        <code class="language-plaintext highlighter-rouge">bash
+        incus config set performant-vm limits.memory.enforce hard
+       </code>
+    *   <strong>NUMA Pinning (Pin memory to the same NUMA node as CPUs, e.g., node 0):</strong>
+        <code class="language-plaintext highlighter-rouge">bash
+        incus config set performant-vm limits.memory.nodes 0
+       </code></p>
+
+<p>3.  <strong>Disk I/O Performance:</strong>
+    *   <strong>Storage Backend:</strong>
+        *   <strong>Direct Block Device Passthrough (Recommended for single disk performance):</strong>
+            <code class="language-plaintext highlighter-rouge">bash
+            # Example: Pass through /dev/sdb1 as the VM's root disk
+            incus config device add performant-vm rootdisk disk source=/dev/sdb1 path=/
+           </code>
+        *   <strong>Or, LVM/ZFS Pool (Flexible, good for SSD/NVMe):</strong>
+            <code class="language-plaintext highlighter-rouge">bash
+            # Assuming 'mypool' is an existing LVM or ZFS storage pool on a fast device
+            # incus storage volume create mypool vm_root_disk --type=block size=100GiB
+            # incus config device add performant-vm rootdisk disk pool=mypool source=vm_root_disk path=/
+            # For ZFS, consider pool/dataset tuning: atime=off, recordsize=128k (or match workload)
+            # zfs set recordsize=128k mypool/virtual-machines/performant-vm.block # Example
+            # zfs set atime=off mypool/virtual-machines/performant-vm.block # Example
+           </code>
+    *   <strong>Disk Cache Options for the device:</strong>
+        <code class="language-plaintext highlighter-rouge">bash
+        incus config device set performant-vm rootdisk cache none
+       </code>
+    *   <strong>I/O Mode:</strong>
+        <code class="language-plaintext highlighter-rouge">bash
+        incus config device set performant-vm rootdisk io writethrough
+        # Modern QEMU often defaults well. `io_uring` is preferred if host kernel &amp; QEMU support it;
+        # Incus may enable this automatically or via raw.qemu if needed for specific tuning.
+       </code>
+    *   Ensure the VM uses <code class="language-plaintext highlighter-rouge">virtio-blk</code> or <code class="language-plaintext highlighter-rouge">virtio-scsi</code> (usually default).</p>
+
+<p>4.  <strong>Network I/O Performance:</strong>
+    *   <strong>PCI Passthrough (SR-IOV or Full NIC for best performance):</strong>
+        1.  Identify NIC PCI address: <code class="language-plaintext highlighter-rouge">lspci -nnk | grep -i ethernet</code>
+        2.  (If SR-IOV) Create Virtual Function (VF) on the host.
+        3.  Add to Incus VM (replace <code class="language-plaintext highlighter-rouge">enp3s0f0</code> with your host physical NIC or VF name):
+            <code class="language-plaintext highlighter-rouge">bash
+            incus config device add performant-vm eth0 nic nictype=physical parent=enp3s0f0
+           </code>
+    *   <strong><code class="language-plaintext highlighter-rouge">macvtap</code> (Good performance if PCI passthrough isn’t feasible):</strong>
+        <code class="language-plaintext highlighter-rouge">bash
+        # Replace enp2s0 with your host physical interface
+        incus config device add performant-vm eth0 nic nictype=macvtap parent=enp2s0 mode=bridge
+       </code>
+        (<code class="language-plaintext highlighter-rouge">mode=bridge</code> allows host-guest communication. <code class="language-plaintext highlighter-rouge">private</code> or <code class="language-plaintext highlighter-rouge">vepa</code> modes restrict this).
+    *   <strong>Multi-Queue <code class="language-plaintext highlighter-rouge">virtio-net</code> (N = number of vCPUs, or power of 2):</strong>
+        <code class="language-plaintext highlighter-rouge">bash
+        incus config device set performant-vm eth0 queues.rx 4
+        incus config device set performant-vm eth0 queues.tx 4
+        # Or if your Incus version supports a combined key:
+        # incus config device set performant-vm eth0 queues 4
+       </code></p>
+
+<p>5.  <strong>Guest OS Considerations:</strong>
+    *   Install <code class="language-plaintext highlighter-rouge">qemu-guest-agent</code> inside the VM for better integration (shutdown, time sync, etc.).
+        *   Debian/Ubuntu guests: <code class="language-plaintext highlighter-rouge">sudo apt install qemu-guest-agent</code>
+        *   RHEL/CentOS guests: <code class="language-plaintext highlighter-rouge">sudo yum install qemu-guest-agent</code>
+    *   Ensure the guest OS uses virtio drivers for disk, network, etc. (standard for modern Linux).</p>
+
+<p>6.  <strong>Disable Unused Virtual Hardware:</strong>
+    *   Review <code class="language-plaintext highlighter-rouge">incus config show performant-vm --expanded</code>.
+    *   If a USB tablet or other unneeded devices are present by default, consider removing them if not used:
+        <code class="language-plaintext highlighter-rouge">bash
+        # incus config device remove performant-vm &lt;device_name_from_expanded_config&gt;
+       </code></p>
+
+<p>7.  <strong><code class="language-plaintext highlighter-rouge">raw.qemu</code> (Use Sparingly for Advanced QEMU Options):</strong>
+    *   For QEMU options not directly exposed by Incus. This is for advanced users.
+        <code class="language-plaintext highlighter-rouge">bash
+        # Example: incus config set performant-vm raw.qemu "-some-qemu-option value"
+       </code></p>
+
+<p><strong>III. Verification and Monitoring</strong></p>
+
+<p>1.  <strong>Host Verification:</strong>
+    *   Kernel parameters applied: <code class="language-plaintext highlighter-rouge">cat /proc/cmdline</code>
+    *   CPU topology/NUMA: <code class="language-plaintext highlighter-rouge">lscpu</code>
+    *   HugePages status: <code class="language-plaintext highlighter-rouge">cat /proc/meminfo | grep -i huge</code>
+    *   QEMU process affinity (find PID of <code class="language-plaintext highlighter-rouge">performant-vm</code>’s QEMU process with <code class="language-plaintext highlighter-rouge">ps aux | grep qemu</code> or <code class="language-plaintext highlighter-rouge">incus info performant-vm --resources</code>): <code class="language-plaintext highlighter-rouge">taskset -cp &lt;qemu_pid&gt;</code> (should show affinity to isolated cores).
+    *   I/O scheduler for devices: <code class="language-plaintext highlighter-rouge">cat /sys/block/nvme0n1/queue/scheduler</code></p>
+
+<p>2.  <strong>Incus Verification:</strong>
+    *   Full VM configuration: <code class="language-plaintext highlighter-rouge">incus config show performant-vm --expanded</code>
+    *   VM status and resources: <code class="language-plaintext highlighter-rouge">incus info performant-vm</code> and <code class="language-plaintext highlighter-rouge">incus info performant-vm --resources</code></p>
+
+<p>3.  <strong>Guest Verification (Inside the VM):</strong>
+    *   CPU info: <code class="language-plaintext highlighter-rouge">lscpu</code>
+    *   Memory: <code class="language-plaintext highlighter-rouge">free -h</code>, <code class="language-plaintext highlighter-rouge">cat /proc/meminfo | grep -i huge</code> (to see if guest is using hugepages from host)
+    *   Kernel messages for hardware/driver info: <code class="language-plaintext highlighter-rouge">dmesg</code>
+    *   Run relevant benchmarks (disk: <code class="language-plaintext highlighter-rouge">fio</code>; network: <code class="language-plaintext highlighter-rouge">iperf3</code>; CPU: <code class="language-plaintext highlighter-rouge">sysbench</code>, Phoronix Test Suite).</p>
+
+<p>4.  <strong>Continuous Monitoring:</strong>
+    *   <strong>Host:</strong> <code class="language-plaintext highlighter-rouge">htop</code> (observe CPU usage on isolated vs. host cores), <code class="language-plaintext highlighter-rouge">vmstat</code>, <code class="language-plaintext highlighter-rouge">iostat</code>, <code class="language-plaintext highlighter-rouge">perf top</code> (for deep dives).
+    *   <strong>Incus:</strong> <code class="language-plaintext highlighter-rouge">incus top</code> (for Incus-specific metrics).</p>
+
+<p><strong>IV. General Workflow &amp; Considerations</strong></p>
+
+<p>*   <strong>Iterate and Benchmark:</strong> Performance tuning is often iterative. Change one major setting at a time and benchmark to observe its impact. What works best can be workload-dependent.
+*   <strong>Stability is Paramount:</strong> While aiming for maximum performance, ensure the host and VM remain stable. An unstable host means an unstable VM.
+*   <strong>Documentation:</strong> Document your specific changes and system configuration.
+*   <strong>Recovery Plan:</strong> Before major GRUB or system config changes, ensure you have a way to recover (e.g., bootable USB, familiarity with recovery mode).
+*   <strong>Incus Documentation:</strong> Specific commands and configuration keys can evolve. Always refer to the official Incus documentation for your version if you encounter discrepancies or need more detail.</p>
+
+<p>By systematically applying these optimizations, you can significantly reduce overhead from both Ubuntu Server and Incus, allowing your primary virtual machine (<code class="language-plaintext highlighter-rouge">performant-vm</code>) to utilize the maximum available hardware resources and achieve performance much closer to bare-metal.</p>]]></content><author><name></name></author><category term="scratchpad" /></entry><entry><title type="html">messy folder reorganizer documentation</title><link href="https://ib.bsb.br/messy-folder-reorganizer-documentation/" rel="alternate" type="text/html" title="messy folder reorganizer documentation" /><published>2025-05-19T00:00:00+00:00</published><updated>2025-05-19T08:54:40+00:00</updated><id>https://ib.bsb.br/messy-folder-reorganizer-documentation</id><content type="html" xml:base="https://ib.bsb.br/messy-folder-reorganizer-documentation/"><![CDATA[<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>&lt;!-- [![codecov](/gh/PerminovEugene/messy-folder-reorganizer-ai/branch/main/graph/badge.svg)](/gh/PerminovEugene/messy-folder-reorganizer-ai) --&gt;
 
 ![Build](/github/actions/workflow/status/PerminovEugene/messy-folder-reorganizer-ai/ci.yml?branch=main)
 ![License](/github/license/PerminovEugene/messy-folder-reorganizer-ai)
@@ -9148,1824 +9398,4 @@ If your model is not listed here but has APIs compatible with those of OpenAI, c
 The list of supported models is extracted from [this source](https://github.com/infiniflow/ragflow/blob/main/rag/llm/__init__.py) and may not be the most current. For the latest supported model list, please refer to the Python file.
 :::
 
-</code></pre></div></div>]]></content><author><name></name></author><category term="scratchpad" /></entry><entry><title type="html">Rust CLI parallel processing for copy/move files</title><link href="https://ib.bsb.br/rust-cli-parallel-processing-for-copymove-files/" rel="alternate" type="text/html" title="Rust CLI parallel processing for copy/move files" /><published>2025-05-16T00:00:00+00:00</published><updated>2025-05-16T19:02:11+00:00</updated><id>https://ib.bsb.br/rust-cli-parallel-processing-for-copymove-files</id><content type="html" xml:base="https://ib.bsb.br/rust-cli-parallel-processing-for-copymove-files/"><![CDATA[<p>This tool provides basic file and directory <code class="language-plaintext highlighter-rouge">copy</code>, <code class="language-plaintext highlighter-rouge">move</code> (cut-and-paste), and <code class="language-plaintext highlighter-rouge">delete</code> operations, with an option for parallel processing on multi-core systems.</p>
-
-<p>This guide is tailored for an <code class="language-plaintext highlighter-rouge">arm64 Debian Bullseye</code> environment, such as those found on RK3588-based single-board computers or servers.</p>
-
-<h2 id="prerequisites">Prerequisites</h2>
-
-<p>Before you begin, ensure your <code class="language-plaintext highlighter-rouge">arm64 Debian Bullseye</code> system is set up with the following:</p>
-
-<ol>
-  <li><strong>Rust Language Toolchain:</strong>
-    <ul>
-      <li>If you don’t have Rust installed, visit <a href="https://rustup.rs/">https://rustup.rs/</a> and follow the instructions. This will install <code class="language-plaintext highlighter-rouge">rustc</code> (the compiler) and <code class="language-plaintext highlighter-rouge">cargo</code> (the build tool and package manager).
-        <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>curl <span class="nt">--proto</span> <span class="s1">'=https'</span> <span class="nt">--tlsv1</span>.2 <span class="nt">-sSf</span> https://sh.rustup.rs | sh
-<span class="nb">source</span> <span class="nv">$HOME</span>/.cargo/env 
-<span class="c"># You might need to open a new terminal or re-login for changes to take effect</span>
-</code></pre></div>        </div>
-      </li>
-    </ul>
-  </li>
-  <li><strong>Essential Build Tools:</strong>
-    <ul>
-      <li>Install common build utilities often required by Rust crates that might link against C libraries or need system configuration.
-        <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>apt update
-<span class="nb">sudo </span>apt <span class="nb">install </span>build-essential pkg-config libssl-dev
-</code></pre></div>        </div>
-        <p><em>(Note: <code class="language-plaintext highlighter-rouge">libssl-dev</code> is a common dependency for many Rust crates, though not strictly required by this specific MVP’s direct dependencies, it’s good practice to have it for broader Rust development).</em></p>
-      </li>
-    </ul>
-  </li>
-</ol>
-
-<h2 id="1-creating-the-project-and-adding-code">1. Creating the Project and Adding Code</h2>
-
-<p>First, create a new Rust project using Cargo and navigate into its directory:</p>
-
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>cargo new rapidcopy_rust_cli_mvp
-<span class="nb">cd </span>rapidcopy_rust_cli_mvp
-</code></pre></div></div>
-
-<p>Next, you’ll replace the default <code class="language-plaintext highlighter-rouge">src/main.rs</code> and <code class="language-plaintext highlighter-rouge">Cargo.toml</code> files with the code for our RapidCopy-rs MVP.</p>
-
-<p><strong>Replace the contents of <code class="language-plaintext highlighter-rouge">Cargo.toml</code> with the following:</strong></p>
-
-<div class="language-toml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nn">[package]</span>
-<span class="py">name</span> <span class="p">=</span> <span class="s">"rapidcopy_rust_cli_mvp"</span>
-<span class="py">version</span> <span class="p">=</span> <span class="s">"0.1.0"</span>
-<span class="py">edition</span> <span class="p">=</span> <span class="s">"2021"</span>
-
-<span class="nn">[dependencies]</span>
-<span class="py">clap</span> <span class="o">=</span> <span class="p">{</span> <span class="py">version</span> <span class="p">=</span> <span class="s">"4.5.38"</span><span class="p">,</span> <span class="py">features</span> <span class="p">=</span> <span class="p">[</span><span class="s">"derive"</span><span class="p">]</span> <span class="p">}</span>
-<span class="py">indicatif</span> <span class="p">=</span> <span class="s">"0.17.11"</span>
-<span class="py">rayon</span> <span class="p">=</span> <span class="s">"1.10.0"</span>
-<span class="py">thiserror</span> <span class="p">=</span> <span class="s">"1.0.69"</span>
-<span class="py">walkdir</span> <span class="p">=</span> <span class="s">"2.5.0"</span>
-<span class="py">libc</span> <span class="p">=</span> <span class="s">"0.2.172"</span>
-<span class="py">path-absolutize</span> <span class="p">=</span> <span class="s">"3.1.1"</span>
-</code></pre></div></div>
-
-<p><strong>Replace the contents of <code class="language-plaintext highlighter-rouge">src/main.rs</code> with the following Rust code:</strong></p>
-
-<section class="code-block-container" role="group" aria-label="Rust Code Block" data-filename="rust_code_block.rs" data-code="// src/main.rs
-
-use clap::{Parser, Subcommand};
-use indicatif::{HumanBytes, MultiProgress, ProgressBar, ProgressStyle};
-use path_absolutize::*; // For Path::absolutize()
-use rayon::prelude::*;
-use std::{
-    ffi::OsString,
-    fs,
-    io::{self, ErrorKind, Read, Write},
-    path::{Path, PathBuf},
-    sync::{
-        atomic::{AtomicU64, Ordering as AtomicOrdering},
-        Arc, Mutex,
-    },
-    thread,
-    time::Duration,
-};
-use thiserror::Error;
-use walkdir::{DirEntry, WalkDir};
-
-// --- Argument Parsing ---
-#[derive(Parser, Debug)]
-#[clap(author, version, about = &quot;RapidCopy-rs (MVP): Fast file operations CLI&quot;, long_about = None)]
-struct Cli {
-    #[clap(subcommand)]
-    command: Commands,
-
-    #[clap(short, long, global = true, help = &quot;Enable verbose output&quot;)]
-    verbose: bool,
-}
-
-#[derive(Subcommand, Debug)]
-enum Commands {
-    /// Copies a file or directory recursively
-    Copy {
-        /// Source path
-        source: PathBuf,
-        /// Destination path
-        destination: PathBuf,
-        #[clap(short, long, help = &quot;Overwrite existing files at the destination&quot;)]
-        overwrite: bool,
-        #[clap(long, help = &quot;Enable parallel processing for directory contents&quot;)]
-        parallel: bool,
-    },
-    /// Moves a file or directory recursively (cut and paste)
-    Move {
-        /// Source path
-        source: PathBuf,
-        /// Destination path
-        destination: PathBuf,
-        #[clap(short, long, help = &quot;Overwrite existing files at the destination if copying&quot;)]
-        overwrite: bool,
-        #[clap(short = &#39;f&#39;, long, help = &quot;Force deletion of source without interactive confirmation (used in move)&quot;)]
-        force_delete_source: bool,
-        #[clap(long, help = &quot;Enable parallel processing for directory contents during copy phase&quot;)]
-        parallel: bool,
-    },
-    /// Deletes a file or directory recursively
-    Delete {
-        /// Path to delete
-        path: PathBuf,
-        #[clap(short, long, help = &quot;Force deletion without interactive confirmation&quot;)]
-        force: bool,
-    },
-}
-
-// --- Error Handling ---
-#[derive(Error, Debug)]
-pub enum AppError {
-    #[error(&quot;I/O error accessing &#39;{path:?}&#39;: {source}&quot;)]
-    Io {
-        source: io::Error,
-        path: PathBuf,
-    },
-    #[error(&quot;WalkDir error for path &#39;{path:?}&#39;: {source}&quot;)]
-    WalkDir {
-        source: walkdir::Error,
-        path: PathBuf,
-    },
-    #[error(&quot;Source path does not exist: {0}&quot;)]
-    SourceDoesNotExist(PathBuf),
-    #[error(&quot;Destination path &#39;{0}&#39; already exists and overwrite is false&quot;)]
-    DestinationExists(PathBuf),
-    #[error(&quot;Cannot copy/move directory &#39;{source_dir}&#39; to existing file &#39;{dest_file}&#39;&quot;)]
-    DirToExistingFile {
-        source_dir: PathBuf,
-        dest_file: PathBuf,
-    },
-    #[error(&quot;Cannot copy/move file &#39;{source_file}&#39; to existing directory &#39;{dest_dir}&#39; (ambiguous destination name or destination is a file and overwrite is false)&quot;)]
-    FileToExistingDirAmbiguous {
-        source_file: PathBuf,
-        dest_dir: PathBuf,
-    },
-    #[error(&quot;User did not confirm deletion of &#39;{0}&#39;&quot;)]
-    DeletionNotConfirmed(PathBuf),
-    #[error(&quot;Failed to get metadata for path: {0}&quot;)]
-    MetadataError(PathBuf),
-    #[error(&quot;Source path &#39;{0}&#39; has no filename component&quot;)]
-    NoFileName(PathBuf),
-    #[error(&quot;Failed to strip prefix for path processing: &#39;{path}&#39; relative to &#39;{base}&#39;&quot;)]
-    StripPrefixError { path: PathBuf, base: PathBuf },
-    #[error(&quot;Operation failed with multiple errors during parallel processing:\n{0:#?}&quot;)]
-    ParallelOperationFailed(Vec&lt;String&gt;),
-    #[error(&quot;Cannot move/copy &#39;{0}&#39; to a subdirectory of itself &#39;{1}&#39;&quot;)]
-    RecursiveMoveOrCopy(PathBuf, PathBuf),
-    #[error(&quot;Indicatif style template error: {0}&quot;)]
-    TemplateError(String),
-}
-
-impl From&lt;walkdir::Error&gt; for AppError {
-    fn from(err: walkdir::Error) -&gt; Self {
-        let path = err
-            .path()
-            .unwrap_or_else(|| Path::new(&quot;&lt;unknown path from walkdir error&gt;&quot;))
-            .to_path_buf();
-        AppError::WalkDir { source: err, path }
-    }
-}
-
-fn io_err_with_path(err: io::Error, path: &amp;Path) -&gt; AppError {
-    AppError::Io {
-        source: err,
-        path: path.to_path_buf(),
-    }
-}
-
-impl From&lt;indicatif::style::TemplateError&gt; for AppError {
-    fn from(err: indicatif::style::TemplateError) -&gt; Self {
-        AppError::TemplateError(err.to_string())
-    }
-}
-
-// --- Core Logic Module ---
-mod core_logic {
-    use super::*;
-
-    const BUFFER_SIZE: usize = 128 * 1024;
-
-    #[derive(Debug)]
-    struct ProgressInfo {
-        items_processed: AtomicU64,
-        bytes_processed: AtomicU64,
-        total_items_to_process: u64,
-        total_bytes_to_process: u64,
-    }
-
-    impl ProgressInfo {
-        fn new(total_items: u64, total_bytes: u64) -&gt; Self {
-            Self {
-                items_processed: AtomicU64::new(0),
-                bytes_processed: AtomicU64::new(0),
-                total_items_to_process: total_items,
-                total_bytes_to_process: total_bytes,
-            }
-        }
-    }
-
-    fn pre_scan_directory(dir: &amp;Path, verbose: bool) -&gt; Result&lt;(u64, u64), AppError&gt; {
-        if verbose {
-            println!(&quot;Pre-scanning directory &#39;{}&#39;...&quot;, dir.display());
-        }
-        let mut total_items = 0u64;
-        let mut total_bytes = 0u64;
-        total_items += 1; // Count the root directory itself
-        for entry_result in WalkDir::new(dir).min_depth(1).follow_links(false) {
-            let entry = entry_result?; 
-            total_items += 1;
-            if entry.file_type().is_file() {
-                total_bytes += entry.metadata()?.len(); 
-            }
-        }
-        if verbose {
-            println!(
-                &quot;Pre-scan complete: {} items, {}&quot;,
-                total_items,
-                HumanBytes(total_bytes)
-            );
-        }
-        Ok((total_items, total_bytes))
-    }
-
-    fn copy_single_file(
-        source: &amp;Path,
-        destination: &amp;Path,
-        overwrite: bool,
-        mp_opt: Option&lt;&amp;MultiProgress&gt;,
-        overall_progress_info_opt: Option&lt;&amp;Arc&lt;ProgressInfo&gt;&gt;,
-        verbose: bool,
-    ) -&gt; Result&lt;u64, AppError&gt; {
-        if destination.exists() {
-            let dest_meta =
-                fs::metadata(destination).map_err(|e| io_err_with_path(e, destination))?;
-            if dest_meta.is_dir() {
-                return Err(AppError::FileToExistingDirAmbiguous {
-                    source_file: source.to_path_buf(),
-                    dest_dir: destination.to_path_buf(),
-                });
-            }
-            if !overwrite {
-                if verbose {
-                    println!(
-                        &quot;Skipping &#39;{}&#39;: destination file exists and overwrite is false.&quot;,
-                        destination.display()
-                    );
-                }
-                if let Some(stats) = overall_progress_info_opt {
-                    stats.items_processed.fetch_add(1, AtomicOrdering::Relaxed);
-                }
-                return Ok(0);
-            }
-        }
-
-        if let Some(parent) = destination.parent() {
-            if !parent.exists() {
-                fs::create_dir_all(parent).map_err(|e| io_err_with_path(e, parent))?;
-            }
-        }
-
-        let file_size = fs::metadata(source)
-            .map_err(|e| io_err_with_path(e, source))?
-            .len();
-
-        let pb = if let Some(mp) = mp_opt {
-            let p = mp.add(ProgressBar::new(file_size));
-            p.enable_steady_tick(Duration::from_millis(250));
-            p
-        } else {
-            let p = ProgressBar::new(file_size);
-            p.enable_steady_tick(Duration::from_millis(100));
-            p
-        };
-
-        pb.set_style(
-            ProgressStyle::default_bar()
-                .template(
-                    &quot;{msg:&lt;30.bold.dim} [{bar:40.cyan/blue}] {bytes}/{total_bytes} ({bytes_per_sec}, {eta})&quot;,
-                )?
-                .progress_chars(&quot;=&gt; &quot;),
-        );
-        let filename = source.file_name().unwrap_or_default().to_string_lossy();
-        pb.set_message(filename.chars().take(30).collect::&lt;String&gt;());
-
-        let mut source_file = fs::File::open(source).map_err(|e| io_err_with_path(e, source))?;
-        let mut dest_file =
-            fs::File::create(destination).map_err(|e| io_err_with_path(e, destination))?;
-
-        let mut buffer = vec![0; BUFFER_SIZE];
-        let mut copied_bytes_for_this_file = 0u64;
-
-        loop {
-            let bytes_read = source_file
-                .read(&amp;mut buffer)
-                .map_err(|e| io_err_with_path(e, source))?;
-            if bytes_read == 0 {
-                break;
-            }
-            dest_file
-                .write_all(&amp;buffer[..bytes_read])
-                .map_err(|e| io_err_with_path(e, destination))?;
-            copied_bytes_for_this_file += bytes_read as u64;
-            pb.set_position(copied_bytes_for_this_file);
-            if let Some(stats) = overall_progress_info_opt {
-                stats
-                    .bytes_processed
-                    .fetch_add(bytes_read as u64, AtomicOrdering::Relaxed);
-            }
-        }
-        pb.finish_with_message(format!(&quot;Copied {} ({})&quot;, filename, HumanBytes(file_size)));
-        if let Some(stats) = overall_progress_info_opt {
-            stats.items_processed.fetch_add(1, AtomicOrdering::Relaxed);
-        }
-        Ok(file_size)
-    }
-
-    fn copy_dir_recursive(
-        source_dir: &amp;Path,
-        target_dest_dir: &amp;Path, 
-        overwrite: bool,
-        parallel: bool,
-        _overall_item_pb: &amp;ProgressBar, 
-        progress_info: &amp;Arc&lt;ProgressInfo&gt;,
-        verbose: bool, // verbose is available here
-    ) -&gt; Result&lt;(), Vec&lt;String&gt;&gt; {
-        if verbose {
-            println!(
-                &quot;Recursively copying contents of &#39;{}&#39; into &#39;{}&#39;&quot;,
-                source_dir.display(),
-                target_dest_dir.display()
-            );
-        }
-
-        if !target_dest_dir.exists() {
-            fs::create_dir_all(target_dest_dir)
-                .map_err(|e| vec![io_err_with_path(e, target_dest_dir).to_string()])?;
-            if verbose {
-                println!(&quot;Created directory &#39;{}&#39;&quot;, target_dest_dir.display());
-            }
-        }
-      
-        let entries: Vec&lt;DirEntry&gt; = WalkDir::new(source_dir)
-            .min_depth(1) 
-            .follow_links(false)
-            .into_iter()
-            .collect::&lt;Result&lt;Vec&lt;_&gt;, _&gt;&gt;()
-            .map_err(|e| {
-                vec![AppError::WalkDir {
-                    source: e,
-                    path: source_dir.to_path_buf(),
-                }
-                .to_string()]
-            })?;
-
-        let multi_progress_manager_opt = if parallel &amp;&amp; entries.iter().filter(|e| e.path().is_file()).count() &gt; 1 {
-            Some(MultiProgress::new())
-        } else {
-            None
-        };
-
-        let errors_arc = Arc::new(Mutex::new(Vec::&lt;String&gt;::new()));
-
-        let process_entry_closure = |entry: DirEntry| {
-            let entry_path = entry.path();
-            let relative_path = match entry_path.strip_prefix(source_dir) {
-                Ok(p) =&gt; p,
-                Err(_) =&gt; {
-                    errors_arc.lock().unwrap().push(
-                        AppError::StripPrefixError {
-                            path: entry_path.to_path_buf(),
-                            base: source_dir.to_path_buf(),
-                        }
-                        .to_string(),
-                    );
-                    return;
-                }
-            };
-            let dest_path = target_dest_dir.join(relative_path);
-
-            if entry.file_type().is_dir() {
-                if verbose {
-                    println!(&quot;Creating directory &#39;{}&#39;&quot;, dest_path.display());
-                }
-                if let Err(e) = fs::create_dir_all(&amp;dest_path) {
-                    errors_arc
-                        .lock()
-                        .unwrap()
-                        .push(io_err_with_path(e, &amp;dest_path).to_string());
-                    return;
-                }
-                progress_info
-                    .items_processed
-                    .fetch_add(1, AtomicOrdering::Relaxed);
-            } else if entry.file_type().is_file() {
-                match copy_single_file(
-                    entry_path,
-                    &amp;dest_path,
-                    overwrite,
-                    multi_progress_manager_opt.as_ref(),
-                    Some(progress_info), 
-                    verbose,
-                ) {
-                    Ok(_) =&gt; {}
-                    Err(e) =&gt; {
-                        errors_arc.lock().unwrap().push(format!(
-                            &quot;Error copying file &#39;{}&#39;: {}&quot;,
-                            entry_path.display(),
-                            e
-                        ));
-                    }
-                }
-            } else {
-                progress_info
-                    .items_processed
-                    .fetch_add(1, AtomicOrdering::Relaxed);
-                if verbose {
-                    println!(&quot;Skipping non-file/non-directory entry: {}&quot;, entry_path.display());
-                }
-            }
-        };
-
-        if parallel &amp;&amp; entries.len() &gt; 1 {
-            entries.into_par_iter().for_each(process_entry_closure);
-        } else {
-            for entry in entries {
-                process_entry_closure(entry);
-            }
-        }
-
-        if let Some(mp) = multi_progress_manager_opt {
-            if let Err(e) = mp.clear() {
-                if verbose {
-                    // Error during UI cleanup is not critical to the copy operation itself.
-                    eprintln!(&quot;Warning: Failed to clear multi-progress display: {}&quot;, e);
-                }
-            }
-        }
-
-        let final_errors = Arc::try_unwrap(errors_arc)
-            .expect(&quot;Mutex still has multiple owners for errors_arc&quot;)
-            .into_inner()
-            .expect(&quot;Mutex was poisoned for errors_arc&quot;);
-
-        if !final_errors.is_empty() {
-            return Err(final_errors);
-        }
-        Ok(())
-    }
-
-    pub fn handle_copy_operation_main(
-        source: &amp;Path,
-        destination: &amp;Path,
-        overwrite: bool,
-        parallel: bool,
-        verbose: bool,
-    ) -&gt; Result&lt;u64, AppError&gt; {
-        if verbose {
-            println!(
-                &quot;Copy operation: &#39;{}&#39; -&gt; &#39;{}&#39;&quot;,
-                source.display(),
-                destination.display()
-            );
-        }
-        if !source.exists() {
-            return Err(AppError::SourceDoesNotExist(source.to_path_buf()));
-        }
-
-        let source_meta = fs::metadata(source).map_err(|e| io_err_with_path(e, source))?;
-        let source_abs = source.absolutize().map_err(|e| io_err_with_path(e, source))?.into_owned();
-
-
-        let target_path_for_item: PathBuf; 
-        let effective_dest_dir_for_contents: PathBuf; 
-
-        if source_meta.is_dir() {
-            let source_name = source
-                .file_name()
-                .ok_or_else(|| AppError::NoFileName(source.to_path_buf()))?;
-            if destination.exists()
-                &amp;&amp; fs::metadata(destination)
-                    .map_err(|e| io_err_with_path(e, destination))?
-                    .is_dir()
-            {
-                target_path_for_item = destination.join(source_name);
-            } else if destination.exists()
-                &amp;&amp; fs::metadata(destination)
-                    .map_err(|e| io_err_with_path(e, destination))?
-                    .is_file()
-            {
-                return Err(AppError::DirToExistingFile {
-                    source_dir: source.to_path_buf(),
-                    dest_file: destination.to_path_buf(),
-                });
-            } else {
-                target_path_for_item = destination.to_path_buf();
-            }
-            effective_dest_dir_for_contents = target_path_for_item.clone(); 
-            
-            let target_abs_check = target_path_for_item.absolutize().map_err(|e| io_err_with_path(e, &amp;target_path_for_item))?.into_owned();
-            if target_abs_check.starts_with(&amp;source_abs) {
-                 return Err(AppError::RecursiveMoveOrCopy(source.to_path_buf(), target_path_for_item));
-            }
-
-        } else { // Source is a file
-            if destination.exists()
-                &amp;&amp; fs::metadata(destination)
-                    .map_err(|e| io_err_with_path(e, destination))?
-                    .is_dir()
-            {
-                target_path_for_item = destination.join(
-                    source
-                        .file_name()
-                        .ok_or_else(|| AppError::NoFileName(source.to_path_buf()))?,
-                );
-            } else if !destination.exists()
-                &amp;&amp; destination.to_string_lossy().ends_with(std::path::MAIN_SEPARATOR)
-            {
-                fs::create_dir_all(destination).map_err(|e| io_err_with_path(e, destination))?;
-                target_path_for_item = destination.join(
-                    source
-                        .file_name()
-                        .ok_or_else(|| AppError::NoFileName(source.to_path_buf()))?,
-                );
-            } else {
-                target_path_for_item = destination.to_path_buf();
-            }
-            effective_dest_dir_for_contents = target_path_for_item
-                .parent()
-                .unwrap_or_else(|| Path::new(&quot;.&quot;))
-                .to_path_buf();
-        }
-
-        let (total_items_scanned, total_bytes_scanned) = if source_meta.is_dir() {
-            pre_scan_directory(source, verbose)?
-        } else {
-            (1, source_meta.len()) 
-        };
-        let progress_info = Arc::new(ProgressInfo::new(
-            total_items_scanned,
-            total_bytes_scanned,
-        ));
-
-        let overall_pb = ProgressBar::new(total_items_scanned.max(1)); 
-        overall_pb.set_style(
-            ProgressStyle::default_bar()
-                .template(&quot;{msg} [{elapsed_precise}] {wide_bar:.cyan/blue} Overall Items: {pos}/{len} ({items_per_sec}, ETA {eta})&quot;)?
-                .progress_chars(&quot;=&gt; &quot;),
-        );
-        let source_filename_owned: OsString =
-            source.file_name().unwrap_or_default().to_os_string();
-
-        overall_pb.set_message(format!(
-            &quot;Preparing to copy {}&quot;,
-            source_filename_owned.to_string_lossy()
-        ));
-        overall_pb.enable_steady_tick(Duration::from_millis(200));
-
-        let overall_pb_clone_for_updater = overall_pb.clone();
-        let progress_info_clone_for_updater = progress_info.clone();
-        let source_filename_clone_for_updater = source_filename_owned.clone();
-
-        let bytes_updater_thread = thread::spawn(move || {
-            while !overall_pb_clone_for_updater.is_finished() {
-                let items_done = progress_info_clone_for_updater
-                    .items_processed
-                    .load(AtomicOrdering::Relaxed);
-                let bytes_done = progress_info_clone_for_updater
-                    .bytes_processed
-                    .load(AtomicOrdering::Relaxed);
-
-                overall_pb_clone_for_updater.set_position(items_done); 
-                overall_pb_clone_for_updater.set_message(format!(
-                    &quot;Copying {} (Bytes: {} / {}) | Items: {}/{}&quot;,
-                    source_filename_clone_for_updater.to_string_lossy(),
-                    HumanBytes(bytes_done),
-                    HumanBytes(progress_info_clone_for_updater.total_bytes_to_process),
-                    items_done,
-                    progress_info_clone_for_updater.total_items_to_process
-                ));
-                thread::sleep(Duration::from_millis(200));
-            }
-            let items_done = progress_info_clone_for_updater
-                .items_processed
-                .load(AtomicOrdering::Relaxed);
-            let bytes_done = progress_info_clone_for_updater
-                .bytes_processed
-                .load(AtomicOrdering::Relaxed);
-            overall_pb_clone_for_updater.set_position(items_done);
-            overall_pb_clone_for_updater.set_message(format!(
-                &quot;Finished {} (Bytes: {} / {}) | Items: {}/{}&quot;,
-                source_filename_clone_for_updater.to_string_lossy(),
-                HumanBytes(bytes_done),
-                HumanBytes(progress_info_clone_for_updater.total_bytes_to_process),
-                items_done,
-                progress_info_clone_for_updater.total_items_to_process
-            ));
-        });
-
-        let result = if source_meta.is_dir() {
-            if !target_path_for_item.exists() {
-                 fs::create_dir_all(&amp;target_path_for_item).map_err(|e| io_err_with_path(e, &amp;target_path_for_item))?;
-                 if verbose { println!(&quot;Created target base directory &#39;{}&#39;&quot;, target_path_for_item.display()); }
-            }
-            progress_info.items_processed.fetch_add(1, AtomicOrdering::Relaxed);
-
-            copy_dir_recursive(
-                source, 
-                &amp;effective_dest_dir_for_contents, 
-                overwrite,
-                parallel,
-                &amp;overall_pb,
-                &amp;progress_info,
-                verbose,
-            )
-            .map_err(AppError::ParallelOperationFailed)?;
-            Ok(progress_info.items_processed.load(AtomicOrdering::Relaxed))
-        } else if source_meta.is_file() {
-            copy_single_file(
-                source,
-                &amp;target_path_for_item,
-                overwrite,
-                None, 
-                Some(&amp;progress_info),
-                verbose,
-            )?;
-            Ok(1) 
-        } else {
-            if verbose {
-                println!(
-                    &quot;Warning: Source &#39;{}&#39; is not a regular file or directory. Skipping.&quot;,
-                    source.display()
-                );
-            }
-            Ok(0)
-        };
-
-        overall_pb.set_position(progress_info.items_processed.load(AtomicOrdering::Relaxed)); 
-        overall_pb.finish_with_message(format!(&quot;Copy of &#39;{}&#39; complete.&quot;, source.display()));
-        bytes_updater_thread
-            .join()
-            .expect(&quot;Bytes updater thread panicked&quot;);
-        result
-    }
-
-    pub fn handle_delete_operation(
-        path: &amp;Path,
-        force: bool,
-        verbose: bool,
-    ) -&gt; Result&lt;u64, AppError&gt; {
-        if verbose {
-            println!(
-                &quot;Delete operation: &#39;{}&#39; (Force: {})&quot;,
-                path.display(),
-                force
-            );
-        }
-
-        if !path.exists() {
-            if force {
-                if verbose {
-                    println!(
-                        &quot;Path &#39;{}&#39; does not exist. Nothing to delete (forced).&quot;,
-                        path.display()
-                    );
-                }
-                return Ok(0);
-            }
-            return Err(AppError::SourceDoesNotExist(path.to_path_buf()));
-        }
-
-        if !force {
-            print!(
-                &quot;Are you sure you want to delete &#39;{}&#39; and all its contents? (yes/no): &quot;,
-                path.display()
-            );
-            io::stdout().flush().map_err(|e| io_err_with_path(e, path))?;
-            let mut confirmation = String::new();
-            io::stdin()
-                .read_line(&amp;mut confirmation)
-                .map_err(|e| io_err_with_path(e, path))?;
-            if confirmation.trim().to_lowercase() != &quot;yes&quot; {
-                return Err(AppError::DeletionNotConfirmed(path.to_path_buf()));
-            }
-        }
-
-        let items_deleted_count: u64;
-
-        if path.is_dir() {
-            let (total_items, _) = pre_scan_directory(path, verbose)?; 
-
-            let pb = ProgressBar::new(total_items.max(1));
-            pb.set_style(
-                ProgressStyle::default_bar()
-                    .template(
-                        &quot;{msg:.red.bold} [{bar:40.red/yellow}] Items: {pos}/{len} ({elapsed_precise})&quot;,
-                    )?
-                    .progress_chars(&quot;=&gt; &quot;),
-            );
-            pb.set_message(format!(
-                &quot;Deleting dir {}&quot;,
-                path.file_name().unwrap_or_default().to_string_lossy()
-            ));
-            pb.enable_steady_tick(Duration::from_millis(200));
-            
-            fs::remove_dir_all(path).map_err(|e| io_err_with_path(e, path))?;
-            items_deleted_count = total_items; 
-            pb.set_position(items_deleted_count);
-            pb.finish_with_message(format!(&quot;Deleted directory &#39;{}&#39;&quot;, path.display()));
-        } else {
-            if verbose {
-                println!(&quot;Deleting file &#39;{}&#39;...&quot;, path.display());
-            }
-            fs::remove_file(path).map_err(|e| io_err_with_path(e, path))?;
-            items_deleted_count = 1;
-        }
-
-        if verbose {
-            println!(
-                &quot;Deletion of &#39;{}&#39; complete. {} items affected.&quot;,
-                path.display(),
-                items_deleted_count
-            );
-        }
-        Ok(items_deleted_count)
-    }
-
-    pub fn handle_move_operation(
-        source: PathBuf,
-        destination: PathBuf,
-        overwrite: bool,
-        force_delete_source: bool, 
-        parallel: bool,
-        verbose: bool,
-    ) -&gt; Result&lt;u64, AppError&gt; {
-        if verbose {
-            println!(
-                &quot;Move operation: &#39;{}&#39; -&gt; &#39;{}&#39;&quot;,
-                source.display(),
-                destination.display()
-            );
-        }
-        if !source.exists() {
-            return Err(AppError::SourceDoesNotExist(source.clone()));
-        }
-
-        let source_meta = fs::metadata(&amp;source).map_err(|io_e| io_err_with_path(io_e, &amp;source))?;
-        let source_abs = source.absolutize().map_err(|e| io_err_with_path(e, &amp;source))?.into_owned();
-
-        let final_dest_target = if destination.exists()
-            &amp;&amp; fs::metadata(&amp;destination)
-                .map_err(|e| io_err_with_path(e, &amp;destination))?
-                .is_dir()
-        {
-            destination.join(
-                source
-                    .file_name()
-                    .ok_or_else(|| AppError::NoFileName(source.clone()))?,
-            )
-        } else {
-            destination.clone()
-        };
-
-        if source_meta.is_dir() {
-            let target_abs_check = final_dest_target.absolutize().map_err(|e| io_err_with_path(e, &amp;final_dest_target))?.into_owned();
-            if target_abs_check.starts_with(&amp;source_abs) {
-                 return Err(AppError::RecursiveMoveOrCopy(source, final_dest_target));
-            }
-        }
-
-        if final_dest_target.exists() &amp;&amp; !overwrite {
-            if source_meta.is_file() {
-                 let dest_meta = fs::metadata(&amp;final_dest_target).map_err(|e| io_err_with_path(e, &amp;final_dest_target))?;
-                 if dest_meta.is_file() {
-                    return Err(AppError::DestinationExists(final_dest_target));
-                 }
-            } else if source_meta.is_dir() {
-                let dest_meta = fs::metadata(&amp;final_dest_target).map_err(|e| io_err_with_path(e, &amp;final_dest_target))?;
-                if dest_meta.is_file() {
-                    return Err(AppError::DirToExistingFile { source_dir: source.clone(), dest_file: final_dest_target });
-                }
-                 return Err(AppError::DestinationExists(final_dest_target));
-            }
-        }
-
-        match fs::rename(&amp;source, &amp;final_dest_target) {
-            Ok(_) =&gt; {
-                if verbose {
-                    println!(
-                        &quot;Successfully moved (renamed) &#39;{}&#39; to &#39;{}&#39;&quot;,
-                        source.display(),
-                        final_dest_target.display()
-                    );
-                }
-                Ok(1) 
-            }
-            Err(e) =&gt; {
-                let should_fallback_to_copy_delete = e.kind() == ErrorKind::CrossesDevices
-                    || e.raw_os_error() == Some(libc::EXDEV)
-                    || (source_meta.is_file()
-                        &amp;&amp; destination.exists() 
-                        &amp;&amp; fs::metadata(&amp;destination)
-                            .map_err(|io_e| io_err_with_path(io_e, &amp;destination))?
-                            .is_dir());
-
-                if should_fallback_to_copy_delete {
-                    if verbose {
-                        println!(
-                            &quot;Rename failed (reason: {}, OS error: {:?}), attempting copy then delete...&quot;,
-                            e.kind(),
-                            e.raw_os_error()
-                        );
-                    }
-                    
-                    let items_copied = handle_copy_operation_main(
-                        &amp;source,
-                        &amp;destination, 
-                        overwrite,
-                        parallel,
-                        verbose,
-                    )?;
-                    if verbose {
-                        println!(
-                            &quot;Copy phase of move complete. Now deleting source &#39;{}&#39;.&quot;,
-                            source.display()
-                        );
-                    }
-
-                    match handle_delete_operation(&amp;source, force_delete_source, verbose) { 
-                        Ok(_) =&gt; {
-                            if verbose {
-                                println!(
-                                    &quot;Source &#39;{}&#39; deleted successfully after copy.&quot;,
-                                    source.display()
-                                );
-                            }
-                            Ok(items_copied)
-                        }
-                        Err(del_err) =&gt; {
-                            eprintln!(&quot;CRITICAL: Error deleting source &#39;{}&#39; after copy: {}. Copied files remain at &#39;{}&#39;. Manual cleanup of source may be required.&quot;, source.display(), del_err, destination.display());
-                            Err(AppError::Io {
-                                source: io::Error::new(
-                                    ErrorKind::Other,
-                                    &quot;Failed to delete source after successful copy during move operation&quot;,
-                                ),
-                                path: source,
-                            })
-                        }
-                    }
-                } else {
-                    Err(io_err_with_path(e, &amp;source))
-                }
-            }
-        }
-    }
-}
-
-// --- Main Application Logic ---
-fn main() -&gt; Result&lt;(), ()&gt; {
-    let cli = Cli::parse();
-
-    let result: Result&lt;u64, AppError&gt; = match cli.command {
-        Commands::Copy {
-            source,
-            destination,
-            overwrite,
-            parallel,
-        } =&gt; core_logic::handle_copy_operation_main(
-            &amp;source,
-            &amp;destination,
-            overwrite,
-            parallel,
-            cli.verbose,
-        ),
-        Commands::Move {
-            source,
-            destination,
-            overwrite,
-            force_delete_source,
-            parallel,
-        } =&gt; core_logic::handle_move_operation(
-            source,
-            destination,
-            overwrite,
-            force_delete_source,
-            parallel,
-            cli.verbose,
-        ),
-        Commands::Delete { path, force } =&gt; {
-            core_logic::handle_delete_operation(&amp;path, force, cli.verbose)
-        }
-    };
-
-    match result {
-        Ok(items_affected) =&gt; {
-            if items_affected &gt; 0 || cli.verbose {
-                println!(
-                    &quot;Operation completed successfully. {} items affected.&quot;,
-                    items_affected
-                );
-            } else if !cli.verbose {
-                println!(
-                    &quot;Operation completed (no items affected or action skipped). Use --verbose for details.&quot;
-                );
-            }
-            Ok(())
-        }
-        Err(e) =&gt; {
-            eprintln!(&quot;Error: {}&quot;, e);
-            if let AppError::ParallelOperationFailed(errors) = e {
-                for (i, err_msg) in errors.iter().enumerate() {
-                    eprintln!(&quot;  Parallel error {}: {}&quot;, i + 1, err_msg);
-                }
-            }
-            Err(())
-        }
-    }
-}" data-download-link="" data-download-label="Download Rust">
-  <code class="language-rust">// src/main.rs
-
-use clap::{Parser, Subcommand};
-use indicatif::{HumanBytes, MultiProgress, ProgressBar, ProgressStyle};
-use path_absolutize::*; // For Path::absolutize()
-use rayon::prelude::*;
-use std::{
-    ffi::OsString,
-    fs,
-    io::{self, ErrorKind, Read, Write},
-    path::{Path, PathBuf},
-    sync::{
-        atomic::{AtomicU64, Ordering as AtomicOrdering},
-        Arc, Mutex,
-    },
-    thread,
-    time::Duration,
-};
-use thiserror::Error;
-use walkdir::{DirEntry, WalkDir};
-
-// --- Argument Parsing ---
-#[derive(Parser, Debug)]
-#[clap(author, version, about = &quot;RapidCopy-rs (MVP): Fast file operations CLI&quot;, long_about = None)]
-struct Cli {
-    #[clap(subcommand)]
-    command: Commands,
-
-    #[clap(short, long, global = true, help = &quot;Enable verbose output&quot;)]
-    verbose: bool,
-}
-
-#[derive(Subcommand, Debug)]
-enum Commands {
-    /// Copies a file or directory recursively
-    Copy {
-        /// Source path
-        source: PathBuf,
-        /// Destination path
-        destination: PathBuf,
-        #[clap(short, long, help = &quot;Overwrite existing files at the destination&quot;)]
-        overwrite: bool,
-        #[clap(long, help = &quot;Enable parallel processing for directory contents&quot;)]
-        parallel: bool,
-    },
-    /// Moves a file or directory recursively (cut and paste)
-    Move {
-        /// Source path
-        source: PathBuf,
-        /// Destination path
-        destination: PathBuf,
-        #[clap(short, long, help = &quot;Overwrite existing files at the destination if copying&quot;)]
-        overwrite: bool,
-        #[clap(short = &#39;f&#39;, long, help = &quot;Force deletion of source without interactive confirmation (used in move)&quot;)]
-        force_delete_source: bool,
-        #[clap(long, help = &quot;Enable parallel processing for directory contents during copy phase&quot;)]
-        parallel: bool,
-    },
-    /// Deletes a file or directory recursively
-    Delete {
-        /// Path to delete
-        path: PathBuf,
-        #[clap(short, long, help = &quot;Force deletion without interactive confirmation&quot;)]
-        force: bool,
-    },
-}
-
-// --- Error Handling ---
-#[derive(Error, Debug)]
-pub enum AppError {
-    #[error(&quot;I/O error accessing &#39;{path:?}&#39;: {source}&quot;)]
-    Io {
-        source: io::Error,
-        path: PathBuf,
-    },
-    #[error(&quot;WalkDir error for path &#39;{path:?}&#39;: {source}&quot;)]
-    WalkDir {
-        source: walkdir::Error,
-        path: PathBuf,
-    },
-    #[error(&quot;Source path does not exist: {0}&quot;)]
-    SourceDoesNotExist(PathBuf),
-    #[error(&quot;Destination path &#39;{0}&#39; already exists and overwrite is false&quot;)]
-    DestinationExists(PathBuf),
-    #[error(&quot;Cannot copy/move directory &#39;{source_dir}&#39; to existing file &#39;{dest_file}&#39;&quot;)]
-    DirToExistingFile {
-        source_dir: PathBuf,
-        dest_file: PathBuf,
-    },
-    #[error(&quot;Cannot copy/move file &#39;{source_file}&#39; to existing directory &#39;{dest_dir}&#39; (ambiguous destination name or destination is a file and overwrite is false)&quot;)]
-    FileToExistingDirAmbiguous {
-        source_file: PathBuf,
-        dest_dir: PathBuf,
-    },
-    #[error(&quot;User did not confirm deletion of &#39;{0}&#39;&quot;)]
-    DeletionNotConfirmed(PathBuf),
-    #[error(&quot;Failed to get metadata for path: {0}&quot;)]
-    MetadataError(PathBuf),
-    #[error(&quot;Source path &#39;{0}&#39; has no filename component&quot;)]
-    NoFileName(PathBuf),
-    #[error(&quot;Failed to strip prefix for path processing: &#39;{path}&#39; relative to &#39;{base}&#39;&quot;)]
-    StripPrefixError { path: PathBuf, base: PathBuf },
-    #[error(&quot;Operation failed with multiple errors during parallel processing:\n{0:#?}&quot;)]
-    ParallelOperationFailed(Vec&lt;String&gt;),
-    #[error(&quot;Cannot move/copy &#39;{0}&#39; to a subdirectory of itself &#39;{1}&#39;&quot;)]
-    RecursiveMoveOrCopy(PathBuf, PathBuf),
-    #[error(&quot;Indicatif style template error: {0}&quot;)]
-    TemplateError(String),
-}
-
-impl From&lt;walkdir::Error&gt; for AppError {
-    fn from(err: walkdir::Error) -&gt; Self {
-        let path = err
-            .path()
-            .unwrap_or_else(|| Path::new(&quot;&lt;unknown path from walkdir error&gt;&quot;))
-            .to_path_buf();
-        AppError::WalkDir { source: err, path }
-    }
-}
-
-fn io_err_with_path(err: io::Error, path: &amp;Path) -&gt; AppError {
-    AppError::Io {
-        source: err,
-        path: path.to_path_buf(),
-    }
-}
-
-impl From&lt;indicatif::style::TemplateError&gt; for AppError {
-    fn from(err: indicatif::style::TemplateError) -&gt; Self {
-        AppError::TemplateError(err.to_string())
-    }
-}
-
-// --- Core Logic Module ---
-mod core_logic {
-    use super::*;
-
-    const BUFFER_SIZE: usize = 128 * 1024;
-
-    #[derive(Debug)]
-    struct ProgressInfo {
-        items_processed: AtomicU64,
-        bytes_processed: AtomicU64,
-        total_items_to_process: u64,
-        total_bytes_to_process: u64,
-    }
-
-    impl ProgressInfo {
-        fn new(total_items: u64, total_bytes: u64) -&gt; Self {
-            Self {
-                items_processed: AtomicU64::new(0),
-                bytes_processed: AtomicU64::new(0),
-                total_items_to_process: total_items,
-                total_bytes_to_process: total_bytes,
-            }
-        }
-    }
-
-    fn pre_scan_directory(dir: &amp;Path, verbose: bool) -&gt; Result&lt;(u64, u64), AppError&gt; {
-        if verbose {
-            println!(&quot;Pre-scanning directory &#39;{}&#39;...&quot;, dir.display());
-        }
-        let mut total_items = 0u64;
-        let mut total_bytes = 0u64;
-        total_items += 1; // Count the root directory itself
-        for entry_result in WalkDir::new(dir).min_depth(1).follow_links(false) {
-            let entry = entry_result?; 
-            total_items += 1;
-            if entry.file_type().is_file() {
-                total_bytes += entry.metadata()?.len(); 
-            }
-        }
-        if verbose {
-            println!(
-                &quot;Pre-scan complete: {} items, {}&quot;,
-                total_items,
-                HumanBytes(total_bytes)
-            );
-        }
-        Ok((total_items, total_bytes))
-    }
-
-    fn copy_single_file(
-        source: &amp;Path,
-        destination: &amp;Path,
-        overwrite: bool,
-        mp_opt: Option&lt;&amp;MultiProgress&gt;,
-        overall_progress_info_opt: Option&lt;&amp;Arc&lt;ProgressInfo&gt;&gt;,
-        verbose: bool,
-    ) -&gt; Result&lt;u64, AppError&gt; {
-        if destination.exists() {
-            let dest_meta =
-                fs::metadata(destination).map_err(|e| io_err_with_path(e, destination))?;
-            if dest_meta.is_dir() {
-                return Err(AppError::FileToExistingDirAmbiguous {
-                    source_file: source.to_path_buf(),
-                    dest_dir: destination.to_path_buf(),
-                });
-            }
-            if !overwrite {
-                if verbose {
-                    println!(
-                        &quot;Skipping &#39;{}&#39;: destination file exists and overwrite is false.&quot;,
-                        destination.display()
-                    );
-                }
-                if let Some(stats) = overall_progress_info_opt {
-                    stats.items_processed.fetch_add(1, AtomicOrdering::Relaxed);
-                }
-                return Ok(0);
-            }
-        }
-
-        if let Some(parent) = destination.parent() {
-            if !parent.exists() {
-                fs::create_dir_all(parent).map_err(|e| io_err_with_path(e, parent))?;
-            }
-        }
-
-        let file_size = fs::metadata(source)
-            .map_err(|e| io_err_with_path(e, source))?
-            .len();
-
-        let pb = if let Some(mp) = mp_opt {
-            let p = mp.add(ProgressBar::new(file_size));
-            p.enable_steady_tick(Duration::from_millis(250));
-            p
-        } else {
-            let p = ProgressBar::new(file_size);
-            p.enable_steady_tick(Duration::from_millis(100));
-            p
-        };
-
-        pb.set_style(
-            ProgressStyle::default_bar()
-                .template(
-                    &quot;{msg:&lt;30.bold.dim} [{bar:40.cyan/blue}] {bytes}/{total_bytes} ({bytes_per_sec}, {eta})&quot;,
-                )?
-                .progress_chars(&quot;=&gt; &quot;),
-        );
-        let filename = source.file_name().unwrap_or_default().to_string_lossy();
-        pb.set_message(filename.chars().take(30).collect::&lt;String&gt;());
-
-        let mut source_file = fs::File::open(source).map_err(|e| io_err_with_path(e, source))?;
-        let mut dest_file =
-            fs::File::create(destination).map_err(|e| io_err_with_path(e, destination))?;
-
-        let mut buffer = vec![0; BUFFER_SIZE];
-        let mut copied_bytes_for_this_file = 0u64;
-
-        loop {
-            let bytes_read = source_file
-                .read(&amp;mut buffer)
-                .map_err(|e| io_err_with_path(e, source))?;
-            if bytes_read == 0 {
-                break;
-            }
-            dest_file
-                .write_all(&amp;buffer[..bytes_read])
-                .map_err(|e| io_err_with_path(e, destination))?;
-            copied_bytes_for_this_file += bytes_read as u64;
-            pb.set_position(copied_bytes_for_this_file);
-            if let Some(stats) = overall_progress_info_opt {
-                stats
-                    .bytes_processed
-                    .fetch_add(bytes_read as u64, AtomicOrdering::Relaxed);
-            }
-        }
-        pb.finish_with_message(format!(&quot;Copied {} ({})&quot;, filename, HumanBytes(file_size)));
-        if let Some(stats) = overall_progress_info_opt {
-            stats.items_processed.fetch_add(1, AtomicOrdering::Relaxed);
-        }
-        Ok(file_size)
-    }
-
-    fn copy_dir_recursive(
-        source_dir: &amp;Path,
-        target_dest_dir: &amp;Path, 
-        overwrite: bool,
-        parallel: bool,
-        _overall_item_pb: &amp;ProgressBar, 
-        progress_info: &amp;Arc&lt;ProgressInfo&gt;,
-        verbose: bool, // verbose is available here
-    ) -&gt; Result&lt;(), Vec&lt;String&gt;&gt; {
-        if verbose {
-            println!(
-                &quot;Recursively copying contents of &#39;{}&#39; into &#39;{}&#39;&quot;,
-                source_dir.display(),
-                target_dest_dir.display()
-            );
-        }
-
-        if !target_dest_dir.exists() {
-            fs::create_dir_all(target_dest_dir)
-                .map_err(|e| vec![io_err_with_path(e, target_dest_dir).to_string()])?;
-            if verbose {
-                println!(&quot;Created directory &#39;{}&#39;&quot;, target_dest_dir.display());
-            }
-        }
-      
-        let entries: Vec&lt;DirEntry&gt; = WalkDir::new(source_dir)
-            .min_depth(1) 
-            .follow_links(false)
-            .into_iter()
-            .collect::&lt;Result&lt;Vec&lt;_&gt;, _&gt;&gt;()
-            .map_err(|e| {
-                vec![AppError::WalkDir {
-                    source: e,
-                    path: source_dir.to_path_buf(),
-                }
-                .to_string()]
-            })?;
-
-        let multi_progress_manager_opt = if parallel &amp;&amp; entries.iter().filter(|e| e.path().is_file()).count() &gt; 1 {
-            Some(MultiProgress::new())
-        } else {
-            None
-        };
-
-        let errors_arc = Arc::new(Mutex::new(Vec::&lt;String&gt;::new()));
-
-        let process_entry_closure = |entry: DirEntry| {
-            let entry_path = entry.path();
-            let relative_path = match entry_path.strip_prefix(source_dir) {
-                Ok(p) =&gt; p,
-                Err(_) =&gt; {
-                    errors_arc.lock().unwrap().push(
-                        AppError::StripPrefixError {
-                            path: entry_path.to_path_buf(),
-                            base: source_dir.to_path_buf(),
-                        }
-                        .to_string(),
-                    );
-                    return;
-                }
-            };
-            let dest_path = target_dest_dir.join(relative_path);
-
-            if entry.file_type().is_dir() {
-                if verbose {
-                    println!(&quot;Creating directory &#39;{}&#39;&quot;, dest_path.display());
-                }
-                if let Err(e) = fs::create_dir_all(&amp;dest_path) {
-                    errors_arc
-                        .lock()
-                        .unwrap()
-                        .push(io_err_with_path(e, &amp;dest_path).to_string());
-                    return;
-                }
-                progress_info
-                    .items_processed
-                    .fetch_add(1, AtomicOrdering::Relaxed);
-            } else if entry.file_type().is_file() {
-                match copy_single_file(
-                    entry_path,
-                    &amp;dest_path,
-                    overwrite,
-                    multi_progress_manager_opt.as_ref(),
-                    Some(progress_info), 
-                    verbose,
-                ) {
-                    Ok(_) =&gt; {}
-                    Err(e) =&gt; {
-                        errors_arc.lock().unwrap().push(format!(
-                            &quot;Error copying file &#39;{}&#39;: {}&quot;,
-                            entry_path.display(),
-                            e
-                        ));
-                    }
-                }
-            } else {
-                progress_info
-                    .items_processed
-                    .fetch_add(1, AtomicOrdering::Relaxed);
-                if verbose {
-                    println!(&quot;Skipping non-file/non-directory entry: {}&quot;, entry_path.display());
-                }
-            }
-        };
-
-        if parallel &amp;&amp; entries.len() &gt; 1 {
-            entries.into_par_iter().for_each(process_entry_closure);
-        } else {
-            for entry in entries {
-                process_entry_closure(entry);
-            }
-        }
-
-        if let Some(mp) = multi_progress_manager_opt {
-            if let Err(e) = mp.clear() {
-                if verbose {
-                    // Error during UI cleanup is not critical to the copy operation itself.
-                    eprintln!(&quot;Warning: Failed to clear multi-progress display: {}&quot;, e);
-                }
-            }
-        }
-
-        let final_errors = Arc::try_unwrap(errors_arc)
-            .expect(&quot;Mutex still has multiple owners for errors_arc&quot;)
-            .into_inner()
-            .expect(&quot;Mutex was poisoned for errors_arc&quot;);
-
-        if !final_errors.is_empty() {
-            return Err(final_errors);
-        }
-        Ok(())
-    }
-
-    pub fn handle_copy_operation_main(
-        source: &amp;Path,
-        destination: &amp;Path,
-        overwrite: bool,
-        parallel: bool,
-        verbose: bool,
-    ) -&gt; Result&lt;u64, AppError&gt; {
-        if verbose {
-            println!(
-                &quot;Copy operation: &#39;{}&#39; -&gt; &#39;{}&#39;&quot;,
-                source.display(),
-                destination.display()
-            );
-        }
-        if !source.exists() {
-            return Err(AppError::SourceDoesNotExist(source.to_path_buf()));
-        }
-
-        let source_meta = fs::metadata(source).map_err(|e| io_err_with_path(e, source))?;
-        let source_abs = source.absolutize().map_err(|e| io_err_with_path(e, source))?.into_owned();
-
-
-        let target_path_for_item: PathBuf; 
-        let effective_dest_dir_for_contents: PathBuf; 
-
-        if source_meta.is_dir() {
-            let source_name = source
-                .file_name()
-                .ok_or_else(|| AppError::NoFileName(source.to_path_buf()))?;
-            if destination.exists()
-                &amp;&amp; fs::metadata(destination)
-                    .map_err(|e| io_err_with_path(e, destination))?
-                    .is_dir()
-            {
-                target_path_for_item = destination.join(source_name);
-            } else if destination.exists()
-                &amp;&amp; fs::metadata(destination)
-                    .map_err(|e| io_err_with_path(e, destination))?
-                    .is_file()
-            {
-                return Err(AppError::DirToExistingFile {
-                    source_dir: source.to_path_buf(),
-                    dest_file: destination.to_path_buf(),
-                });
-            } else {
-                target_path_for_item = destination.to_path_buf();
-            }
-            effective_dest_dir_for_contents = target_path_for_item.clone(); 
-            
-            let target_abs_check = target_path_for_item.absolutize().map_err(|e| io_err_with_path(e, &amp;target_path_for_item))?.into_owned();
-            if target_abs_check.starts_with(&amp;source_abs) {
-                 return Err(AppError::RecursiveMoveOrCopy(source.to_path_buf(), target_path_for_item));
-            }
-
-        } else { // Source is a file
-            if destination.exists()
-                &amp;&amp; fs::metadata(destination)
-                    .map_err(|e| io_err_with_path(e, destination))?
-                    .is_dir()
-            {
-                target_path_for_item = destination.join(
-                    source
-                        .file_name()
-                        .ok_or_else(|| AppError::NoFileName(source.to_path_buf()))?,
-                );
-            } else if !destination.exists()
-                &amp;&amp; destination.to_string_lossy().ends_with(std::path::MAIN_SEPARATOR)
-            {
-                fs::create_dir_all(destination).map_err(|e| io_err_with_path(e, destination))?;
-                target_path_for_item = destination.join(
-                    source
-                        .file_name()
-                        .ok_or_else(|| AppError::NoFileName(source.to_path_buf()))?,
-                );
-            } else {
-                target_path_for_item = destination.to_path_buf();
-            }
-            effective_dest_dir_for_contents = target_path_for_item
-                .parent()
-                .unwrap_or_else(|| Path::new(&quot;.&quot;))
-                .to_path_buf();
-        }
-
-        let (total_items_scanned, total_bytes_scanned) = if source_meta.is_dir() {
-            pre_scan_directory(source, verbose)?
-        } else {
-            (1, source_meta.len()) 
-        };
-        let progress_info = Arc::new(ProgressInfo::new(
-            total_items_scanned,
-            total_bytes_scanned,
-        ));
-
-        let overall_pb = ProgressBar::new(total_items_scanned.max(1)); 
-        overall_pb.set_style(
-            ProgressStyle::default_bar()
-                .template(&quot;{msg} [{elapsed_precise}] {wide_bar:.cyan/blue} Overall Items: {pos}/{len} ({items_per_sec}, ETA {eta})&quot;)?
-                .progress_chars(&quot;=&gt; &quot;),
-        );
-        let source_filename_owned: OsString =
-            source.file_name().unwrap_or_default().to_os_string();
-
-        overall_pb.set_message(format!(
-            &quot;Preparing to copy {}&quot;,
-            source_filename_owned.to_string_lossy()
-        ));
-        overall_pb.enable_steady_tick(Duration::from_millis(200));
-
-        let overall_pb_clone_for_updater = overall_pb.clone();
-        let progress_info_clone_for_updater = progress_info.clone();
-        let source_filename_clone_for_updater = source_filename_owned.clone();
-
-        let bytes_updater_thread = thread::spawn(move || {
-            while !overall_pb_clone_for_updater.is_finished() {
-                let items_done = progress_info_clone_for_updater
-                    .items_processed
-                    .load(AtomicOrdering::Relaxed);
-                let bytes_done = progress_info_clone_for_updater
-                    .bytes_processed
-                    .load(AtomicOrdering::Relaxed);
-
-                overall_pb_clone_for_updater.set_position(items_done); 
-                overall_pb_clone_for_updater.set_message(format!(
-                    &quot;Copying {} (Bytes: {} / {}) | Items: {}/{}&quot;,
-                    source_filename_clone_for_updater.to_string_lossy(),
-                    HumanBytes(bytes_done),
-                    HumanBytes(progress_info_clone_for_updater.total_bytes_to_process),
-                    items_done,
-                    progress_info_clone_for_updater.total_items_to_process
-                ));
-                thread::sleep(Duration::from_millis(200));
-            }
-            let items_done = progress_info_clone_for_updater
-                .items_processed
-                .load(AtomicOrdering::Relaxed);
-            let bytes_done = progress_info_clone_for_updater
-                .bytes_processed
-                .load(AtomicOrdering::Relaxed);
-            overall_pb_clone_for_updater.set_position(items_done);
-            overall_pb_clone_for_updater.set_message(format!(
-                &quot;Finished {} (Bytes: {} / {}) | Items: {}/{}&quot;,
-                source_filename_clone_for_updater.to_string_lossy(),
-                HumanBytes(bytes_done),
-                HumanBytes(progress_info_clone_for_updater.total_bytes_to_process),
-                items_done,
-                progress_info_clone_for_updater.total_items_to_process
-            ));
-        });
-
-        let result = if source_meta.is_dir() {
-            if !target_path_for_item.exists() {
-                 fs::create_dir_all(&amp;target_path_for_item).map_err(|e| io_err_with_path(e, &amp;target_path_for_item))?;
-                 if verbose { println!(&quot;Created target base directory &#39;{}&#39;&quot;, target_path_for_item.display()); }
-            }
-            progress_info.items_processed.fetch_add(1, AtomicOrdering::Relaxed);
-
-            copy_dir_recursive(
-                source, 
-                &amp;effective_dest_dir_for_contents, 
-                overwrite,
-                parallel,
-                &amp;overall_pb,
-                &amp;progress_info,
-                verbose,
-            )
-            .map_err(AppError::ParallelOperationFailed)?;
-            Ok(progress_info.items_processed.load(AtomicOrdering::Relaxed))
-        } else if source_meta.is_file() {
-            copy_single_file(
-                source,
-                &amp;target_path_for_item,
-                overwrite,
-                None, 
-                Some(&amp;progress_info),
-                verbose,
-            )?;
-            Ok(1) 
-        } else {
-            if verbose {
-                println!(
-                    &quot;Warning: Source &#39;{}&#39; is not a regular file or directory. Skipping.&quot;,
-                    source.display()
-                );
-            }
-            Ok(0)
-        };
-
-        overall_pb.set_position(progress_info.items_processed.load(AtomicOrdering::Relaxed)); 
-        overall_pb.finish_with_message(format!(&quot;Copy of &#39;{}&#39; complete.&quot;, source.display()));
-        bytes_updater_thread
-            .join()
-            .expect(&quot;Bytes updater thread panicked&quot;);
-        result
-    }
-
-    pub fn handle_delete_operation(
-        path: &amp;Path,
-        force: bool,
-        verbose: bool,
-    ) -&gt; Result&lt;u64, AppError&gt; {
-        if verbose {
-            println!(
-                &quot;Delete operation: &#39;{}&#39; (Force: {})&quot;,
-                path.display(),
-                force
-            );
-        }
-
-        if !path.exists() {
-            if force {
-                if verbose {
-                    println!(
-                        &quot;Path &#39;{}&#39; does not exist. Nothing to delete (forced).&quot;,
-                        path.display()
-                    );
-                }
-                return Ok(0);
-            }
-            return Err(AppError::SourceDoesNotExist(path.to_path_buf()));
-        }
-
-        if !force {
-            print!(
-                &quot;Are you sure you want to delete &#39;{}&#39; and all its contents? (yes/no): &quot;,
-                path.display()
-            );
-            io::stdout().flush().map_err(|e| io_err_with_path(e, path))?;
-            let mut confirmation = String::new();
-            io::stdin()
-                .read_line(&amp;mut confirmation)
-                .map_err(|e| io_err_with_path(e, path))?;
-            if confirmation.trim().to_lowercase() != &quot;yes&quot; {
-                return Err(AppError::DeletionNotConfirmed(path.to_path_buf()));
-            }
-        }
-
-        let items_deleted_count: u64;
-
-        if path.is_dir() {
-            let (total_items, _) = pre_scan_directory(path, verbose)?; 
-
-            let pb = ProgressBar::new(total_items.max(1));
-            pb.set_style(
-                ProgressStyle::default_bar()
-                    .template(
-                        &quot;{msg:.red.bold} [{bar:40.red/yellow}] Items: {pos}/{len} ({elapsed_precise})&quot;,
-                    )?
-                    .progress_chars(&quot;=&gt; &quot;),
-            );
-            pb.set_message(format!(
-                &quot;Deleting dir {}&quot;,
-                path.file_name().unwrap_or_default().to_string_lossy()
-            ));
-            pb.enable_steady_tick(Duration::from_millis(200));
-            
-            fs::remove_dir_all(path).map_err(|e| io_err_with_path(e, path))?;
-            items_deleted_count = total_items; 
-            pb.set_position(items_deleted_count);
-            pb.finish_with_message(format!(&quot;Deleted directory &#39;{}&#39;&quot;, path.display()));
-        } else {
-            if verbose {
-                println!(&quot;Deleting file &#39;{}&#39;...&quot;, path.display());
-            }
-            fs::remove_file(path).map_err(|e| io_err_with_path(e, path))?;
-            items_deleted_count = 1;
-        }
-
-        if verbose {
-            println!(
-                &quot;Deletion of &#39;{}&#39; complete. {} items affected.&quot;,
-                path.display(),
-                items_deleted_count
-            );
-        }
-        Ok(items_deleted_count)
-    }
-
-    pub fn handle_move_operation(
-        source: PathBuf,
-        destination: PathBuf,
-        overwrite: bool,
-        force_delete_source: bool, 
-        parallel: bool,
-        verbose: bool,
-    ) -&gt; Result&lt;u64, AppError&gt; {
-        if verbose {
-            println!(
-                &quot;Move operation: &#39;{}&#39; -&gt; &#39;{}&#39;&quot;,
-                source.display(),
-                destination.display()
-            );
-        }
-        if !source.exists() {
-            return Err(AppError::SourceDoesNotExist(source.clone()));
-        }
-
-        let source_meta = fs::metadata(&amp;source).map_err(|io_e| io_err_with_path(io_e, &amp;source))?;
-        let source_abs = source.absolutize().map_err(|e| io_err_with_path(e, &amp;source))?.into_owned();
-
-        let final_dest_target = if destination.exists()
-            &amp;&amp; fs::metadata(&amp;destination)
-                .map_err(|e| io_err_with_path(e, &amp;destination))?
-                .is_dir()
-        {
-            destination.join(
-                source
-                    .file_name()
-                    .ok_or_else(|| AppError::NoFileName(source.clone()))?,
-            )
-        } else {
-            destination.clone()
-        };
-
-        if source_meta.is_dir() {
-            let target_abs_check = final_dest_target.absolutize().map_err(|e| io_err_with_path(e, &amp;final_dest_target))?.into_owned();
-            if target_abs_check.starts_with(&amp;source_abs) {
-                 return Err(AppError::RecursiveMoveOrCopy(source, final_dest_target));
-            }
-        }
-
-        if final_dest_target.exists() &amp;&amp; !overwrite {
-            if source_meta.is_file() {
-                 let dest_meta = fs::metadata(&amp;final_dest_target).map_err(|e| io_err_with_path(e, &amp;final_dest_target))?;
-                 if dest_meta.is_file() {
-                    return Err(AppError::DestinationExists(final_dest_target));
-                 }
-            } else if source_meta.is_dir() {
-                let dest_meta = fs::metadata(&amp;final_dest_target).map_err(|e| io_err_with_path(e, &amp;final_dest_target))?;
-                if dest_meta.is_file() {
-                    return Err(AppError::DirToExistingFile { source_dir: source.clone(), dest_file: final_dest_target });
-                }
-                 return Err(AppError::DestinationExists(final_dest_target));
-            }
-        }
-
-        match fs::rename(&amp;source, &amp;final_dest_target) {
-            Ok(_) =&gt; {
-                if verbose {
-                    println!(
-                        &quot;Successfully moved (renamed) &#39;{}&#39; to &#39;{}&#39;&quot;,
-                        source.display(),
-                        final_dest_target.display()
-                    );
-                }
-                Ok(1) 
-            }
-            Err(e) =&gt; {
-                let should_fallback_to_copy_delete = e.kind() == ErrorKind::CrossesDevices
-                    || e.raw_os_error() == Some(libc::EXDEV)
-                    || (source_meta.is_file()
-                        &amp;&amp; destination.exists() 
-                        &amp;&amp; fs::metadata(&amp;destination)
-                            .map_err(|io_e| io_err_with_path(io_e, &amp;destination))?
-                            .is_dir());
-
-                if should_fallback_to_copy_delete {
-                    if verbose {
-                        println!(
-                            &quot;Rename failed (reason: {}, OS error: {:?}), attempting copy then delete...&quot;,
-                            e.kind(),
-                            e.raw_os_error()
-                        );
-                    }
-                    
-                    let items_copied = handle_copy_operation_main(
-                        &amp;source,
-                        &amp;destination, 
-                        overwrite,
-                        parallel,
-                        verbose,
-                    )?;
-                    if verbose {
-                        println!(
-                            &quot;Copy phase of move complete. Now deleting source &#39;{}&#39;.&quot;,
-                            source.display()
-                        );
-                    }
-
-                    match handle_delete_operation(&amp;source, force_delete_source, verbose) { 
-                        Ok(_) =&gt; {
-                            if verbose {
-                                println!(
-                                    &quot;Source &#39;{}&#39; deleted successfully after copy.&quot;,
-                                    source.display()
-                                );
-                            }
-                            Ok(items_copied)
-                        }
-                        Err(del_err) =&gt; {
-                            eprintln!(&quot;CRITICAL: Error deleting source &#39;{}&#39; after copy: {}. Copied files remain at &#39;{}&#39;. Manual cleanup of source may be required.&quot;, source.display(), del_err, destination.display());
-                            Err(AppError::Io {
-                                source: io::Error::new(
-                                    ErrorKind::Other,
-                                    &quot;Failed to delete source after successful copy during move operation&quot;,
-                                ),
-                                path: source,
-                            })
-                        }
-                    }
-                } else {
-                    Err(io_err_with_path(e, &amp;source))
-                }
-            }
-        }
-    }
-}
-
-// --- Main Application Logic ---
-fn main() -&gt; Result&lt;(), ()&gt; {
-    let cli = Cli::parse();
-
-    let result: Result&lt;u64, AppError&gt; = match cli.command {
-        Commands::Copy {
-            source,
-            destination,
-            overwrite,
-            parallel,
-        } =&gt; core_logic::handle_copy_operation_main(
-            &amp;source,
-            &amp;destination,
-            overwrite,
-            parallel,
-            cli.verbose,
-        ),
-        Commands::Move {
-            source,
-            destination,
-            overwrite,
-            force_delete_source,
-            parallel,
-        } =&gt; core_logic::handle_move_operation(
-            source,
-            destination,
-            overwrite,
-            force_delete_source,
-            parallel,
-            cli.verbose,
-        ),
-        Commands::Delete { path, force } =&gt; {
-            core_logic::handle_delete_operation(&amp;path, force, cli.verbose)
-        }
-    };
-
-    match result {
-        Ok(items_affected) =&gt; {
-            if items_affected &gt; 0 || cli.verbose {
-                println!(
-                    &quot;Operation completed successfully. {} items affected.&quot;,
-                    items_affected
-                );
-            } else if !cli.verbose {
-                println!(
-                    &quot;Operation completed (no items affected or action skipped). Use --verbose for details.&quot;
-                );
-            }
-            Ok(())
-        }
-        Err(e) =&gt; {
-            eprintln!(&quot;Error: {}&quot;, e);
-            if let AppError::ParallelOperationFailed(errors) = e {
-                for (i, err_msg) in errors.iter().enumerate() {
-                    eprintln!(&quot;  Parallel error {}: {}&quot;, i + 1, err_msg);
-                }
-            }
-            Err(())
-        }
-    }
-}</code>
-</section>
-
-<h2 id="to-build-and-run">To Build and Run</h2>
-
-<ol>
-  <li>Save <code class="language-plaintext highlighter-rouge">src/main.rs</code> and <code class="language-plaintext highlighter-rouge">Cargo.toml</code>.</li>
-  <li>Ensure Rust and build essentials are installed on your <code class="language-plaintext highlighter-rouge">arm64 Debian Bullseye</code> machine.</li>
-  <li>Build: <code class="language-plaintext highlighter-rouge">cargo build --release</code></li>
-</ol>]]></content><author><name></name></author><category term="software&gt;rust" /></entry></feed>
+</code></pre></div></div>]]></content><author><name></name></author><category term="scratchpad" /></entry></feed>
