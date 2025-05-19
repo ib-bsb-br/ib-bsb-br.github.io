@@ -1,4 +1,1217 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2025-05-19T08:58:03+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">messy folder reorganizer documentation</title><link href="https://ib.bsb.br/messy-folder-reorganizer-documentation/" rel="alternate" type="text/html" title="messy folder reorganizer documentation" /><published>2025-05-19T00:00:00+00:00</published><updated>2025-05-19T08:54:40+00:00</updated><id>https://ib.bsb.br/messy-folder-reorganizer-documentation</id><content type="html" xml:base="https://ib.bsb.br/messy-folder-reorganizer-documentation/"><![CDATA[<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>&lt;!-- [![codecov](/gh/PerminovEugene/messy-folder-reorganizer-ai/branch/main/graph/badge.svg)](/gh/PerminovEugene/messy-folder-reorganizer-ai) --&gt;
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2025-05-19T09:13:35+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">Maximizing VM Performance with Incus v1</title><link href="https://ib.bsb.br/maximizing-vm-performance-with-incus-v1/" rel="alternate" type="text/html" title="Maximizing VM Performance with Incus v1" /><published>2025-05-19T00:00:00+00:00</published><updated>2025-05-19T09:10:23+00:00</updated><id>https://ib.bsb.br/maximizing-vm-performance-with-incus-v1</id><content type="html" xml:base="https://ib.bsb.br/maximizing-vm-performance-with-incus-v1/"><![CDATA[<h2 id="quick-reference-guide">Quick Reference Guide</h2>
+
+<p>This comprehensive guide helps you configure Ubuntu Server 25 and Incus to achieve near-bare-metal performance for a single virtual machine. Follow these steps systematically, testing after each major change.</p>
+
+<p><strong>Key Performance Factors:</strong></p>
+<ul>
+  <li>CPU isolation and pinning</li>
+  <li>Memory allocation and hugepages</li>
+  <li>Storage optimization</li>
+  <li>Network configuration</li>
+  <li>Host OS minimization</li>
+</ul>
+
+<p><strong>Prerequisites:</strong></p>
+<ul>
+  <li>Ubuntu Server 25 installed</li>
+  <li>Administrative (sudo) access</li>
+  <li>Basic understanding of Linux system administration</li>
+  <li>Hardware with virtualization support (Intel VT-x/AMD-V)</li>
+  <li>Backup of any important data</li>
+</ul>
+
+<h2 id="i-pre-implementation-planning">I. Pre-Implementation Planning</h2>
+
+<h3 id="1-hardware-assessment">1. Hardware Assessment</h3>
+
+<p>Before beginning optimizations, assess your hardware capabilities:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Check CPU information</span>
+lscpu
+
+<span class="c"># Check virtualization support</span>
+egrep <span class="nt">-c</span> <span class="s1">'(vmx|svm)'</span> /proc/cpuinfo  <span class="c"># Should return &gt; 0</span>
+
+<span class="c"># Check IOMMU support (for PCI passthrough)</span>
+dmesg | <span class="nb">grep</span> <span class="nt">-e</span> DMAR <span class="nt">-e</span> IOMMU
+
+<span class="c"># Check memory</span>
+free <span class="nt">-h</span>
+
+<span class="c"># Check storage devices</span>
+lsblk <span class="nt">-o</span> NAME,SIZE,MODEL,ROTA
+</code></pre></div></div>
+
+<h3 id="2-workload-requirements-analysis">2. Workload Requirements Analysis</h3>
+
+<p>Different workloads have different optimization priorities:</p>
+<ul>
+  <li><strong>CPU-intensive workloads</strong>: Focus on CPU isolation and frequency scaling</li>
+  <li><strong>Memory-intensive workloads</strong>: Prioritize hugepages and NUMA optimization</li>
+  <li><strong>I/O-intensive workloads</strong>: Focus on storage and network passthrough</li>
+  <li><strong>Graphics-intensive workloads</strong>: Prioritize GPU passthrough</li>
+</ul>
+
+<h3 id="3-risk-assessment">3. Risk Assessment</h3>
+
+<table>
+  <thead>
+    <tr>
+      <th>Optimization</th>
+      <th>Performance Benefit</th>
+      <th>Security Impact</th>
+      <th>Stability Risk</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>CPU isolation</td>
+      <td>High</td>
+      <td>Low</td>
+      <td>Low</td>
+    </tr>
+    <tr>
+      <td>Disabling CPU mitigations</td>
+      <td>High</td>
+      <td>High</td>
+      <td>Low</td>
+    </tr>
+    <tr>
+      <td>Hugepages</td>
+      <td>Medium</td>
+      <td>Low</td>
+      <td>Low</td>
+    </tr>
+    <tr>
+      <td>PCI passthrough</td>
+      <td>High</td>
+      <td>Medium</td>
+      <td>Medium</td>
+    </tr>
+    <tr>
+      <td>Service disabling</td>
+      <td>Low</td>
+      <td>Varies</td>
+      <td>Medium</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2 id="ii-ubuntu-server-host-optimizations">II. Ubuntu Server Host Optimizations</h2>
+
+<h3 id="1-minimal-installation-and-service-optimization">1. Minimal Installation and Service Optimization</h3>
+
+<p>Start with the most minimal Ubuntu Server 25 installation:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># List all enabled services</span>
+<span class="nb">sudo </span>systemctl list-unit-files <span class="nt">--type</span><span class="o">=</span>service <span class="nt">--state</span><span class="o">=</span>enabled
+
+<span class="c"># Identify non-essential services (examples below)</span>
+<span class="c"># - snapd (if not using snaps for Incus)</span>
+<span class="c"># - apport (automated crash reporting)</span>
+<span class="c"># - motd-news (message of the day updates)</span>
+<span class="c"># - unattended-upgrades (if you prefer manual updates)</span>
+
+<span class="c"># Disable non-essential services (example)</span>
+<span class="nb">sudo </span>systemctl stop snapd.service
+<span class="nb">sudo </span>systemctl disable snapd.service
+
+<span class="c"># Verify service is disabled</span>
+systemctl is-enabled snapd.service  <span class="c"># Should return "disabled"</span>
+</code></pre></div></div>
+
+<p><strong>CAUTION</strong>: Do not disable these essential services:</p>
+<ul>
+  <li>systemd-journald</li>
+  <li>systemd-logind</li>
+  <li>ssh (if you need remote access)</li>
+  <li>networking/NetworkManager</li>
+  <li>incus-related services</li>
+</ul>
+
+<h3 id="2-firmware-and-microcode-updates">2. Firmware and Microcode Updates</h3>
+
+<p>Ensure your system firmware and CPU microcode are up-to-date:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Install firmware update tools</span>
+<span class="nb">sudo </span>apt update
+<span class="nb">sudo </span>apt <span class="nb">install</span> <span class="nt">-y</span> fwupd intel-microcode  <span class="c"># For Intel CPUs</span>
+<span class="c"># OR</span>
+<span class="nb">sudo </span>apt <span class="nb">install</span> <span class="nt">-y</span> fwupd amd64-microcode  <span class="c"># For AMD CPUs</span>
+
+<span class="c"># Check for and apply firmware updates</span>
+<span class="nb">sudo </span>fwupdmgr refresh
+<span class="nb">sudo </span>fwupdmgr get-updates
+<span class="nb">sudo </span>fwupdmgr update
+
+<span class="c"># Verify microcode is loaded</span>
+dmesg | <span class="nb">grep </span>microcode
+</code></pre></div></div>
+
+<h3 id="3-biosuefi-configuration">3. BIOS/UEFI Configuration</h3>
+
+<p>Access your system’s BIOS/UEFI settings and configure:</p>
+
+<ol>
+  <li>
+    <p><strong>Enable virtualization technologies</strong>:
+   - Intel: VT-x, VT-d
+   - AMD: AMD-V, AMD-Vi/IOMMU</p>
+  </li>
+  <li>
+    <p><strong>Disable power-saving features</strong>:
+   - C-states beyond C1/C2
+   - P-states (or set to OS control)
+   - Set power profile to “Performance” or “High Performance”</p>
+  </li>
+  <li>
+    <p><strong>Memory settings</strong>:
+   - Disable memory power saving
+   - For NUMA systems: Set appropriate memory interleaving mode</p>
+  </li>
+  <li>
+    <p><strong>Disable unused devices</strong>:
+   - Audio controllers (if not needed)
+   - Serial/parallel ports
+   - Unused SATA/PCIe controllers</p>
+  </li>
+</ol>
+
+<h3 id="4-kernel-boot-parameters">4. Kernel Boot Parameters</h3>
+
+<p>Modify GRUB configuration to optimize the kernel:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Edit GRUB configuration</span>
+<span class="nb">sudo </span>nano /etc/default/grub
+
+<span class="c"># Identify your CPU cores</span>
+lscpu
+
+<span class="c"># Determine cores to reserve for host vs. VM</span>
+<span class="c"># Example: On an 8-core system (0-7), reserve cores 0-1 for host, 2-7 for VM</span>
+</code></pre></div></div>
+
+<p>Add these parameters to <code class="language-plaintext highlighter-rouge">GRUB_CMDLINE_LINUX_DEFAULT</code>:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code># For Intel CPUs:
+isolcpus=2-7 nohz_full=2-7 rcu_nocbs=2-7 intel_iommu=on iommu=pt
+
+# For AMD CPUs:
+isolcpus=2-7 nohz_full=2-7 rcu_nocbs=2-7 amd_iommu=on iommu=pt
+</code></pre></div></div>
+
+<p><strong>Parameter Explanation</strong>:</p>
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">isolcpus=2-7</code>: Prevents the kernel scheduler from using these cores for general tasks</li>
+  <li><code class="language-plaintext highlighter-rouge">nohz_full=2-7</code>: Reduces timer interrupts on isolated cores</li>
+  <li><code class="language-plaintext highlighter-rouge">rcu_nocbs=2-7</code>: Offloads RCU callbacks from isolated cores</li>
+  <li><code class="language-plaintext highlighter-rouge">intel_iommu=on</code>/<code class="language-plaintext highlighter-rouge">amd_iommu=on</code>: Enables IOMMU for device passthrough</li>
+  <li><code class="language-plaintext highlighter-rouge">iommu=pt</code>: Optimizes IOMMU for passthrough performance</li>
+</ul>
+
+<p><strong>Optional Performance Parameters</strong> (with security implications):</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code># SECURITY RISK - only use in trusted environments:
+mitigations=off
+</code></pre></div></div>
+
+<p>Apply changes and verify:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Update GRUB</span>
+<span class="nb">sudo </span>update-grub
+
+<span class="c"># Reboot</span>
+<span class="nb">sudo </span>reboot
+
+<span class="c"># Verify parameters are applied</span>
+<span class="nb">cat</span> /proc/cmdline
+</code></pre></div></div>
+
+<h3 id="5-cpu-frequency-scaling">5. CPU Frequency Scaling</h3>
+
+<p>Configure CPU governor for maximum performance:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Install CPU frequency utilities</span>
+<span class="nb">sudo </span>apt update <span class="o">&amp;&amp;</span> <span class="nb">sudo </span>apt <span class="nb">install</span> <span class="nt">-y</span> cpufrequtils
+
+<span class="c"># Set performance governor</span>
+<span class="nb">echo</span> <span class="s1">'GOVERNOR="performance"'</span> | <span class="nb">sudo tee</span> /etc/default/cpufrequtils
+
+<span class="c"># Disable ondemand service (conflicts with performance governor)</span>
+<span class="nb">sudo </span>systemctl disable <span class="nt">--now</span> ondemand
+
+<span class="c"># Enable cpufrequtils service</span>
+<span class="nb">sudo </span>systemctl <span class="nb">enable</span> <span class="nt">--now</span> cpufrequtils
+
+<span class="c"># Verify settings (should show "performance" for all CPUs)</span>
+<span class="nb">cat</span> /sys/devices/system/cpu/cpu<span class="k">*</span>/cpufreq/scaling_governor
+</code></pre></div></div>
+
+<p>For Intel CPUs with <code class="language-plaintext highlighter-rouge">intel_pstate</code> driver:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Check if using intel_pstate</span>
+<span class="nb">cat</span> /sys/devices/system/cpu/cpu0/cpufreq/scaling_driver
+
+<span class="c"># If using intel_pstate, set performance mode</span>
+<span class="nb">echo </span>performance | <span class="nb">sudo tee</span> /sys/devices/system/cpu/intel_pstate/status
+</code></pre></div></div>
+
+<h3 id="6-memory-optimization-swappiness-and-hugepages">6. Memory Optimization: Swappiness and Hugepages</h3>
+
+<h4 id="61-reduce-swappiness">6.1 Reduce Swappiness</h4>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Set swappiness to minimum</span>
+<span class="nb">sudo </span>sysctl vm.swappiness<span class="o">=</span>1
+
+<span class="c"># Make permanent</span>
+<span class="nb">echo</span> <span class="s1">'vm.swappiness=1'</span> | <span class="nb">sudo tee</span> <span class="nt">-a</span> /etc/sysctl.conf
+
+<span class="c"># Verify setting</span>
+<span class="nb">cat</span> /proc/sys/vm/swappiness  <span class="c"># Should return 1</span>
+</code></pre></div></div>
+
+<h4 id="62-configure-hugepages">6.2 Configure Hugepages</h4>
+
+<p>First, determine your hugepage size and VM memory requirements:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Check hugepage size</span>
+<span class="nb">cat</span> /proc/meminfo | <span class="nb">grep </span>Hugepagesize  <span class="c"># Usually 2048 kB (2MB)</span>
+
+<span class="c"># Calculate number of hugepages needed</span>
+<span class="c"># Formula: (VM_RAM_in_GB * 1024 + overhead_MB) / hugepage_size_in_MB</span>
+<span class="c"># Example for 60GB VM with 2MB pages: (60*1024 + 512) / 2 = 30976</span>
+</code></pre></div></div>
+
+<p>Configure hugepages:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># For 2MB pages (temporary setting)</span>
+<span class="nb">echo </span>30976 | <span class="nb">sudo tee</span> /proc/sys/vm/nr_hugepages
+
+<span class="c"># Make permanent</span>
+<span class="nb">echo</span> <span class="s1">'vm.nr_hugepages = 30976'</span> | <span class="nb">sudo tee</span> <span class="nt">-a</span> /etc/sysctl.conf
+
+<span class="c"># Alternative: Configure via GRUB for 1GB pages</span>
+<span class="c"># Add to GRUB_CMDLINE_LINUX_DEFAULT: hugepagesz=1G hugepages=62</span>
+
+<span class="c"># Verify hugepages allocation</span>
+<span class="nb">cat</span> /proc/meminfo | <span class="nb">grep</span> <span class="nt">-i</span> huge
+</code></pre></div></div>
+
+<p><strong>Note</strong>: If hugepages allocation fails, try:</p>
+<ol>
+  <li>Allocating fewer pages</li>
+  <li>Rebooting and allocating before memory fragmentation occurs</li>
+  <li>Adding slightly more than needed to account for system usage</li>
+</ol>
+
+<h3 id="7-disk-io-optimization">7. Disk I/O Optimization</h3>
+
+<h4 id="71-choose-optimal-io-scheduler">7.1 Choose Optimal I/O Scheduler</h4>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Identify your storage devices</span>
+lsblk <span class="nt">-d</span> <span class="nt">-o</span> NAME,ROTA,MODEL
+
+<span class="c"># Check current scheduler</span>
+<span class="nb">cat</span> /sys/block/nvme0n1/queue/scheduler  <span class="c"># For NVMe</span>
+<span class="c"># OR</span>
+<span class="nb">cat</span> /sys/block/sda/queue/scheduler  <span class="c"># For SATA</span>
+
+<span class="c"># Set optimal scheduler</span>
+<span class="c"># For NVMe:</span>
+<span class="nb">echo </span>none | <span class="nb">sudo tee</span> /sys/block/nvme0n1/queue/scheduler
+
+<span class="c"># For SATA SSD:</span>
+<span class="nb">echo </span>mq-deadline | <span class="nb">sudo tee</span> /sys/block/sda/queue/scheduler
+
+<span class="c"># For SATA HDD:</span>
+<span class="nb">echo </span>bfq | <span class="nb">sudo tee</span> /sys/block/sda/queue/scheduler
+</code></pre></div></div>
+
+<p>Make changes persistent:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Create udev rules file</span>
+<span class="nb">sudo </span>nano /etc/udev/rules.d/60-scheduler.rules
+
+<span class="c"># Add these lines (adjust device patterns as needed)</span>
+<span class="nv">ACTION</span><span class="o">==</span><span class="s2">"add|change"</span>, <span class="nv">KERNEL</span><span class="o">==</span><span class="s2">"sd[a-z]"</span>, ATTR<span class="o">{</span>queue/rotational<span class="o">}==</span><span class="s2">"0"</span>, ATTR<span class="o">{</span>queue/scheduler<span class="o">}=</span><span class="s2">"mq-deadline"</span>
+<span class="nv">ACTION</span><span class="o">==</span><span class="s2">"add|change"</span>, <span class="nv">KERNEL</span><span class="o">==</span><span class="s2">"sd[a-z]"</span>, ATTR<span class="o">{</span>queue/rotational<span class="o">}==</span><span class="s2">"1"</span>, ATTR<span class="o">{</span>queue/scheduler<span class="o">}=</span><span class="s2">"bfq"</span>
+<span class="nv">ACTION</span><span class="o">==</span><span class="s2">"add|change"</span>, <span class="nv">KERNEL</span><span class="o">==</span><span class="s2">"nvme[0-9]*"</span>, ATTR<span class="o">{</span>queue/scheduler<span class="o">}=</span><span class="s2">"none"</span>
+</code></pre></div></div>
+
+<h4 id="72-additional-storage-optimizations">7.2 Additional Storage Optimizations</h4>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Disable disk barriers if using battery-backed cache</span>
+<span class="c"># CAUTION: Data loss risk if power failure occurs without proper battery backup</span>
+<span class="nb">sudo </span>mount <span class="nt">-o</span> remount,nobarrier /mount/point  <span class="c"># Only for specific filesystems</span>
+
+<span class="c"># Increase read-ahead for sequential workloads (example for nvme0n1)</span>
+<span class="nb">sudo </span>blockdev <span class="nt">--setra</span> 4096 /dev/nvme0n1
+</code></pre></div></div>
+
+<h3 id="8-irq-affinity">8. IRQ Affinity</h3>
+
+<p>Properly configure IRQ affinity to prevent interrupts from impacting VM performance:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Install tools</span>
+<span class="nb">sudo </span>apt <span class="nb">install</span> <span class="nt">-y</span> irqbalance
+
+<span class="c"># Disable irqbalance service (we'll manually configure IRQs)</span>
+<span class="nb">sudo </span>systemctl stop irqbalance
+<span class="nb">sudo </span>systemctl disable irqbalance
+
+<span class="c"># Identify IRQs and their current affinity</span>
+<span class="nb">cat</span> /proc/interrupts
+</code></pre></div></div>
+
+<p>Create an IRQ affinity script:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>nano /usr/local/bin/set-irq-affinity.sh
+</code></pre></div></div>
+
+<p>Add this content (adjust CPU mask for your configuration):</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c">#!/bin/bash</span>
+<span class="c"># This script sets IRQ affinity to host-only CPUs (0-1 in this example)</span>
+<span class="c"># CPU mask for cores 0-1: 3 (binary 11)</span>
+
+<span class="c"># Set default affinity for all IRQs to cores 0-1</span>
+<span class="k">for </span>irq <span class="k">in</span> <span class="si">$(</span><span class="nb">cat</span> /proc/interrupts | <span class="nb">grep</span> <span class="nt">-v</span> CPU | <span class="nb">awk</span> <span class="s1">'{print $1}'</span> | <span class="nb">sed </span>s/<span class="se">\:</span>//g<span class="si">)</span><span class="p">;</span> <span class="k">do</span>
+  <span class="k">if</span> <span class="o">[</span> <span class="nt">-f</span> /proc/irq/<span class="nv">$irq</span>/smp_affinity <span class="o">]</span><span class="p">;</span> <span class="k">then</span>
+    <span class="nb">echo</span> <span class="s2">"Setting IRQ </span><span class="nv">$irq</span><span class="s2"> affinity to 3 (CPU 0-1)"</span>
+    <span class="nb">echo </span>3 <span class="o">&gt;</span> /proc/irq/<span class="nv">$irq</span>/smp_affinity
+  <span class="k">fi
+done</span>
+
+<span class="c"># For devices used by the VM via passthrough, you might want different settings</span>
+<span class="c"># Example: If passing through a NIC with IRQ 40, you might want it on the VM's CPUs</span>
+<span class="c"># echo 252 &gt; /proc/irq/40/smp_affinity  # Binary 11111100 = CPUs 2-7</span>
+</code></pre></div></div>
+
+<p>Make the script executable and run at boot:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo chmod</span> +x /usr/local/bin/set-irq-affinity.sh
+
+<span class="c"># Add to /etc/rc.local or create a systemd service</span>
+<span class="nb">sudo </span>nano /etc/systemd/system/irqaffinity.service
+</code></pre></div></div>
+
+<p>Add this content:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>[Unit]
+Description=Set IRQ Affinity
+After=network.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/set-irq-affinity.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+</code></pre></div></div>
+
+<p>Enable and start the service:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>systemctl <span class="nb">enable </span>irqaffinity.service
+<span class="nb">sudo </span>systemctl start irqaffinity.service
+
+<span class="c"># Verify IRQ affinity</span>
+<span class="nb">cat</span> /proc/irq/<span class="k">*</span>/smp_affinity
+</code></pre></div></div>
+
+<h3 id="9-system-wide-tuning-with-tuned">9. System-wide Tuning with tuned</h3>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Install tuned</span>
+<span class="nb">sudo </span>apt <span class="nb">install</span> <span class="nt">-y</span> tuned
+
+<span class="c"># Apply virtual-host profile</span>
+<span class="nb">sudo </span>tuned-adm profile virtual-host
+
+<span class="c"># Verify active profile</span>
+<span class="nb">sudo </span>tuned-adm active  <span class="c"># Should show "Current active profile: virtual-host"</span>
+</code></pre></div></div>
+
+<p>For advanced users, create a custom tuned profile:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Create custom profile directory</span>
+<span class="nb">sudo mkdir</span> <span class="nt">-p</span> /etc/tuned/vm-host-custom
+
+<span class="c"># Create profile configuration</span>
+<span class="nb">sudo </span>nano /etc/tuned/vm-host-custom/tuned.conf
+</code></pre></div></div>
+
+<p>Add this content (adjust as needed):</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>[main]
+include=virtual-host
+
+[cpu]
+force_latency=1
+governor=performance
+energy_perf_bias=performance
+
+[vm]
+transparent_hugepages=never
+
+[sysctl]
+vm.swappiness=1
+kernel.sched_min_granularity_ns=10000000
+kernel.sched_wakeup_granularity_ns=15000000
+</code></pre></div></div>
+
+<p>Apply the custom profile:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>tuned-adm profile vm-host-custom
+
+<span class="c"># Verify</span>
+<span class="nb">sudo </span>tuned-adm active
+</code></pre></div></div>
+
+<h2 id="iii-incus-virtual-machine-configuration">III. Incus Virtual Machine Configuration</h2>
+
+<h3 id="1-incus-installation-and-basic-setup">1. Incus Installation and Basic Setup</h3>
+
+<p>If not already installed:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Add Incus repository</span>
+<span class="nb">sudo </span>apt update
+<span class="nb">sudo </span>apt <span class="nb">install</span> <span class="nt">-y</span> curl gpg
+curl <span class="nt">-fsSL</span> https://pkgs.zabbly.com/key.asc | <span class="nb">sudo </span>gpg <span class="nt">--dearmor</span> <span class="nt">-o</span> /etc/apt/keyrings/zabbly.gpg
+<span class="nb">echo</span> <span class="s2">"deb [arch=amd64,arm64 signed-by=/etc/apt/keyrings/zabbly.gpg] https://pkgs.zabbly.com/incus/stable </span><span class="si">$(</span>lsb_release <span class="nt">-cs</span><span class="si">)</span><span class="s2"> main"</span> | <span class="nb">sudo tee</span> /etc/apt/sources.list.d/incus-stable.list
+
+<span class="c"># Install Incus</span>
+<span class="nb">sudo </span>apt update
+<span class="nb">sudo </span>apt <span class="nb">install</span> <span class="nt">-y</span> incus
+
+<span class="c"># Initialize Incus</span>
+<span class="nb">sudo </span>incus admin init
+</code></pre></div></div>
+
+<h3 id="2-cpu-configuration">2. CPU Configuration</h3>
+
+<p>Create or configure your VM with optimal CPU settings:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Create a new VM (example)</span>
+incus init images:ubuntu/24.04 YOUR_VM_NAME <span class="nt">--vm</span> <span class="nt">-c</span> limits.cpu<span class="o">=</span>2-7
+
+<span class="c"># Or configure existing VM</span>
+incus config <span class="nb">set </span>YOUR_VM_NAME limits.cpu 2-7
+incus config <span class="nb">set </span>YOUR_VM_NAME limits.cpu.allowance 100%
+incus config <span class="nb">set </span>YOUR_VM_NAME limits.cpu.priority 10
+
+<span class="c"># Enable CPU host passthrough for best performance</span>
+incus config <span class="nb">set </span>YOUR_VM_NAME security.guest.features.cpu.host_passthrough <span class="nb">true</span>
+
+<span class="c"># For NUMA systems, pin to specific node</span>
+incus config <span class="nb">set </span>YOUR_VM_NAME limits.cpu.nodes 0
+</code></pre></div></div>
+
+<p>Verify CPU configuration:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>incus config show YOUR_VM_NAME | <span class="nb">grep</span> <span class="nt">-i</span> cpu
+</code></pre></div></div>
+
+<h3 id="3-memory-configuration">3. Memory Configuration</h3>
+
+<p>Configure VM memory for optimal performance:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Set memory limit (adjust based on your system)</span>
+incus config <span class="nb">set </span>YOUR_VM_NAME limits.memory 60GiB
+
+<span class="c"># Enforce hard memory limits</span>
+incus config <span class="nb">set </span>YOUR_VM_NAME limits.memory.enforce hard
+
+<span class="c"># Enable hugepages (after configuring on host)</span>
+incus config <span class="nb">set </span>YOUR_VM_NAME limits.memory.hugepages <span class="nb">true</span>
+
+<span class="c"># For NUMA systems, pin memory to same node as CPUs</span>
+incus config <span class="nb">set </span>YOUR_VM_NAME limits.memory.nodes 0
+</code></pre></div></div>
+
+<p>Verify memory configuration:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>incus config show YOUR_VM_NAME | <span class="nb">grep</span> <span class="nt">-i</span> memory
+</code></pre></div></div>
+
+<h3 id="4-storage-configuration">4. Storage Configuration</h3>
+
+<h4 id="41-direct-device-passthrough-best-performance">4.1 Direct Device Passthrough (Best Performance)</h4>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Identify available block devices</span>
+lsblk
+
+<span class="c"># Pass through entire disk or partition</span>
+incus config device add YOUR_VM_NAME root disk <span class="nb">source</span><span class="o">=</span>/dev/sdb <span class="nv">path</span><span class="o">=</span>/
+</code></pre></div></div>
+
+<h4 id="42-storage-pool-configuration">4.2 Storage Pool Configuration</h4>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Create a storage pool (if not already created)</span>
+incus storage create vm-storage zfs <span class="nb">source</span><span class="o">=</span>/dev/sdc
+
+<span class="c"># Create a volume</span>
+incus storage volume create vm-storage vm-disk <span class="nv">size</span><span class="o">=</span>100GiB
+
+<span class="c"># Add to VM</span>
+incus config device add YOUR_VM_NAME root disk <span class="nv">pool</span><span class="o">=</span>vm-storage <span class="nb">source</span><span class="o">=</span>vm-disk <span class="nv">path</span><span class="o">=</span>/
+
+<span class="c"># Optimize disk settings</span>
+incus config device <span class="nb">set </span>YOUR_VM_NAME root limits.read 0
+incus config device <span class="nb">set </span>YOUR_VM_NAME root limits.write 0
+incus config device <span class="nb">set </span>YOUR_VM_NAME root limits.disk.priority 10
+</code></pre></div></div>
+
+<p>For advanced disk performance:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Disable cache for direct I/O</span>
+incus config device <span class="nb">set </span>YOUR_VM_NAME root cache none
+
+<span class="c"># Set appropriate I/O mode</span>
+incus config device <span class="nb">set </span>YOUR_VM_NAME root io native
+</code></pre></div></div>
+
+<h3 id="5-network-configuration">5. Network Configuration</h3>
+
+<h4 id="51-pci-passthrough-best-performance">5.1 PCI Passthrough (Best Performance)</h4>
+
+<p>First, identify the network device:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># List PCI devices</span>
+lspci <span class="nt">-nnk</span> | <span class="nb">grep</span> <span class="nt">-i</span> ethernet
+
+<span class="c"># Identify the device name</span>
+ip <span class="nb">link </span>show
+</code></pre></div></div>
+
+<p>Configure PCI passthrough:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Add the device to the VM</span>
+incus config device add YOUR_VM_NAME eth0 nic <span class="nv">nictype</span><span class="o">=</span>physical <span class="nv">parent</span><span class="o">=</span>enp3s0
+
+<span class="c"># If using SR-IOV (for supported NICs)</span>
+<span class="c"># First create virtual functions on host</span>
+<span class="nb">echo </span>4 | <span class="nb">sudo tee</span> /sys/class/net/enp3s0/device/sriov_numvfs
+
+<span class="c"># Then assign a VF to the VM</span>
+incus config device add YOUR_VM_NAME eth0 nic <span class="nv">nictype</span><span class="o">=</span>sriov <span class="nv">parent</span><span class="o">=</span>enp3s0
+</code></pre></div></div>
+
+<h4 id="52-macvlan-configuration-good-performance">5.2 Macvlan Configuration (Good Performance)</h4>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Add macvlan interface</span>
+incus config device add YOUR_VM_NAME eth0 nic <span class="nv">nictype</span><span class="o">=</span>macvlan <span class="nv">parent</span><span class="o">=</span>enp3s0
+
+<span class="c"># Enable multi-queue for better performance</span>
+incus config device <span class="nb">set </span>YOUR_VM_NAME eth0 queues 8
+</code></pre></div></div>
+
+<p>Verify network configuration:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>incus config show YOUR_VM_NAME | <span class="nb">grep</span> <span class="nt">-A</span> 10 <span class="s2">"devices:"</span>
+</code></pre></div></div>
+
+<h3 id="6-gpu-passthrough-for-graphics-workloads">6. GPU Passthrough (For Graphics Workloads)</h3>
+
+<p>If you need GPU acceleration in your VM:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Identify GPU</span>
+lspci <span class="nt">-nnk</span> | <span class="nb">grep</span> <span class="nt">-i</span> vga
+
+<span class="c"># Ensure IOMMU is enabled and GPU is in its own IOMMU group</span>
+find /sys/kernel/iommu_groups/ <span class="nt">-type</span> l | <span class="nb">sort</span> <span class="nt">-n</span>
+
+<span class="c"># Add GPU to VM (example for NVIDIA GPU at 01:00.0)</span>
+incus config device add YOUR_VM_NAME gpu gpu <span class="nv">pci</span><span class="o">=</span>0000:01:00.0
+</code></pre></div></div>
+
+<p>For NVIDIA GPUs, you may need to hide the virtualization:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Hide KVM from NVIDIA driver</span>
+incus config <span class="nb">set </span>YOUR_VM_NAME raw.qemu <span class="s1">'-cpu host,kvm=off'</span>
+</code></pre></div></div>
+
+<h3 id="7-guest-os-optimization">7. Guest OS Optimization</h3>
+
+<p>Start the VM and perform guest-side optimizations:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Start the VM</span>
+incus start YOUR_VM_NAME
+
+<span class="c"># Access VM console</span>
+incus console YOUR_VM_NAME
+</code></pre></div></div>
+
+<p>Inside the VM, install and configure:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Install QEMU guest agent</span>
+<span class="nb">sudo </span>apt update
+<span class="nb">sudo </span>apt <span class="nb">install</span> <span class="nt">-y</span> qemu-guest-agent
+<span class="nb">sudo </span>systemctl <span class="nb">enable</span> <span class="nt">--now</span> qemu-guest-agent
+
+<span class="c"># Install virtio drivers (usually pre-installed on Linux guests)</span>
+lsmod | <span class="nb">grep </span>virtio  <span class="c"># Should show multiple virtio modules</span>
+
+<span class="c"># Optimize I/O scheduler inside guest</span>
+<span class="nb">echo </span>none | <span class="nb">sudo tee</span> /sys/block/vda/queue/scheduler
+
+<span class="c"># Set CPU governor to performance</span>
+<span class="nb">sudo </span>apt <span class="nb">install</span> <span class="nt">-y</span> cpufrequtils
+<span class="nb">echo</span> <span class="s1">'GOVERNOR="performance"'</span> | <span class="nb">sudo tee</span> /etc/default/cpufrequtils
+<span class="nb">sudo </span>systemctl <span class="nb">enable</span> <span class="nt">--now</span> cpufrequtils
+</code></pre></div></div>
+
+<h2 id="iv-verification-and-benchmarking">IV. Verification and Benchmarking</h2>
+
+<h3 id="1-host-verification">1. Host Verification</h3>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Verify kernel parameters</span>
+<span class="nb">cat</span> /proc/cmdline
+
+<span class="c"># Check CPU isolation</span>
+ps <span class="nt">-eo</span> psr,pid,comm | <span class="nb">sort</span> <span class="nt">-n</span> | <span class="nb">head</span> <span class="nt">-20</span>  <span class="c"># Should show most processes on cores 0-1</span>
+
+<span class="c"># Verify hugepages allocation</span>
+<span class="nb">cat</span> /proc/meminfo | <span class="nb">grep</span> <span class="nt">-i</span> huge
+
+<span class="c"># Check CPU governor</span>
+<span class="nb">cat</span> /sys/devices/system/cpu/cpu<span class="k">*</span>/cpufreq/scaling_governor
+
+<span class="c"># Verify QEMU process CPU affinity</span>
+ps aux | <span class="nb">grep </span>qemu
+taskset <span class="nt">-cp</span> <span class="si">$(</span>pgrep <span class="nt">-f</span> <span class="s2">"qemu.*YOUR_VM_NAME"</span><span class="si">)</span>  <span class="c"># Should show it's running on isolated cores</span>
+</code></pre></div></div>
+
+<h3 id="2-vm-verification">2. VM Verification</h3>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Check VM status and resource allocation</span>
+incus info YOUR_VM_NAME
+
+<span class="c"># Monitor VM resource usage</span>
+incus top YOUR_VM_NAME
+</code></pre></div></div>
+
+<p>Inside the VM:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Check CPU information</span>
+lscpu
+
+<span class="c"># Verify memory allocation</span>
+free <span class="nt">-h</span>
+
+<span class="c"># Check for virtualization-specific hardware</span>
+lspci
+
+<span class="c"># Examine kernel messages for hardware detection</span>
+dmesg | <span class="nb">grep</span> <span class="nt">-i</span> virt
+</code></pre></div></div>
+
+<h3 id="3-performance-benchmarking">3. Performance Benchmarking</h3>
+
+<h4 id="31-cpu-benchmarks">3.1 CPU Benchmarks</h4>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Install benchmarking tools</span>
+<span class="nb">sudo </span>apt <span class="nb">install</span> <span class="nt">-y</span> sysbench
+
+<span class="c"># CPU benchmark</span>
+sysbench cpu <span class="nt">--cpu-max-prime</span><span class="o">=</span>20000 <span class="nt">--threads</span><span class="o">=</span><span class="si">$(</span><span class="nb">nproc</span><span class="si">)</span> run
+
+<span class="c"># Compare with host performance (run same test on host)</span>
+</code></pre></div></div>
+
+<h4 id="32-memory-benchmarks">3.2 Memory Benchmarks</h4>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Memory benchmark</span>
+sysbench memory <span class="nt">--memory-block-size</span><span class="o">=</span>1K <span class="nt">--memory-total-size</span><span class="o">=</span>100G <span class="nt">--threads</span><span class="o">=</span><span class="si">$(</span><span class="nb">nproc</span><span class="si">)</span> run
+</code></pre></div></div>
+
+<h4 id="33-disk-io-benchmarks">3.3 Disk I/O Benchmarks</h4>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Install fio</span>
+<span class="nb">sudo </span>apt <span class="nb">install</span> <span class="nt">-y</span> fio
+
+<span class="c"># Random read/write test</span>
+fio <span class="nt">--name</span><span class="o">=</span>random-rw <span class="nt">--ioengine</span><span class="o">=</span>libaio <span class="nt">--direct</span><span class="o">=</span>1 <span class="nt">--bs</span><span class="o">=</span>4k <span class="nt">--iodepth</span><span class="o">=</span>64 <span class="nt">--size</span><span class="o">=</span>4G <span class="nt">--numjobs</span><span class="o">=</span>4 <span class="nt">--rw</span><span class="o">=</span>randrw <span class="nt">--group_reporting</span>
+
+<span class="c"># Sequential read test</span>
+fio <span class="nt">--name</span><span class="o">=</span>seq-read <span class="nt">--ioengine</span><span class="o">=</span>libaio <span class="nt">--direct</span><span class="o">=</span>1 <span class="nt">--bs</span><span class="o">=</span>1M <span class="nt">--iodepth</span><span class="o">=</span>16 <span class="nt">--size</span><span class="o">=</span>4G <span class="nt">--numjobs</span><span class="o">=</span>1 <span class="nt">--rw</span><span class="o">=</span><span class="nb">read</span> <span class="nt">--group_reporting</span>
+</code></pre></div></div>
+
+<h4 id="34-network-benchmarks">3.4 Network Benchmarks</h4>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Install iperf3</span>
+<span class="nb">sudo </span>apt <span class="nb">install</span> <span class="nt">-y</span> iperf3
+
+<span class="c"># Run iperf3 server on one machine</span>
+iperf3 <span class="nt">-s</span>
+
+<span class="c"># Run client on the other machine</span>
+iperf3 <span class="nt">-c</span> SERVER_IP <span class="nt">-P</span> 4 <span class="nt">-t</span> 30
+</code></pre></div></div>
+
+<h2 id="v-monitoring-and-maintenance">V. Monitoring and Maintenance</h2>
+
+<h3 id="1-ongoing-performance-monitoring">1. Ongoing Performance Monitoring</h3>
+
+<p>Set up basic monitoring:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Install monitoring tools</span>
+<span class="nb">sudo </span>apt <span class="nb">install</span> <span class="nt">-y</span> sysstat htop iotop
+
+<span class="c"># Configure sysstat collection</span>
+<span class="nb">sudo </span>systemctl <span class="nb">enable</span> <span class="nt">--now</span> sysstat
+</code></pre></div></div>
+
+<p>For advanced monitoring, consider:</p>
+<ul>
+  <li>Prometheus + Grafana</li>
+  <li>Netdata</li>
+  <li>Telegraf + InfluxDB + Grafana</li>
+</ul>
+
+<h3 id="2-update-management">2. Update Management</h3>
+
+<p>Create a maintenance plan:</p>
+
+<ol>
+  <li>
+    <p><strong>Kernel Updates</strong>: Test in a non-production environment first, as they may affect:
+   - CPU isolation settings
+   - IOMMU functionality
+   - PCI passthrough behavior</p>
+  </li>
+  <li>
+    <p><strong>Incus Updates</strong>: Check release notes for changes that might affect VM configuration</p>
+  </li>
+  <li>
+    <p><strong>Firmware Updates</strong>: Periodically check for and apply firmware/microcode updates</p>
+  </li>
+</ol>
+
+<h3 id="3-backup-strategy">3. Backup Strategy</h3>
+
+<p>Implement a VM backup strategy:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Create a snapshot</span>
+incus snapshot YOUR_VM_NAME snapshot1
+
+<span class="c"># Export the snapshot</span>
+incus <span class="nb">export </span>YOUR_VM_NAME/snapshot1 /path/to/backup/location/vm-backup.tar.gz
+</code></pre></div></div>
+
+<p>Consider automating backups with a script:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c">#!/bin/bash</span>
+<span class="c"># VM backup script</span>
+<span class="nv">DATE</span><span class="o">=</span><span class="si">$(</span><span class="nb">date</span> +%Y%m%d<span class="si">)</span>
+<span class="nv">SNAPSHOT_NAME</span><span class="o">=</span><span class="s2">"backup-</span><span class="nv">$DATE</span><span class="s2">"</span>
+<span class="nv">VM_NAME</span><span class="o">=</span><span class="s2">"YOUR_VM_NAME"</span>
+<span class="nv">BACKUP_DIR</span><span class="o">=</span><span class="s2">"/path/to/backups"</span>
+
+<span class="c"># Create snapshot</span>
+incus snapshot <span class="nv">$VM_NAME</span> <span class="nv">$SNAPSHOT_NAME</span>
+
+<span class="c"># Export snapshot</span>
+incus <span class="nb">export</span> <span class="nv">$VM_NAME</span>/<span class="nv">$SNAPSHOT_NAME</span> <span class="nv">$BACKUP_DIR</span>/<span class="nv">$VM_NAME</span>-<span class="nv">$DATE</span>.tar.gz
+
+<span class="c"># Clean up old snapshots (keep last 5)</span>
+incus info <span class="nv">$VM_NAME</span> | <span class="nb">grep </span>snapshot | <span class="nb">sort</span> | <span class="nb">head</span> <span class="nt">-n</span> <span class="nt">-5</span> | <span class="k">while </span><span class="nb">read</span> <span class="nt">-r</span> line<span class="p">;</span> <span class="k">do</span>
+  <span class="nv">SNAP</span><span class="o">=</span><span class="si">$(</span><span class="nb">echo</span> <span class="nv">$line</span> | <span class="nb">awk</span> <span class="s1">'{print $1}'</span><span class="si">)</span>
+  incus delete <span class="nv">$VM_NAME</span>/<span class="nv">$SNAP</span>
+<span class="k">done</span>
+</code></pre></div></div>
+
+<h2 id="vi-troubleshooting-common-issues">VI. Troubleshooting Common Issues</h2>
+
+<h3 id="1-vm-performance-issues">1. VM Performance Issues</h3>
+
+<p>If VM performance is not as expected:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Check if CPU isolation is working</span>
+ps <span class="nt">-eo</span> psr,pid,comm | <span class="nb">grep</span> <span class="nt">-v</span> <span class="s2">"^[0-1]"</span>  <span class="c"># Should show minimal processes on isolated cores</span>
+
+<span class="c"># Check if VM processes are on isolated cores</span>
+ps <span class="nt">-eo</span> psr,pid,comm | <span class="nb">grep </span>qemu  <span class="c"># Should show on isolated cores</span>
+
+<span class="c"># Check for CPU throttling</span>
+<span class="nb">grep</span> <span class="nt">-i</span> throttling /var/log/syslog
+
+<span class="c"># Monitor for resource contention</span>
+<span class="nb">sudo </span>apt <span class="nb">install</span> <span class="nt">-y</span> perf
+<span class="nb">sudo </span>perf top  <span class="c"># Look for unexpected system activity</span>
+</code></pre></div></div>
+
+<h3 id="2-pci-passthrough-issues">2. PCI Passthrough Issues</h3>
+
+<p>If PCI passthrough doesn’t work:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Verify IOMMU is enabled</span>
+dmesg | <span class="nb">grep</span> <span class="nt">-e</span> DMAR <span class="nt">-e</span> IOMMU
+
+<span class="c"># Check IOMMU groups</span>
+find /sys/kernel/iommu_groups/ <span class="nt">-type</span> l | <span class="nb">sort</span> <span class="nt">-n</span>
+
+<span class="c"># Ensure device is properly bound to vfio-pci</span>
+lspci <span class="nt">-nnk</span> | <span class="nb">grep</span> <span class="nt">-A3</span> <span class="s2">"PCI_ID_OF_DEVICE"</span>
+</code></pre></div></div>
+
+<h3 id="3-memory-allocation-issues">3. Memory Allocation Issues</h3>
+
+<p>If hugepages allocation fails:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Check memory fragmentation</span>
+<span class="nb">cat</span> /proc/buddyinfo
+
+<span class="c"># Try allocating hugepages early in boot process</span>
+<span class="c"># Add to GRUB_CMDLINE_LINUX_DEFAULT: hugepagesz=2M hugepages=30976</span>
+
+<span class="c"># Or try 1GB hugepages if supported</span>
+<span class="c"># Add to GRUB_CMDLINE_LINUX_DEFAULT: hugepagesz=1G hugepages=62</span>
+</code></pre></div></div>
+
+<h2 id="vii-advanced-optimizations">VII. Advanced Optimizations</h2>
+
+<h3 id="1-cpu-pinning-fine-tuning">1. CPU Pinning Fine-Tuning</h3>
+
+<p>For multi-socket NUMA systems, further optimize CPU pinning:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Identify NUMA topology</span>
+numactl <span class="nt">--hardware</span>
+
+<span class="c"># Pin emulator threads to host CPUs</span>
+incus config <span class="nb">set </span>YOUR_VM_NAME raw.qemu <span class="s1">'-object iothread,id=iothread0 -object iothread,id=iothread1'</span>
+
+<span class="c"># For VMs with many vCPUs, consider topology awareness</span>
+incus config <span class="nb">set </span>YOUR_VM_NAME raw.qemu <span class="s1">'-smp 6,sockets=1,cores=6,threads=1'</span>
+</code></pre></div></div>
+
+<h3 id="2-storage-io-fine-tuning">2. Storage I/O Fine-Tuning</h3>
+
+<p>For storage-intensive workloads:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Add dedicated I/O threads</span>
+incus config device <span class="nb">set </span>YOUR_VM_NAME root io.threads 4
+
+<span class="c"># For ZFS storage pools, optimize ARC cache</span>
+<span class="nb">echo</span> <span class="s2">"options zfs zfs_arc_max=4294967296"</span> | <span class="nb">sudo tee</span> /etc/modprobe.d/zfs.conf  <span class="c"># Limit to 4GB</span>
+<span class="nb">sudo </span>systemctl restart zfs-import-cache
+
+<span class="c"># For multi-queue block device support</span>
+incus config device <span class="nb">set </span>YOUR_VM_NAME root queues 4
+</code></pre></div></div>
+
+<h3 id="3-real-time-kernel-for-latency-sensitive-workloads">3. Real-Time Kernel (For Latency-Sensitive Workloads)</h3>
+
+<p>For workloads requiring minimal latency:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Install real-time kernel</span>
+<span class="nb">sudo </span>apt <span class="nb">install</span> <span class="nt">-y</span> linux-image-rt-amd64
+
+<span class="c"># Update GRUB to boot with RT kernel</span>
+<span class="nb">sudo </span>update-grub
+
+<span class="c"># After reboot, verify RT kernel</span>
+<span class="nb">uname</span> <span class="nt">-a</span>  <span class="c"># Should show "PREEMPT_RT"</span>
+
+<span class="c"># Set RT priorities for VM</span>
+<span class="nb">sudo </span>chrt <span class="nt">-f</span> <span class="nt">-p</span> 80 <span class="si">$(</span>pgrep <span class="nt">-f</span> <span class="s2">"qemu.*YOUR_VM_NAME"</span><span class="si">)</span>
+</code></pre></div></div>
+
+<h3 id="4-power-management-optimization">4. Power Management Optimization</h3>
+
+<p>Balance performance and power consumption:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Install power management tools</span>
+<span class="nb">sudo </span>apt <span class="nb">install</span> <span class="nt">-y</span> powertop
+
+<span class="c"># Run powertop calibration</span>
+<span class="nb">sudo </span>powertop <span class="nt">--calibrate</span>
+
+<span class="c"># Generate optimized settings</span>
+<span class="nb">sudo </span>powertop <span class="nt">--auto-tune</span>
+
+<span class="c"># Apply only to non-isolated cores (advanced)</span>
+<span class="k">for </span>cpu <span class="k">in </span>0 1<span class="p">;</span> <span class="k">do</span>
+  <span class="nb">echo </span>performance | <span class="nb">sudo tee</span> /sys/devices/system/cpu/cpu<span class="nv">$cpu</span>/cpufreq/scaling_governor
+<span class="k">done</span>
+</code></pre></div></div>
+
+<h2 id="viii-specialized-configurations">VIII. Specialized Configurations</h2>
+
+<h3 id="1-high-performance-computing-hpc-vm">1. High-Performance Computing (HPC) VM</h3>
+
+<p>For scientific computing workloads:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Enable CPU features like AVX, AVX2, AVX512</span>
+incus config <span class="nb">set </span>YOUR_VM_NAME raw.qemu <span class="s1">'-cpu host,+avx,+avx2,+avx512f,+avx512dq,+avx512bw,+avx512vl'</span>
+
+<span class="c"># Optimize memory access</span>
+<span class="nb">echo </span>0 | <span class="nb">sudo tee</span> /proc/sys/kernel/numa_balancing  <span class="c"># Disable automatic NUMA balancing</span>
+</code></pre></div></div>
+
+<h3 id="2-gaming-vm-configuration">2. Gaming VM Configuration</h3>
+
+<p>For gaming workloads:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Enable CPU features for gaming</span>
+incus config <span class="nb">set </span>YOUR_VM_NAME raw.qemu <span class="s1">'-cpu host,kvm=off,hv_vendor_id=1234567890ab,hv_relaxed,hv_spinlocks=0x1fff,hv_vapic,hv_time'</span>
+
+<span class="c"># Add gaming-optimized kernel parameters to host</span>
+<span class="c"># Add to GRUB_CMDLINE_LINUX_DEFAULT: clocksource=tsc tsc=reliable</span>
+
+<span class="c"># Inside VM, optimize for gaming</span>
+<span class="nb">echo </span>1 | <span class="nb">sudo tee</span> /proc/sys/kernel/sched_child_runs_first
+</code></pre></div></div>
+
+<h3 id="3-database-vm-configuration">3. Database VM Configuration</h3>
+
+<p>For database workloads:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Optimize I/O scheduler for database workloads</span>
+<span class="nb">echo </span>kyber | <span class="nb">sudo tee</span> /sys/block/nvme0n1/queue/scheduler
+
+<span class="c"># Set I/O priorities</span>
+ionice <span class="nt">-c</span> 1 <span class="nt">-n</span> 0 <span class="nt">-p</span> <span class="si">$(</span>pgrep <span class="nt">-f</span> <span class="s2">"qemu.*YOUR_VM_NAME"</span><span class="si">)</span>
+
+<span class="c"># Inside VM, optimize memory management</span>
+<span class="nb">echo</span> <span class="s1">'vm.dirty_ratio = 10'</span> | <span class="nb">sudo tee</span> <span class="nt">-a</span> /etc/sysctl.conf
+<span class="nb">echo</span> <span class="s1">'vm.dirty_background_ratio = 5'</span> | <span class="nb">sudo tee</span> <span class="nt">-a</span> /etc/sysctl.conf
+<span class="nb">sudo </span>sysctl <span class="nt">-p</span>
+</code></pre></div></div>
+
+<h2 id="ix-security-considerations">IX. Security Considerations</h2>
+
+<h3 id="1-mitigating-security-risks">1. Mitigating Security Risks</h3>
+
+<p>When using performance-enhancing but security-reducing options:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># If using mitigations=off, implement network isolation</span>
+<span class="nb">sudo </span>ufw <span class="nb">enable
+sudo </span>ufw default deny incoming
+<span class="nb">sudo </span>ufw allow ssh
+<span class="nb">sudo </span>ufw allow from TRUSTED_IP_ADDRESS
+
+<span class="c"># Consider running VM in isolated VLAN</span>
+incus network create isolated-net <span class="nt">--type</span><span class="o">=</span>bridge
+incus network attach isolated-net YOUR_VM_NAME eth0
+</code></pre></div></div>
+
+<h3 id="2-secure-pci-passthrough">2. Secure PCI Passthrough</h3>
+
+<p>When passing through PCI devices:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Ensure device firmware is up-to-date</span>
+<span class="nb">sudo </span>apt <span class="nb">install</span> <span class="nt">-y</span> pciutils
+<span class="nb">sudo </span>update-pciids
+lspci <span class="nt">-vvv</span> | <span class="nb">grep</span> <span class="nt">-i</span> <span class="s2">"firmware"</span>
+
+<span class="c"># For GPU passthrough, consider firmware security</span>
+<span class="nb">sudo </span>apt <span class="nb">install</span> <span class="nt">-y</span> vgabios
+</code></pre></div></div>
+
+<h3 id="3-vm-isolation">3. VM Isolation</h3>
+
+<p>Enhance VM isolation:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Disable unnecessary VM features</span>
+incus config <span class="nb">set </span>YOUR_VM_NAME security.guest.features.secureboot <span class="nb">false
+</span>incus config <span class="nb">set </span>YOUR_VM_NAME security.guest.features.smm <span class="nb">false</span>
+
+<span class="c"># Enable nested virtualization only if needed</span>
+incus config <span class="nb">set </span>YOUR_VM_NAME security.guest.features.nested <span class="nb">false</span>
+</code></pre></div></div>
+
+<h2 id="x-migration-and-backup-strategies">X. Migration and Backup Strategies</h2>
+
+<h3 id="1-vm-migration-preparation">1. VM Migration Preparation</h3>
+
+<p>Prepare your VM for potential migration:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Use consistent device naming</span>
+incus config device <span class="nb">set </span>YOUR_VM_NAME root <span class="nv">path</span><span class="o">=</span>/dev/vda
+
+<span class="c"># Document all passthrough devices</span>
+incus config show YOUR_VM_NAME <span class="o">&gt;</span> vm_config_backup.txt
+
+<span class="c"># Create a migration-ready snapshot</span>
+incus snapshot YOUR_VM_NAME migration-ready
+</code></pre></div></div>
+
+<h3 id="2-comprehensive-backup-strategy">2. Comprehensive Backup Strategy</h3>
+
+<p>Implement a comprehensive backup strategy:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Create backup script with verification</span>
+<span class="nb">cat</span> <span class="o">&gt;</span> /usr/local/bin/vm-backup.sh <span class="o">&lt;&lt;</span> <span class="sh">'</span><span class="no">EOF</span><span class="sh">'
+#!/bin/bash
+set -e
+
+VM_NAME="YOUR_VM_NAME"
+BACKUP_DIR="/path/to/backups"
+DATE=</span><span class="si">$(</span><span class="nb">date</span> +%Y%m%d-%H%M%S<span class="si">)</span><span class="sh">
+SNAPSHOT_NAME="backup-</span><span class="nv">$DATE</span><span class="sh">"
+BACKUP_FILE="</span><span class="nv">$BACKUP_DIR</span><span class="sh">/</span><span class="nv">$VM_NAME</span><span class="sh">-</span><span class="nv">$DATE</span><span class="sh">.tar.gz"
+LOG_FILE="</span><span class="nv">$BACKUP_DIR</span><span class="sh">/backup-</span><span class="nv">$DATE</span><span class="sh">.log"
+
+echo "Starting backup of </span><span class="nv">$VM_NAME</span><span class="sh"> at </span><span class="si">$(</span><span class="nb">date</span><span class="si">)</span><span class="sh">" | tee -a "</span><span class="nv">$LOG_FILE</span><span class="sh">"
+
+# Create snapshot
+incus snapshot "</span><span class="nv">$VM_NAME</span><span class="sh">" "</span><span class="nv">$SNAPSHOT_NAME</span><span class="sh">" 2&gt;&amp;1 | tee -a "</span><span class="nv">$LOG_FILE</span><span class="sh">"
+
+# Export snapshot
+incus export "</span><span class="nv">$VM_NAME</span><span class="sh">/</span><span class="nv">$SNAPSHOT_NAME</span><span class="sh">" "</span><span class="nv">$BACKUP_FILE</span><span class="sh">" 2&gt;&amp;1 | tee -a "</span><span class="nv">$LOG_FILE</span><span class="sh">"
+
+# Verify backup integrity
+tar -tzf "</span><span class="nv">$BACKUP_FILE</span><span class="sh">" &gt; /dev/null 2&gt;&amp;1
+if [ </span><span class="nv">$?</span><span class="sh"> -eq 0 ]; then
+  echo "Backup verified successfully" | tee -a "</span><span class="nv">$LOG_FILE</span><span class="sh">"
+else
+  echo "ERROR: Backup verification failed!" | tee -a "</span><span class="nv">$LOG_FILE</span><span class="sh">"
+  exit 1
+fi
+
+# Clean up old snapshots (keep last 5)
+for SNAP in </span><span class="si">$(</span>incus info <span class="s2">"</span><span class="nv">$VM_NAME</span><span class="s2">"</span> | <span class="nb">grep</span> <span class="s2">"backup-"</span> | <span class="nb">sort</span> | <span class="nb">head</span> <span class="nt">-n</span> <span class="nt">-5</span> | <span class="nb">awk</span> <span class="s1">'{print $1}'</span><span class="si">)</span><span class="sh">; do
+  echo "Removing old snapshot: </span><span class="nv">$SNAP</span><span class="sh">" | tee -a "</span><span class="nv">$LOG_FILE</span><span class="sh">"
+  incus delete "</span><span class="nv">$VM_NAME</span><span class="sh">/</span><span class="nv">$SNAP</span><span class="sh">" 2&gt;&amp;1 | tee -a "</span><span class="nv">$LOG_FILE</span><span class="sh">"
+done
+
+echo "Backup completed successfully at </span><span class="si">$(</span><span class="nb">date</span><span class="si">)</span><span class="sh">" | tee -a "</span><span class="nv">$LOG_FILE</span><span class="sh">"
+</span><span class="no">EOF
+
+</span><span class="nb">chmod</span> +x /usr/local/bin/vm-backup.sh
+</code></pre></div></div>
+
+<p>Set up automated backups:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Create systemd timer for regular backups</span>
+<span class="nb">cat</span> <span class="o">&gt;</span> /etc/systemd/system/vm-backup.service <span class="o">&lt;&lt;</span> <span class="no">EOF</span><span class="sh">
+[Unit]
+Description=Backup Incus VM
+After=network.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/vm-backup.sh
+User=root
+
+[Install]
+WantedBy=multi-user.target
+</span><span class="no">EOF
+
+</span><span class="nb">cat</span> <span class="o">&gt;</span> /etc/systemd/system/vm-backup.timer <span class="o">&lt;&lt;</span> <span class="no">EOF</span><span class="sh">
+[Unit]
+Description=Run VM backup daily
+
+[Timer]
+OnCalendar=*-*-* 02:00:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+</span><span class="no">EOF
+
+</span><span class="nb">sudo </span>systemctl <span class="nb">enable</span> <span class="nt">--now</span> vm-backup.timer
+</code></pre></div></div>
+
+<h2 id="xi-long-term-maintenance-and-evolution">XI. Long-term Maintenance and Evolution</h2>
+
+<h3 id="1-performance-monitoring-dashboard">1. Performance Monitoring Dashboard</h3>
+
+<p>Set up a comprehensive monitoring solution:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Install Prometheus and node_exporter</span>
+<span class="nb">sudo </span>apt <span class="nb">install</span> <span class="nt">-y</span> prometheus prometheus-node-exporter
+
+<span class="c"># Install Grafana</span>
+<span class="nb">sudo </span>apt <span class="nb">install</span> <span class="nt">-y</span> apt-transport-https software-properties-common
+wget <span class="nt">-q</span> <span class="nt">-O</span> - https://packages.grafana.com/gpg.key | <span class="nb">sudo </span>apt-key add -
+<span class="nb">echo</span> <span class="s2">"deb https://packages.grafana.com/oss/deb stable main"</span> | <span class="nb">sudo tee</span> /etc/apt/sources.list.d/grafana.list
+<span class="nb">sudo </span>apt update
+<span class="nb">sudo </span>apt <span class="nb">install</span> <span class="nt">-y</span> grafana
+
+<span class="c"># Enable and start services</span>
+<span class="nb">sudo </span>systemctl <span class="nb">enable</span> <span class="nt">--now</span> prometheus prometheus-node-exporter grafana-server
+
+<span class="c"># Access Grafana at http://your-server-ip:3000 (default: admin/admin)</span>
+<span class="c"># Add Prometheus as a data source and import VM monitoring dashboards</span>
+</code></pre></div></div>
+
+<h3 id="2-update-management-strategy">2. Update Management Strategy</h3>
+
+<p>Create a systematic update process:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Create update testing script</span>
+<span class="nb">cat</span> <span class="o">&gt;</span> /usr/local/bin/test-updates.sh <span class="o">&lt;&lt;</span> <span class="sh">'</span><span class="no">EOF</span><span class="sh">'
+#!/bin/bash
+set -e
+
+VM_NAME="YOUR_VM_NAME"
+SNAPSHOT_NAME="pre-update-</span><span class="si">$(</span><span class="nb">date</span> +%Y%m%d<span class="si">)</span><span class="sh">"
+
+# Create pre-update snapshot
+incus snapshot "</span><span class="nv">$VM_NAME</span><span class="sh">" "</span><span class="nv">$SNAPSHOT_NAME</span><span class="sh">"
+
+# Apply updates
+sudo apt update
+sudo apt upgrade -y
+
+# Run performance tests
+# Add your benchmarking commands here
+
+# If tests fail, restore snapshot
+# incus restore "</span><span class="nv">$VM_NAME</span><span class="sh">" "</span><span class="nv">$SNAPSHOT_NAME</span><span class="sh">"
+</span><span class="no">EOF
+
+</span><span class="nb">chmod</span> +x /usr/local/bin/test-updates.sh
+</code></pre></div></div>
+
+<h3 id="3-documentation-and-knowledge-base">3. Documentation and Knowledge Base</h3>
+
+<p>Maintain comprehensive documentation:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Create documentation directory</span>
+<span class="nb">mkdir</span> <span class="nt">-p</span> ~/vm-documentation
+
+<span class="c"># Document current configuration</span>
+incus config show YOUR_VM_NAME <span class="o">&gt;</span> ~/vm-documentation/vm-config.txt
+<span class="nb">cat</span> /proc/cmdline <span class="o">&gt;</span> ~/vm-documentation/kernel-parameters.txt
+lspci <span class="nt">-vvv</span> <span class="o">&gt;</span> ~/vm-documentation/pci-devices.txt
+<span class="nb">cat</span> /etc/default/grub <span class="o">&gt;</span> ~/vm-documentation/grub-config.txt
+
+<span class="c"># Document performance baseline</span>
+sysbench cpu <span class="nt">--cpu-max-prime</span><span class="o">=</span>20000 <span class="nt">--threads</span><span class="o">=</span><span class="si">$(</span><span class="nb">nproc</span><span class="si">)</span> run <span class="o">&gt;</span> ~/vm-documentation/cpu-baseline.txt
+fio <span class="nt">--name</span><span class="o">=</span>random-rw <span class="nt">--ioengine</span><span class="o">=</span>libaio <span class="nt">--direct</span><span class="o">=</span>1 <span class="nt">--bs</span><span class="o">=</span>4k <span class="nt">--iodepth</span><span class="o">=</span>64 <span class="nt">--size</span><span class="o">=</span>4G <span class="nt">--numjobs</span><span class="o">=</span>4 <span class="nt">--rw</span><span class="o">=</span>randrw <span class="nt">--group_reporting</span> <span class="o">&gt;</span> ~/vm-documentation/disk-baseline.txt
+</code></pre></div></div>
+
+<h2 id="xii-conclusion-and-final-checklist">XII. Conclusion and Final Checklist</h2>
+
+<h3 id="1-performance-optimization-checklist">1. Performance Optimization Checklist</h3>
+
+<p>Before considering your optimization complete, verify:</p>
+
+<ul class="task-list">
+  <li class="task-list-item"><input type="checkbox" class="task-list-item-checkbox" disabled="disabled" />CPU isolation is working (processes stay on designated cores)</li>
+  <li class="task-list-item"><input type="checkbox" class="task-list-item-checkbox" disabled="disabled" />VM is using hugepages (check with <code class="language-plaintext highlighter-rouge">incus info</code>)</li>
+  <li class="task-list-item"><input type="checkbox" class="task-list-item-checkbox" disabled="disabled" />Storage performance meets expectations (verify with <code class="language-plaintext highlighter-rouge">fio</code>)</li>
+  <li class="task-list-item"><input type="checkbox" class="task-list-item-checkbox" disabled="disabled" />Network performance meets expectations (verify with <code class="language-plaintext highlighter-rouge">iperf3</code>)</li>
+  <li class="task-list-item"><input type="checkbox" class="task-list-item-checkbox" disabled="disabled" />VM startup and operation is stable</li>
+  <li class="task-list-item"><input type="checkbox" class="task-list-item-checkbox" disabled="disabled" />Backup and recovery procedures are tested</li>
+  <li class="task-list-item"><input type="checkbox" class="task-list-item-checkbox" disabled="disabled" />Monitoring is in place</li>
+  <li class="task-list-item"><input type="checkbox" class="task-list-item-checkbox" disabled="disabled" />Documentation is complete</li>
+</ul>
+
+<h3 id="2-final-thoughts">2. Final Thoughts</h3>
+
+<p>Remember that performance optimization is an ongoing process:</p>
+
+<ol>
+  <li><strong>Measure First</strong>: Always benchmark before and after changes</li>
+  <li><strong>Incremental Changes</strong>: Make one change at a time and test</li>
+  <li><strong>Document Everything</strong>: Keep detailed records of all configurations</li>
+  <li><strong>Security Balance</strong>: Understand the security implications of performance optimizations</li>
+  <li><strong>Workload Adaptation</strong>: Be prepared to adjust optimizations as workloads change</li>
+</ol>
+
+<p>By systematically applying these optimizations to both the Ubuntu Server host and Incus VM configuration, you can achieve virtual machine performance very close to bare-metal, with minimal overhead from the virtualization layer.</p>]]></content><author><name></name></author><category term="scratchpad" /></entry><entry><title type="html">messy folder reorganizer documentation</title><link href="https://ib.bsb.br/messy-folder-reorganizer-documentation/" rel="alternate" type="text/html" title="messy folder reorganizer documentation" /><published>2025-05-19T00:00:00+00:00</published><updated>2025-05-19T08:54:40+00:00</updated><id>https://ib.bsb.br/messy-folder-reorganizer-documentation</id><content type="html" xml:base="https://ib.bsb.br/messy-folder-reorganizer-documentation/"><![CDATA[<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>&lt;!-- [![codecov](/gh/PerminovEugene/messy-folder-reorganizer-ai/branch/main/graph/badge.svg)](/gh/PerminovEugene/messy-folder-reorganizer-ai) --&gt;
 
 ![Build](/github/actions/workflow/status/PerminovEugene/messy-folder-reorganizer-ai/ci.yml?branch=main)
 ![License](/github/license/PerminovEugene/messy-folder-reorganizer-ai)
@@ -9755,186 +10968,4 @@ fn main() -&gt; Result&lt;(), ()&gt; {
   <li>Save <code class="language-plaintext highlighter-rouge">src/main.rs</code> and <code class="language-plaintext highlighter-rouge">Cargo.toml</code>.</li>
   <li>Ensure Rust and build essentials are installed on your <code class="language-plaintext highlighter-rouge">arm64 Debian Bullseye</code> machine.</li>
   <li>Build: <code class="language-plaintext highlighter-rouge">cargo build --release</code></li>
-</ol>]]></content><author><name></name></author><category term="software&gt;rust" /></entry><entry><title type="html">Copying data in Linux</title><link href="https://ib.bsb.br/copying-data-in-linux/" rel="alternate" type="text/html" title="Copying data in Linux" /><published>2025-05-15T00:00:00+00:00</published><updated>2025-05-15T21:45:24+00:00</updated><id>https://ib.bsb.br/copying-data-in-linux</id><content type="html" xml:base="https://ib.bsb.br/copying-data-in-linux/"><![CDATA[<p>Copying a large volume of data like 500GiB, especially when it consists of thousands of individual files, from an SD card to an external hard disk in Linux requires strategies that minimize overhead and maximize throughput. The key is to leverage parallel processing to utilize multiple CPU cores and choose tools that handle file operations efficiently.</p>
-
-<p><strong>Understanding the Bottlenecks</strong></p>
-
-<p>Before diving into tools, it’s helpful to understand potential bottlenecks:</p>
-<ol>
-  <li><strong>Per-File Overhead (CPU Bound):</strong> When dealing with thousands of small files, the operating system incurs overhead for each file operation (opening, reading metadata, writing metadata, closing). This can make the CPU a bottleneck even if the drives aren’t saturated. Parallel processing helps here.</li>
-  <li><strong>I/O Throughput (Drive Bound):</strong> The read speed of your SD card and the write speed of your external HDD (especially if it’s a mechanical drive vs. an SSD) will ultimately limit transfer rates for large files or when per-file overhead is minimized.</li>
-  <li><strong>Single-Threaded Operations:</strong> Standard <code class="language-plaintext highlighter-rouge">cp</code> or <code class="language-plaintext highlighter-rouge">mv</code> commands are typically single-threaded, processing one file at a time, making them inefficient for this scale.</li>
-</ol>
-
-<p>Here are several effective Linux tools and techniques to accomplish this task, focusing on speed and resource utilization:</p>
-
-<p><strong>1. <code class="language-plaintext highlighter-rouge">rsync</code> with GNU <code class="language-plaintext highlighter-rouge">parallel</code> (Recommended for Robustness &amp; Parallelism)</strong></p>
-
-<p><code class="language-plaintext highlighter-rouge">rsync</code> is a powerful and versatile tool for copying and synchronizing files. While <code class="language-plaintext highlighter-rouge">rsync</code> itself processes files sequentially within a single instance, you can use it with GNU <code class="language-plaintext highlighter-rouge">parallel</code> to run multiple <code class="language-plaintext highlighter-rouge">rsync</code> jobs concurrently, significantly speeding up the transfer of many files.</p>
-
-<ul>
-  <li><strong>How it Works:</strong> <code class="language-plaintext highlighter-rouge">find</code> lists all files and directories. GNU <code class="language-plaintext highlighter-rouge">parallel</code> takes this list and launches multiple <code class="language-plaintext highlighter-rouge">rsync</code> processes, each handling a subset of the files/directories simultaneously. This leverages multiple CPU cores to manage the per-file operations and can better saturate your drive’s I/O capabilities.</li>
-  <li><strong>Key Advantages:</strong> Robust error handling, ability to resume interrupted transfers (with <code class="language-plaintext highlighter-rouge">rsync</code>), preserves permissions and metadata, detailed progress.</li>
-  <li><strong>Installation:</strong> If <code class="language-plaintext highlighter-rouge">parallel</code> isn’t installed: <code class="language-plaintext highlighter-rouge">sudo apt update &amp;&amp; sudo apt install parallel</code> (Debian/Ubuntu) or <code class="language-plaintext highlighter-rouge">sudo dnf install parallel</code> (Fedora/RHEL).</li>
-</ul>
-
-<p><strong>Example Command (Copying contents of source into destination):</strong></p>
-
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Ensure destination directory exists: mkdir -p /media/user/externalhdd/backup_destination</span>
-find /media/user/sdcard/source_folder/ <span class="nt">-mindepth</span> 1 <span class="nt">-print0</span> | <span class="se">\</span>
-  parallel <span class="nt">-0</span> <span class="nt">-j</span><span class="si">$(</span><span class="nb">nproc</span><span class="si">)</span> <span class="nt">--eta</span> <span class="nt">--joblog</span> /tmp/rsync_parallel.log <span class="se">\</span>
-  rsync <span class="nt">-aP</span> <span class="o">{}</span> /media/user/externalhdd/backup_destination/
-</code></pre></div></div>
-
-<ul>
-  <li><code class="language-plaintext highlighter-rouge">/media/user/sdcard/source_folder/</code>: Your source directory on the SD card. The trailing slash means “contents of.”</li>
-  <li><code class="language-plaintext highlighter-rouge">-mindepth 1</code>: Excludes the top-level source directory itself from the list, processing its contents.</li>
-  <li><code class="language-plaintext highlighter-rouge">-print0</code>: Handles filenames with spaces or special characters safely.</li>
-  <li><code class="language-plaintext highlighter-rouge">parallel -0 -j$(nproc) --eta --joblog /tmp/rsync_parallel.log</code>:
-    <ul>
-      <li><code class="language-plaintext highlighter-rouge">-0</code>: Expects null-terminated input from <code class="language-plaintext highlighter-rouge">find</code>.</li>
-      <li><code class="language-plaintext highlighter-rouge">-j$(nproc)</code>: Runs a number of jobs equal to your CPU cores. You can set a specific number, e.g., <code class="language-plaintext highlighter-rouge">-j4</code>.</li>
-      <li><code class="language-plaintext highlighter-rouge">--eta</code>: Shows estimated time of arrival.</li>
-      <li><code class="language-plaintext highlighter-rouge">--joblog /tmp/rsync_parallel.log</code>: Logs the progress and success/failure of each parallel job.</li>
-    </ul>
-  </li>
-  <li><code class="language-plaintext highlighter-rouge">rsync -aP {} /media/user/externalhdd/backup_destination/</code>:
-    <ul>
-      <li><code class="language-plaintext highlighter-rouge">-a</code>: Archive mode (preserves permissions, timestamps, symbolic links, etc.).</li>
-      <li><code class="language-plaintext highlighter-rouge">-P</code>: Combines <code class="language-plaintext highlighter-rouge">--progress</code> and <code class="language-plaintext highlighter-rouge">--partial</code> (for resumability).</li>
-      <li><code class="language-plaintext highlighter-rouge">{}</code>: Placeholder for the file/directory passed by <code class="language-plaintext highlighter-rouge">parallel</code>.</li>
-      <li><code class="language-plaintext highlighter-rouge">/media/user/externalhdd/backup_destination/</code>: The destination. The trailing slash is important for <code class="language-plaintext highlighter-rouge">rsync</code> to copy items <em>into</em> this directory.</li>
-    </ul>
-  </li>
-</ul>
-
-<p><strong>Dry Run (Highly Recommended):</strong> Before running the actual copy, perform a dry run:
-Add <code class="language-plaintext highlighter-rouge">rsync -anP</code> (note the <code class="language-plaintext highlighter-rouge">n</code> for dry-run) in the command above, or add <code class="language-plaintext highlighter-rouge">--dry-run</code> to the <code class="language-plaintext highlighter-rouge">parallel</code> command.</p>
-
-<p><strong>2. <code class="language-plaintext highlighter-rouge">tar</code> Pipelined (Efficient for Many Small Files)</strong></p>
-
-<p>This classic method archives the source files into a single stream (<code class="language-plaintext highlighter-rouge">stdout</code>) and pipes this stream directly to another <code class="language-plaintext highlighter-rouge">tar</code> process that extracts it at the destination (<code class="language-plaintext highlighter-rouge">stdin</code>). This significantly reduces the overhead of individual file system operations, especially beneficial for mechanical drives and vast numbers of tiny files.</p>
-
-<ul>
-  <li><strong>How it Works:</strong> <code class="language-plaintext highlighter-rouge">tar</code> reads all source files sequentially and writes them as a continuous data stream. The receiving <code class="language-plaintext highlighter-rouge">tar</code> process reads this stream and recreates the files and directory structure.</li>
-  <li><strong>Key Advantages:</strong> Can be very fast for scenarios with extreme numbers of small files by minimizing disk head seeking.</li>
-  <li><strong>Considerations:</strong> Less easily resumable if interrupted compared to <code class="language-plaintext highlighter-rouge">rsync</code>. Progress indication is often through tools like <code class="language-plaintext highlighter-rouge">pv</code> (Pipe Viewer).</li>
-</ul>
-
-<p><strong>Example Command:</strong></p>
-
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Ensure destination directory exists: mkdir -p /media/user/externalhdd/backup_destination</span>
-<span class="o">(</span><span class="nb">cd</span> /media/user/sdcard/source_folder/ <span class="o">&amp;&amp;</span> <span class="nb">tar</span> <span class="nt">-cf</span> - .<span class="o">)</span> | pv | <span class="o">(</span><span class="nb">cd</span> /media/user/externalhdd/backup_destination/ <span class="o">&amp;&amp;</span> <span class="nb">tar</span> <span class="nt">-xf</span> -<span class="o">)</span>
-</code></pre></div></div>
-
-<ul>
-  <li><code class="language-plaintext highlighter-rouge">(cd /media/user/sdcard/source_folder/ &amp;&amp; tar -cf - .)</code>:
-    <ul>
-      <li><code class="language-plaintext highlighter-rouge">cd ...</code>: Changes to the source directory. The subshell <code class="language-plaintext highlighter-rouge">(...)</code> ensures this <code class="language-plaintext highlighter-rouge">cd</code> doesn’t affect your main shell’s working directory.</li>
-      <li><code class="language-plaintext highlighter-rouge">tar -cf - .</code>: Creates (<code class="language-plaintext highlighter-rouge">c</code>) an archive of the current directory (<code class="language-plaintext highlighter-rouge">.</code>) and writes it to standard output (<code class="language-plaintext highlighter-rouge">f -</code>).</li>
-    </ul>
-  </li>
-  <li><code class="language-plaintext highlighter-rouge">pv</code>: (Optional, install with <code class="language-plaintext highlighter-rouge">sudo apt install pv</code>) Pipe Viewer shows progress of data through the pipe.</li>
-  <li><code class="language-plaintext highlighter-rouge">(cd /media/user/externalhdd/backup_destination/ &amp;&amp; tar -xf -)</code>:
-    <ul>
-      <li><code class="language-plaintext highlighter-rouge">cd ...</code>: Changes to the destination directory in a subshell.</li>
-      <li><code class="language-plaintext highlighter-rouge">tar -xf -</code>: Extracts (<code class="language-plaintext highlighter-rouge">x</code>) the archive from standard input (<code class="language-plaintext highlighter-rouge">f -</code>).</li>
-    </ul>
-  </li>
-</ul>
-
-<p><strong>3. <code class="language-plaintext highlighter-rouge">find</code> with <code class="language-plaintext highlighter-rouge">xargs</code> and <code class="language-plaintext highlighter-rouge">cp --parents</code> (Parallel Basic Copy)</strong></p>
-
-<p>This method uses <code class="language-plaintext highlighter-rouge">find</code> to locate files, and <code class="language-plaintext highlighter-rouge">xargs</code> to execute <code class="language-plaintext highlighter-rouge">cp</code> commands in parallel. The crucial <code class="language-plaintext highlighter-rouge">--parents</code> option for <code class="language-plaintext highlighter-rouge">cp</code> ensures the source directory structure is replicated at the destination.</p>
-
-<ul>
-  <li><strong>How it Works:</strong> <code class="language-plaintext highlighter-rouge">find</code> generates a list of files. <code class="language-plaintext highlighter-rouge">xargs</code> takes this list and runs multiple <code class="language-plaintext highlighter-rouge">cp</code> commands simultaneously. <code class="language-plaintext highlighter-rouge">cp --parents</code> recreates the necessary parent directories at the destination.</li>
-  <li><strong>Key Advantages:</strong> Uses standard <code class="language-plaintext highlighter-rouge">cp</code>, can be effective if <code class="language-plaintext highlighter-rouge">rsync</code>’s overhead is a concern for a simple copy.</li>
-  <li><strong>Considerations:</strong> <code class="language-plaintext highlighter-rouge">cp</code> doesn’t have <code class="language-plaintext highlighter-rouge">rsync</code>’s advanced resumability or delta-transfer capabilities (though not relevant for an initial full copy).</li>
-</ul>
-
-<p><strong>Example Command:</strong></p>
-
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Ensure base destination directory exists: mkdir -p /media/user/externalhdd/backup_destination</span>
-<span class="nb">cd</span> /media/user/sdcard/source_folder/ <span class="o">&amp;&amp;</span> <span class="se">\</span>
-  find <span class="nb">.</span> <span class="nt">-type</span> f <span class="nt">-print0</span> | <span class="se">\</span>
-  xargs <span class="nt">-0</span> <span class="nt">-P</span><span class="si">$(</span><span class="nb">nproc</span><span class="si">)</span> <span class="nt">-I</span> <span class="o">{}</span> <span class="nb">cp</span> <span class="nt">--parents</span> <span class="nt">-a</span> <span class="o">{}</span> /media/user/externalhdd/backup_destination/
-</code></pre></div></div>
-
-<ul>
-  <li><code class="language-plaintext highlighter-rouge">cd /media/user/sdcard/source_folder/</code>: Change to the source directory to make relative paths work with <code class="language-plaintext highlighter-rouge">cp --parents</code>.</li>
-  <li><code class="language-plaintext highlighter-rouge">find . -type f -print0</code>: Finds only files (<code class="language-plaintext highlighter-rouge">-type f</code>) in the current directory (<code class="language-plaintext highlighter-rouge">.</code>) and its subdirectories.</li>
-  <li><code class="language-plaintext highlighter-rouge">xargs -0 -P$(nproc) -I {}</code>:
-    <ul>
-      <li><code class="language-plaintext highlighter-rouge">-0</code>: Null-terminated input.</li>
-      <li><code class="language-plaintext highlighter-rouge">-P$(nproc)</code>: Parallel processes up to the number of CPU cores.</li>
-      <li><code class="language-plaintext highlighter-rouge">-I {}</code>: Replaces <code class="language-plaintext highlighter-rouge">{}</code> with each input item. This makes <code class="language-plaintext highlighter-rouge">cp --parents</code> work correctly with paths containing spaces.</li>
-    </ul>
-  </li>
-  <li><code class="language-plaintext highlighter-rouge">cp --parents -a {} /media/user/externalhdd/backup_destination/</code>:
-    <ul>
-      <li><code class="language-plaintext highlighter-rouge">--parents</code>: Recreates the source directory structure under the destination.</li>
-      <li><code class="language-plaintext highlighter-rouge">-a</code>: Archive mode (like <code class="language-plaintext highlighter-rouge">rsync -a</code>, equivalent to <code class="language-plaintext highlighter-rouge">-dR --preserve=all</code>).</li>
-      <li><code class="language-plaintext highlighter-rouge">{}</code>: The file to copy.</li>
-      <li><code class="language-plaintext highlighter-rouge">/media/user/externalhdd/backup_destination/</code>: The target directory where the structure from <code class="language-plaintext highlighter-rouge">source_folder</code> will be created.</li>
-    </ul>
-  </li>
-</ul>
-
-<p><strong>4. <code class="language-plaintext highlighter-rouge">fpsync</code> (Specialized Parallel <code class="language-plaintext highlighter-rouge">rsync</code> Wrapper)</strong></p>
-
-<p><code class="language-plaintext highlighter-rouge">fpsync</code> is a tool designed to parallelize <code class="language-plaintext highlighter-rouge">rsync</code>. It uses <code class="language-plaintext highlighter-rouge">fpart</code> to partition the file list and then runs multiple <code class="language-plaintext highlighter-rouge">rsync</code> workers.</p>
-
-<ul>
-  <li><strong>How it Works:</strong> Automates the process of splitting the workload and managing parallel <code class="language-plaintext highlighter-rouge">rsync</code> instances.</li>
-  <li><strong>Key Advantages:</strong> Tailored for this exact scenario; can be very efficient.</li>
-  <li><strong>Installation:</strong> May need to be installed via your package manager (e.g., <code class="language-plaintext highlighter-rouge">sudo apt install fpart</code>, as <code class="language-plaintext highlighter-rouge">fpsync</code> is often bundled with it).</li>
-</ul>
-
-<p><strong>Example Command:</strong></p>
-
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Ensure destination directory exists: mkdir -p /media/user/externalhdd/backup_destination</span>
-fpsync <span class="nt">-n</span> <span class="si">$(</span><span class="nb">nproc</span><span class="si">)</span> <span class="nt">-v</span> <span class="se">\</span>
-  /media/user/sdcard/source_folder/ /media/user/externalhdd/backup_destination/
-</code></pre></div></div>
-
-<ul>
-  <li><code class="language-plaintext highlighter-rouge">-n $(nproc)</code>: Number of parallel <code class="language-plaintext highlighter-rouge">rsync</code> workers (e.g., number of CPU cores).</li>
-  <li><code class="language-plaintext highlighter-rouge">-v</code>: Verbose mode.</li>
-  <li><code class="language-plaintext highlighter-rouge">/media/user/sdcard/source_folder/</code>: Source directory.</li>
-  <li><code class="language-plaintext highlighter-rouge">/media/user/externalhdd/backup_destination/</code>: Destination directory.</li>
-  <li><strong>Note on batching:</strong> <code class="language-plaintext highlighter-rouge">fpsync</code> uses <code class="language-plaintext highlighter-rouge">fpart</code> underneath. If you need to control batching by number of files per job (rather than just total workers), you might pass <code class="language-plaintext highlighter-rouge">fpart</code> options using <code class="language-plaintext highlighter-rouge">fpsync -o "-f &lt;num_files&gt;"</code>. Check <code class="language-plaintext highlighter-rouge">man fpart</code> for details.</li>
-</ul>
-
-<p><strong>5. <code class="language-plaintext highlighter-rouge">mc</code> (Midnight Commander - TUI Alternative)</strong></p>
-
-<p>For users who prefer a Text-based User Interface, Midnight Commander is a powerful console file manager. Its built-in copy operations (<code class="language-plaintext highlighter-rouge">F5</code>) are generally well-optimized and can handle large numbers of files more gracefully than a simple desktop file manager.</p>
-
-<ul>
-  <li><strong>How it Works:</strong> Provides an interactive way to select source files/directories and copy them. While it might not offer the same granular parallel control as CLI combinations, it’s often faster than basic <code class="language-plaintext highlighter-rouge">cp</code> for large jobs.</li>
-  <li><strong>Installation:</strong> <code class="language-plaintext highlighter-rouge">sudo apt install mc</code> or <code class="language-plaintext highlighter-rouge">sudo dnf install mc</code>.</li>
-  <li><strong>Usage:</strong> Run <code class="language-plaintext highlighter-rouge">mc</code>, navigate panels to source and destination, select files (e.g., <code class="language-plaintext highlighter-rouge">Insert</code> key or <code class="language-plaintext highlighter-rouge">*</code>), press <code class="language-plaintext highlighter-rouge">F5</code> to copy.</li>
-</ul>
-
-<p><strong>Additional Considerations for Maximizing Speed:</strong></p>
-
-<ul>
-  <li><strong>Hardware:</strong> Ensure both SD card reader and external HDD are connected to the fastest available USB ports (USB 3.0+). An SSD external drive will be significantly faster than a mechanical HDD.</li>
-  <li><strong>Filesystem Mount Options:</strong> Mounting filesystems with <code class="language-plaintext highlighter-rouge">noatime</code> or <code class="language-plaintext highlighter-rouge">relatime</code> can reduce some disk I/O by not updating file access times on every read.
-<code class="language-plaintext highlighter-rouge">sudo mount -o remount,noatime /media/user/sdcard</code> (if applicable and safe for your use case).</li>
-  <li><strong>I/O Scheduler:</strong> For mechanical drives, the I/O scheduler can matter. Modern kernels often default to <code class="language-plaintext highlighter-rouge">bfq</code> or <code class="language-plaintext highlighter-rouge">mq-deadline</code>, which are generally good.</li>
-  <li><strong>System Load:</strong> Minimize other disk-intensive or CPU-intensive processes during the copy.</li>
-  <li><strong>Resource Monitoring:</strong> Use tools like <code class="language-plaintext highlighter-rouge">iotop</code> (to see disk I/O per process), <code class="language-plaintext highlighter-rouge">htop</code> (CPU/memory), <code class="language-plaintext highlighter-rouge">vmstat</code>, or <code class="language-plaintext highlighter-rouge">dstat</code> to identify bottlenecks during the transfer.</li>
-  <li><strong>GUI <code class="language-plaintext highlighter-rouge">rsync</code> Front-ends:</strong> If you prefer a GUI but want <code class="language-plaintext highlighter-rouge">rsync</code>’s power, tools like <code class="language-plaintext highlighter-rouge">grsync</code> provide a graphical interface to <code class="language-plaintext highlighter-rouge">rsync</code>.</li>
-</ul>
-
-<p><strong>Which Method to Choose?</strong></p>
-
-<ul>
-  <li><strong>For general robustness, features, and good parallel performance:</strong> <code class="language-plaintext highlighter-rouge">rsync</code> with GNU <code class="language-plaintext highlighter-rouge">parallel</code> (Method 1) or <code class="language-plaintext highlighter-rouge">fpsync</code> (Method 4) are excellent choices.</li>
-  <li><strong>For potentially the highest speed with extreme numbers of very small files (especially to/from mechanical drives):</strong> The <code class="language-plaintext highlighter-rouge">tar</code> pipe (Method 2) can be very effective.</li>
-  <li><strong>For a simpler parallel <code class="language-plaintext highlighter-rouge">cp</code> approach:</strong> <code class="language-plaintext highlighter-rouge">find</code> with <code class="language-plaintext highlighter-rouge">xargs</code> and <code class="language-plaintext highlighter-rouge">cp --parents</code> (Method 3) is a solid option.</li>
-  <li><strong>For an interactive TUI approach:</strong> <code class="language-plaintext highlighter-rouge">mc</code> (Method 5) is user-friendly.</li>
-</ul>
-
-<p>Always test with a smaller subset of your data and use dry-run options where available before committing to the full 500GiB transfer. This allows you to verify commands and estimate performance. Remember to replace placeholder paths with your actual SD card and external HDD mount points.</p>]]></content><author><name></name></author><category term="scratchpad" /></entry></feed>
+</ol>]]></content><author><name></name></author><category term="software&gt;rust" /></entry></feed>
