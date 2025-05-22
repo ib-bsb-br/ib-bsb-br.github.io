@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2025-05-22T15:23:34+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">Diagnostic script for disks and mount with `exfat-fuse`</title><link href="https://ib.bsb.br/diagnostic-script-for-disks-and-mount-with-exfat-fuse/" rel="alternate" type="text/html" title="Diagnostic script for disks and mount with `exfat-fuse`" /><published>2025-05-22T00:00:00+00:00</published><updated>2025-05-22T15:14:10+00:00</updated><id>https://ib.bsb.br/diagnostic-script-for-disks-and-mount-with-exfat-fuse</id><content type="html" xml:base="https://ib.bsb.br/diagnostic-script-for-disks-and-mount-with-exfat-fuse/"><![CDATA[<ol>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2025-05-22T15:34:31+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">Diagnostic script for disks and mount with `exfat-fuse`</title><link href="https://ib.bsb.br/diagnostic-script-for-disks-and-mount-with-exfat-fuse/" rel="alternate" type="text/html" title="Diagnostic script for disks and mount with `exfat-fuse`" /><published>2025-05-22T00:00:00+00:00</published><updated>2025-05-22T15:14:10+00:00</updated><id>https://ib.bsb.br/diagnostic-script-for-disks-and-mount-with-exfat-fuse</id><content type="html" xml:base="https://ib.bsb.br/diagnostic-script-for-disks-and-mount-with-exfat-fuse/"><![CDATA[<ol>
   <li><strong>Install <code class="language-plaintext highlighter-rouge">exfat-fuse</code>:</strong>
     <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>apt <span class="nb">install </span>exfat-fuse
 </code></pre></div>    </div>
@@ -205,7 +205,161 @@ run_and_log <span class="s2">"dmesg (Kernel messages related to </span><span cla
 <span class="nb">echo</span> <span class="s2">"Please review the contents of this file carefully."</span>
 
 <span class="nb">exit </span>0
-</code></pre></div></div>]]></content><author><name></name></author><category term="scratchpad" /></entry><entry><title type="html">Google Drive API and `rclone`</title><link href="https://ib.bsb.br/google-drive-api-and-rclone/" rel="alternate" type="text/html" title="Google Drive API and `rclone`" /><published>2025-05-22T00:00:00+00:00</published><updated>2025-05-22T15:16:46+00:00</updated><id>https://ib.bsb.br/google-drive-api-and-rclone</id><content type="html" xml:base="https://ib.bsb.br/google-drive-api-and-rclone/"><![CDATA[<p><strong>Step 1: Install <code class="language-plaintext highlighter-rouge">rclone</code></strong></p>
+</code></pre></div></div>]]></content><author><name></name></author><category term="scratchpad" /></entry><entry><title type="html">Generate `.bashrc` aliases from .desktop files</title><link href="https://ib.bsb.br/generate-bashrc-aliases-from-desktop-files/" rel="alternate" type="text/html" title="Generate `.bashrc` aliases from .desktop files" /><published>2025-05-22T00:00:00+00:00</published><updated>2025-05-22T15:31:11+00:00</updated><id>https://ib.bsb.br/generate-bashrc-aliases-from-desktop-files</id><content type="html" xml:base="https://ib.bsb.br/generate-bashrc-aliases-from-desktop-files/"><![CDATA[<section class="code-block-container" role="group" aria-label="Bash Code Block" data-filename="bash_code_block.sh" data-code="#!/bin/bash
+
+# Script to extract Exec= lines from .desktop files
+# and create a list of bash aliases in a deterministic order.
+
+# --- Configuration ---
+DESKTOP_DIR=&quot;/home/linaro/.local/share/applications&quot;
+OUTPUT_FILE=&quot;/home/linaro/desktop-exec-alias.txt&quot;
+ALIAS_COUNTER=0
+# --- End Configuration ---
+
+echo &quot;--- Script Starting ---&quot;
+echo &quot;Desktop directory: $DESKTOP_DIR&quot;
+echo &quot;Output file: $OUTPUT_FILE&quot;
+
+# Ensure the target directory for .desktop files exists
+if [ ! -d &quot;$DESKTOP_DIR&quot; ]; then
+    echo &quot;Error: Directory $DESKTOP_DIR does not exist.&quot; &gt;&amp;2
+    exit 1
+fi
+echo &quot;Desktop directory confirmed to exist.&quot;
+
+# Clear or create the output file for a fresh list
+# This ensures that if the script is run multiple times,
+# the output file contains only the latest aliases.
+&gt; &quot;$OUTPUT_FILE&quot;
+echo &quot;Output file initialized (cleared or created).&quot;
+
+echo &quot;Finding .desktop files...&quot;
+# Find all files ending with .desktop in the specified directory.
+# -print0 outputs filenames null-terminated.
+# sort -z sorts null-terminated input (ensures deterministic order of aliases).
+# The while loop with IFS= and read -r -d $&#39;\0&#39;
+# robustly handles filenames that might contain spaces or special characters.
+find &quot;$DESKTOP_DIR&quot; -name &quot;*.desktop&quot; -type f -print0 | sort -z | while IFS= read -r -d $&#39;\0&#39; desktop_file; do
+    echo &quot;----------------------------------------&quot; # Separator for each file
+    echo &quot;Processing file: $desktop_file&quot; # DEBUG
+
+    # Try to get the Exec line using grep first for debugging
+    # This helps see if the line is even present in a way grep recognizes
+    echo &quot;Attempting to grep &#39;^Exec=&#39; from file...&quot; # DEBUG
+    grep_exec_line=$(grep &#39;^Exec=&#39; &quot;$desktop_file&quot;) # DEBUG
+    if [ -n &quot;$grep_exec_line&quot; ]; then
+        echo &quot;DEBUG: grep found the following Exec line(s):&quot; # DEBUG
+        echo &quot;$grep_exec_line&quot; # DEBUG
+    else
+        echo &quot;DEBUG: grep did NOT find any line starting with &#39;Exec=&#39;&quot; # DEBUG
+    fi
+
+    # Original sed command to extract the value
+    echo &quot;Attempting to extract Exec value with sed...&quot; # DEBUG
+    exec_value=$(sed -n &#39;s/^Exec=//p&#39; &quot;$desktop_file&quot; | head -n 1)
+    
+    if [ -n &quot;$exec_value&quot; ]; then
+        echo &quot;DEBUG: sed extracted value: &#39;$exec_value&#39;&quot; # DEBUG
+        # Append the alias command to the output file.
+        # Single quotes around &#39;$exec_value&#39; are important to preserve
+        # the command exactly as it is, including spaces and special characters,
+        # when writing to the alias file.
+        echo &quot;alias $ALIAS_COUNTER=&#39;$exec_value&#39;&quot; &gt;&gt; &quot;$OUTPUT_FILE&quot;
+        ALIAS_COUNTER=$((ALIAS_COUNTER + 1)) # Increment the alias number
+    else
+        echo &quot;DEBUG: sed did NOT extract any value for Exec=&quot; # DEBUG
+        # Output a warning to the standard error stream if an Exec line
+        # couldn&#39;t be found or its value was empty in a specific .desktop file.
+        echo &quot;Warning: Could not extract Exec value from $desktop_file (or line was not found/empty after &#39;Exec=&#39;)&quot; &gt;&amp;2
+    fi
+done
+
+echo &quot;----------------------------------------&quot;
+echo &quot;File processing loop finished.&quot;
+echo &quot;Alias list generation complete.&quot;
+echo &quot;Output saved to: $OUTPUT_FILE&quot;
+echo &quot;Total aliases generated: $ALIAS_COUNTER&quot; # Shows actual count
+echo &quot;--- Script Finished ---&quot;
+
+exit 0" data-download-link="" data-download-label="Download Bash">
+  <code class="language-bash">#!/bin/bash
+
+# Script to extract Exec= lines from .desktop files
+# and create a list of bash aliases in a deterministic order.
+
+# --- Configuration ---
+DESKTOP_DIR=&quot;/home/linaro/.local/share/applications&quot;
+OUTPUT_FILE=&quot;/home/linaro/desktop-exec-alias.txt&quot;
+ALIAS_COUNTER=0
+# --- End Configuration ---
+
+echo &quot;--- Script Starting ---&quot;
+echo &quot;Desktop directory: $DESKTOP_DIR&quot;
+echo &quot;Output file: $OUTPUT_FILE&quot;
+
+# Ensure the target directory for .desktop files exists
+if [ ! -d &quot;$DESKTOP_DIR&quot; ]; then
+    echo &quot;Error: Directory $DESKTOP_DIR does not exist.&quot; &gt;&amp;2
+    exit 1
+fi
+echo &quot;Desktop directory confirmed to exist.&quot;
+
+# Clear or create the output file for a fresh list
+# This ensures that if the script is run multiple times,
+# the output file contains only the latest aliases.
+&gt; &quot;$OUTPUT_FILE&quot;
+echo &quot;Output file initialized (cleared or created).&quot;
+
+echo &quot;Finding .desktop files...&quot;
+# Find all files ending with .desktop in the specified directory.
+# -print0 outputs filenames null-terminated.
+# sort -z sorts null-terminated input (ensures deterministic order of aliases).
+# The while loop with IFS= and read -r -d $&#39;\0&#39;
+# robustly handles filenames that might contain spaces or special characters.
+find &quot;$DESKTOP_DIR&quot; -name &quot;*.desktop&quot; -type f -print0 | sort -z | while IFS= read -r -d $&#39;\0&#39; desktop_file; do
+    echo &quot;----------------------------------------&quot; # Separator for each file
+    echo &quot;Processing file: $desktop_file&quot; # DEBUG
+
+    # Try to get the Exec line using grep first for debugging
+    # This helps see if the line is even present in a way grep recognizes
+    echo &quot;Attempting to grep &#39;^Exec=&#39; from file...&quot; # DEBUG
+    grep_exec_line=$(grep &#39;^Exec=&#39; &quot;$desktop_file&quot;) # DEBUG
+    if [ -n &quot;$grep_exec_line&quot; ]; then
+        echo &quot;DEBUG: grep found the following Exec line(s):&quot; # DEBUG
+        echo &quot;$grep_exec_line&quot; # DEBUG
+    else
+        echo &quot;DEBUG: grep did NOT find any line starting with &#39;Exec=&#39;&quot; # DEBUG
+    fi
+
+    # Original sed command to extract the value
+    echo &quot;Attempting to extract Exec value with sed...&quot; # DEBUG
+    exec_value=$(sed -n &#39;s/^Exec=//p&#39; &quot;$desktop_file&quot; | head -n 1)
+    
+    if [ -n &quot;$exec_value&quot; ]; then
+        echo &quot;DEBUG: sed extracted value: &#39;$exec_value&#39;&quot; # DEBUG
+        # Append the alias command to the output file.
+        # Single quotes around &#39;$exec_value&#39; are important to preserve
+        # the command exactly as it is, including spaces and special characters,
+        # when writing to the alias file.
+        echo &quot;alias $ALIAS_COUNTER=&#39;$exec_value&#39;&quot; &gt;&gt; &quot;$OUTPUT_FILE&quot;
+        ALIAS_COUNTER=$((ALIAS_COUNTER + 1)) # Increment the alias number
+    else
+        echo &quot;DEBUG: sed did NOT extract any value for Exec=&quot; # DEBUG
+        # Output a warning to the standard error stream if an Exec line
+        # couldn&#39;t be found or its value was empty in a specific .desktop file.
+        echo &quot;Warning: Could not extract Exec value from $desktop_file (or line was not found/empty after &#39;Exec=&#39;)&quot; &gt;&amp;2
+    fi
+done
+
+echo &quot;----------------------------------------&quot;
+echo &quot;File processing loop finished.&quot;
+echo &quot;Alias list generation complete.&quot;
+echo &quot;Output saved to: $OUTPUT_FILE&quot;
+echo &quot;Total aliases generated: $ALIAS_COUNTER&quot; # Shows actual count
+echo &quot;--- Script Finished ---&quot;
+
+exit 0</code>
+</section>]]></content><author><name></name></author><category term="scratchpad" /></entry><entry><title type="html">Google Drive API and `rclone`</title><link href="https://ib.bsb.br/google-drive-api-and-rclone/" rel="alternate" type="text/html" title="Google Drive API and `rclone`" /><published>2025-05-22T00:00:00+00:00</published><updated>2025-05-22T15:16:46+00:00</updated><id>https://ib.bsb.br/google-drive-api-and-rclone</id><content type="html" xml:base="https://ib.bsb.br/google-drive-api-and-rclone/"><![CDATA[<p><strong>Step 1: Install <code class="language-plaintext highlighter-rouge">rclone</code></strong></p>
 <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>apt <span class="nb">install </span>rclone
 </code></pre></div></div>
 
@@ -5123,35 +5277,4 @@ log_action &quot;Setup complete. Backup of wpa_supplicant config (if it existed)
 echo &quot;---------------------------------------------------------------------&quot;
 
 exit 0</code>
-</section>]]></content><author><name></name></author><category term="scripts&gt;bash" /><category term="software&gt;linux" /></entry><entry><title type="html">czkawka dedup workflow</title><link href="https://ib.bsb.br/czkawka-dedup-workflow/" rel="alternate" type="text/html" title="czkawka dedup workflow" /><published>2025-05-17T00:00:00+00:00</published><updated>2025-05-17T22:29:37+00:00</updated><id>https://ib.bsb.br/czkawka-dedup-workflow</id><content type="html" xml:base="https://ib.bsb.br/czkawka-dedup-workflow/"><![CDATA[<ol>
-  <li>
-    <p><strong>!!! BACKUP YOUR ENTIRE TARGET DIRECTORY !!!</strong></p>
-  </li>
-  <li>
-    <p>Carefully identify your <code class="language-plaintext highlighter-rouge">TARGET_DIR</code> (and any <code class="language-plaintext highlighter-rouge">-r</code> reference directories).</p>
-  </li>
-  <li><strong>Duplicate File Management (Czkawka CLI):</strong>
-    <ul>
-      <li><strong>Dry Run:</strong> <code class="language-plaintext highlighter-rouge">czkawka dup -d /your/target/dir [-r /your/reference/dir] -s HASH -D AEO --dry-run</code> (adjust <code class="language-plaintext highlighter-rouge">-m</code>, <code class="language-plaintext highlighter-rouge">-t</code>, <code class="language-plaintext highlighter-rouge">-D &lt;method&gt;</code> as needed).</li>
-      <li>Review output carefully.</li>
-      <li><strong>Actual Deletion:</strong>
-        <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>czkawka dup -d /mnt/my_data_drive/repository_to_clean -s HASH -t BLAKE3 -m 8192 -D AEO
-</code></pre></div>        </div>
-      </li>
-    </ul>
-  </li>
-  <li><strong>Empty File Deletion (Czkawka CLI):</strong>
-    <ul>
-      <li>Find: <code class="language-plaintext highlighter-rouge">czkawka empty-files -d /your/target/dir</code></li>
-      <li>Review.</li>
-      <li>Delete: <code class="language-plaintext highlighter-rouge">czkawka empty-files -d /mnt/my_data_drive/repository_to_clean -D</code></li>
-    </ul>
-  </li>
-  <li><strong>Empty Folder Deletion (Czkawka CLI):</strong>
-    <ul>
-      <li>Find: <code class="language-plaintext highlighter-rouge">czkawka empty-folders -d /your/target/dir</code></li>
-      <li>Review.</li>
-      <li>Delete: <code class="language-plaintext highlighter-rouge">czkawka empty-folders -d /mnt/my_data_drive/repository_to_clean -D</code></li>
-    </ul>
-  </li>
-</ol>]]></content><author><name></name></author><category term="scratchpad" /></entry></feed>
+</section>]]></content><author><name></name></author><category term="scripts&gt;bash" /><category term="software&gt;linux" /></entry></feed>
