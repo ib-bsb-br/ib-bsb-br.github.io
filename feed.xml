@@ -1,4 +1,352 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2025-05-21T17:17:22+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">LightRAG - extracting relevant information from mixed data</title><link href="https://ib.bsb.br/lightrag-extracting-relevant-information-from-mixed-data/" rel="alternate" type="text/html" title="LightRAG - extracting relevant information from mixed data" /><published>2025-05-21T00:00:00+00:00</published><updated>2025-05-21T17:13:45+00:00</updated><id>https://ib.bsb.br/lightrag-extracting-relevant-information-from-mixed-data</id><content type="html" xml:base="https://ib.bsb.br/lightrag-extracting-relevant-information-from-mixed-data/"><![CDATA[<h2 id="introduction-can-lightrag-solve-your-problem">Introduction: Can LightRAG Solve Your Problem?</h2>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2025-05-22T04:06:07+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">Running LightRAG on Baremetal Linux (ARM64)</title><link href="https://ib.bsb.br/lightrag-arm64/" rel="alternate" type="text/html" title="Running LightRAG on Baremetal Linux (ARM64)" /><published>2025-05-22T00:00:00+00:00</published><updated>2025-05-22T04:02:53+00:00</updated><id>https://ib.bsb.br/lightrag-arm64</id><content type="html" xml:base="https://ib.bsb.br/lightrag-arm64/"><![CDATA[<p>This guide provides instructions and considerations for running LightRAG on a baremetal Linux machine with an ARM64 architecture.</p>
+
+<h2 id="1-system-prerequisites">1. System Prerequisites</h2>
+
+<p>Before installing LightRAG, ensure your ARM64 Linux system meets the following prerequisites:</p>
+
+<ul>
+  <li><strong>Python:</strong> Python 3.10 or newer is required. You can check your Python version with <code class="language-plaintext highlighter-rouge">python3 --version</code>. If you need to install or upgrade Python, consult your Linux distribution’s package manager (e.g., <code class="language-plaintext highlighter-rouge">apt</code> for Debian/Ubuntu, <code class="language-plaintext highlighter-rouge">yum</code> for CentOS/RHEL, <code class="language-plaintext highlighter-rouge">dnf</code> for Fedora).
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Example for Debian/Ubuntu</span>
+<span class="nb">sudo </span>apt update
+<span class="nb">sudo </span>apt <span class="nb">install </span>python3 python3-pip python3-venv
+</code></pre></div>    </div>
+  </li>
+  <li><strong>Build Tools:</strong> Since some Python packages may need to be compiled from source on ARM64 (if pre-built wheels are not available), you’ll need standard build tools.
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Example for Debian/Ubuntu</span>
+<span class="nb">sudo </span>apt <span class="nb">install </span>build-essential python3-dev
+<span class="c"># For other distributions, you might need packages like 'gcc', 'g++', 'make'</span>
+</code></pre></div>    </div>
+  </li>
+  <li><strong>Pip:</strong> Ensure <code class="language-plaintext highlighter-rouge">pip</code> for Python 3 is installed. It’s usually included with Python or can be installed separately.
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>python3 <span class="nt">-m</span> ensurepip <span class="nt">--upgrade</span>
+</code></pre></div>    </div>
+  </li>
+  <li><strong>Git:</strong> You’ll need Git to clone the repository.
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Example for Debian/Ubuntu</span>
+<span class="nb">sudo </span>apt <span class="nb">install </span>git
+</code></pre></div>    </div>
+  </li>
+  <li><strong>System Dependencies for <code class="language-plaintext highlighter-rouge">textract</code> (Optional but Recommended for Full File Support):</strong>
+LightRAG uses the <code class="language-plaintext highlighter-rouge">textract</code> library to extract text from various file types (PDF, DOCX, etc.). To enable support for these formats, you’ll need to install their underlying system dependencies. The specific packages can vary slightly by distribution, but the following are common for Debian-based systems. Adapt them for your specific Linux distribution.
+    <ul>
+      <li>For <strong>.docx</strong> files: <code class="language-plaintext highlighter-rouge">libxml2-dev</code>, <code class="language-plaintext highlighter-rouge">libxslt1-dev</code></li>
+      <li>For <strong>.doc</strong> files: <code class="language-plaintext highlighter-rouge">antiword</code></li>
+      <li>For <strong>.rtf</strong> files: <code class="language-plaintext highlighter-rouge">unrtf</code></li>
+      <li>For <strong>.pdf</strong> files: <code class="language-plaintext highlighter-rouge">poppler-utils</code> (provides <code class="language-plaintext highlighter-rouge">pdftotext</code>)</li>
+      <li>For <strong>.ps</strong> files: <code class="language-plaintext highlighter-rouge">pstotext</code> (may require manual installation or be part of a larger PostScript handling package)</li>
+      <li>For image-based text extraction (OCR for <strong>.jpg, .png, .gif</strong>): <code class="language-plaintext highlighter-rouge">tesseract-ocr</code> and its language data packs (e.g., <code class="language-plaintext highlighter-rouge">tesseract-ocr-eng</code> for English).</li>
+      <li>For audio files (<strong>.mp3, .ogg, .wav</strong>): <code class="language-plaintext highlighter-rouge">sox</code>, <code class="language-plaintext highlighter-rouge">libsox-fmt-all</code>, <code class="language-plaintext highlighter-rouge">ffmpeg</code>, <code class="language-plaintext highlighter-rouge">lame</code>, <code class="language-plaintext highlighter-rouge">libmad0</code></li>
+      <li>Other potentially useful packages mentioned by <code class="language-plaintext highlighter-rouge">textract</code> documentation: <code class="language-plaintext highlighter-rouge">libjpeg-dev</code>, <code class="language-plaintext highlighter-rouge">swig</code>, <code class="language-plaintext highlighter-rouge">flac</code>.</li>
+    </ul>
+
+    <p>A comprehensive command for Debian/Ubuntu to install most <code class="language-plaintext highlighter-rouge">textract</code> dependencies would be:</p>
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>apt <span class="nb">install </span>libxml2-dev libxslt1-dev antiword unrtf poppler-utils pstotext tesseract-ocr tesseract-ocr-eng sox libsox-fmt-all ffmpeg lame libmad0 libjpeg-dev swig flac
+</code></pre></div>    </div>
+    <p><strong>Note:</strong> Some dependencies like <code class="language-plaintext highlighter-rouge">pstotext</code> might be harder to find in all distributions. <code class="language-plaintext highlighter-rouge">textract</code> has fallbacks for some formats (e.g., a pure Python PDF parser if <code class="language-plaintext highlighter-rouge">pdftotext</code> is missing), but functionality might be limited. Refer to your distribution’s package repositories and the <code class="language-plaintext highlighter-rouge">textract</code> documentation for the most accurate package names.</p>
+  </li>
+</ul>
+
+<h2 id="2-installation-from-source">2. Installation from Source</h2>
+
+<p>Installing from source is recommended for a baremetal setup, as it gives you the most control and ensures compatibility with your ARM64 architecture.</p>
+
+<ol>
+  <li><strong>Clone the Repository:</strong>
+Open your terminal and clone the LightRAG repository from GitHub:
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>git clone https://github.com/HKUDS/LightRAG.git
+<span class="nb">cd </span>LightRAG
+</code></pre></div>    </div>
+  </li>
+  <li><strong>Create and Activate a Python Virtual Environment:</strong>
+It’s highly recommended to use a virtual environment to manage project dependencies and avoid conflicts with system-wide packages.
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>python3 <span class="nt">-m</span> venv venv
+<span class="nb">source </span>venv/bin/activate
+</code></pre></div>    </div>
+    <p><em>(To deactivate the virtual environment later, simply type <code class="language-plaintext highlighter-rouge">deactivate</code>)</em></p>
+  </li>
+  <li><strong>Install LightRAG and its Dependencies:</strong>
+LightRAG uses <code class="language-plaintext highlighter-rouge">pip</code> for installation. You have two main options:
+    <ul>
+      <li><strong>To install the core LightRAG engine along with the API server and web UI components:</strong>
+        <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>pip <span class="nb">install</span> <span class="nt">-e</span> <span class="s2">".[api]"</span>
+</code></pre></div>        </div>
+      </li>
+      <li><strong>To install only the core LightRAG engine (if you don’t need the API server or web UI):</strong>
+        <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>pip <span class="nb">install</span> <span class="nt">-e</span> <span class="nb">.</span>
+</code></pre></div>        </div>
+      </li>
+    </ul>
+
+    <p><strong>Note on Compilation:</strong> This step might take a significant amount of time, especially on ARM64 devices, as some dependencies may need to be compiled from source. Ensure your system has a stable internet connection and sufficient resources (RAM, CPU).</p>
+  </li>
+  <li><strong>Troubleshooting Compilation Issues:</strong>
+If you encounter errors during the <code class="language-plaintext highlighter-rouge">pip install</code> step, they are often due to missing development libraries for a particular package.
+    <ul>
+      <li>Carefully read the error messages. They usually indicate which library is missing.</li>
+      <li>Use your system’s package manager to search for and install the required development package. For example, if an error mentions something related to <code class="language-plaintext highlighter-rouge">xyz</code>, you might need to install <code class="language-plaintext highlighter-rouge">libxyz-dev</code> (on Debian/Ubuntu) or a similarly named package.</li>
+      <li>Ensure your build tools (<code class="language-plaintext highlighter-rouge">gcc</code>, <code class="language-plaintext highlighter-rouge">python3-dev</code>, etc.) are correctly installed.</li>
+    </ul>
+  </li>
+</ol>
+
+<h2 id="3-configuration-for-baremetal-deployment">3. Configuration for Baremetal Deployment</h2>
+
+<p>After successful installation, you need to configure LightRAG for your baremetal environment. This is primarily done through an <code class="language-plaintext highlighter-rouge">.env</code> file.</p>
+
+<ol>
+  <li><strong>Create the <code class="language-plaintext highlighter-rouge">.env</code> File:</strong>
+Navigate to the root directory of your cloned LightRAG project (if you’re not already there) and copy the example environment file:
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">cp </span>env.example .env
+</code></pre></div>    </div>
+  </li>
+  <li>
+    <p><strong>Edit the <code class="language-plaintext highlighter-rouge">.env</code> File:</strong>
+Open the <code class="language-plaintext highlighter-rouge">.env</code> file with a text editor. Here are some key configurations to consider for a baremetal ARM64 setup:</p>
+
+    <ul>
+      <li><strong>LLM Configuration:</strong>
+You’ll likely want to use LLMs that can run locally on your ARM64 machine.
+        <ul>
+          <li><strong>Using Ollama (Recommended for local models):</strong>
+If you have Ollama installed and serving a model:
+            <pre><code class="language-env">LLM_BINDING=ollama
+LLM_BINDING_HOST=http://localhost:11434 # Or your Ollama server address
+LLM_MODEL=your_ollama_model_name # e.g., llama3, gemma2
+</code></pre>
+            <p>Ensure Ollama is running and the specified model is pulled (<code class="language-plaintext highlighter-rouge">ollama pull your_ollama_model_name</code>).
+The <code class="language-plaintext highlighter-rouge">README.md</code> has specific instructions for increasing Ollama’s context window (<code class="language-plaintext highlighter-rouge">num_ctx</code>), which is important for LightRAG.</p>
+          </li>
+          <li><strong>Using Hugging Face Models (Directly or via a local inference server):</strong>
+The <code class="language-plaintext highlighter-rouge">README.md</code> provides examples for using Hugging Face models. This might involve more manual setup to ensure the model runs efficiently on your ARM64 hardware.
+            <pre><code class="language-env"># Example (refer to LightRAG docs for specific HuggingFace setup)
+# LLM_BINDING=hf 
+# LLM_MODEL_NAME=meta-llama/Llama-3.1-8B-Instruct 
+</code></pre>
+          </li>
+          <li><strong>Using OpenAI (If you have internet access and an API key):</strong>
+While this is a baremetal guide, you can still use OpenAI if desired:
+            <pre><code class="language-env">LLM_BINDING=openai
+OPENAI_API_KEY=your_openai_api_key
+LLM_MODEL=gpt-4o-mini # Or other model
+</code></pre>
+          </li>
+        </ul>
+      </li>
+      <li><strong>Embedding Model Configuration:</strong>
+Similar to LLMs, you’ll need to configure embedding models.
+        <ul>
+          <li><strong>Using Ollama:</strong>
+            <pre><code class="language-env">EMBEDDING_BINDING=ollama
+EMBEDDING_BINDING_HOST=http://localhost:11434 # Or your Ollama server address
+EMBEDDING_MODEL=nomic-embed-text # Or another Ollama embedding model
+</code></pre>
+            <p>Ensure the embedding model is pulled in Ollama (<code class="language-plaintext highlighter-rouge">ollama pull nomic-embed-text</code>).</p>
+          </li>
+          <li><strong>Using Hugging Face Models:</strong>
+Refer to the main <code class="language-plaintext highlighter-rouge">README.md</code> for Hugging Face embedding examples.</li>
+          <li><strong>Using OpenAI:</strong>
+            <pre><code class="language-env">EMBEDDING_BINDING=openai
+# OPENAI_API_KEY should already be set if using OpenAI LLM
+EMBEDDING_MODEL=text-embedding-3-small # Or other model
+</code></pre>
+          </li>
+        </ul>
+      </li>
+      <li><strong>Storage Configuration:</strong>
+LightRAG supports various storage backends. For a simple baremetal setup, the defaults (using local JSON files) are often sufficient to get started.
+        <ul>
+          <li><strong>Default (JSON-based):</strong> No specific <code class="language-plaintext highlighter-rouge">.env</code> changes are typically needed for the default storage, as data will be stored in the <code class="language-plaintext highlighter-rouge">working_dir</code> (defaults to <code class="language-plaintext highlighter-rouge">lightrag_cache_&lt;timestamp&gt;</code> or as specified in your scripts).</li>
+          <li><strong>Using PostgreSQL or Neo4j (Advanced):</strong>
+If you prefer a more robust local database, you can set up PostgreSQL (with pgvector and Apache AGE extensions) or Neo4j on your ARM64 machine.
+The main <code class="language-plaintext highlighter-rouge">README.md</code> provides guidance on configuring LightRAG to use these:
+            <ul>
+              <li>Set <code class="language-plaintext highlighter-rouge">KV_STORAGE</code>, <code class="language-plaintext highlighter-rouge">VECTOR_STORAGE</code>, <code class="language-plaintext highlighter-rouge">GRAPH_STORAGE</code>, <code class="language-plaintext highlighter-rouge">DOC_STATUS_STORAGE</code> variables in the <code class="language-plaintext highlighter-rouge">.env</code> file or directly in your Python scripts when initializing <code class="language-plaintext highlighter-rouge">LightRAG</code>.</li>
+              <li>Example for Neo4j (ensure Neo4j server is running and configured):
+                <pre><code class="language-env">GRAPH_STORAGE=Neo4JStorage
+NEO4J_URI=neo4j://localhost:7687
+NEO4J_USERNAME=neo4j
+NEO4J_PASSWORD=your_neo4j_password
+</code></pre>
+              </li>
+              <li>Example for PostgreSQL (ensure PostgreSQL server is running with necessary extensions):
+                <pre><code class="language-env"># In your Python script or set as environment variables
+# os.environ["DB_USER"] = "your_postgres_user"
+# os.environ["DB_PASSWORD"] = "your_postgres_password"
+# os.environ["DB_HOST"] = "localhost"
+# os.environ["DB_PORT"] = "5432"
+# os.environ["DB_NAME"] = "your_database_name"
+# KV_STORAGE=PGKVStorage
+# VECTOR_STORAGE=PGVectorStorage
+# GRAPH_STORAGE=AGEStorage 
+</code></pre>
+                <p>Refer to the “Storage” section in the main <code class="language-plaintext highlighter-rouge">README.md</code> and the example <code class="language-plaintext highlighter-rouge">examples/lightrag_zhipu_postgres_demo.py</code> for more details.</p>
+              </li>
+            </ul>
+          </li>
+        </ul>
+      </li>
+      <li><strong>API Server Configuration (if using <code class="language-plaintext highlighter-rouge">.[api]</code> installation):</strong>
+        <ul>
+          <li><code class="language-plaintext highlighter-rouge">HOST</code>: Server host (default: <code class="language-plaintext highlighter-rouge">0.0.0.0</code> to listen on all interfaces)</li>
+          <li><code class="language-plaintext highlighter-rouge">PORT</code>: Server port (default: <code class="language-plaintext highlighter-rouge">9621</code>)</li>
+          <li><code class="language-plaintext highlighter-rouge">LIGHTRAG_API_KEY</code>: Set a secure API key if you plan to expose the API.</li>
+        </ul>
+      </li>
+      <li><strong>Other Parameters:</strong>
+        <ul>
+          <li><code class="language-plaintext highlighter-rouge">MAX_ASYNC</code>: Maximum async operations.</li>
+          <li><code class="language-plaintext highlighter-rouge">MAX_TOKENS</code>: Maximum token size for LLM.</li>
+          <li><code class="language-plaintext highlighter-rouge">WORKING_DIR</code>: Default directory for storing data if not overridden in scripts. Can be set in <code class="language-plaintext highlighter-rouge">.env</code> as <code class="language-plaintext highlighter-rouge">LIGHTRAG_WORKING_DIR</code>.
+            <pre><code class="language-env">  # LIGHTRAG_WORKING_DIR=./my_lightrag_data 
+</code></pre>
+          </li>
+        </ul>
+      </li>
+    </ul>
+  </li>
+  <li><strong>Save the <code class="language-plaintext highlighter-rouge">.env</code> File:</strong>
+After making your changes, save the file. LightRAG will load these settings when it starts.</li>
+</ol>
+
+<h2 id="4-running-lightrag">4. Running LightRAG</h2>
+
+<p>Once LightRAG is installed and configured, you can start using it.</p>
+
+<h3 id="running-the-lightrag-server-optional">Running the LightRAG Server (Optional)</h3>
+
+<p>If you installed LightRAG with the API extras (<code class="language-plaintext highlighter-rouge">pip install -e ".[api]"</code>) and want to use the Web UI or API:</p>
+
+<ol>
+  <li><strong>Ensure your <code class="language-plaintext highlighter-rouge">.env</code> file is configured</strong>, especially <code class="language-plaintext highlighter-rouge">HOST</code>, <code class="language-plaintext highlighter-rouge">PORT</code>, <code class="language-plaintext highlighter-rouge">LIGHTRAG_API_KEY</code>, and your LLM/embedding model settings.</li>
+  <li><strong>Activate your virtual environment</strong> (if not already active):
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">source </span>venv/bin/activate
+</code></pre></div>    </div>
+  </li>
+  <li>
+    <p><strong>Start the server:</strong>
+The main <code class="language-plaintext highlighter-rouge">README.md</code> mentions running the server. Typically, this involves a command like <code class="language-plaintext highlighter-rouge">python -m lightrag.api.lightrag_server</code> or a specific script if provided. Refer to the main <code class="language-plaintext highlighter-rouge">README.md</code> or <code class="language-plaintext highlighter-rouge">./lightrag/api/README.md</code> for the precise command to start the server.
+You might also use <code class="language-plaintext highlighter-rouge">docker compose up</code> if you later decide to use Docker and have configured <code class="language-plaintext highlighter-rouge">docker-compose.yml</code> appropriately for arm64.</p>
+
+    <p>Once started, the API should be accessible at <code class="language-plaintext highlighter-rouge">http://&lt;your_host&gt;:&lt;your_port&gt;</code> and the Web UI (if included) at a similar address.</p>
+  </li>
+</ol>
+
+<h3 id="running-example-scripts-core-engine">Running Example Scripts (Core Engine)</h3>
+
+<p>The <code class="language-plaintext highlighter-rouge">examples/</code> directory contains various scripts demonstrating how to use the LightRAG core engine.</p>
+
+<ol>
+  <li><strong>Activate your virtual environment:</strong>
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">source </span>venv/bin/activate
+</code></pre></div>    </div>
+  </li>
+  <li>
+    <p><strong>Ensure your <code class="language-plaintext highlighter-rouge">.env</code> file is configured</strong> with your chosen LLM and embedding models (e.g., local Ollama models). The example scripts often default to OpenAI, so you’ll need to modify them or ensure your LightRAG initialization in the script picks up the <code class="language-plaintext highlighter-rouge">.env</code> settings or is explicitly set to your local models.</p>
+  </li>
+  <li><strong>Prepare a test document (Optional, for some demos):</strong>
+Some demos, like <code class="language-plaintext highlighter-rouge">lightrag_openai_demo.py</code>, use a sample text file.
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># From the LightRAG root directory</span>
+curl https://raw.githubusercontent.com/gusye1234/nano-graphrag/main/tests/mock_data.txt <span class="o">&gt;</span> ./book.txt
+</code></pre></div>    </div>
+  </li>
+  <li><strong>Run an example script:</strong>
+Navigate to the LightRAG root directory. Let’s take <code class="language-plaintext highlighter-rouge">examples/lightrag_openai_demo.py</code> as a base.
+    <ul>
+      <li><strong>If you configured OpenAI in <code class="language-plaintext highlighter-rouge">.env</code>:</strong>
+        <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Ensure OPENAI_API_KEY is in your .env or exported</span>
+python examples/lightrag_openai_demo.py
+</code></pre></div>        </div>
+      </li>
+      <li>
+        <p><strong>If you configured a local model (e.g., Ollama) in <code class="language-plaintext highlighter-rouge">.env</code> and the script is set up to use it, or if you modify the script:</strong>
+Many examples in the <code class="language-plaintext highlighter-rouge">examples</code> directory show how to initialize <code class="language-plaintext highlighter-rouge">LightRAG</code> with specific model functions (e.g., <code class="language-plaintext highlighter-rouge">ollama_model_complete</code>, <code class="language-plaintext highlighter-rouge">hf_model_complete</code>). You might need to adapt <code class="language-plaintext highlighter-rouge">lightrag_openai_demo.py</code> or use a different example that’s closer to your setup (like <code class="language-plaintext highlighter-rouge">examples/lightrag_ollama_demo.py</code>).</p>
+
+        <p>For <code class="language-plaintext highlighter-rouge">lightrag_ollama_demo.py</code>:</p>
+        <div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Inside lightrag_ollama_demo.py, you'd typically see:
+# from lightrag.llm.ollama import ollama_model_complete, ollama_embed
+# ...
+# rag = LightRAG(
+#     llm_model_func=ollama_model_complete,
+#     llm_model_name="your_ollama_model_from_env_or_hardcoded",
+#     embedding_func=EmbeddingFunc(
+#         embedding_dim=..., # set based on your ollama embedding model
+#         max_token_size=...,
+#         func=lambda texts: ollama_embed(texts, embed_model="your_ollama_embedding_model")
+#     ),
+#     ...
+# )
+</span></code></pre></div>        </div>
+        <p>To run such a script:</p>
+        <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>python examples/lightrag_ollama_demo.py
+</code></pre></div>        </div>
+        <p><strong>Important:</strong> Review the script you choose. Ensure the <code class="language-plaintext highlighter-rouge">LightRAG</code> initialization parameters (like <code class="language-plaintext highlighter-rouge">llm_model_func</code>, <code class="language-plaintext highlighter-rouge">embedding_func</code>, model names, dimensions) match your ARM64 setup and the models you have available. The <code class="language-plaintext highlighter-rouge">.env</code> file settings are used by default by the server, but scripts can override these if they explicitly pass parameters to <code class="language-plaintext highlighter-rouge">LightRAG()</code>.</p>
+      </li>
+    </ul>
+
+    <p><strong>Note on <code class="language-plaintext highlighter-rouge">WORKING_DIR</code>:</strong> LightRAG will create a directory (e.g., <code class="language-plaintext highlighter-rouge">rag_storage</code> or <code class="language-plaintext highlighter-rouge">lightrag_cache_&lt;timestamp&gt;</code>) to store data, indexes, and caches. Make sure you have write permissions in the location where the script is run or where <code class="language-plaintext highlighter-rouge">WORKING_DIR</code> points. If you switch embedding models, you might need to clear this directory as per the main README’s advice.</p>
+  </li>
+</ol>
+
+<h2 id="5-alternative-using-docker-on-arm64">5. Alternative: Using Docker on ARM64</h2>
+
+<p>While this guide focuses on baremetal installation, you can also run LightRAG using Docker on your ARM64 Linux machine, provided Docker is installed.</p>
+
+<ul>
+  <li>
+    <p><strong>Dockerfiles Provided:</strong> The repository includes a <code class="language-plaintext highlighter-rouge">Dockerfile</code> and a <code class="language-plaintext highlighter-rouge">docker-compose.yml</code> file, which are the starting points for a Docker-based deployment.</p>
+  </li>
+  <li><strong>ARM64 Docker Image:</strong>
+    <ul>
+      <li>Check if the project provides official multi-arch Docker images that support <code class="language-plaintext highlighter-rouge">linux/arm64</code>. You can find information on this in the main <code class="language-plaintext highlighter-rouge">README.md</code> or on the project’s container registry (e.g., Docker Hub, GitHub Packages).</li>
+      <li>If an official arm64 image is not available, you may need to build the Docker image directly on your ARM64 machine. This can be done using <code class="language-plaintext highlighter-rouge">docker build</code> or <code class="language-plaintext highlighter-rouge">docker compose build</code>. Ensure the <code class="language-plaintext highlighter-rouge">Dockerfile</code> is compatible with ARM64 (e.g., base images are available for ARM64, and any compiled dependencies can be built for ARM64).</li>
+    </ul>
+  </li>
+  <li>
+    <p><strong>Configuration:</strong> You would still use an <code class="language-plaintext highlighter-rouge">.env</code> file (or Docker Compose environment variables) to configure LightRAG, similar to the baremetal setup, paying attention to aspects like <code class="language-plaintext highlighter-rouge">LLM_BINDING_HOST</code> (which might need to be <code class="language-plaintext highlighter-rouge">host.docker.internal</code> or a specific container network IP if Ollama or other services are also running in Docker).</p>
+  </li>
+  <li><strong>Further Docker Instructions:</strong> For more detailed information on Docker deployment, refer to the <a href="./DockerDeployment.md">DockerDeployment.md</a> file in the <code class="language-plaintext highlighter-rouge">docs/</code> directory.</li>
+</ul>
+
+<p>Using Docker can simplify dependency management but adds a layer of abstraction. Choose the method that best suits your comfort level and technical requirements.</p>
+
+<h2 id="6-performance-considerations-for-arm64">6. Performance Considerations for ARM64</h2>
+
+<p>Running Large Language Models (LLMs) and associated processes (like embeddings and graph analysis) can be resource-intensive. When deploying LightRAG on a baremetal ARM64 machine, keep the following performance considerations in mind:</p>
+
+<ul>
+  <li><strong>Hardware Limitations:</strong> The performance of LightRAG will heavily depend on the capabilities of your ARM64 hardware:
+    <ul>
+      <li><strong>CPU:</strong> A powerful multi-core ARM64 CPU will significantly speed up processing.</li>
+      <li><strong>RAM:</strong> LLMs, especially larger ones, require a substantial amount of RAM. Insufficient RAM can lead to slow performance or out-of-memory errors. Monitor your RAM usage closely.</li>
+      <li><strong>Storage Speed:</strong> Fast storage (e.g., NVMe SSD) can improve loading times for models and data.</li>
+      <li><strong>Accelerators:</strong> While many ARM64 SoCs include AI/ML accelerators, the ability to leverage them depends on the specific LLM serving framework (e.g., Ollama, llama.cpp) and model compatibility with those accelerators on Linux.</li>
+    </ul>
+  </li>
+  <li><strong>Model Choice:</strong> The size and type of the LLM and embedding models you choose will be the primary determinant of performance and resource consumption.
+    <ul>
+      <li><strong>Start Small:</strong> If you are unsure about your hardware’s capacity or if you have limited resources (e.g., on a Raspberry Pi or similar single-board computer), start with the smallest available models (e.g., 2B or 3B parameter models if using Ollama).</li>
+      <li><strong>Quantization:</strong> Using quantized versions of models can significantly reduce their size and computational requirements, often with a manageable impact on performance. Check if your chosen LLM framework supports quantized models (e.g., GGUF for llama.cpp-based backends like Ollama).</li>
+    </ul>
+  </li>
+  <li><strong>Batch Sizes and Concurrency:</strong>
+    <ul>
+      <li>Parameters like <code class="language-plaintext highlighter-rouge">MAX_ASYNC</code> in the <code class="language-plaintext highlighter-rouge">.env</code> file, <code class="language-plaintext highlighter-rouge">embedding_batch_num</code>, and <code class="language-plaintext highlighter-rouge">llm_model_max_async</code> in the <code class="language-plaintext highlighter-rouge">LightRAG</code> initialization can be tuned. However, on resource-constrained ARM64 devices, increasing concurrency too much might lead to thrashing rather than improved performance. Start with conservative values.</li>
+    </ul>
+  </li>
+  <li><strong>System Optimization:</strong>
+    <ul>
+      <li>Ensure your Linux system is optimized. Minimize background processes to free up resources.</li>
+      <li>Consider performance governors for your CPU if applicable (e.g., setting to <code class="language-plaintext highlighter-rouge">performance</code> mode if thermal headroom allows, though be mindful of heat on passively cooled devices).</li>
+    </ul>
+  </li>
+  <li><strong>Monitoring:</strong>
+    <ul>
+      <li>Use system monitoring tools (<code class="language-plaintext highlighter-rouge">htop</code>, <code class="language-plaintext highlighter-rouge">vmstat</code>, <code class="language-plaintext highlighter-rouge">iotop</code>) to observe CPU, RAM, and disk I/O usage while LightRAG is processing data or handling queries. This can help you identify bottlenecks.</li>
+    </ul>
+  </li>
+</ul>
+
+<p>Running complex RAG pipelines on ARM64 is feasible, especially with newer, more powerful ARM64 processors. However, managing expectations and carefully selecting models appropriate for your hardware are key to a successful deployment.</p>]]></content><author><name></name></author><category term="scratchpad" /></entry><entry><title type="html">LightRAG - extracting relevant information from mixed data</title><link href="https://ib.bsb.br/lightrag-extracting-relevant-information-from-mixed-data/" rel="alternate" type="text/html" title="LightRAG - extracting relevant information from mixed data" /><published>2025-05-21T00:00:00+00:00</published><updated>2025-05-21T17:13:45+00:00</updated><id>https://ib.bsb.br/lightrag-extracting-relevant-information-from-mixed-data</id><content type="html" xml:base="https://ib.bsb.br/lightrag-extracting-relevant-information-from-mixed-data/"><![CDATA[<h2 id="introduction-can-lightrag-solve-your-problem">Introduction: Can LightRAG Solve Your Problem?</h2>
 
 <p>Based on the provided <code class="language-plaintext highlighter-rouge">LightRAG</code> documentation, your assessment of its capabilities is largely correct—and, in some respects, the tool is even more powerful than you might expect. <code class="language-plaintext highlighter-rouge">LightRAG</code> is designed as a lightweight, high-performance Retrieval-Augmented Generation (RAG) system with a strong focus on knowledge graph construction, semantic search, and efficient document management. It supports a range of file formats, offers robust document ingestion and indexing pipelines, and provides advanced querying and referencing features. Its architecture is optimized for handling large, disorganized collections, making it well-suited to your scenario: quickly filtering, searching, and referencing only the relevant content from a “sea of mixed files.”</p>
 
@@ -5296,492 +5644,4 @@ If <code class="language-plaintext highlighter-rouge">Quick Search</code> doesn�
       <li>PhotoRec is also menu-driven. You’ll select the disk/image, choose file types to search for (you can often select all or specific ones like .jpg, .doc, etc.), and specify a destination directory for recovered files.</li>
     </ul>
   </li>
-</ul>]]></content><author><name></name></author><category term="scratchpad" /></entry><entry><title type="html">installing rescatux/rescapp on Debian</title><link href="https://ib.bsb.br/installing-rescatuxrescapp-on-debian/" rel="alternate" type="text/html" title="installing rescatux/rescapp on Debian" /><published>2025-05-16T00:00:00+00:00</published><updated>2025-05-16T06:59:31+00:00</updated><id>https://ib.bsb.br/installing-rescatuxrescapp-on-debian</id><content type="html" xml:base="https://ib.bsb.br/installing-rescatuxrescapp-on-debian/"><![CDATA[<h1 id="1-update-your-system">1. Update Your System</h1>
-
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>apt update
-<span class="nb">sudo </span>apt upgrade <span class="nt">-y</span>
-</code></pre></div></div>
-
-<hr />
-
-<h1 id="2-install-build-essentials-and-core-utilities">2. Install Build Essentials and Core Utilities</h1>
-
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>apt <span class="nb">install</span> <span class="nt">-y</span> build-essential make coreutils
-</code></pre></div></div>
-
-<hr />
-
-<h1 id="3-install-all-required-runtime-dependencies">3. Install All Required Runtime Dependencies</h1>
-
-<p>The following list is derived from the <code class="language-plaintext highlighter-rouge">INSTALL</code> file, plugin scripts, and the codebase. Some packages may already be installed by default, but running these commands is safe and ensures completeness.</p>
-
-<h2 id="31-python-3-and-required-python-modules">3.1. Python 3 and Required Python Modules</h2>
-
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>apt <span class="nb">install</span> <span class="nt">-y</span> python3 python3-gi python3-dbus python3-pyqt5 python3-pyqt5.qtwebkit python3-parted
-</code></pre></div></div>
-<blockquote>
-  <p><strong>Note:</strong></p>
-  <ul>
-    <li><code class="language-plaintext highlighter-rouge">python3-pyqt5.qtwebkit</code> is in the <code class="language-plaintext highlighter-rouge">bullseye</code> repo but may be called <code class="language-plaintext highlighter-rouge">python3-pyqt5.qtwebengine</code> in some newer releases. For Bullseye, the above is correct.</li>
-    <li><code class="language-plaintext highlighter-rouge">python3-parted</code> provides the <code class="language-plaintext highlighter-rouge">parted</code> Python bindings.</li>
-  </ul>
-</blockquote>
-
-<h2 id="32-gui-and-desktop-integration">3.2. GUI and Desktop Integration</h2>
-
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>apt <span class="nb">install</span> <span class="nt">-y</span> zenity xdg-utils wmctrl
-</code></pre></div></div>
-
-<h2 id="33-dbus-system-integration">3.3. DBus System Integration</h2>
-
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>apt <span class="nb">install</span> <span class="nt">-y</span> dbus
-</code></pre></div></div>
-
-<h2 id="34-disk-filesystem-and-partition-tools">3.4. Disk, Filesystem, and Partition Tools</h2>
-
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>apt <span class="nb">install</span> <span class="nt">-y</span> util-linux reiserfsprogs reiser4progs btrfs-progs xfsprogs xfsdump ntfs-3g dosfstools gawk extundelete os-prober
-</code></pre></div></div>
-
-<h2 id="35-raid-lvm-and-encryption">3.5. RAID, LVM, and Encryption</h2>
-
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>apt <span class="nb">install</span> <span class="nt">-y</span> dmraid lvm2 cryptsetup libcryptsetup12 cryptsetup-bin
-</code></pre></div></div>
-
-<h2 id="36-gpt-and-uefi-tools">3.6. GPT and UEFI Tools</h2>
-
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>apt <span class="nb">install</span> <span class="nt">-y</span> gdisk efibootmgr mokutil
-</code></pre></div></div>
-
-<h2 id="37-bootloader-and-mbr-tools">3.7. Bootloader and MBR Tools</h2>
-
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>apt <span class="nb">install</span> <span class="nt">-y</span> syslinux lilo
-</code></pre></div></div>
-
-<h2 id="38-terminal-emulator">3.8. Terminal Emulator</h2>
-
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>apt <span class="nb">install</span> <span class="nt">-y</span> xterm
-</code></pre></div></div>
-
-<h2 id="39-miscellaneous-utilities">3.9. Miscellaneous Utilities</h2>
-
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>apt <span class="nb">install</span> <span class="nt">-y</span> pastebinit hexchat gawk extundelete
-</code></pre></div></div>
-
-<h2 id="310-inxi-and-boot-info-script">3.10. Inxi and Boot Info Script</h2>
-
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>apt <span class="nb">install</span> <span class="nt">-y</span> inxi boot-info-script
-</code></pre></div></div>
-
-<h2 id="311-optional-but-recommended-partition-and-recovery-tools">3.11. Optional but Recommended: Partition and Recovery Tools</h2>
-
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>apt <span class="nb">install</span> <span class="nt">-y</span> gparted gpart testdisk
-</code></pre></div></div>
-
-<h2 id="312-additional-utilities">3.12. Additional Utilities</h2>
-
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>apt <span class="nb">install</span> <span class="nt">-y</span> wget curl
-</code></pre></div></div>
-
-<hr />
-
-<h1 id="4-install-the-rescatux-chntpw-package-for-windows-passwordaccount-operations">4. Install the Rescatux chntpw Package (for Windows Password/Account Operations)</h1>
-
-<p><strong>IMPORTANT:</strong><br />
-The standard <code class="language-plaintext highlighter-rouge">chntpw</code> package in Debian is not sufficient for all Rescapp features.<br />
-You should use the Rescatux-provided version.</p>
-
-<h2 id="41-add-the-rescatux-repository">4.1. Add the Rescatux Repository</h2>
-
-<p>Create the file <code class="language-plaintext highlighter-rouge">/etc/apt/sources.list.d/rescatux.list</code>:</p>
-
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">echo</span> <span class="s2">"deb http://rescatux.sourceforge.net/repo/ buster-dev main"</span> | <span class="nb">sudo tee</span> /etc/apt/sources.list.d/rescatux.list
-</code></pre></div></div>
-
-<h2 id="42-update-and-install-chntpw">4.2. Update and Install chntpw</h2>
-
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>apt <span class="nt">-o</span> Acquire::AllowInsecureRepositories<span class="o">=</span><span class="nb">true</span> <span class="nt">-o</span> Acquire::AllowDowngradeToInsecureRepositories<span class="o">=</span><span class="nb">true </span>update
-<span class="nb">sudo </span>apt <span class="nb">install</span> <span class="nt">-y</span> chntpw
-</code></pre></div></div>
-<blockquote>
-  <p><strong>Note:</strong></p>
-  <ul>
-    <li>You may be prompted about unauthenticated packages. Accept them.</li>
-    <li>The Rescatux repo is for Buster, but the chntpw package is compatible with Bullseye.</li>
-  </ul>
-</blockquote>
-
-<hr />
-
-<h1 id="5-optional-selinux-support">5. (Optional) SELinux Support</h1>
-
-<p>If you need SELinux support (rare, mostly for Fedora/RedHat/CentOS rescue):</p>
-
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>apt <span class="nb">install</span> <span class="nt">-y</span> python3-selinux python3-semanage policycoreutils-python-utils selinux-basics auditd selinux-policy-default setools
-</code></pre></div></div>
-<blockquote>
-  <p><strong>Note:</strong></p>
-  <ul>
-    <li>These packages are optional and only needed if you plan to rescue SELinux-enabled systems.</li>
-  </ul>
-</blockquote>
-
-<hr />
-
-<h1 id="6-clone-the-rescapp-repository">6. Clone the Rescapp Repository</h1>
-
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>git clone https://github.com/rescatux/rescapp.git
-<span class="nb">cd </span>rescapp
-</code></pre></div></div>
-
-<hr />
-
-<h1 id="7-install-rescapp">7. Install Rescapp</h1>
-
-<p>By default, this will install to <code class="language-plaintext highlighter-rouge">/usr/local</code>.<br />
-If you want to install to <code class="language-plaintext highlighter-rouge">/usr</code>, use <code class="language-plaintext highlighter-rouge">prefix=/usr make install</code>.</p>
-
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>make <span class="nb">install</span>
-</code></pre></div></div>
-<p>or, for system-wide <code class="language-plaintext highlighter-rouge">/usr</code> installation:</p>
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>make <span class="nv">prefix</span><span class="o">=</span>/usr <span class="nb">install</span>
-</code></pre></div></div>
-
-<hr />
-
-<h1 id="8-optional-verify-installation">8. (Optional) Verify Installation</h1>
-
-<p>Check that the <code class="language-plaintext highlighter-rouge">rescapp</code> binary is in your path:</p>
-
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>which rescapp
-</code></pre></div></div>
-
-<p>You should see <code class="language-plaintext highlighter-rouge">/usr/local/bin/rescapp</code> or <code class="language-plaintext highlighter-rouge">/usr/bin/rescapp</code> depending on your install prefix.</p>
-
-<hr />
-
-<h1 id="9-optional-desktop-integration">9. (Optional) Desktop Integration</h1>
-
-<p>If you want Rescapp to appear in your desktop menu, ensure the <code class="language-plaintext highlighter-rouge">.desktop</code> file is installed:</p>
-
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">ls</span> /usr/local/share/applications/rescapp.desktop
-</code></pre></div></div>
-<p>or</p>
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">ls</span> /usr/share/applications/rescapp.desktop
-</code></pre></div></div>
-
-<hr />
-
-<h1 id="10-run-rescapp">10. Run Rescapp</h1>
-
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>rescapp
-</code></pre></div></div>
-
-<hr />
-
-<h1 id="11-optional-troubleshooting">11. (Optional) Troubleshooting</h1>
-
-<ul>
-  <li>If you encounter missing dependencies, re-check the above lists.</li>
-  <li>For issues with chntpw, ensure you are using the Rescatux-provided version.</li>
-  <li>For graphical issues, ensure you have a working X session and all Qt5 dependencies.</li>
-</ul>
-
-<hr />
-
-<h2 id="summary-table-of-all-key-packages"><strong>Summary Table of All Key Packages</strong></h2>
-
-<table>
-  <thead>
-    <tr>
-      <th>Purpose</th>
-      <th>Package Names</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>Core build/utils</td>
-      <td>build-essential make coreutils</td>
-    </tr>
-    <tr>
-      <td>Python &amp; Qt</td>
-      <td>python3 python3-gi python3-dbus python3-pyqt5 python3-pyqt5.qtwebkit python3-parted</td>
-    </tr>
-    <tr>
-      <td>GUI/desktop</td>
-      <td>zenity xdg-utils wmctrl</td>
-    </tr>
-    <tr>
-      <td>DBus</td>
-      <td>dbus</td>
-    </tr>
-    <tr>
-      <td>Disk/FS tools</td>
-      <td>util-linux reiserfsprogs reiser4progs btrfs-progs xfsprogs xfsdump ntfs-3g dosfstools</td>
-    </tr>
-    <tr>
-      <td>RAID/LVM/Crypto</td>
-      <td>dmraid lvm2 cryptsetup libcryptsetup12 cryptsetup-bin</td>
-    </tr>
-    <tr>
-      <td>GPT/UEFI</td>
-      <td>gdisk efibootmgr mokutil</td>
-    </tr>
-    <tr>
-      <td>Bootloader/MBR</td>
-      <td>syslinux lilo</td>
-    </tr>
-    <tr>
-      <td>Terminal emulator</td>
-      <td>xterm</td>
-    </tr>
-    <tr>
-      <td>Misc utilities</td>
-      <td>pastebinit hexchat gawk extundelete wget curl</td>
-    </tr>
-    <tr>
-      <td>Info scripts</td>
-      <td>inxi boot-info-script</td>
-    </tr>
-    <tr>
-      <td>Partition/recovery</td>
-      <td>gparted gpart testdisk</td>
-    </tr>
-    <tr>
-      <td>Windows password tool</td>
-      <td>chntpw (from Rescatux repo)</td>
-    </tr>
-    <tr>
-      <td>SELinux (optional)</td>
-      <td>python3-selinux python3-semanage policycoreutils-python-utils selinux-basics auditd selinux-policy-default setools</td>
-    </tr>
-  </tbody>
-</table>
-
-<hr />
-
-<h1 id="references"><strong>References</strong></h1>
-
-<ul>
-  <li><a href="https://github.com/rescatux/rescapp">Rescapp GitHub</a></li>
-  <li><a href="https://www.rescatux.org">Rescatux Website</a></li>
-  <li><a href="https://github.com/rescatux/chntpw">Rescatux chntpw package</a></li>
-  <li><a href="https://packages.debian.org/bullseye/">Debian Bullseye Packages</a></li>
-</ul>
-
-<h1 id="bash-script-automation">bash script automation</h1>
-
-<section class="code-block-container" role="group" aria-label="Bash Code Block" data-filename="bash_code_block.sh" data-code="#!/bin/bash
-# Script to install Rescapp and its dependencies on Debian Bullseye x64
-# This script automates the steps from the revised guide.
-# It should be run with sudo privileges or by a user who can sudo without a password for apt.
-# The script will exit immediately if any command fails.
-set -e # Exit immediately if a command exits with a non-zero status.
-set -u # Treat unset variables as an error when substituting.
-set -o pipefail # The return value of a pipeline is the status of the last command to exit with a non-zero status, or zero if no command exited with a non-zero status.
-# --- Configuration ---
-# Set DEBIAN_FRONTEND to noninteractive to avoid prompts during package installation
-export DEBIAN_FRONTEND=noninteractive
-# --- Temporary Directory for Build ---
-BUILD_DIR=&quot;&quot; # Initialize BUILD_DIR
-# Cleanup function to remove temporary directory
-cleanup() {
-    if [ -n &quot;$BUILD_DIR&quot; ] &amp;&amp; [ -d &quot;$BUILD_DIR&quot; ]; then
-        echo &quot;Cleaning up temporary build directory: $BUILD_DIR&quot;
-        sudo rm -rf &quot;$BUILD_DIR&quot;
-    fi
-}
-# Register cleanup function to be called on script exit or interruption
-trap cleanup EXIT SIGINT SIGTERM
-echo &quot;Starting Rescapp installation process...&quot;
-echo &quot;This script will install necessary packages and Rescapp.&quot;
-echo &quot;Ensure you have an active internet connection.&quot;
-echo &quot;-----------------------------------------------------&quot;
-# 1. Update System
-echo &quot;[Step 1/7] Updating system packages...&quot;
-sudo apt update
-sudo apt upgrade -y
-# 2. Install Build Essentials and Git
-echo &quot;[Step 2/7] Installing build essentials, core utilities, and git...&quot;
-sudo apt install -y build-essential make coreutils git
-# 3. Install All Required Runtime Dependencies
-echo &quot;[Step 3/7] Installing Rescapp runtime dependencies...&quot;
-# Note: python3-pyqt5.qtwebkit is for Bullseye. Newer distros might use python3-pyqt5.qtwebengine.
-# Lilo might produce a warning during installation; this is generally acceptable for newer systems not relying on Lilo.
-sudo apt install -y \
-    python3 python3-gi python3-dbus python3-pyqt5 python3-pyqt5.qtwebkit python3-parted \
-    zenity xdg-utils wmctrl \
-    dbus \
-    util-linux reiserfsprogs reiser4progs btrfs-progs xfsprogs xfsdump ntfs-3g dosfstools gawk extundelete os-prober \
-    dmraid lvm2 cryptsetup libcryptsetup12 cryptsetup-bin \
-    gdisk efibootmgr mokutil \
-    syslinux lilo \
-    xterm \
-    pastebinit hexchat \
-    inxi boot-info-script \
-    gparted gpart testdisk \
-    wget curl
-# 4. (Optional) SELinux Support
-# If you need to rescue SELinux-enabled systems (e.g., Fedora, RHEL, CentOS),
-# uncomment the following section.
-# echo &quot;[Step 4/7 - Optional] Installing SELinux support packages...&quot;
-# sudo apt install -y \
-# python3-selinux python3-semanage policycoreutils-python-utils selinux-basics auditd selinux-policy-default setools
-# 5. Install the Rescatux chntpw Package
-echo &quot;[Step 4/7] Installing Rescatux chntpw package...&quot;
-# This uses the Rescatux repository for a version of chntpw with features needed by Rescapp.
-# The repository is for Debian Buster but the chntpw package is generally compatible with Bullseye.
-RESCATUX_REPO_FILE=&quot;/etc/apt/sources.list.d/rescatux.list&quot;
-RESCATUX_REPO_LINE=&quot;deb http://rescatux.sourceforge.net/repo/ buster-dev main&quot;
-if ! grep -qF &quot;$RESCATUX_REPO_LINE&quot; &quot;$RESCATUX_REPO_FILE&quot; 2&gt;/dev/null; then
-    echo &quot;$RESCATUX_REPO_LINE&quot; | sudo tee &quot;$RESCATUX_REPO_FILE&quot;
-else
-    echo &quot;Rescatux repository line already exists in $RESCATUX_REPO_FILE.&quot;
-fi
-# Allow unauthenticated repositories for this specific source if GPG key is not imported.
-sudo apt -o Acquire::AllowInsecureRepositories=true -o Acquire::AllowDowngradeToInsecureRepositories=true update
-# You might be prompted to accept unauthenticated packages; this is expected for this repo if not running fully noninteractive.
-# The DEBIAN_FRONTEND=noninteractive export should handle this.
-sudo apt install -y chntpw
-# 6. Clone the Rescapp Repository
-BUILD_DIR=$(mktemp -d) # Create a temporary directory
-echo &quot;[Step 5/7] Cloning the Rescapp repository into $BUILD_DIR/rescapp...&quot;
-git clone https://github.com/rescatux/rescapp.git &quot;$BUILD_DIR/rescapp&quot;
-cd &quot;$BUILD_DIR/rescapp&quot;
-# 7. Install Rescapp
-echo &quot;[Step 6/7] Installing Rescapp (default to /usr/local)...&quot;
-# To install to /usr instead, you would use: sudo make prefix=/usr install
-sudo make install
-# 8. Verify Installation
-echo &quot;[Step 7/7] Verifying installation...&quot;
-RESCAPP_PATH=$(which rescapp || echo &quot;not_found&quot;) # Avoid error if not found when set -u is active
-if [ &quot;$RESCAPP_PATH&quot; != &quot;not_found&quot; ] &amp;&amp; [ -n &quot;$RESCAPP_PATH&quot; ]; then
-    echo &quot;Rescapp executable found at: $RESCAPP_PATH&quot;
-else
-    echo &quot;ERROR: Rescapp executable not found in PATH after installation.&quot;
-    # The script will exit here if set -e is active and which fails,
-    # but this explicit check is for clarity.
-fi
-DESKTOP_FILE_USR_LOCAL=&quot;/usr/local/share/applications/rescapp.desktop&quot;
-DESKTOP_FILE_USR=&quot;/usr/share/applications/rescapp.desktop&quot;
-if [ -f &quot;$DESKTOP_FILE_USR_LOCAL&quot; ]; then
-    echo &quot;Rescapp desktop file found at: $DESKTOP_FILE_USR_LOCAL&quot;
-elif [ -f &quot;$DESKTOP_FILE_USR&quot; ]; then
-    echo &quot;Rescapp desktop file found at: $DESKTOP_FILE_USR&quot;
-else
-    echo &quot;Warning: Rescapp desktop file not found. Desktop integration might be incomplete.&quot;
-fi
-echo &quot;-----------------------------------------------------&quot;
-echo &quot;Rescapp installation process completed successfully.&quot;
-echo &quot;The build files were in the temporary directory $BUILD_DIR and will be cleaned up.&quot;
-echo &quot;You can now attempt to run Rescapp by typing &#39;rescapp&#39; in your terminal.&quot;
-echo &quot;-----------------------------------------------------&quot;
-# Cleanup is handled by the trap EXIT
-exit 0" data-download-link="" data-download-label="Download Bash">
-  <code class="language-bash">#!/bin/bash
-# Script to install Rescapp and its dependencies on Debian Bullseye x64
-# This script automates the steps from the revised guide.
-# It should be run with sudo privileges or by a user who can sudo without a password for apt.
-# The script will exit immediately if any command fails.
-set -e # Exit immediately if a command exits with a non-zero status.
-set -u # Treat unset variables as an error when substituting.
-set -o pipefail # The return value of a pipeline is the status of the last command to exit with a non-zero status, or zero if no command exited with a non-zero status.
-# --- Configuration ---
-# Set DEBIAN_FRONTEND to noninteractive to avoid prompts during package installation
-export DEBIAN_FRONTEND=noninteractive
-# --- Temporary Directory for Build ---
-BUILD_DIR=&quot;&quot; # Initialize BUILD_DIR
-# Cleanup function to remove temporary directory
-cleanup() {
-    if [ -n &quot;$BUILD_DIR&quot; ] &amp;&amp; [ -d &quot;$BUILD_DIR&quot; ]; then
-        echo &quot;Cleaning up temporary build directory: $BUILD_DIR&quot;
-        sudo rm -rf &quot;$BUILD_DIR&quot;
-    fi
-}
-# Register cleanup function to be called on script exit or interruption
-trap cleanup EXIT SIGINT SIGTERM
-echo &quot;Starting Rescapp installation process...&quot;
-echo &quot;This script will install necessary packages and Rescapp.&quot;
-echo &quot;Ensure you have an active internet connection.&quot;
-echo &quot;-----------------------------------------------------&quot;
-# 1. Update System
-echo &quot;[Step 1/7] Updating system packages...&quot;
-sudo apt update
-sudo apt upgrade -y
-# 2. Install Build Essentials and Git
-echo &quot;[Step 2/7] Installing build essentials, core utilities, and git...&quot;
-sudo apt install -y build-essential make coreutils git
-# 3. Install All Required Runtime Dependencies
-echo &quot;[Step 3/7] Installing Rescapp runtime dependencies...&quot;
-# Note: python3-pyqt5.qtwebkit is for Bullseye. Newer distros might use python3-pyqt5.qtwebengine.
-# Lilo might produce a warning during installation; this is generally acceptable for newer systems not relying on Lilo.
-sudo apt install -y \
-    python3 python3-gi python3-dbus python3-pyqt5 python3-pyqt5.qtwebkit python3-parted \
-    zenity xdg-utils wmctrl \
-    dbus \
-    util-linux reiserfsprogs reiser4progs btrfs-progs xfsprogs xfsdump ntfs-3g dosfstools gawk extundelete os-prober \
-    dmraid lvm2 cryptsetup libcryptsetup12 cryptsetup-bin \
-    gdisk efibootmgr mokutil \
-    syslinux lilo \
-    xterm \
-    pastebinit hexchat \
-    inxi boot-info-script \
-    gparted gpart testdisk \
-    wget curl
-# 4. (Optional) SELinux Support
-# If you need to rescue SELinux-enabled systems (e.g., Fedora, RHEL, CentOS),
-# uncomment the following section.
-# echo &quot;[Step 4/7 - Optional] Installing SELinux support packages...&quot;
-# sudo apt install -y \
-# python3-selinux python3-semanage policycoreutils-python-utils selinux-basics auditd selinux-policy-default setools
-# 5. Install the Rescatux chntpw Package
-echo &quot;[Step 4/7] Installing Rescatux chntpw package...&quot;
-# This uses the Rescatux repository for a version of chntpw with features needed by Rescapp.
-# The repository is for Debian Buster but the chntpw package is generally compatible with Bullseye.
-RESCATUX_REPO_FILE=&quot;/etc/apt/sources.list.d/rescatux.list&quot;
-RESCATUX_REPO_LINE=&quot;deb http://rescatux.sourceforge.net/repo/ buster-dev main&quot;
-if ! grep -qF &quot;$RESCATUX_REPO_LINE&quot; &quot;$RESCATUX_REPO_FILE&quot; 2&gt;/dev/null; then
-    echo &quot;$RESCATUX_REPO_LINE&quot; | sudo tee &quot;$RESCATUX_REPO_FILE&quot;
-else
-    echo &quot;Rescatux repository line already exists in $RESCATUX_REPO_FILE.&quot;
-fi
-# Allow unauthenticated repositories for this specific source if GPG key is not imported.
-sudo apt -o Acquire::AllowInsecureRepositories=true -o Acquire::AllowDowngradeToInsecureRepositories=true update
-# You might be prompted to accept unauthenticated packages; this is expected for this repo if not running fully noninteractive.
-# The DEBIAN_FRONTEND=noninteractive export should handle this.
-sudo apt install -y chntpw
-# 6. Clone the Rescapp Repository
-BUILD_DIR=$(mktemp -d) # Create a temporary directory
-echo &quot;[Step 5/7] Cloning the Rescapp repository into $BUILD_DIR/rescapp...&quot;
-git clone https://github.com/rescatux/rescapp.git &quot;$BUILD_DIR/rescapp&quot;
-cd &quot;$BUILD_DIR/rescapp&quot;
-# 7. Install Rescapp
-echo &quot;[Step 6/7] Installing Rescapp (default to /usr/local)...&quot;
-# To install to /usr instead, you would use: sudo make prefix=/usr install
-sudo make install
-# 8. Verify Installation
-echo &quot;[Step 7/7] Verifying installation...&quot;
-RESCAPP_PATH=$(which rescapp || echo &quot;not_found&quot;) # Avoid error if not found when set -u is active
-if [ &quot;$RESCAPP_PATH&quot; != &quot;not_found&quot; ] &amp;&amp; [ -n &quot;$RESCAPP_PATH&quot; ]; then
-    echo &quot;Rescapp executable found at: $RESCAPP_PATH&quot;
-else
-    echo &quot;ERROR: Rescapp executable not found in PATH after installation.&quot;
-    # The script will exit here if set -e is active and which fails,
-    # but this explicit check is for clarity.
-fi
-DESKTOP_FILE_USR_LOCAL=&quot;/usr/local/share/applications/rescapp.desktop&quot;
-DESKTOP_FILE_USR=&quot;/usr/share/applications/rescapp.desktop&quot;
-if [ -f &quot;$DESKTOP_FILE_USR_LOCAL&quot; ]; then
-    echo &quot;Rescapp desktop file found at: $DESKTOP_FILE_USR_LOCAL&quot;
-elif [ -f &quot;$DESKTOP_FILE_USR&quot; ]; then
-    echo &quot;Rescapp desktop file found at: $DESKTOP_FILE_USR&quot;
-else
-    echo &quot;Warning: Rescapp desktop file not found. Desktop integration might be incomplete.&quot;
-fi
-echo &quot;-----------------------------------------------------&quot;
-echo &quot;Rescapp installation process completed successfully.&quot;
-echo &quot;The build files were in the temporary directory $BUILD_DIR and will be cleaned up.&quot;
-echo &quot;You can now attempt to run Rescapp by typing &#39;rescapp&#39; in your terminal.&quot;
-echo &quot;-----------------------------------------------------&quot;
-# Cleanup is handled by the trap EXIT
-exit 0</code>
-</section>]]></content><author><name></name></author><category term="scratchpad" /></entry></feed>
+</ul>]]></content><author><name></name></author><category term="scratchpad" /></entry></feed>
