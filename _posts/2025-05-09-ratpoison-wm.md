@@ -81,30 +81,16 @@ set barpadding 4 4
 set bargravity c
 set barborder 0
 
-definekey top M-Tab next
-definekey top M-ISO_Left_Tab prev
-definekey top M-KP_8 ratrelwarp 0 -15
-definekey top M-KP_2 ratrelwarp 0 15
-definekey top M-KP_4 ratrelwarp -15 0
-definekey top M-KP_6 ratrelwarp 15 0
-definekey top M-KP_1 ratclick 1
-definekey top M-KP_5 ratclick 2
-definekey top M-KP_3 ratclick 3
-
-exec rpws init 9
-exec rpbar
 exec xsetroot -bitmap /home/linaro/Desktop/02-media/pics/wallpaper1.xbm -bg "#073642" -fg "#345345"
 exec xrdb -merge /home/linaro/.Xresources
 exec xfce4-power-manager
 exec unclutter --timeout 2 --jitter 5
+exec rpws init 9
+exec rpbar
 exec nm-applet
+exec clipse -listen
 exec brightnessctl s 7
 exec /usr/bin/rpws restore /home/linaro/Desktop/01-document/dotfiles/rpws_layouts.dmp
-
-startup_message on
-escape Super_L
-banish
-unmanage rpbar
 
 addhook titlechanged exec rpbarsend
 addhook switchwin exec rpbarsend
@@ -113,75 +99,43 @@ addhook switchframe exec rpbarsend
 addhook newwindow exec rpbarsend
 addhook deletewindow exec rpbarsend
 
+startup_message on
+escape Super_L
+unmanage rpbar
+banish
+
+definekey top M-Tab next
+definekey top M-ISO_Left_Tab prev
+definekey top ISO_Left_Tab exec rpws next
+definekey top C-ISO_Left_Tab exec rpws prev
+
+bind z undo
+bind x swap
 bind w exec thorium-browser
 bind v exec paste_clipboard_from_file.sh
 bind Up focusup
-bind u undo
+bind u exec /usr/bin/rpws dump /home/linaro/Desktop/01-document/dotfiles/rpws_layouts.dmp
 bind Tab focus 
+bind Tab focus
 bind t exec pcmanfm-qt --daemon-mode
 bind space exec xboomx
-bind Right focusright
-bind Return exec x-terminal-emulator
-bind r resize
-bind q delete
-bind k kill
-bind Print exec xfce4-screenshooter
-bind Page_Up exec rpws prev
-bind Page_Down exec rpws next
-bind minus vsplit
-bind Left focusleft
-bind KP_Separator exec xdotool key quotedbl key quotedbl key quotedbl
-bind KP_9 exec rpws 9
-bind KP_8 exec rpws 8
-bind KP_7 exec rpws 7
-bind KP_6 exec rpws 6
-bind KP_5 exec rpws 5
-bind KP_4 exec rpws 4
-bind KP_3 exec rpws 3
-bind KP_2 exec rpws 2
-bind KP_1 exec rpws 1
-bind KP_0 exec xdotool key apostrophe key apostrophe key apostrophe
-bind i exec viewnior
-bind g exec gsimplecal
-bind F8 exec flatpak run io.github.zaps166.QMPlay2
-bind F7 exec flatpak run com.github.ryonakano.reco
-bind F6 exec flatpak run com.strlen.TreeSheets
-bind F5 exec flatpak run com.github.tenderowl.frog
-bind F4 exec flatpak run org.telegram.desktop
-bind F1 exec thermal.sh
-bind f only
-bind Escape exec /usr/bin/rpws dump /home/linaro/Desktop/01-document/dotfiles/rpws_layouts.dmp
-bind equal hsplit
-bind e exec xnedit
-bind Down focusdown
-bind c exec write_clipboard_to_file.sh
-bind BackSpace next
-bind h exec x-terminal-emulator -e bpytop
-bind apostrophe colon exec x-terminal-emulator -e 
-bind 9 exec rpws 9
-bind 8 exec rpws 8
-bind 7 exec rpws 7
-bind 6 exec rpws 6
-bind 5 exec rpws 5
-bind 4 exec rpws 4
-bind 3 exec rpws 3
-bind 2 exec rpws 2
-bind 1 exec rpws 1
-bind 0 remove
-bind s-w exec x-terminal-emulator -e nm-connection-editor
+bind s-z redo
+bind s-x fselect
+bind s-w select
 bind s-Up exchangeup
-bind s-u redo
-bind s-Tab nextscreen
+bind s-u exec /usr/bin/rpws restore /home/linaro/Desktop/01-document/dotfiles/rpws_layouts.dmp
+bind s-Tab focuslast
 bind s-t exec sudo pcmanfm-qt
 bind s-space exec x-terminal-emulator --hold -e python3 /home/linaro/.local/bin/dratmenu.py
 bind s-Right exchangeright
 bind s-Return exec sudo x-terminal-emulator
-bind s-q abort
 bind s-Print exec scrot -s -e 'xclip -selection clipboard -t image/png -i $f && rm $f'
 bind s-Page_Up exec rpws movenext
 bind s-Page_Down exec rpws moveprev
 bind s-minus exec amixer set Master 5%-
+bind s-M-Tab prev
 bind s-Left exchangeleft
+bind s-KP_Separator exec xdotool key dead_circumflex key dead_circumflex key dead_circumflex
 bind s-KP_9 exec rpws move9
 bind s-KP_8 exec rpws move8
 bind s-KP_7 exec rpws move7
@@ -191,15 +145,15 @@ bind s-KP_4 exec rpws move4
 bind s-KP_3 exec rpws move3
 bind s-KP_2 exec rpws move2
 bind s-KP_1 exec rpws move1
+bind s-KP_0 exec xdotool key Ccedilla key Ccedilla key Ccedilla
+bind s-i exec x-terminal-emulator -e nm-connection-editor
 bind s-g exec galculator
 bind s-F1 exec reverse-thermal.sh
-bind s-Escape exec /usr/bin/rpws restore /home/linaro/Desktop/01-document/dotfiles/rpws_layouts.dmp
+bind s-Escape kill
 bind s-equal exec amixer set Master 5%+
 bind s-e exec xnc
 bind s-Down exchangedown
 bind s-BackSpace prev
-bind s-b exec vorta
-bind b exec sudo timeshift --create --comments "Before making changes"
 bind s-apostrophe colon exec x-terminal-emulator -e sudo 
 bind s-a title
 bind s-9 exec rpws move9
@@ -212,6 +166,62 @@ bind s-3 exec rpws move3
 bind s-2 exec rpws move2
 bind s-1 exec rpws move1
 bind s-0 exec amixer set Master toggle
+bind Right focusright
+bind Return exec x-terminal-emulator
+bind r resize
+bind q delete
+bind Print exec xfce4-screenshooter
+bind Page_Up exec rpws next
+bind Page_Down exec rpws prev
+bind minus vsplit
+bind M-Tab next
+bind M-3 ratclick 3
+bind M-2 ratclick 2
+bind M-1 ratclick 1
+bind Left focusleft
+bind KP_Separator exec xdotool key quotedbl key quotedbl key quotedbl
+bind KP_9 exec rpws 9
+bind KP_8 exec rpws 8
+bind KP_7 exec rpws 7
+bind KP_6 exec rpws 6
+bind KP_5 exec rpws 5
+bind KP_4 exec rpws 4
+bind KP_3 exec rpws 3
+bind KP_2 exec rpws 2
+bind KP_1 exec rpws 1
+bind KP_0 exec xdotool key apostrophe key apostrophe key apostrophe
+bind k exec x-terminal-emulator -e "$SHELL" -c clipse
+bind ISO_Left_Tab exec rpws movenext
+bind i exec viewnior
+bind h exec x-terminal-emulator -e bpytop
+bind g exec gsimplecal
+bind F8 exec flatpak run io.github.zaps166.QMPlay2
+bind F7 exec flatpak run com.github.ryonakano.reco
+bind F6 exec flatpak run com.strlen.TreeSheets
+bind F5 exec flatpak run com.github.tenderowl.frog
+bind F4 exec flatpak run org.filezillaproject.Filezilla
+bind F1 exec thermal.sh
+bind f only
+bind Escape abort
+bind equal hsplit
+bind e exec xnedit
+bind Down focusdown
+bind C-Tab nextscreen
+bind C-ISO_Left_Tab exec rpws moveprev
+bind c exec write_clipboard_to_file.sh
+bind BackSpace next
+bind b exec vorta
+bind apostrophe colon exec x-terminal-emulator -e 
+bind 9 exec rpws 9
+bind 8 exec rpws 8
+bind 7 exec rpws 7
+bind 6 exec rpws 6
+bind 5 exec rpws 5
+bind 4 exec rpws 4
+bind 3 exec rpws 3
+bind 2 exec rpws 2
+bind 1 exec rpws 1
+bind 0 remove
 {% endcodeblock %}
 
 #### ~/.rpbar.ini
