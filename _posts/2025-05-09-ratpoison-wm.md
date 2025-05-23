@@ -236,7 +236,7 @@ bind 0 remove
 ##### `shell/llm_analyze_file.sh`
 ```bash
 #!/bin/bash
-# Script to analyze a file with llm (o3-mini) using a specific prompt.
+# Script to analyze a file with /home/linaro/.local/bin/llm (o3-mini) using a specific prompt.
 # Refactored by Gemini to use `script` and `xsel` for capturing all terminal output to clipboard.
 
 GEMINI_CAPTURE_MODE="${GEMINI_CAPTURE_MODE:-outer}" # Default to outer mode
@@ -244,7 +244,7 @@ GEMINI_CAPTURE_MODE="${GEMINI_CAPTURE_MODE:-outer}" # Default to outer mode
 if [ "$GEMINI_CAPTURE_MODE" = "inner" ]; then
     # INNER EXECUTION: This is the original script logic.
     # All terminal I/O here is captured by the `script` command.
-    echo "LLM File Analysis (o3-mini)"
+    echo "/home/linaro/.local/bin/llm File Analysis (o3-mini)"
     echo "Enter the full path to the file you want to analyze (Ctrl+D or empty to cancel):"
     read -p "File Path: " FILE_PATH
 
@@ -256,15 +256,15 @@ if [ "$GEMINI_CAPTURE_MODE" = "inner" ]; then
         echo ""
         echo "Analyzing file: $FILE_PATH"
         echo "Using model: o3-mini"
-        echo "Waiting for LLM response..."
+        echo "Waiting for /home/linaro/.local/bin/llm response..."
         echo ""
 
-        cat "$FILE_PATH" | llm -m o3-mini -s "$SYSTEM_PROMPT_TEXT"
+        cat "$FILE_PATH" | /home/linaro/.local/bin/llm -m o3-mini -s "$SYSTEM_PROMPT_TEXT"
     else
         echo "File not found: $FILE_PATH" >&2
     fi
     
-    printf '\nLLM command finished. Press any key to close this terminal...'
+    printf '\n/home/linaro/.local/bin/llm command finished. Press any key to close this terminal...'
     read -n 1 -s -r
     exit 0 # Exit the inner script
 
@@ -335,7 +335,7 @@ fi
 ##### `shell/llm_pipe_selected_sys.sh`
 ```bash
 #!/bin/bash
-# Takes selected text (clipboard/primary) and pipes to llm with a user-provided system prompt.
+# Takes selected text (clipboard/primary) and pipes to /home/linaro/.local/bin/llm with a user-provided system prompt.
 # Refactored by Gemini to use `script` and `xsel` for capturing all terminal output to clipboard.
 
 GEMINI_CAPTURE_MODE="${GEMINI_CAPTURE_MODE:-outer}"
@@ -365,12 +365,12 @@ if [ "$GEMINI_CAPTURE_MODE" = "inner" ]; then
         echo "--- Selected Text Start (first 200 chars) ---"
         echo "$SELECTED_TEXT" | head -c 200
         echo "--- Selected Text End (truncated if long) ---"
-        echo "Waiting for LLM response..."
+        echo "Waiting for /home/linaro/.local/bin/llm response..."
         echo ""
-        echo "$SELECTED_TEXT" | llm --system "$SYSTEM_PROMPT"
+        echo "$SELECTED_TEXT" | /home/linaro/.local/bin/llm --system "$SYSTEM_PROMPT"
     fi
 
-    printf '\nLLM command finished. Press any key to close this terminal...'
+    printf '\n/home/linaro/.local/bin/llm command finished. Press any key to close this terminal...'
     read -n 1 -s -r
     exit 0
 
@@ -441,18 +441,18 @@ fi
 ##### `shell/llm_sF11_list_fragments.sh`
 ```bash
 #!/bin/bash
-# Lists llm fragments.
+# Lists /home/linaro/.local/bin/llm fragments.
 # Refactored by Gemini to use `script` and `xsel` for capturing all terminal output to clipboard.
 
 GEMINI_CAPTURE_MODE="${GEMINI_CAPTURE_MODE:-outer}"
 
 if [ "$GEMINI_CAPTURE_MODE" = "inner" ]; then
-    echo "LLM Fragments List"
+    echo "/home/linaro/.local/bin/llm Fragments List"
     echo "Fetching list..."
     echo ""
-    llm fragments list
+    /home/linaro/.local/bin/llm fragments list
     
-    printf '\nLLM command finished. Press any key to close this terminal...'
+    printf '\n/home/linaro/.local/bin/llm command finished. Press any key to close this terminal...'
     read -n 1 -s -r
     exit 0
 
@@ -523,22 +523,22 @@ fi
 ##### `shell/llm_sF12_extract_last.sh`
 ```bash
 #!/bin/bash
-# Prompts for a message and sends it to llm with o3-mini, extracting the last code block.
+# Prompts for a message and sends it to /home/linaro/.local/bin/llm with o3-mini, extracting the last code block.
 # Refactored by Gemini to use `script` and `xsel` for capturing all terminal output to clipboard.
 
 GEMINI_CAPTURE_MODE="${GEMINI_CAPTURE_MODE:-outer}"
 
 if [ "$GEMINI_CAPTURE_MODE" = "inner" ]; then
-    echo "LLM Extract Last Code Block (o3-mini)"
+    echo "/home/linaro/.local/bin/llm Extract Last Code Block (o3-mini)"
     read -p "Enter your prompt: " prompt_text
     
     if [ -z "$prompt_text" ]; then
         echo "No prompt entered. Exiting."
     else
-        llm -m o3-mini --xl "$prompt_text"
+        /home/linaro/.local/bin/llm -m o3-mini --xl "$prompt_text"
     fi
     
-    printf '\nLLM command finished. Press any key to close this terminal...'
+    printf '\n/home/linaro/.local/bin/llm command finished. Press any key to close this terminal...'
     read -n 1 -s -r
     exit 0
 
@@ -609,22 +609,22 @@ fi
 ##### `shell/llm_sF4_prompt.sh`
 ```bash
 #!/bin/bash
-# Prompts for a message and sends it to llm with gpt-4.1.
+# Prompts for a message and sends it to /home/linaro/.local/bin/llm with gpt-4.1.
 # Refactored by Gemini to use `script` and `xsel` for capturing all terminal output to clipboard.
 
 GEMINI_CAPTURE_MODE="${GEMINI_CAPTURE_MODE:-outer}"
 
 if [ "$GEMINI_CAPTURE_MODE" = "inner" ]; then
-    echo "LLM with gpt-4.1"
+    echo "/home/linaro/.local/bin/llm with gpt-4.1"
     read -p "Enter your prompt: " prompt_text
     
     if [ -z "$prompt_text" ]; then
         echo "No prompt entered. Exiting."
     else
-        llm -m gpt-4.1 "$prompt_text"
+        /home/linaro/.local/bin/llm -m gpt-4.1 "$prompt_text"
     fi
     
-    printf '\nLLM command finished. Press any key to close this terminal...'
+    printf '\n/home/linaro/.local/bin/llm command finished. Press any key to close this terminal...'
     read -n 1 -s -r
     exit 0
 
@@ -701,7 +701,7 @@ fi
 GEMINI_CAPTURE_MODE="${GEMINI_CAPTURE_MODE:-outer}"
 
 if [ "$GEMINI_CAPTURE_MODE" = "inner" ]; then
-    echo "LLM with System Prompt"
+    echo "/home/linaro/.local/bin/llm with System Prompt"
     read -p "Enter SYSTEM prompt: " system_prompt
     if [ -z "$system_prompt" ]; then
         echo "No system prompt entered. Exiting."
@@ -714,10 +714,10 @@ if [ "$GEMINI_CAPTURE_MODE" = "inner" ]; then
     if [ -z "$main_prompt" ]; then
         echo "No main prompt entered. Exiting."
     else
-        llm --system "$system_prompt" "$main_prompt"
+        /home/linaro/.local/bin/llm --system "$system_prompt" "$main_prompt"
     fi
     
-    printf '\nLLM command finished. Press any key to close this terminal...'
+    printf '\n/home/linaro/.local/bin/llm command finished. Press any key to close this terminal...'
     read -n 1 -s -r
     exit 0
 
@@ -794,7 +794,7 @@ fi
 GEMINI_CAPTURE_MODE="${GEMINI_CAPTURE_MODE:-outer}"
 
 if [ "$GEMINI_CAPTURE_MODE" = "inner" ]; then
-    echo "LLM with Fragment"
+    echo "/home/linaro/.local/bin/llm with Fragment"
     read -p "Enter fragment source (URL or file path): " fragment_source
     if [ -z "$fragment_source" ]; then
         echo "No fragment source entered. Exiting."
@@ -807,10 +807,10 @@ if [ "$GEMINI_CAPTURE_MODE" = "inner" ]; then
     if [ -z "$main_prompt" ]; then
         echo "No main prompt entered. Exiting."
     else
-        llm -f "$fragment_source" "$main_prompt"
+        /home/linaro/.local/bin/llm -f "$fragment_source" "$main_prompt"
     fi
     
-    printf '\nLLM command finished. Press any key to close this terminal...'
+    printf '\n/home/linaro/.local/bin/llm command finished. Press any key to close this terminal...'
     read -n 1 -s -r
     exit 0
 
@@ -881,13 +881,13 @@ fi
 ##### `shell/llm_sF9_attachment.sh`
 ```bash
 #!/bin/bash
-# Prompts for a main prompt and an attachment for llm with gpt-4.1-mini.
+# Prompts for a main prompt and an attachment for /home/linaro/.local/bin/llm with gpt-4.1-mini.
 # Refactored by Gemini to use `script` and `xsel` for capturing all terminal output to clipboard.
 
 GEMINI_CAPTURE_MODE="${GEMINI_CAPTURE_MODE:-outer}"
 
 if [ "$GEMINI_CAPTURE_MODE" = "inner" ]; then
-    echo "LLM with Attachment (gpt-4.1-mini)"
+    echo "/home/linaro/.local/bin/llm with Attachment (gpt-4.1-mini)"
     read -p "Enter MAIN prompt: " main_prompt
     if [ -z "$main_prompt" ]; then
         echo "No main prompt entered. Exiting."
@@ -900,10 +900,10 @@ if [ "$GEMINI_CAPTURE_MODE" = "inner" ]; then
     if [ -z "$attachment_source" ]; then
         echo "No attachment source entered. Exiting."
     else
-        llm -m gpt-4.1-mini "$main_prompt" -a "$attachment_source"
+        /home/linaro/.local/bin/llm -m gpt-4.1-mini "$main_prompt" -a "$attachment_source"
     fi
     
-    printf '\nLLM command finished. Press any key to close this terminal...'
+    printf '\n/home/linaro/.local/bin/llm command finished. Press any key to close this terminal...'
     read -n 1 -s -r
     exit 0
 
