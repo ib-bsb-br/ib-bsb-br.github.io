@@ -1,14 +1,16 @@
 ---
-tags: [scratchpad]
+tags:
+- scratchpad
 info: aberto.
 date: 2025-05-23
 type: post
 layout: post
 published: true
 slug: search-and-extract-information-from-disorganized-data-with-ugrep
-title: 'Search and extract information from disorganized data with `ugrep`'
+title: Search and extract information from disorganized data with `ugrep`
+comment: https://github.com/Genivia/ugrep
 ---
-bibref https://github.com/Genivia/ugrep
+
 
 ## I. Introduction: Taming Your Digital Research Archive with `ugrep`
 
