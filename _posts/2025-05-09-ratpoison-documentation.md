@@ -11,6 +11,1014 @@ title: ratpoison documentation
 comment: https://raw.githubusercontent.com/dimatura/ratpoison/refs/heads/master/doc/ratpoison.texi
 ---
 
+**NAME**
+
+**ratpoison** — window manager without mouse dependency
+
+**SYNOPSIS**
+
+**ratpoison** [**−hv**] **ratpoison** [**−d**_dpy_] [**−s**_num_] [**−f**_file_] **ratpoison** [**−d**_dpy_] [**−s**_num_] [**−i**] **−c**_command_ [**−c**_command ..._]
+
+**DESCRIPTION**
+
+**ratpoison** is a Window Manager without fat library dependencies, fancy graphics or rat dependence.
+
+The screen can be split into non-overlapping frames. All windows are kept maximized inside their frames.
+
+All interaction with the window manager is done through keystrokes. **ratpoison** has a prefix map to minimize key clobbering.
+
+The options are as follows:
+
+**−c**, **−−command**
+
+Send ratpoison a command. There must be a ratpoison instance running as window manager for the given display/screen for this to work. Do not forget to quote the command if it contains spaces. For example:
+
+**ratpoison −c** "_echo hello world_"
+
+**−d**, **−−display**_display_
+
+Set the X display to use or send commands to.
+
+**−f**, **−−file**_filename_
+
+Specify an alternate configuration file. If this is not given, **ratpoison** will try _$HOME/.ratpoisonrc_ and if that does not exist _/etc/ratpoisonrc_ and execute each command when starting up.
+
+**−h**, **−−help**
+
+Show summary of options.
+
+**−i**, **−−interactive**
+
+Execute commands given with **−c** or **−−command** in interactive mode. That means it will behave exactly as if called with **C−t :** like prompting for missing arguments and things like that.
+
+**−s**, **−−screen**_number_
+
+Only use the specified screen.
+
+**−v**, **−−version**
+
+Show version of program.
+
+**KEY BINDINGS**
+
+To avoid conflicts with other programs, all default ratpoison key bindings start with an escape key, per default **C−t** (read Control−t). Some important default key bindings:
+
+**C−t ?**
+
+Show key bindings
+
+**C−t c**
+
+Start an X terminal
+
+**C−t n**
+
+Switch to next window
+
+**C−t p**
+
+Switch to previous window
+
+**C−t 1** | **2** | **3** | **4** | **5** | **6** | **7** | **8** | **9**
+
+Switch to window number 1 | 2 | ...
+
+**C−t k**
+
+Close the current window
+
+**C−t K**
+
+XKill the current application
+
+**C−t s** | **S**
+
+Split the current frame into two vertical | horizontal ones
+
+**C−t Tab** | **Left** | **Up** | **Right** | **Down**
+
+Switch to the next | left | top | right | bottom frame.
+
+**C−t Q**
+
+Make the current frame the only one
+
+**C−t :**
+
+Execute a ratpoison command
+
+Further default key bindings can be found in parentheses after the commands in the next section.
+
+**COMMANDS AND DEFAULT ALIASES
+
+ abort**
+
+(**C−t C−g**) Do nothing and that successfully. (
+
+Useful if you pressed **C−t** in error ).
+
+**addhook**_event command_
+
+Add a hook: run _command_ whenever _event_ is called. Possible events are:
+
+**deletewindow**
+
+Run after a window is withdrawn.
+
+**newwindow**
+
+Run after a new window is mapped.
+
+**key**
+
+Run whenever a top level key is pressed (by default **C−t**).
+
+**quit**
+
+Run before exiting **ratpoison**.
+
+**restart**
+
+Run before restarting **ratpoison**.
+
+**switchframe**
+
+Run after a frame actually switched, but before the window in it is focused.
+
+**switchgroup**
+
+Run after selecting a new group.
+
+**switchscreen**
+
+Run when the user switches to a different screen.
+
+**switchwin**
+
+Run after a new window is selected. (With dedication, it may already be inactive again, if it was put into another frame)
+
+**alias**_alias command_
+
+Add _alias_ as new way to call _command_.
+
+**bind**_key command_
+
+alias for "**definekey root**_key command_"
+
+**banish**
+
+(**C−t b**) Banish the rat cursor to the lower right corner of the screen.
+
+**banishrel**
+
+Banish the rat cursor to the lower right corner of the current window. If there isn’t a window in the current frame, it banishes the rat cursor to the lower right corner of the frame.
+
+**chdir** [_directory_]
+
+If the optional argument is given, change the current directory of **ratpoison** to _directory_. If nothing is given, change it to the value of the environment variable "HOME".
+
+**clrunmanaged**
+
+Clears the unmanaged window list.
+
+**cnext**
+
+Like **next** but switch to the next window with another resource class than the current one. (That means the next window belonging to another type of application than the current one.)
+
+**cprev**
+
+Like **prev** but switch to the previous window with another resource class than the current one. (That means the previous window belonging to another type of application than the current one.)
+
+**colon**_ratpoison−command_ (**C−t :**)
+
+Execute _ratpoison−command_ interactively. (i.e. ask for possible missing arguments.)
+
+**cother**
+
+Like **other** but switch to the window of the current group that was last accessed and has another resource class but is not currently visible.
+
+**curframe** (**C−t F**)
+
+Show a bar marking the current frame.
+
+**definekey**_keymap key command_
+
+Add a new key binding in _keymap_ for _key_ to execute _command_. Default keymaps are top normally only containing **C−t**, which reads a key from root, containing all the normal commands.
+
+Note that you have to describe ":" by "colon", "!" by "exclam" and so on. If you cannot guess a name of a key, try either **C−t**_key_ and look at the error message, or try **:describekey** root and pressing the key.
+
+**dedicate** [**0** | **1**]
+
+Consider the current frame dedicated/chaste (**1**) or promiscuous (**0**).
+
+A dedicated frame will not accept new windows. When new windows are to be focused, they will be opened in a non-dedicated frame instead.
+
+If no argument is given, toggle the current dedicateness. By default no windows are dedicated.
+
+**delete** (**C−t k**)
+
+Close the current window.
+
+**delkmap**_keymap_
+
+Deletes the keymap named _keymap_, that was generated with **newkmap**. The keymaps top (or whatever was specified by **set**_topkmap_) and root cannot be deleted.
+
+**describekey**_keymap_
+
+Grab the next key. Similar to **readkey**, **describekey** shows only the command in _keymap_, that would be executed by **readkey**.
+
+**echo**_text_
+
+Show _text_ as **ratpoison** message.
+
+**escape**_key_
+
+Update the default escape key to _key_.
+
+Strictly speaking it updates the **readkey root** command in the keymap **top** to _key_, the **other** binding in root to _key_, and **meta** binding in root to _key_ without modifiers or **C−**_key_ if _key_ has no modifiers. (If **set topkmap** was called with an argument other than **top** that will be used instead of **top**.)
+
+**exchangedown** (**C−t C−Down**)
+
+Exchange the window in the current frame with the window in the frame below the current frame.
+
+**exchangeleft** (**C−t C−Left**)
+
+Exchange the window in the current frame with the window in the frame left of the current frame.
+
+**exchangeright** (**C−t C−Right**)
+
+Exchange the window in the current frame with the window in the frame right of the current frame.
+
+**exchangeup** (**C−t C−Up**)
+
+Exchange the window in the current frame with the window in the frame above the current frame.
+
+**exec**_shell−command_ (**C−t !**)
+
+Spawn a shell executing _shell−command_.
+
+**execa**_shell−command_
+
+Spawn a shell executing _shell−command_, without remembering the current frame, so that _NET_WM_PID declaring programs will be placed into the frame active when they open a window instead of the frame active when **ratpoison** gets this command.
+
+**execf**_frame shell−command_
+
+Spawn a shell executing _shell−command_, showing _NET_WM_PID supporting programs in the given frame instead of the frame selected when this program is run.
+
+**fdump** [_screenno_]
+
+Output the defining data for all frames of the current screen, or for screen number _screenno_ if this is specified.
+
+**focus** (**C−t Tab**)
+
+Focus the next frame.
+
+**focuslast**
+
+Switch to the last selected focus.
+
+**focusleft** (**C−t Left**)
+
+Switch to the frame to the left of the current one.
+
+**focusdown** (**C−t Down**)
+
+Switch to the frame beneath the current one.
+
+**focusright** (**C−t Right**)
+
+Switch to the frame to the right of the current one.
+
+**focusprev**
+
+Focus the previous frame.
+
+**focusup** (**C−t Up**)
+
+Switch to the frame above the current one.
+
+**frestore**_frames_
+
+Replace the current frames with the ones specified in _frames_ in the format as generated by **fdump**.
+
+**fselect** [ _frameno_] (**C−t f**)
+
+If an argument is supplied, switch to a frame given by number _frameno_.
+
+If no argument is given, show a frame selector in each frame and wait for a key to be pressed. If the key matches an existing frame selector, this frame gets focused.
+
+Frame selectors are by default the numbers starting with zero, but they can be changed by **set**ting _framesels_.
+
+**gdelete** [_group_]
+
+If the optional argument _group_ is supplied, delete _group_. Otherwise delete the current group. If the last group is deleted, a new group with name default is created. The group has to be empty, otherwise it cannot be deleted.
+
+**getenv**_variable_
+
+Output the value of the environment variable _variable_.
+
+**getsel**
+
+Paste the current X Selection into the current window.
+
+**gmerge**_group_
+
+Move all windows from group _group_ into the current group.
+
+**gmove**_group_
+
+Move the current window into group _group_.
+
+**gnew**_group_
+
+Create a new group with name _group_ and select it. Most window commands only see (and thus select, consider next, previous or last) windows within the group active when they are issued.
+
+**gnewbg**_group_
+
+Create a new group named _group_, but do not select it.
+
+**gnext**
+
+Select the next group. Most window commands only see windows in the effective group.
+
+**gnumber** [_old new_]
+
+Give the number _new_ to the group with the number _old_ or the current group.
+
+**gother**
+
+Select the last accessed group. Most window commands only see windows in the effective group.
+
+**gprev**
+
+Select the prior group. Most window commands only see windows in the effective group.
+
+**gravity** [**nw** | **w** | **sw** | **n** | **c** | **s** | **ne** | **e** | **se**]
+
+Change how in its frame the current window is aligned.
+
+**grename**
+
+Rename current group.
+
+**groups**
+
+Output a list of all groups with their number.
+
+**gselect**_group_
+
+Select the group named _group_.
+
+**help** [_keymap_]
+
+If the optional parameter _keymap_ is given, list all keybindings in this keymap, otherwise list all key bindings in keymap root.
+
+**hsplit** [ _l_**/**_p_ | [ **−**]_pixels_] (**C−t S**)
+
+Split the current frame into left frame and a right frame. If no parameter is given, split in halves. If two numbers separated by a slash (‘/’) are given, the left one is _l_ times the _p_ th part and the right one (_p_ − _l_) times the _p_ th part of the prior width. Otherwise the right half is _pixels_ wide or the left one is _pixels_ wide, depending whether there is ‘−’ in front of the number or not.
+
+**inext**
+
+Like **next** but switch to the next window with the same resource class as the current one. (That means the next window belonging to the same application as the current one.)
+
+**info** (**C−t i**)
+
+Output the current the width, height, window number and window name of the current window. (
+
+What name means is chosen by ‘‘**set**_winname_’’. )
+
+**iprev**
+
+Like **prev** but switch to the previous window with the same resource class as the current one. (That means the previous window belonging to the same application as the current one.)
+
+**iother**
+
+Like **other** but switch to the window of the current group that was last accessed and has the same resource class but is not currently visible.
+
+**kill** (**C−t K**)
+
+Close the X-connection of the X-client responsible for the current window.
+
+**lastmsg** (**C−t m**)
+
+Reshow the last message.
+
+**license** (**C−t V**)
+
+Show **ratpoison**’s license.
+
+**link**_key_ [_keymap_]
+
+Do what _key_ is bound to in the keymap _keymap_ if supplied. Otherwise what _key_ is bound to in keymap root.
+
+**listhook**_event_
+
+List all commands specified with **addhook** to be executed when even _event_ occurs.
+
+**meta** [ _key_] (**C−t t**)
+
+Send the escape key (that which normally is **C−t**) to the current window. If a _key_ is specified, this is sent instead. Note that some applications by default ignore the synthetic key that is sent using this command as it is considered a security hole. xterm is one such application.
+
+**msgwait** [_seconds_]
+
+Set the duration the message window is shown. If _seconds_ is zero, wait infinitely. This command is deprecated, please set the _msgwait_ variable instead.
+
+**newkmap**_keymap_
+
+Generate a new keymap named _keymap_. This keymap can be used to add new key-command mappings to it with **definekey** and can be called with **readkey**.
+
+**newwm**_new-window-manager_
+
+Quit **ratpoison** and execute _new-window-manager_ instead.
+
+**next** (**C−t Return** | **C−t n** | **C−t space**)
+
+Switch to the next window in the current group.
+
+**nextscreen** (**C−t N**)
+
+Switch to the next screen. (If you have multiple physical ones.)
+
+**number**_new_ [_old_]
+
+Give the number _new_ to the window with the number _old_ or the current window.
+
+**only** (**C−t Q**)
+
+Remove all frames on the current screen except the current frame and maximize this one to the size of the whole screen.
+
+**other** (**C−t C−t**)
+
+Switch to the window of the current group that was last accessed but is not currently visible.
+
+**prev** (**C−t p**)
+
+Switch to the previous window in the current group.
+
+**prevscreen** (**C−t P**)
+
+Switch to the previous screen. (If you have multiple physical ones.)
+
+**prompt** [_prompt_]
+
+**ratpoison** will ask the user for input, showing _prompt_ (or a single colon, if no argument is given) and output the input the user has made. Note that this command probably does not make much sense in interactive mode.
+
+**putsel**_x−selection_
+
+Replace the X selection with the text _x−selection_. It can be inserted into the current window with **getsel**.
+
+**quit**
+
+Quit **ratpoison**.
+
+**ratinfo**
+
+Display the x y coordinates of the rat cursor relative to the screen.
+
+**ratrelinfo**
+
+Display the x y coordinates of the rat cursor relative to the current window or current frame if no window is focused
+
+**ratwarp**_x y_
+
+Move the rat cursor to the position (_x_, _y_).
+
+**ratrelwarp**_deltax deltay_
+
+Move the rat cursor to (_deltax_, _deltay_), relative to the current position.
+
+**ratclick** [_button_]
+
+Simulate a rat click with _button_ (button 1=left button if none given).
+
+**rathold** { **up** | **down**} [_button_]
+
+Simulate pressing|releasing rat button _button_ (1=left button if none given).
+
+**readkey**_keymap_
+
+Grab the next key pressed, and execute the command associated to this key in _keymap_. To show it is waiting for a key, **ratpoison** will change the rat cursor to a square if _waitcursor_ is set. This command is perhaps best described with its usage in the default configuration: by pressing **C−t**, which is the only key in the keymap top , the command "**readkey root**" is executed. The next key then executes the command in keymap root belonging to this command.
+
+**redisplay** (**C−t l**)
+
+Extend the current window to the whole size of its current frame and redisplay it. (Useful to redisplay normal windows or bring transient windows to the full size of the frame as only normal windows are maximized by **ratpoison**)
+
+**redo** (**C−t U**)
+
+Revert the last **undo** of frame changes.
+
+**remhook**_event command_
+
+Remove command _command_ from the list of commands to be called when event _event_ is hit. (The command has to specified, as an event can have multiple commands attached to it.) Use "**listhook**_hook_" to get a list of all attached commands.
+
+**remove** (**C−t R**)
+
+Remove the current frame and extend some frames around to fill the remaining gap.
+
+**removedown** (**C−t M−Down**)
+
+Kill frames directly below the current frame, extending the current frame as much as possible.
+
+**removeleft** (**C−t M−Left**)
+
+Kill frames directly left of the current frame, extending the current frame as much as possible.
+
+**removeup** (**C−t M−Up**)
+
+Kill frames directly above the current frame, extending the current frame as much as possible.
+
+**removeright** (**C−t M−Right**)
+
+Kill frames directly right of the current frame, extending the current frame as much as possible.
+
+**resize** [ _deltax deltay_] (**C−t r**)
+
+If _deltax_ and _deltay_ are supplied, resize the current frame by that (i.e. move the bottom right corner by the given offsets and then move this frame and resize adjacent frames to make the frames fill the whole screen again.)
+
+If in interactive mode no arguments are supplied, resize the current frame interactively:
+
+**Return**
+
+finish resizing
+
+**C−g**, **Escape**
+
+abort resizing
+
+**C−n**, **Down**, **j**
+
+grow vertically
+
+**C−p**, **Up**, **k**
+
+shrink vertically
+
+**C−f**, **Right**, **l**
+
+grow horizontally
+
+**C−b**, **Up**, **h**
+
+shrink horizontally
+
+**s**
+
+shrink to size of current window
+
+While resizing interactively, changes are in multiples of the amount of pixels given by **set resizeunit** (by default 10).
+
+**restart**
+
+Restart **ratpoison**.
+
+**rudeness** [_rudeness_]
+
+This command is deprecated, please use the _rudeness_ variable instead.
+
+**sdump**
+
+Output the list of all screens. The screens are separated by commas. Each screen is shown as 6 values: its number, its x-coordinate, its y-coordinate, its width, its height and if it is currently selected (1=true, 0=false).
+
+**select** { **−** | _name_ | _number_} (**C−t ’**)
+
+If a number is given, switch to the window with number _number_. If a name is given, switch to the window in the current group with name _name_. Blank the current frame, if **−** is given.
+
+**set** [_variable_ [_value_]]
+
+If no argument is given, output all **ratpoison** variables and their values.
+
+If one argument is given, output the value of **ratpoison** variable _variable_. Otherwise set _variable_ to _value_. What values are valid depends on the variable. See the section _VARIABLES_ later in this document for details.
+
+**setenv**_variable value_
+
+Set the environment variable _variable_ to _value_. (
+
+Environment variables will be passed to all programs started from **ratpoison**. )
+
+**sfdump**
+
+Output all frames similar to **fdump**, but not limited to one screen, but all screens at once and with the screen number after each frame.
+
+**sfrestore**_frames_
+
+Replace the current frames with the ones specified in _frames_ in the format as generated by **sfdump**.
+
+**shrink**
+
+Shrink the current frame to the size of the current window with in.
+
+**split** [ _split_] (**C−t s**)
+
+alias for **vsplit**
+
+**source**_file_
+
+Read _file_ and execute each line as **ratpoison** command.
+
+**sselect**_screennumber_
+
+Switch to the screen _screennumber_. (If you have multiple physical ones.)
+
+**startup_message** {**on** | **off**}
+
+Select whether **ratpoison** will show a startup message or not. This command is deprecated, please use the _startupmessage_ variable instead.
+
+**swap**_dest-frame_ [ _src-frame_] (**C−t x**)
+
+Exchange the window in _src−frame_ (or the current frame if there is no second argument) with the window _dest−frame_ (or ask interactively which frame to swap with if there is no argument).
+
+**time** (**C−t a**)
+
+Output current data and time.
+
+**title**_newname_ (**C−t A**)
+
+Overwrite the title of the current window with _newname_. All following **ratpoison** commands will only know the window under the new name.
+
+**tmpwm**_tmpwm_
+
+Temporarily give control over to the other window manager _tmpwm_, reclaiming control when that WM terminates.
+
+**unalias**_alias_
+
+Remove the alias _alias_.
+
+**unbind**_key_
+
+alias for
+
+**undefinekey**_root key_
+
+**undefinekey**_keymap key_
+
+Remove the binding for _key_ from _keymap_.
+
+**undo** (**C−t _**, **C−t u**)
+
+Un−do the last change to the frameset. (Like splitting, resizing, deleting, ...)
+
+The amount of steps that can be undone is specified by the variable _maxundos_.
+
+**unmanage** [_name_]
+
+Add _name_ to the list of unmanaged windows. Thus, windows of this name will not be managed but allowed to choose their position themselves.
+
+In non−interactive mode calling it without arguments will print the list.
+
+The list can be cleared again by calling **clrunmanaged**.
+
+**unsetenv**_variable_
+
+Remove variable _variable_ from the list of environment variables.
+
+**verbexec**_cmdline_
+
+Spawn a shell executing _cmdline_ after showing a message with the command.
+
+**version** (**C−t v**)
+
+Output version and compile time information.
+
+**vsplit** [ _l_**/**_p_ | _pixels-from-top_ | **−**_pixels-from-bottom_] (**C−t s**)
+
+Split the current frame into upper frame and a lower frame. If no parameter is given, split in halves. If two numbers separated by a slash (‘‘/’’) are given, the upper one is _l_ times the _p_ th part and the lower one (_p_ − _l_) times the _p_ th part of the prior height. Otherwise the lower one is _pixels from bottom_ wide or the upper one _pixels from top_ high, depending whether there is a ‘‘−’’ in front of the number or not.
+
+**warp** {**on** | **off**}
+
+Select if focusing a window moves the rat cursor to the place it had been last time this window was focused, or not. This command is deprecated, please set the _warp_ variable instead.
+
+**windows** [ _format_] (**C−t w**)
+
+In interactive mode, show the list of all windows in the current group for the duration specified by the variable _msgwait_. If _msgwait_ was zero, toggle between indefinitely showing and not showing.
+
+The messages are shown in columns or rows depending on the value of _winliststyle_ in the format set by **set**_winfmt_. The following substitutions happen in format:
+
+%a
+
+application name (resource name)
+
+%c
+
+resource class
+
+%f
+
+frame number
+
+%g
+
+gravity of the window
+
+%h
+
+height of the window
+
+%H
+
+unit to resize the window vertically (height_inc)
+
+%i
+
+X Window ID
+
+%p
+
+process ID
+
+%l
+
+last access number
+
+%M
+
+string Maxsize, if it specifies a maximum size
+
+%n
+
+window number
+
+%s
+
+window status (
+
+‘*’ is active window, ‘+’ would be chosen by **other**, ‘−’ otherwise )
+
+ %S
+
+screen number
+
+%t
+
+window name (
+
+see **set**_winname_ ),
+
+ %T
+
+the string ‘‘Transient’’, if it is a transient window
+
+%w
+
+width of the window
+
+%W
+
+unit to resize the window horizontally (width_inc)
+
+%x
+
+xine screen number
+
+%%
+
+litteral ‘%’
+
+Additionally there can be a positive decimal integer number between the percent sign and the format string to specify the length this value should be truncated to if longer. (
+
+For example: %20t )
+
+In non−interactive mode, output the list of windows in the current group line by line. The format string can be overwritten by the optional parameter _format_.
+
+**VARIABLES**
+
+**ratpoison** variables can be shown and set with **set**. The following variables are supported:
+
+**resizeunit**_pixels_
+
+Set the amount of pixels interactive **resize** will add/subtract in each step.
+
+Default is 5.
+
+**maxundos**_number_
+
+The maximal amount of step **ratpoison** can undo with the **undo** command.
+
+Default is 20.
+
+**wingravity** {**nw** | **w** | **sw** | **n** | **c** | **s** | **ne** | **e** | **se**}
+
+Set the default gravity new normal windows will get. Possible values are the same as in the **gravity** command, which changes the gravity of an existing window: cardinal points or numbers 1 to 9.
+
+Default is nw.
+
+**maxsizegravity** {**nw** | **w** | **sw** | **n** | **c** | **s** | **ne** | **e** | **se**}
+
+Set the default gravity new self-maximized windows will get. Possible values are the same as in the **gravity** command, which changes the gravity of an existing window: cardinal points or numbers 1 to 9.
+
+Default is c.
+
+**transgravity** {**nw** | **w** | **sw** | **n** | **c** | **s** | **ne** | **e** | **se**}
+
+Set the default gravity new transient windows will get. Possible values are the same as in the **gravity** command, which changes the gravity of an existing window: cardinal points or numbers 1 to 9.
+
+Default is c.
+
+**bargravity** {**nw** | **w** | **sw** | **n** | **c** | **s** | **ne** | **e** | **se**}
+
+Select the location where message and prompt bars appear.
+
+Default is ne.
+
+**font**_font_
+
+Make **ratpoison** use font _font_.
+
+**padding**_left top right bottom_
+
+Set how much space at the borders of the screen will not be used.
+
+Default is 0 0 0 0.
+
+**border**_pixels_
+
+Selects how thick the frame around windows is.
+
+Default is 1.
+
+**barborder**_pixels_
+
+Selects how thick the frame around **ratpoison**’s prompt or message windows is.
+
+Default is 1.
+
+**inputwidth**_pixels_
+
+Determine the width of the input window.
+
+Default is 200.
+
+**barinpadding** {**0** | **1**}
+
+If there is padding, determines whether the bar appears at the edge of the screen (1) or at the edge of the window area (0).
+
+Default is 0.
+
+**topkmap**_kmap_
+
+Make _kmap_ the top keymap **ratpoison** grabs directly.
+
+The default value is top.
+
+**waitcursor** {**0** | **1**}
+
+Determine whether to change the rat cursor when waiting for a key (1) or not (0) See **readkey** and **describekey**.
+
+Default is 1.
+
+**winfmt**_format_
+
+Choose the default format for the the **windows** command.
+
+Default is %n%s%t.
+
+**winname** {**title** | **name** | **class**}
+
+Choose what is considered the "name" of the window by **ratpoison**:
+
+title
+
+The title of the window.
+
+name
+
+The resource name of the window.
+
+class
+
+The resource class i.e. the name of the application.
+
+Default is title.
+
+**fgcolor**_color_
+
+The foreground color of the windows **ratpoison** creates.
+
+Default is black.
+
+**bgcolor**_color_
+
+The background color of the windows **ratpoison** creates.
+
+Default is white.
+
+**fwcolor**_color_
+
+The border color of the focused window.
+
+Default is black.
+
+**bwcolor**_color_
+
+The border color of unfocused windows.
+
+Default is black.
+
+**barpadding**_x y_
+
+Set horizontal padding of **ratpoison** windows to _x_ and vertical padding to _y_.
+
+Default is 4 0.
+
+**winliststyle** {**row** | **column**}
+
+Determines whether windows are shown in rows or in columns.
+
+Default is column.
+
+**framesels**_selectors_
+
+Override the frame selectors **fselect** uses. The first character is the selector for the first frame, the second character is the selector for the second frame and so on.
+
+Using this variable, one can directly access more than 10 frames.
+
+Default is an empty string, which is equivalent to "0123456789".
+
+**historysize**_number_
+
+Specify maximum number of values kept in input history.
+
+Default is 20.
+
+**historycompaction** {**0** | **1**}
+
+Decide if new input lines added to history delete older equal lines from history.
+
+Default is 1 (on).
+
+**historyexpansion** {**0** | **1**}
+
+Decide if history expansion using ! is available. (Can only be activated when compiled with readline’s libhistory.)
+
+**msgwait**_seconds_
+
+The duration the message window is shown. If _seconds_ is zero, wait infinitely.
+
+**framemsgwait**_seconds_
+
+The duration the ‘Current frame’ indicator is shown. If _seconds_ is zero, wait until the next interactive command. If _seconds_ is -1, don’t show any message.
+
+**startupmessage** 0 | 1
+
+Decide whether to show a greeting message at startup.
+
+**warp** 0 | 1
+
+Decide if focusing a window moves the rat cursor to the place it had been last time this window was focused, or not.
+
+Default is 0 (off).
+
+**rudeness**_number_
+
+Show or set what kind of windows are allowed to jostle into the foreground.
+
+_number_ is a bitwise OR of the following values:
+
+1
+
+Transient windows may raise.
+
+2
+
+Normal windows may raise.
+
+4
+
+New transient windows end up in the foreground.
+
+8
+
+New normal windows end up in the foreground.
+
+Default is all allowed i.e. 15.
+
+**FILES**
+
+ ~/.ratpoisonrc
+
+Configuration file read at startup time, if present.
+
+/etc/ratpoisonrc
+
+Fallback configuration file, if _~/.ratpoisonrc_ is not found.
+
+**EXIT STATUS**
+
+The **ratpoison** utility exits 0 on success, and>0 if an error occurs.
+
+**AUTHORS**
+
+Upstream author is Shawn Betts 〈 _sabetts AT gmail DOT com_〉 .
+
+See the _/usr/share/doc/ratpoison/AUTHORS_ file for other contributors.
+
+This manual page was written by Bernhard R. Link 〈 _brlink AT debian DOT org_〉 . The conversion to the [mdoc(7)](http://man.m.sourcentral.org/ubuntu2504/7+mdoc) language (**http://mdocml.bsd.lv**) was done by Jeremie Courreges-Anglas 〈 _jca AT wxcvbn DOT org_〉 .
+
+**BUGS**
+
+Please report any bug you find to the ratpoison mailing-list, 〈 _ratpoison-devel AT nongnu DOT org_〉 .
+
+BSD September 29, 2019 BSD
+
 {% raw %}
 {% codeblock %}
 \input texinfo   @c -*-texinfo-*-
