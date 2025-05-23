@@ -107,8 +107,8 @@ banish
 definekey top M-Tab next
 definekey top M-ISO_Left_Tab prev
 
-bind z exec rpws next
 bind Z undo
+bind z exec rpws next
 bind x swap
 bind w exec thorium-browser
 bind v exec paste_clipboard_from_file.sh
@@ -118,8 +118,8 @@ bind Tab focus
 bind Tab focus
 bind t exec pcmanfm-qt --daemon-mode
 bind space exec xboomx
-bind s-z exec rpws prev
 bind s-Z redo
+bind s-z exec rpws prev
 bind s-x fselect
 bind s-w select
 bind s-Up exchangeup
@@ -173,11 +173,18 @@ bind Page_Up exec rpws next
 bind Page_Down exec rpws prev
 bind minus vsplit
 bind M-Tab next
+bind M-KP_Separator exec xdotool key dead_circumflex key dead_circumflex key dead_circumflex
+bind M-KP_0 exec xdotool key Ccedilla key Ccedilla key Ccedilla
+bind M-F7 llm_sF12_extract_last.sh
+bind M-F6 llm_sF9_attachment.sh
+bind M-F5 llm_analyze_file.sh
+bind M-F4 llm_sF8_fragment.sh
+bind M-F3 llm_pipe_selected_sys.sh
+bind M-F2 llm_sF6_system_prompt.sh
+bind M-F1 llm_sF4_prompt.sh
 bind M-3 ratclick 3
 bind M-2 ratclick 2
 bind M-1 ratclick 1
-bind M-KP_0 exec xdotool key Ccedilla key Ccedilla key Ccedilla
-bind M-KP_Separator exec xdotool key dead_circumflex key dead_circumflex key dead_circumflex
 bind Left focusleft
 bind KP_Separator exec xdotool key quotedbl key quotedbl key quotedbl
 bind KP_9 exec rpws 9
@@ -222,13 +229,7 @@ bind 3 exec rpws 3
 bind 2 exec rpws 2
 bind 1 exec rpws 1
 bind 0 remove
-bind M-F1 llm_sF4_prompt.sh
-bind M-F2 llm_sF6_system_prompt.sh
-bind M-F3 llm_pipe_selected_sys.sh
-bind M-F4 llm_sF8_fragment.sh
-bind M-F5 llm_analyze_file.sh
-bind M-F6 llm_sF9_attachment.sh
-bind M-F7 llm_sF12_extract_last.sh
+
 {% endcodeblock %}
 
 #### ~/.local/bin/*.sh shell scripts
