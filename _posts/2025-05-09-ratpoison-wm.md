@@ -64,22 +64,186 @@ Create and configure the ~/.ratpoisonrc file in the home directory of the autolo
 Here’s a comprehensive example configuration:  
 `# ~/.ratpoisonrc for linaro`
 {% codeblock %}
+set winname title
+set winliststyle column
+set wingravity n
+set winfmt "%n: %t (%c)"
+set waitcursor 1
+set transgravity center
+set padding 0 0 0 24
+set inputwidth 600
+set historysize 1000
+set gravity center
+set font "Intel One Mono:size=13"
+set border 0
+set bgcolor silver
+set barpadding 4 4
+set bargravity c
+set barborder 0
 
+exec xsetroot -bitmap /home/linaro/Desktop/02-media/pics/wallpaper1.xbm -bg "#073642" -fg "#345345"
+exec xrdb -merge /home/linaro/.Xresources
+exec xfce4-power-manager
+exec unclutter --timeout 2 --jitter 5
+exec rpws init 9
+exec rpbar
+exec nm-applet
+exec clipse -listen
+exec brightnessctl s 7
+exec /usr/bin/rpws restore /home/linaro/Desktop/01-document/dotfiles/rpws_layouts.dmp
+
+addhook titlechanged exec rpbarsend
+addhook switchwin exec rpbarsend
+addhook switchgroup exec rpbarsend
+addhook switchframe exec rpbarsend
+addhook newwindow exec rpbarsend
+addhook deletewindow exec rpbarsend
+
+startup_message on
+escape Super_L
+unmanage rpbar
+banish
+
+definekey top M-Tab next
+definekey top M-ISO_Left_Tab prev
+
+bind z exec rpws next
+bind Z undo
+bind x swap
+bind w exec thorium-browser
+bind v exec paste_clipboard_from_file.sh
+bind Up focusup
+bind u exec /usr/bin/rpws dump /home/linaro/Desktop/01-document/dotfiles/rpws_layouts.dmp
+bind Tab focus 
+bind Tab focus
+bind t exec pcmanfm-qt --daemon-mode
+bind space exec xboomx
+bind s-z exec rpws prev
+bind s-Z redo
+bind s-x fselect
+bind s-w select
+bind s-Up exchangeup
+bind s-u exec /usr/bin/rpws restore /home/linaro/Desktop/01-document/dotfiles/rpws_layouts.dmp
+bind s-Tab focuslast
+bind s-t exec sudo pcmanfm-qt
+bind s-space exec python3 /home/linaro/.local/bin/dratmenu.py
+bind s-Right exchangeright
+bind s-Return exec sudo x-terminal-emulator
+bind s-Print exec scrot -s -e 'xclip -selection clipboard -t image/png -i $f && rm $f'
+bind s-Page_Up exec rpws movenext
+bind s-Page_Down exec rpws moveprev
+bind s-minus exec amixer set Master 5%-
+bind s-M-Tab prev
+bind s-Left exchangeleft
+bind s-KP_9 exec rpws move9
+bind s-KP_8 exec rpws move8
+bind s-KP_7 exec rpws move7
+bind s-KP_6 exec rpws move6
+bind s-KP_5 exec rpws move5
+bind s-KP_4 exec rpws move4
+bind s-KP_3 exec rpws move3
+bind s-KP_2 exec rpws move2
+bind s-KP_1 exec rpws move1
+bind s-i exec nm-connection-editor
+bind s-g exec galculator
+bind s-F1 exec reverse-thermal.sh
+bind s-Escape kill
+bind s-equal exec amixer set Master 5%+
+bind s-e exec xnc
+bind s-Down exchangedown
+bind s-BackSpace prev
+bind s-apostrophe colon exec x-terminal-emulator -e sudo 
+bind s-a title
+bind s-9 exec rpws move9
+bind s-8 exec rpws move8
+bind s-7 exec rpws move7
+bind s-6 exec rpws move6
+bind s-5 exec rpws move5
+bind s-4 exec rpws move4
+bind s-3 exec rpws move3
+bind s-2 exec rpws move2
+bind s-1 exec rpws move1
+bind s-0 exec amixer set Master toggle
+bind Right focusright
+bind Return exec x-terminal-emulator
+bind r resize
+bind q delete
+bind Print exec xfce4-screenshooter
+bind Page_Up exec rpws next
+bind Page_Down exec rpws prev
+bind minus vsplit
+bind M-Tab next
+bind M-3 ratclick 3
+bind M-2 ratclick 2
+bind M-1 ratclick 1
+bind M-KP_0 exec xdotool key Ccedilla key Ccedilla key Ccedilla
+bind M-KP_Separator exec xdotool key dead_circumflex key dead_circumflex key dead_circumflex
+bind Left focusleft
+bind KP_Separator exec xdotool key quotedbl key quotedbl key quotedbl
+bind KP_9 exec rpws 9
+bind KP_8 exec rpws 8
+bind KP_7 exec rpws 7
+bind KP_6 exec rpws 6
+bind KP_5 exec rpws 5
+bind KP_4 exec rpws 4
+bind KP_3 exec rpws 3
+bind KP_2 exec rpws 2
+bind KP_1 exec rpws 1
+bind KP_0 exec xdotool key apostrophe key apostrophe key apostrophe
+bind k exec x-terminal-emulator -e /home/linaro/.local/bin/clipse
+bind ISO_Left_Tab exec rpws movenext
+bind i exec viewnior
+bind h exec x-terminal-emulator -e bpytop
+bind g exec gsimplecal
+bind F8 exec flatpak run io.github.zaps166.QMPlay2
+bind F7 exec flatpak run com.github.ryonakano.reco
+bind F6 exec flatpak run com.strlen.TreeSheets
+bind F5 exec flatpak run com.github.tenderowl.frog
+bind F4 exec flatpak run org.filezillaproject.Filezilla
+bind F1 exec thermal.sh
+bind f only
+bind Escape abort
+bind equal hsplit
+bind e exec xnedit
+bind Down focusdown
+bind C-Tab nextscreen
+bind C-ISO_Left_Tab exec rpws moveprev
+bind c exec write_clipboard_to_file.sh
+bind BackSpace next
+bind b exec vorta
+bind apostrophe colon exec x-terminal-emulator -e 
+bind 9 exec rpws 9
+bind 8 exec rpws 8
+bind 7 exec rpws 7
+bind 6 exec rpws 6
+bind 5 exec rpws 5
+bind 4 exec rpws 4
+bind 3 exec rpws 3
+bind 2 exec rpws 2
+bind 1 exec rpws 1
+bind 0 remove
+bind M-F1 llm_sF4_prompt.sh
+bind M-F2 llm_sF6_system_prompt.sh
+bind M-F3 llm_pipe_selected_sys.sh
+bind M-F4 llm_sF8_fragment.sh
+bind M-F5 llm_analyze_file.sh
+bind M-F6 llm_sF9_attachment.sh
+bind M-F7 llm_sF12_extract_last.sh
 {% endcodeblock %}
 
 #### ~/.local/bin/*.sh shell scripts
 
 ##### `shell/llm_analyze_file.sh`
-
 ```bash
 #!/bin/bash
 # Script to analyze a file with llm (o3-mini) using a specific prompt.
-# It will prompt for the file path within the terminal.
-# Patched by Gemini to capture all terminal output to clipboard
-_GEMINI_SCRIPT_TERMINAL_OUTPUT_LOG="/tmp/$(basename "$0" .sh)_terminal_output_$$_${RANDOM}.log"
+# Refactored by Gemini to use `script` and `xsel` for capturing all terminal output to clipboard.
 
-# Main script logic is executed in a subshell to capture all its output
-(
+GEMINI_CAPTURE_MODE="${GEMINI_CAPTURE_MODE:-outer}" # Default to outer mode
+
+if [ "$GEMINI_CAPTURE_MODE" = "inner" ]; then
+    # INNER EXECUTION: This is the original script logic.
+    # All terminal I/O here is captured by the `script` command.
     echo "LLM File Analysis (o3-mini)"
     echo "Enter the full path to the file you want to analyze (Ctrl+D or empty to cancel):"
     read -p "File Path: " FILE_PATH
@@ -99,58 +263,94 @@ _GEMINI_SCRIPT_TERMINAL_OUTPUT_LOG="/tmp/$(basename "$0" .sh)_terminal_output_$$
     else
         echo "File not found: $FILE_PATH" >&2
     fi
-) > "$_GEMINI_SCRIPT_TERMINAL_OUTPUT_LOG" 2>&1
+    
+    printf '\nLLM command finished. Press any key to close this terminal...'
+    read -n 1 -s -r
+    exit 0 # Exit the inner script
 
-# --- Block to copy terminal log to clipboard and cleanup ---
-# This block executes after the main script logic subshell has finished.
-if [ -f "$_GEMINI_SCRIPT_TERMINAL_OUTPUT_LOG" ]; then # Check if log file was created
-    if command -v xclip &>/dev/null; then
-        if command -v sed &>/dev/null; then
-            # Clean ANSI codes if sed is available and copy
-            sed 's/\x1B\[[0-9;]*[JKmsu]//g' "$_GEMINI_SCRIPT_TERMINAL_OUTPUT_LOG" | xclip -selection clipboard
-            echo "Full terminal output (ANSI codes removed) copied to clipboard."
+else
+    # OUTER EXECUTION: Set up `script`, run inner logic, then handle clipboard.
+    _GEMINI_LOG_FILE_BASENAME="$(basename "$0" .sh)_session"
+    _GEMINI_LOG_FILE=$(mktemp "/tmp/${_GEMINI_LOG_FILE_BASENAME}_XXXXXXXXXX.log")
+    
+    if [ -z "$_GEMINI_LOG_FILE" ] || [ ! -f "$_GEMINI_LOG_FILE" ]; then
+        echo "Error: Failed to create temporary log file." >&2
+        printf '\nPress any key to close this terminal...' && read -n 1 -s -r
+        exit 1
+    fi
+    
+    trap 'rm -f "$_GEMINI_LOG_FILE"' EXIT HUP INT TERM
+    
+    if ! command -v script &>/dev/null; then
+        echo "Error: 'script' command not found. Please install it (e.g., sudo apt install bsdutils)." >&2
+        printf '\nPress any key to close this terminal...' && read -n 1 -s -r
+        exit 1
+    fi
+
+    script -q -e -c "GEMINI_CAPTURE_MODE=inner bash \"$0\" \"$@\"" "$_GEMINI_LOG_FILE"
+    script_exit_status=$?
+    
+    if [ -f "$_GEMINI_LOG_FILE" ]; then
+        if [ -s "$_GEMINI_LOG_FILE" ]; then
+            if command -v xsel &>/dev/null; then
+                CLEANED_CONTENT=""
+                if command -v col &>/dev/null; then
+                    CLEANED_CONTENT=$(col -b < "$_GEMINI_LOG_FILE")
+                else
+                    CLEANED_CONTENT=$(cat "$_GEMINI_LOG_FILE")
+                    echo "Warning: 'col' command not found. Log content might contain unprocessed backspace characters." >&2
+                fi
+
+                if command -v sed &>/dev/null; then
+                    FINAL_CONTENT=$(echo "$CLEANED_CONTENT" | sed -E 's/\x1B\[[0-9;?]*[a-zA-Z]//g; s/\r$//g; s/\r([^\n])/\1/g')
+                    if echo "$FINAL_CONTENT" | xsel --clipboard --input; then
+                        echo "Terminal session (cleaned) copied to clipboard using xsel."
+                    else
+                        echo "Error: xsel command failed to copy to clipboard (exit code $?)." >&2
+                    fi
+                else
+                    echo "Warning: 'sed' command not found. ANSI escape codes and some carriage returns may not be removed." >&2
+                    if echo "$CLEANED_CONTENT" | xsel --clipboard --input; then
+                        echo "Terminal session (partially cleaned) copied to clipboard using xsel."
+                    else
+                        echo "Error: xsel command failed to copy to clipboard (exit code $?)." >&2
+                    fi
+                fi
+            else
+                echo "Error: 'xsel' command not found. Please install it (e.g., sudo apt install xsel). Skipping clipboard copy." >&2
+            fi
         else
-            # Copy raw content if sed is not available
-            xclip -selection clipboard < "$_GEMINI_SCRIPT_TERMINAL_OUTPUT_LOG"
-            echo "Full terminal output copied to clipboard (sed not found, ANSI codes not removed)."
+            echo "Terminal session log is empty; clipboard not updated."
         fi
     else
-        echo "xclip is not installed; skipping clipboard copy of terminal output."
+        echo "Error: Terminal session log file not found at '$_GEMINI_LOG_FILE'." >&2
     fi
-    rm -f "$_GEMINI_SCRIPT_TERMINAL_OUTPUT_LOG" # Clean up the log file
-else
-    echo "No terminal output was captured or log file was not created; clipboard not updated."
-fi
-# --- End of clipboard copy and cleanup block ---
 
-printf '\nLLM command finished. Press any key to close this terminal...'
-read -n 1 -s -r
-exit 0
+    printf '\nClipboard operation finished. Press any key to close this wrapper terminal...'
+    read -n 1 -s -r
+    exit $script_exit_status
+fi
 ```
 
----
 ##### `shell/llm_pipe_selected_sys.sh`
-
 ```bash
 #!/bin/bash
 # Takes selected text (clipboard/primary) and pipes to llm with a user-provided system prompt.
-# Patched by Gemini to capture all terminal output to clipboard
-_GEMINI_SCRIPT_TERMINAL_OUTPUT_LOG="/tmp/$(basename "$0" .sh)_terminal_output_$$_${RANDOM}.log"
+# Refactored by Gemini to use `script` and `xsel` for capturing all terminal output to clipboard.
 
-# Main script logic is executed in a subshell to capture all its output
-(
-    # Try to get text from clipboard, then primary selection
-    SELECTED_TEXT=$(xclip -o -selection clipboard 2>/dev/null)
+GEMINI_CAPTURE_MODE="${GEMINI_CAPTURE_MODE:-outer}"
+
+if [ "$GEMINI_CAPTURE_MODE" = "inner" ]; then
+    SELECTED_TEXT=$(xsel --clipboard --output 2>/dev/null) # Use xsel to get clipboard
     if [ -z "$SELECTED_TEXT" ]; then
-        SELECTED_TEXT=$(xclip -o -selection primary 2>/dev/null)
+        SELECTED_TEXT=$(xsel --primary --output 2>/dev/null) # Try primary selection
     fi
 
     if [ -z "$SELECTED_TEXT" ]; then
-        echo "Action cancelled: No text found in clipboard or primary selection. Copy text first."
-        # This script's original pause and exit for this condition:
+        echo "Action cancelled: No text found in clipboard or primary selection (used xsel). Copy text first."
         printf '\nPress any key to close...'
         read -n 1 -s -r
-        exit 1 # This will exit the subshell
+        exit 1
     fi
 
     echo "Selected text obtained."
@@ -164,328 +364,611 @@ _GEMINI_SCRIPT_TERMINAL_OUTPUT_LOG="/tmp/$(basename "$0" .sh)_terminal_output_$$
         echo "Processing selected text with system prompt: $SYSTEM_PROMPT"
         echo "--- Selected Text Start (first 200 chars) ---"
         echo "$SELECTED_TEXT" | head -c 200
-        # echo "$SELECTED_TEXT" # Uncomment to see full selected text
         echo "--- Selected Text End (truncated if long) ---"
         echo "Waiting for LLM response..."
         echo ""
-
-        # Pipe the selected text to llm with the system prompt
         echo "$SELECTED_TEXT" | llm --system "$SYSTEM_PROMPT"
     fi
-) > "$_GEMINI_SCRIPT_TERMINAL_OUTPUT_LOG" 2>&1
 
-# --- Block to copy terminal log to clipboard and cleanup ---
-if [ -f "$_GEMINI_SCRIPT_TERMINAL_OUTPUT_LOG" ]; then
-    if command -v xclip &>/dev/null; then
-        if command -v sed &>/dev/null; then
-            sed 's/\x1B\[[0-9;]*[JKmsu]//g' "$_GEMINI_SCRIPT_TERMINAL_OUTPUT_LOG" | xclip -selection clipboard
-            echo "Full terminal output (ANSI codes removed) copied to clipboard."
+    printf '\nLLM command finished. Press any key to close this terminal...'
+    read -n 1 -s -r
+    exit 0
+
+else
+    # OUTER EXECUTION
+    _GEMINI_LOG_FILE_BASENAME="$(basename "$0" .sh)_session"
+    _GEMINI_LOG_FILE=$(mktemp "/tmp/${_GEMINI_LOG_FILE_BASENAME}_XXXXXXXXXX.log")
+    
+    if [ -z "$_GEMINI_LOG_FILE" ] || [ ! -f "$_GEMINI_LOG_FILE" ]; then
+        echo "Error: Failed to create temporary log file." >&2
+        printf '\nPress any key to close this terminal...' && read -n 1 -s -r
+        exit 1
+    fi
+    
+    trap 'rm -f "$_GEMINI_LOG_FILE"' EXIT HUP INT TERM
+    
+    if ! command -v script &>/dev/null; then
+        echo "Error: 'script' command not found. Please install it (e.g., sudo apt install bsdutils)." >&2
+        printf '\nPress any key to close this terminal...' && read -n 1 -s -r
+        exit 1
+    fi
+
+    script -q -e -c "GEMINI_CAPTURE_MODE=inner bash \"$0\" \"$@\"" "$_GEMINI_LOG_FILE"
+    script_exit_status=$?
+    
+    if [ -f "$_GEMINI_LOG_FILE" ]; then
+        if [ -s "$_GEMINI_LOG_FILE" ]; then
+            if command -v xsel &>/dev/null; then
+                CLEANED_CONTENT=""
+                if command -v col &>/dev/null; then
+                    CLEANED_CONTENT=$(col -b < "$_GEMINI_LOG_FILE")
+                else
+                    CLEANED_CONTENT=$(cat "$_GEMINI_LOG_FILE")
+                    echo "Warning: 'col' command not found. Log content might contain unprocessed backspace characters." >&2
+                fi
+
+                if command -v sed &>/dev/null; then
+                    FINAL_CONTENT=$(echo "$CLEANED_CONTENT" | sed -E 's/\x1B\[[0-9;?]*[a-zA-Z]//g; s/\r$//g; s/\r([^\n])/\1/g')
+                    if echo "$FINAL_CONTENT" | xsel --clipboard --input; then
+                        echo "Terminal session (cleaned) copied to clipboard using xsel."
+                    else
+                        echo "Error: xsel command failed to copy to clipboard (exit code $?)." >&2
+                    fi
+                else
+                    echo "Warning: 'sed' command not found. ANSI escape codes and some carriage returns may not be removed." >&2
+                    if echo "$CLEANED_CONTENT" | xsel --clipboard --input; then
+                        echo "Terminal session (partially cleaned) copied to clipboard using xsel."
+                    else
+                        echo "Error: xsel command failed to copy to clipboard (exit code $?)." >&2
+                    fi
+                fi
+            else
+                echo "Error: 'xsel' command not found. Please install it (e.g., sudo apt install xsel). Skipping clipboard copy." >&2
+            fi
         else
-            xclip -selection clipboard < "$_GEMINI_SCRIPT_TERMINAL_OUTPUT_LOG"
-            echo "Full terminal output copied to clipboard (sed not found, ANSI codes not removed)."
+            echo "Terminal session log is empty; clipboard not updated."
         fi
     else
-        echo "xclip is not installed; skipping clipboard copy of terminal output."
+        echo "Error: Terminal session log file not found at '$_GEMINI_LOG_FILE'." >&2
     fi
-    rm -f "$_GEMINI_SCRIPT_TERMINAL_OUTPUT_LOG"
-else
-    echo "No terminal output was captured or log file was not created; clipboard not updated."
-fi
-# --- End of clipboard copy and cleanup block ---
 
-printf '\nLLM command finished. Press any key to close this terminal...'
-read -n 1 -s -r
-exit 0
+    printf '\nClipboard operation finished. Press any key to close this wrapper terminal...'
+    read -n 1 -s -r
+    exit $script_exit_status
+fi
 ```
 
----
 ##### `shell/llm_sF11_list_fragments.sh`
-
 ```bash
 #!/bin/bash
 # Lists llm fragments.
-# Patched by Gemini to capture all terminal output to clipboard
-_GEMINI_SCRIPT_TERMINAL_OUTPUT_LOG="/tmp/$(basename "$0" .sh)_terminal_output_$$_${RANDOM}.log"
+# Refactored by Gemini to use `script` and `xsel` for capturing all terminal output to clipboard.
 
-# Main script logic is executed in a subshell to capture all its output
-(
+GEMINI_CAPTURE_MODE="${GEMINI_CAPTURE_MODE:-outer}"
+
+if [ "$GEMINI_CAPTURE_MODE" = "inner" ]; then
     echo "LLM Fragments List"
     echo "Fetching list..."
     echo ""
     llm fragments list
-) > "$_GEMINI_SCRIPT_TERMINAL_OUTPUT_LOG" 2>&1
+    
+    printf '\nLLM command finished. Press any key to close this terminal...'
+    read -n 1 -s -r
+    exit 0
 
-# --- Block to copy terminal log to clipboard and cleanup ---
-if [ -f "$_GEMINI_SCRIPT_TERMINAL_OUTPUT_LOG" ]; then
-    if command -v xclip &>/dev/null; then
-        if command -v sed &>/dev/null; then
-            sed 's/\x1B\[[0-9;]*[JKmsu]//g' "$_GEMINI_SCRIPT_TERMINAL_OUTPUT_LOG" | xclip -selection clipboard
-            echo "Full terminal output (ANSI codes removed) copied to clipboard."
+else
+    # OUTER EXECUTION
+    _GEMINI_LOG_FILE_BASENAME="$(basename "$0" .sh)_session"
+    _GEMINI_LOG_FILE=$(mktemp "/tmp/${_GEMINI_LOG_FILE_BASENAME}_XXXXXXXXXX.log")
+    
+    if [ -z "$_GEMINI_LOG_FILE" ] || [ ! -f "$_GEMINI_LOG_FILE" ]; then
+        echo "Error: Failed to create temporary log file." >&2
+        printf '\nPress any key to close this terminal...' && read -n 1 -s -r
+        exit 1
+    fi
+    
+    trap 'rm -f "$_GEMINI_LOG_FILE"' EXIT HUP INT TERM
+    
+    if ! command -v script &>/dev/null; then
+        echo "Error: 'script' command not found. Please install it (e.g., sudo apt install bsdutils)." >&2
+        printf '\nPress any key to close this terminal...' && read -n 1 -s -r
+        exit 1
+    fi
+
+    script -q -e -c "GEMINI_CAPTURE_MODE=inner bash \"$0\" \"$@\"" "$_GEMINI_LOG_FILE"
+    script_exit_status=$?
+    
+    if [ -f "$_GEMINI_LOG_FILE" ]; then
+        if [ -s "$_GEMINI_LOG_FILE" ]; then
+            if command -v xsel &>/dev/null; then
+                CLEANED_CONTENT=""
+                if command -v col &>/dev/null; then
+                    CLEANED_CONTENT=$(col -b < "$_GEMINI_LOG_FILE")
+                else
+                    CLEANED_CONTENT=$(cat "$_GEMINI_LOG_FILE")
+                    echo "Warning: 'col' command not found. Log content might contain unprocessed backspace characters." >&2
+                fi
+
+                if command -v sed &>/dev/null; then
+                    FINAL_CONTENT=$(echo "$CLEANED_CONTENT" | sed -E 's/\x1B\[[0-9;?]*[a-zA-Z]//g; s/\r$//g; s/\r([^\n])/\1/g')
+                    if echo "$FINAL_CONTENT" | xsel --clipboard --input; then
+                        echo "Terminal session (cleaned) copied to clipboard using xsel."
+                    else
+                        echo "Error: xsel command failed to copy to clipboard (exit code $?)." >&2
+                    fi
+                else
+                    echo "Warning: 'sed' command not found. ANSI escape codes and some carriage returns may not be removed." >&2
+                    if echo "$CLEANED_CONTENT" | xsel --clipboard --input; then
+                        echo "Terminal session (partially cleaned) copied to clipboard using xsel."
+                    else
+                        echo "Error: xsel command failed to copy to clipboard (exit code $?)." >&2
+                    fi
+                fi
+            else
+                echo "Error: 'xsel' command not found. Please install it (e.g., sudo apt install xsel). Skipping clipboard copy." >&2
+            fi
         else
-            xclip -selection clipboard < "$_GEMINI_SCRIPT_TERMINAL_OUTPUT_LOG"
-            echo "Full terminal output copied to clipboard (sed not found, ANSI codes not removed)."
+            echo "Terminal session log is empty; clipboard not updated."
         fi
     else
-        echo "xclip is not installed; skipping clipboard copy of terminal output."
+        echo "Error: Terminal session log file not found at '$_GEMINI_LOG_FILE'." >&2
     fi
-    rm -f "$_GEMINI_SCRIPT_TERMINAL_OUTPUT_LOG"
-else
-    echo "No terminal output was captured or log file was not created; clipboard not updated."
-fi
-# --- End of clipboard copy and cleanup block ---
 
-printf '\nLLM command finished. Press any key to close this terminal...'
-read -n 1 -s -r
-exit 0
+    printf '\nClipboard operation finished. Press any key to close this wrapper terminal...'
+    read -n 1 -s -r
+    exit $script_exit_status
+fi
 ```
 
----
 ##### `shell/llm_sF12_extract_last.sh`
-
 ```bash
 #!/bin/bash
 # Prompts for a message and sends it to llm with o3-mini, extracting the last code block.
-# Patched by Gemini to capture all terminal output to clipboard
-_GEMINI_SCRIPT_TERMINAL_OUTPUT_LOG="/tmp/$(basename "$0" .sh)_terminal_output_$$_${RANDOM}.log"
+# Refactored by Gemini to use `script` and `xsel` for capturing all terminal output to clipboard.
 
-# Main script logic is executed in a subshell to capture all its output
-(
+GEMINI_CAPTURE_MODE="${GEMINI_CAPTURE_MODE:-outer}"
+
+if [ "$GEMINI_CAPTURE_MODE" = "inner" ]; then
     echo "LLM Extract Last Code Block (o3-mini)"
     read -p "Enter your prompt: " prompt_text
-
+    
     if [ -z "$prompt_text" ]; then
         echo "No prompt entered. Exiting."
     else
         llm -m o3-mini --xl "$prompt_text"
     fi
-) > "$_GEMINI_SCRIPT_TERMINAL_OUTPUT_LOG" 2>&1
+    
+    printf '\nLLM command finished. Press any key to close this terminal...'
+    read -n 1 -s -r
+    exit 0
 
-# --- Block to copy terminal log to clipboard and cleanup ---
-if [ -f "$_GEMINI_SCRIPT_TERMINAL_OUTPUT_LOG" ]; then
-    if command -v xclip &>/dev/null; then
-        if command -v sed &>/dev/null; then
-            sed 's/\x1B\[[0-9;]*[JKmsu]//g' "$_GEMINI_SCRIPT_TERMINAL_OUTPUT_LOG" | xclip -selection clipboard
-            echo "Full terminal output (ANSI codes removed) copied to clipboard."
+else
+    # OUTER EXECUTION
+    _GEMINI_LOG_FILE_BASENAME="$(basename "$0" .sh)_session"
+    _GEMINI_LOG_FILE=$(mktemp "/tmp/${_GEMINI_LOG_FILE_BASENAME}_XXXXXXXXXX.log")
+    
+    if [ -z "$_GEMINI_LOG_FILE" ] || [ ! -f "$_GEMINI_LOG_FILE" ]; then
+        echo "Error: Failed to create temporary log file." >&2
+        printf '\nPress any key to close this terminal...' && read -n 1 -s -r
+        exit 1
+    fi
+    
+    trap 'rm -f "$_GEMINI_LOG_FILE"' EXIT HUP INT TERM
+    
+    if ! command -v script &>/dev/null; then
+        echo "Error: 'script' command not found. Please install it (e.g., sudo apt install bsdutils)." >&2
+        printf '\nPress any key to close this terminal...' && read -n 1 -s -r
+        exit 1
+    fi
+
+    script -q -e -c "GEMINI_CAPTURE_MODE=inner bash \"$0\" \"$@\"" "$_GEMINI_LOG_FILE"
+    script_exit_status=$?
+    
+    if [ -f "$_GEMINI_LOG_FILE" ]; then
+        if [ -s "$_GEMINI_LOG_FILE" ]; then
+            if command -v xsel &>/dev/null; then
+                CLEANED_CONTENT=""
+                if command -v col &>/dev/null; then
+                    CLEANED_CONTENT=$(col -b < "$_GEMINI_LOG_FILE")
+                else
+                    CLEANED_CONTENT=$(cat "$_GEMINI_LOG_FILE")
+                    echo "Warning: 'col' command not found. Log content might contain unprocessed backspace characters." >&2
+                fi
+
+                if command -v sed &>/dev/null; then
+                    FINAL_CONTENT=$(echo "$CLEANED_CONTENT" | sed -E 's/\x1B\[[0-9;?]*[a-zA-Z]//g; s/\r$//g; s/\r([^\n])/\1/g')
+                    if echo "$FINAL_CONTENT" | xsel --clipboard --input; then
+                        echo "Terminal session (cleaned) copied to clipboard using xsel."
+                    else
+                        echo "Error: xsel command failed to copy to clipboard (exit code $?)." >&2
+                    fi
+                else
+                    echo "Warning: 'sed' command not found. ANSI escape codes and some carriage returns may not be removed." >&2
+                    if echo "$CLEANED_CONTENT" | xsel --clipboard --input; then
+                        echo "Terminal session (partially cleaned) copied to clipboard using xsel."
+                    else
+                        echo "Error: xsel command failed to copy to clipboard (exit code $?)." >&2
+                    fi
+                fi
+            else
+                echo "Error: 'xsel' command not found. Please install it (e.g., sudo apt install xsel). Skipping clipboard copy." >&2
+            fi
         else
-            xclip -selection clipboard < "$_GEMINI_SCRIPT_TERMINAL_OUTPUT_LOG"
-            echo "Full terminal output copied to clipboard (sed not found, ANSI codes not removed)."
+            echo "Terminal session log is empty; clipboard not updated."
         fi
     else
-        echo "xclip is not installed; skipping clipboard copy of terminal output."
+        echo "Error: Terminal session log file not found at '$_GEMINI_LOG_FILE'." >&2
     fi
-    rm -f "$_GEMINI_SCRIPT_TERMINAL_OUTPUT_LOG"
-else
-    echo "No terminal output was captured or log file was not created; clipboard not updated."
-fi
-# --- End of clipboard copy and cleanup block ---
 
-printf '\nLLM command finished. Press any key to close this terminal...'
-read -n 1 -s -r
-exit 0
+    printf '\nClipboard operation finished. Press any key to close this wrapper terminal...'
+    read -n 1 -s -r
+    exit $script_exit_status
+fi
 ```
 
----
 ##### `shell/llm_sF4_prompt.sh`
-
 ```bash
 #!/bin/bash
 # Prompts for a message and sends it to llm with gpt-4.1.
-# Patched by Gemini to capture all terminal output to clipboard
-_GEMINI_SCRIPT_TERMINAL_OUTPUT_LOG="/tmp/$(basename "$0" .sh)_terminal_output_$$_${RANDOM}.log"
+# Refactored by Gemini to use `script` and `xsel` for capturing all terminal output to clipboard.
 
-# Main script logic is executed in a subshell to capture all its output
-(
+GEMINI_CAPTURE_MODE="${GEMINI_CAPTURE_MODE:-outer}"
+
+if [ "$GEMINI_CAPTURE_MODE" = "inner" ]; then
     echo "LLM with gpt-4.1"
     read -p "Enter your prompt: " prompt_text
-
+    
     if [ -z "$prompt_text" ]; then
         echo "No prompt entered. Exiting."
     else
         llm -m gpt-4.1 "$prompt_text"
     fi
-) > "$_GEMINI_SCRIPT_TERMINAL_OUTPUT_LOG" 2>&1
+    
+    printf '\nLLM command finished. Press any key to close this terminal...'
+    read -n 1 -s -r
+    exit 0
 
-# --- Block to copy terminal log to clipboard and cleanup ---
-if [ -f "$_GEMINI_SCRIPT_TERMINAL_OUTPUT_LOG" ]; then
-    if command -v xclip &>/dev/null; then
-        if command -v sed &>/dev/null; then
-            sed 's/\x1B\[[0-9;]*[JKmsu]//g' "$_GEMINI_SCRIPT_TERMINAL_OUTPUT_LOG" | xclip -selection clipboard
-            echo "Full terminal output (ANSI codes removed) copied to clipboard."
+else
+    # OUTER EXECUTION
+    _GEMINI_LOG_FILE_BASENAME="$(basename "$0" .sh)_session"
+    _GEMINI_LOG_FILE=$(mktemp "/tmp/${_GEMINI_LOG_FILE_BASENAME}_XXXXXXXXXX.log")
+    
+    if [ -z "$_GEMINI_LOG_FILE" ] || [ ! -f "$_GEMINI_LOG_FILE" ]; then
+        echo "Error: Failed to create temporary log file." >&2
+        printf '\nPress any key to close this terminal...' && read -n 1 -s -r
+        exit 1
+    fi
+    
+    trap 'rm -f "$_GEMINI_LOG_FILE"' EXIT HUP INT TERM
+    
+    if ! command -v script &>/dev/null; then
+        echo "Error: 'script' command not found. Please install it (e.g., sudo apt install bsdutils)." >&2
+        printf '\nPress any key to close this terminal...' && read -n 1 -s -r
+        exit 1
+    fi
+
+    script -q -e -c "GEMINI_CAPTURE_MODE=inner bash \"$0\" \"$@\"" "$_GEMINI_LOG_FILE"
+    script_exit_status=$?
+    
+    if [ -f "$_GEMINI_LOG_FILE" ]; then
+        if [ -s "$_GEMINI_LOG_FILE" ]; then
+            if command -v xsel &>/dev/null; then
+                CLEANED_CONTENT=""
+                if command -v col &>/dev/null; then
+                    CLEANED_CONTENT=$(col -b < "$_GEMINI_LOG_FILE")
+                else
+                    CLEANED_CONTENT=$(cat "$_GEMINI_LOG_FILE")
+                    echo "Warning: 'col' command not found. Log content might contain unprocessed backspace characters." >&2
+                fi
+
+                if command -v sed &>/dev/null; then
+                    FINAL_CONTENT=$(echo "$CLEANED_CONTENT" | sed -E 's/\x1B\[[0-9;?]*[a-zA-Z]//g; s/\r$//g; s/\r([^\n])/\1/g')
+                    if echo "$FINAL_CONTENT" | xsel --clipboard --input; then
+                        echo "Terminal session (cleaned) copied to clipboard using xsel."
+                    else
+                        echo "Error: xsel command failed to copy to clipboard (exit code $?)." >&2
+                    fi
+                else
+                    echo "Warning: 'sed' command not found. ANSI escape codes and some carriage returns may not be removed." >&2
+                    if echo "$CLEANED_CONTENT" | xsel --clipboard --input; then
+                        echo "Terminal session (partially cleaned) copied to clipboard using xsel."
+                    else
+                        echo "Error: xsel command failed to copy to clipboard (exit code $?)." >&2
+                    fi
+                fi
+            else
+                echo "Error: 'xsel' command not found. Please install it (e.g., sudo apt install xsel). Skipping clipboard copy." >&2
+            fi
         else
-            xclip -selection clipboard < "$_GEMINI_SCRIPT_TERMINAL_OUTPUT_LOG"
-            echo "Full terminal output copied to clipboard (sed not found, ANSI codes not removed)."
+            echo "Terminal session log is empty; clipboard not updated."
         fi
     else
-        echo "xclip is not installed; skipping clipboard copy of terminal output."
+        echo "Error: Terminal session log file not found at '$_GEMINI_LOG_FILE'." >&2
     fi
-    rm -f "$_GEMINI_SCRIPT_TERMINAL_OUTPUT_LOG"
-else
-    echo "No terminal output was captured or log file was not created; clipboard not updated."
-fi
-# --- End of clipboard copy and cleanup block ---
 
-printf '\nLLM command finished. Press any key to close this terminal...'
-read -n 1 -s -r
-exit 0
+    printf '\nClipboard operation finished. Press any key to close this wrapper terminal...'
+    read -n 1 -s -r
+    exit $script_exit_status
+fi
 ```
 
----
 ##### `shell/llm_sF6_system_prompt.sh`
-
 ```bash
 #!/bin/bash
 # Prompts for a system prompt and a main prompt for llm.
-# Patched by Gemini to capture all terminal output to clipboard
-_GEMINI_SCRIPT_TERMINAL_OUTPUT_LOG="/tmp/$(basename "$0" .sh)_terminal_output_$$_${RANDOM}.log"
+# Refactored by Gemini to use `script` and `xsel` for capturing all terminal output to clipboard.
 
-# Main script logic is executed in a subshell to capture all its output
-(
+GEMINI_CAPTURE_MODE="${GEMINI_CAPTURE_MODE:-outer}"
+
+if [ "$GEMINI_CAPTURE_MODE" = "inner" ]; then
     echo "LLM with System Prompt"
     read -p "Enter SYSTEM prompt: " system_prompt
     if [ -z "$system_prompt" ]; then
         echo "No system prompt entered. Exiting."
-        # This script's original pause and exit for this condition:
         printf '\nPress any key to close...'
         read -n 1 -s -r
-        exit 1 # This will exit the subshell
+        exit 1
     fi
-
+    
     read -p "Enter MAIN prompt: " main_prompt
     if [ -z "$main_prompt" ]; then
         echo "No main prompt entered. Exiting."
     else
         llm --system "$system_prompt" "$main_prompt"
     fi
-) > "$_GEMINI_SCRIPT_TERMINAL_OUTPUT_LOG" 2>&1
+    
+    printf '\nLLM command finished. Press any key to close this terminal...'
+    read -n 1 -s -r
+    exit 0
 
-# --- Block to copy terminal log to clipboard and cleanup ---
-if [ -f "$_GEMINI_SCRIPT_TERMINAL_OUTPUT_LOG" ]; then
-    if command -v xclip &>/dev/null; then
-        if command -v sed &>/dev/null; then
-            sed 's/\x1B\[[0-9;]*[JKmsu]//g' "$_GEMINI_SCRIPT_TERMINAL_OUTPUT_LOG" | xclip -selection clipboard
-            echo "Full terminal output (ANSI codes removed) copied to clipboard."
+else
+    # OUTER EXECUTION
+    _GEMINI_LOG_FILE_BASENAME="$(basename "$0" .sh)_session"
+    _GEMINI_LOG_FILE=$(mktemp "/tmp/${_GEMINI_LOG_FILE_BASENAME}_XXXXXXXXXX.log")
+    
+    if [ -z "$_GEMINI_LOG_FILE" ] || [ ! -f "$_GEMINI_LOG_FILE" ]; then
+        echo "Error: Failed to create temporary log file." >&2
+        printf '\nPress any key to close this terminal...' && read -n 1 -s -r
+        exit 1
+    fi
+    
+    trap 'rm -f "$_GEMINI_LOG_FILE"' EXIT HUP INT TERM
+    
+    if ! command -v script &>/dev/null; then
+        echo "Error: 'script' command not found. Please install it (e.g., sudo apt install bsdutils)." >&2
+        printf '\nPress any key to close this terminal...' && read -n 1 -s -r
+        exit 1
+    fi
+
+    script -q -e -c "GEMINI_CAPTURE_MODE=inner bash \"$0\" \"$@\"" "$_GEMINI_LOG_FILE"
+    script_exit_status=$?
+    
+    if [ -f "$_GEMINI_LOG_FILE" ]; then
+        if [ -s "$_GEMINI_LOG_FILE" ]; then
+            if command -v xsel &>/dev/null; then
+                CLEANED_CONTENT=""
+                if command -v col &>/dev/null; then
+                    CLEANED_CONTENT=$(col -b < "$_GEMINI_LOG_FILE")
+                else
+                    CLEANED_CONTENT=$(cat "$_GEMINI_LOG_FILE")
+                    echo "Warning: 'col' command not found. Log content might contain unprocessed backspace characters." >&2
+                fi
+
+                if command -v sed &>/dev/null; then
+                    FINAL_CONTENT=$(echo "$CLEANED_CONTENT" | sed -E 's/\x1B\[[0-9;?]*[a-zA-Z]//g; s/\r$//g; s/\r([^\n])/\1/g')
+                    if echo "$FINAL_CONTENT" | xsel --clipboard --input; then
+                        echo "Terminal session (cleaned) copied to clipboard using xsel."
+                    else
+                        echo "Error: xsel command failed to copy to clipboard (exit code $?)." >&2
+                    fi
+                else
+                    echo "Warning: 'sed' command not found. ANSI escape codes and some carriage returns may not be removed." >&2
+                    if echo "$CLEANED_CONTENT" | xsel --clipboard --input; then
+                        echo "Terminal session (partially cleaned) copied to clipboard using xsel."
+                    else
+                        echo "Error: xsel command failed to copy to clipboard (exit code $?)." >&2
+                    fi
+                fi
+            else
+                echo "Error: 'xsel' command not found. Please install it (e.g., sudo apt install xsel). Skipping clipboard copy." >&2
+            fi
         else
-            xclip -selection clipboard < "$_GEMINI_SCRIPT_TERMINAL_OUTPUT_LOG"
-            echo "Full terminal output copied to clipboard (sed not found, ANSI codes not removed)."
+            echo "Terminal session log is empty; clipboard not updated."
         fi
     else
-        echo "xclip is not installed; skipping clipboard copy of terminal output."
+        echo "Error: Terminal session log file not found at '$_GEMINI_LOG_FILE'." >&2
     fi
-    rm -f "$_GEMINI_SCRIPT_TERMINAL_OUTPUT_LOG"
-else
-    echo "No terminal output was captured or log file was not created; clipboard not updated."
-fi
-# --- End of clipboard copy and cleanup block ---
 
-printf '\nLLM command finished. Press any key to close this terminal...'
-read -n 1 -s -r
-exit 0
+    printf '\nClipboard operation finished. Press any key to close this wrapper terminal...'
+    read -n 1 -s -r
+    exit $script_exit_status
+fi
 ```
 
----
 ##### `shell/llm_sF8_fragment.sh`
-
 ```bash
 #!/bin/bash
 # Prompts for a fragment source and a main prompt for llm.
-# Patched by Gemini to capture all terminal output to clipboard
-_GEMINI_SCRIPT_TERMINAL_OUTPUT_LOG="/tmp/$(basename "$0" .sh)_terminal_output_$$_${RANDOM}.log"
+# Refactored by Gemini to use `script` and `xsel` for capturing all terminal output to clipboard.
 
-# Main script logic is executed in a subshell to capture all its output
-(
+GEMINI_CAPTURE_MODE="${GEMINI_CAPTURE_MODE:-outer}"
+
+if [ "$GEMINI_CAPTURE_MODE" = "inner" ]; then
     echo "LLM with Fragment"
     read -p "Enter fragment source (URL or file path): " fragment_source
     if [ -z "$fragment_source" ]; then
         echo "No fragment source entered. Exiting."
-        # This script's original pause and exit for this condition:
         printf '\nPress any key to close...'
         read -n 1 -s -r
-        exit 1 # This will exit the subshell
+        exit 1
     fi
-
+    
     read -p "Enter MAIN prompt: " main_prompt
     if [ -z "$main_prompt" ]; then
         echo "No main prompt entered. Exiting."
     else
         llm -f "$fragment_source" "$main_prompt"
     fi
-) > "$_GEMINI_SCRIPT_TERMINAL_OUTPUT_LOG" 2>&1
+    
+    printf '\nLLM command finished. Press any key to close this terminal...'
+    read -n 1 -s -r
+    exit 0
 
-# --- Block to copy terminal log to clipboard and cleanup ---
-if [ -f "$_GEMINI_SCRIPT_TERMINAL_OUTPUT_LOG" ]; then
-    if command -v xclip &>/dev/null; then
-        if command -v sed &>/dev/null; then
-            sed 's/\x1B\[[0-9;]*[JKmsu]//g' "$_GEMINI_SCRIPT_TERMINAL_OUTPUT_LOG" | xclip -selection clipboard
-            echo "Full terminal output (ANSI codes removed) copied to clipboard."
+else
+    # OUTER EXECUTION
+    _GEMINI_LOG_FILE_BASENAME="$(basename "$0" .sh)_session"
+    _GEMINI_LOG_FILE=$(mktemp "/tmp/${_GEMINI_LOG_FILE_BASENAME}_XXXXXXXXXX.log")
+    
+    if [ -z "$_GEMINI_LOG_FILE" ] || [ ! -f "$_GEMINI_LOG_FILE" ]; then
+        echo "Error: Failed to create temporary log file." >&2
+        printf '\nPress any key to close this terminal...' && read -n 1 -s -r
+        exit 1
+    fi
+    
+    trap 'rm -f "$_GEMINI_LOG_FILE"' EXIT HUP INT TERM
+    
+    if ! command -v script &>/dev/null; then
+        echo "Error: 'script' command not found. Please install it (e.g., sudo apt install bsdutils)." >&2
+        printf '\nPress any key to close this terminal...' && read -n 1 -s -r
+        exit 1
+    fi
+
+    script -q -e -c "GEMINI_CAPTURE_MODE=inner bash \"$0\" \"$@\"" "$_GEMINI_LOG_FILE"
+    script_exit_status=$?
+    
+    if [ -f "$_GEMINI_LOG_FILE" ]; then
+        if [ -s "$_GEMINI_LOG_FILE" ]; then
+            if command -v xsel &>/dev/null; then
+                CLEANED_CONTENT=""
+                if command -v col &>/dev/null; then
+                    CLEANED_CONTENT=$(col -b < "$_GEMINI_LOG_FILE")
+                else
+                    CLEANED_CONTENT=$(cat "$_GEMINI_LOG_FILE")
+                    echo "Warning: 'col' command not found. Log content might contain unprocessed backspace characters." >&2
+                fi
+
+                if command -v sed &>/dev/null; then
+                    FINAL_CONTENT=$(echo "$CLEANED_CONTENT" | sed -E 's/\x1B\[[0-9;?]*[a-zA-Z]//g; s/\r$//g; s/\r([^\n])/\1/g')
+                    if echo "$FINAL_CONTENT" | xsel --clipboard --input; then
+                        echo "Terminal session (cleaned) copied to clipboard using xsel."
+                    else
+                        echo "Error: xsel command failed to copy to clipboard (exit code $?)." >&2
+                    fi
+                else
+                    echo "Warning: 'sed' command not found. ANSI escape codes and some carriage returns may not be removed." >&2
+                    if echo "$CLEANED_CONTENT" | xsel --clipboard --input; then
+                        echo "Terminal session (partially cleaned) copied to clipboard using xsel."
+                    else
+                        echo "Error: xsel command failed to copy to clipboard (exit code $?)." >&2
+                    fi
+                fi
+            else
+                echo "Error: 'xsel' command not found. Please install it (e.g., sudo apt install xsel). Skipping clipboard copy." >&2
+            fi
         else
-            xclip -selection clipboard < "$_GEMINI_SCRIPT_TERMINAL_OUTPUT_LOG"
-            echo "Full terminal output copied to clipboard (sed not found, ANSI codes not removed)."
+            echo "Terminal session log is empty; clipboard not updated."
         fi
     else
-        echo "xclip is not installed; skipping clipboard copy of terminal output."
+        echo "Error: Terminal session log file not found at '$_GEMINI_LOG_FILE'." >&2
     fi
-    rm -f "$_GEMINI_SCRIPT_TERMINAL_OUTPUT_LOG"
-else
-    echo "No terminal output was captured or log file was not created; clipboard not updated."
-fi
-# --- End of clipboard copy and cleanup block ---
 
-printf '\nLLM command finished. Press any key to close this terminal...'
-read -n 1 -s -r
-exit 0
+    printf '\nClipboard operation finished. Press any key to close this wrapper terminal...'
+    read -n 1 -s -r
+    exit $script_exit_status
+fi
 ```
 
----
 ##### `shell/llm_sF9_attachment.sh`
-
 ```bash
 #!/bin/bash
 # Prompts for a main prompt and an attachment for llm with gpt-4.1-mini.
-# Patched by Gemini to capture all terminal output to clipboard
-_GEMINI_SCRIPT_TERMINAL_OUTPUT_LOG="/tmp/$(basename "$0" .sh)_terminal_output_$$_${RANDOM}.log"
+# Refactored by Gemini to use `script` and `xsel` for capturing all terminal output to clipboard.
 
-# Main script logic is executed in a subshell to capture all its output
-(
+GEMINI_CAPTURE_MODE="${GEMINI_CAPTURE_MODE:-outer}"
+
+if [ "$GEMINI_CAPTURE_MODE" = "inner" ]; then
     echo "LLM with Attachment (gpt-4.1-mini)"
     read -p "Enter MAIN prompt: " main_prompt
     if [ -z "$main_prompt" ]; then
         echo "No main prompt entered. Exiting."
-        # This script's original pause and exit for this condition:
         printf '\nPress any key to close...'
         read -n 1 -s -r
-        exit 1 # This will exit the subshell
+        exit 1
     fi
-
+    
     read -p "Enter attachment (URL or file path): " attachment_source
     if [ -z "$attachment_source" ]; then
         echo "No attachment source entered. Exiting."
     else
         llm -m gpt-4.1-mini "$main_prompt" -a "$attachment_source"
     fi
-) > "$_GEMINI_SCRIPT_TERMINAL_OUTPUT_LOG" 2>&1
+    
+    printf '\nLLM command finished. Press any key to close this terminal...'
+    read -n 1 -s -r
+    exit 0
 
-# --- Block to copy terminal log to clipboard and cleanup ---
-if [ -f "$_GEMINI_SCRIPT_TERMINAL_OUTPUT_LOG" ]; then
-    if command -v xclip &>/dev/null; then
-        if command -v sed &>/dev/null; then
-            sed 's/\x1B\[[0-9;]*[JKmsu]//g' "$_GEMINI_SCRIPT_TERMINAL_OUTPUT_LOG" | xclip -selection clipboard
-            echo "Full terminal output (ANSI codes removed) copied to clipboard."
+else
+    # OUTER EXECUTION
+    _GEMINI_LOG_FILE_BASENAME="$(basename "$0" .sh)_session"
+    _GEMINI_LOG_FILE=$(mktemp "/tmp/${_GEMINI_LOG_FILE_BASENAME}_XXXXXXXXXX.log")
+    
+    if [ -z "$_GEMINI_LOG_FILE" ] || [ ! -f "$_GEMINI_LOG_FILE" ]; then
+        echo "Error: Failed to create temporary log file." >&2
+        printf '\nPress any key to close this terminal...' && read -n 1 -s -r
+        exit 1
+    fi
+    
+    trap 'rm -f "$_GEMINI_LOG_FILE"' EXIT HUP INT TERM
+    
+    if ! command -v script &>/dev/null; then
+        echo "Error: 'script' command not found. Please install it (e.g., sudo apt install bsdutils)." >&2
+        printf '\nPress any key to close this terminal...' && read -n 1 -s -r
+        exit 1
+    fi
+
+    script -q -e -c "GEMINI_CAPTURE_MODE=inner bash \"$0\" \"$@\"" "$_GEMINI_LOG_FILE"
+    script_exit_status=$?
+    
+    if [ -f "$_GEMINI_LOG_FILE" ]; then
+        if [ -s "$_GEMINI_LOG_FILE" ]; then
+            if command -v xsel &>/dev/null; then
+                CLEANED_CONTENT=""
+                if command -v col &>/dev/null; then
+                    CLEANED_CONTENT=$(col -b < "$_GEMINI_LOG_FILE")
+                else
+                    CLEANED_CONTENT=$(cat "$_GEMINI_LOG_FILE")
+                    echo "Warning: 'col' command not found. Log content might contain unprocessed backspace characters." >&2
+                fi
+
+                if command -v sed &>/dev/null; then
+                    FINAL_CONTENT=$(echo "$CLEANED_CONTENT" | sed -E 's/\x1B\[[0-9;?]*[a-zA-Z]//g; s/\r$//g; s/\r([^\n])/\1/g')
+                    if echo "$FINAL_CONTENT" | xsel --clipboard --input; then
+                        echo "Terminal session (cleaned) copied to clipboard using xsel."
+                    else
+                        echo "Error: xsel command failed to copy to clipboard (exit code $?)." >&2
+                    fi
+                else
+                    echo "Warning: 'sed' command not found. ANSI escape codes and some carriage returns may not be removed." >&2
+                    if echo "$CLEANED_CONTENT" | xsel --clipboard --input; then
+                        echo "Terminal session (partially cleaned) copied to clipboard using xsel."
+                    else
+                        echo "Error: xsel command failed to copy to clipboard (exit code $?)." >&2
+                    fi
+                fi
+            else
+                echo "Error: 'xsel' command not found. Please install it (e.g., sudo apt install xsel). Skipping clipboard copy." >&2
+            fi
         else
-            xclip -selection clipboard < "$_GEMINI_SCRIPT_TERMINAL_OUTPUT_LOG"
-            echo "Full terminal output copied to clipboard (sed not found, ANSI codes not removed)."
+            echo "Terminal session log is empty; clipboard not updated."
         fi
     else
-        echo "xclip is not installed; skipping clipboard copy of terminal output."
+        echo "Error: Terminal session log file not found at '$_GEMINI_LOG_FILE'." >&2
     fi
-    rm -f "$_GEMINI_SCRIPT_TERMINAL_OUTPUT_LOG"
-else
-    echo "No terminal output was captured or log file was not created; clipboard not updated."
-fi
-# --- End of clipboard copy and cleanup block ---
 
-printf '\nLLM command finished. Press any key to close this terminal...'
-read -n 1 -s -r
-exit 0
+    printf '\nClipboard operation finished. Press any key to close this wrapper terminal...'
+    read -n 1 -s -r
+    exit $script_exit_status
+fi
 ```
 
 #### ~/.rpbar.ini
