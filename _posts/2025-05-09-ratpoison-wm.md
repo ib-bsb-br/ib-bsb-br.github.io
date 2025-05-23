@@ -175,13 +175,13 @@ bind minus vsplit
 bind M-Tab next
 bind M-KP_Separator exec xdotool key dead_circumflex key dead_circumflex key dead_circumflex
 bind M-KP_0 exec xdotool key Ccedilla key Ccedilla key Ccedilla
-bind M-F7 llm_sF12_extract_last.sh
-bind M-F6 llm_sF9_attachment.sh
-bind M-F5 llm_analyze_file.sh
-bind M-F4 llm_sF8_fragment.sh
-bind M-F3 llm_pipe_selected_sys.sh
-bind M-F2 llm_sF6_system_prompt.sh
-bind M-F1 llm_sF4_prompt.sh
+bind M-F7 exec x-terminal-emulator -e /home/linaro/.local/bin/llm_sF12_extract_last.sh
+bind M-F6 exec x-terminal-emulator -e /home/linaro/.local/bin/llm_sF9_attachment.sh
+bind M-F5 exec x-terminal-emulator -e /home/linaro/.local/bin/llm_analyze_file.sh
+bind M-F4 exec x-terminal-emulator -e /home/linaro/.local/bin/llm_sF8_fragment.sh
+bind M-F3 exec x-terminal-emulator -e /home/linaro/.local/bin/llm_pipe_selected_sys.sh
+bind M-F2 exec x-terminal-emulator -e /home/linaro/.local/bin/llm_sF6_system_prompt.sh
+bind M-F1 exec x-terminal-emulator -e /home/linaro/.local/bin/llm_sF4_prompt.sh
 bind M-3 ratclick 3
 bind M-2 ratclick 2
 bind M-1 ratclick 1
@@ -229,7 +229,6 @@ bind 3 exec rpws 3
 bind 2 exec rpws 2
 bind 1 exec rpws 1
 bind 0 remove
-
 {% endcodeblock %}
 
 #### ~/.local/bin/*.sh shell scripts
