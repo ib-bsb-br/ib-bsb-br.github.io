@@ -1955,6 +1955,11 @@ if [ -f /home/linaro/.xsessionrc ]; then
 fi
 
 xmodmap .xmodmaprc
+while true
+do
+	xsetroot -name "$(date '+%m|%d %H.%M')"
+	sleep 1
+done &
 exec ratpoison
 ```
 
