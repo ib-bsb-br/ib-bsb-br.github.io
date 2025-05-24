@@ -1,5 +1,6 @@
 ---
-tags: [scratchpad]
+tags:
+- scratchpad
 info: aberto.
 date: 2025-05-24
 type: post
@@ -7,8 +8,9 @@ layout: post
 published: true
 slug: optimizing-rk3588-performance
 title: 'Optimizing RK3588 Performance '
+comment: https://sbcwiki.com/news/articles/tune-your-rk3588/
 ---
-bibref https://sbcwiki.com/news/articles/tune-your-rk3588/
+
 
 This article details methods to enhance the performance of the Rockchip RK3588 system-on-chip (SoC). By adjusting configurations for the **CPU**, **GPU**, and **RAM**, it is possible to achieve significant performance improvements beyond default settings, potentially increasing overall system performance by **up to 40%** in specific benchmarks.
 
