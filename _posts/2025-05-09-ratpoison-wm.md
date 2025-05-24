@@ -103,6 +103,7 @@ startup_message on
 escape Super_L
 unmanage rpbar
 banish
+warp 1
 
 definekey top M-Tab next
 definekey top M-ISO_Left_Tab prev
@@ -133,7 +134,7 @@ bind s-Print exec scrot -s -e 'xclip -selection clipboard -t image/png -i $f && 
 bind s-Page_Up exec rpws movenext
 bind s-Page_Down exec rpws moveprev
 bind s-minus exec amixer set Master 5%-
-bind s-M-Tab prev
+bind s-M-Tab inext
 bind s-Left exchangeleft
 bind s-KP_9 exec rpws move9
 bind s-KP_8 exec rpws move8
@@ -168,11 +169,14 @@ bind Right focusright
 bind Return exec x-terminal-emulator
 bind r resize
 bind q delete
+bind p dedicate
+bind o cother
+bind s-o iother
 bind Print exec xfce4-screenshooter
 bind Page_Up exec rpws next
 bind Page_Down exec rpws prev
 bind minus vsplit
-bind M-Tab next
+bind M-Tab cnext
 bind M-KP_Separator exec xdotool key dead_circumflex key dead_circumflex key dead_circumflex
 bind M-KP_0 exec xdotool key Ccedilla key Ccedilla key Ccedilla
 bind M-F7 exec x-terminal-emulator -e /home/linaro/.local/bin/llm_sF12_extract_last.sh
