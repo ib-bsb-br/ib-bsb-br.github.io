@@ -1931,8 +1931,13 @@ Your system should automatically log in linaro directly into a Ratpoison session
 
 If you choose not to use LightDM or wish to start Ratpoison manually from a TTY (console login):
 
-1. Ensure xinit is installed: sudo apt install xinit.  
-2. Create or edit ~/.xinitrc (in /home/linaro/.xinitrc):  
+1. Create ~/.xmodmaprc
+```
+remove lock = Caps_Lock
+keycode 66 = F13
+```
+3. Ensure xinit is installed: sudo apt install xinit.
+4. Create or edit ~/.xinitrc (in /home/linaro/.xinitrc):  
    `nano /home/linaro/.xinitrc`  
    Add:  
 
@@ -1949,6 +1954,7 @@ if [ -f /home/linaro/.xsessionrc ]; then
   . /home/linaro/.xsessionrc
 fi
 
+xmodmap .xmodmaprc
 exec ratpoison
 ```
 
