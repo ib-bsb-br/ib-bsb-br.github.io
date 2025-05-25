@@ -1,4 +1,333 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2025-05-25T02:54:42+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">Optimizing RK3588 Performance</title><link href="https://ib.bsb.br/optimizing-rk3588-performance/" rel="alternate" type="text/html" title="Optimizing RK3588 Performance" /><published>2025-05-24T00:00:00+00:00</published><updated>2025-05-24T16:13:25+00:00</updated><id>https://ib.bsb.br/optimizing-rk3588-performance</id><content type="html" xml:base="https://ib.bsb.br/optimizing-rk3588-performance/"><![CDATA[<p>This article details methods to enhance the performance of the Rockchip RK3588 system-on-chip (SoC). By adjusting configurations for the <strong>CPU</strong>, <strong>GPU</strong>, and <strong>RAM</strong>, it is possible to achieve significant performance improvements beyond default settings, potentially increasing overall system performance by <strong>up to 40%</strong> in specific benchmarks.</p>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2025-05-25T14:24:59+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">coolice remote access and file transfer (ssh/ftp)</title><link href="https://ib.bsb.br/coolice-remote-access-and-file-transfer-sshftp/" rel="alternate" type="text/html" title="coolice remote access and file transfer (ssh/ftp)" /><published>2025-05-25T00:00:00+00:00</published><updated>2025-05-25T14:20:53+00:00</updated><id>https://ib.bsb.br/coolice-remote-access-and-file-transfer-sshftp</id><content type="html" xml:base="https://ib.bsb.br/coolice-remote-access-and-file-transfer-sshftp/"><![CDATA[<p><strong>Section 0: Immediate Steps to Secure Your Server Access After Key Compromise</strong></p>
+
+<ol>
+  <li><strong>Generate a NEW SSH Key Pair on Your LOCAL (Client) Machine:</strong>
+    <ul>
+      <li>Open a terminal on your local computer (the one you use to connect <em>to</em> the server).</li>
+      <li>Use the <code class="language-plaintext highlighter-rouge">ssh-keygen</code> command. It’s recommended to use Ed25519 keys, or RSA with sufficient bit length.
+        <ul>
+          <li><strong>For Ed25519 (recommended):</strong>
+            <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>ssh-keygen <span class="nt">-t</span> ed25519 <span class="nt">-C</span> “your_email@example.com”
+</code></pre></div>            </div>
+          </li>
+          <li><strong>Or, for RSA (4096 bits):</strong>
+            <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>ssh-keygen <span class="nt">-t</span> rsa <span class="nt">-b</span> 4096 <span class="nt">-C</span> “your_email@example.com”
+</code></pre></div>            </div>
+          </li>
+        </ul>
+      </li>
+      <li>When prompted, you can choose to save the key in the default location (e.g., <code class="language-plaintext highlighter-rouge">~/.ssh/id_ed25519</code> or <code class="language-plaintext highlighter-rouge">~/.ssh/id_rsa</code>) or specify a new file.</li>
+      <li><strong>IMPORTANT:</strong> When prompted for a passphrase, enter a strong, unique passphrase. This encrypts your new private key on your disk, providing an extra layer of security. You’ll need to enter this passphrase when you use the key, unless you use <code class="language-plaintext highlighter-rouge">ssh-agent</code>.</li>
+    </ul>
+  </li>
+  <li><strong>Secure Your NEW Private Key File on Your Local Machine:</strong>
+    <ul>
+      <li>The <code class="language-plaintext highlighter-rouge">ssh-keygen</code> command usually sets the correct permissions, but verify them. The private key file (e.g., <code class="language-plaintext highlighter-rouge">~/.ssh/id_ed25519</code>) should only be readable by you:
+        <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">chmod </span>600 ~/.ssh/your_new_private_key_filename
+</code></pre></div>        </div>
+      </li>
+    </ul>
+  </li>
+  <li><strong>Copy Your NEW Public Key to the Server (<code class="language-plaintext highlighter-rouge">dc2.myusadc.com</code>):</strong>
+    <ul>
+      <li>The easiest way is to use <code class="language-plaintext highlighter-rouge">ssh-copy-id</code> (if available on your client machine). Replace <code class="language-plaintext highlighter-rouge">your_new_public_key.pub</code> with the actual filename (e.g., <code class="language-plaintext highlighter-rouge">~/.ssh/id_ed25519.pub</code>):
+        <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>ssh-copy-id <span class="nt">-i</span> ~/.ssh/your_new_public_key.pub ibbsbbry@dc2.myusadc.com
+</code></pre></div>        </div>
+        <p>You will be prompted for <code class="language-plaintext highlighter-rouge">ibbsbbry</code>’s password on <code class="language-plaintext highlighter-rouge">dc2.myusadc.com</code> for this one-time operation.</p>
+      </li>
+      <li><strong>Manual Method (if <code class="language-plaintext highlighter-rouge">ssh-copy-id</code> is not available):</strong>
+        <ol>
+          <li>Display your new public key on your local machine:
+            <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">cat</span> ~/.ssh/your_new_public_key.pub
+</code></pre></div>            </div>
+          </li>
+          <li>Copy the entire output (it’s one long line starting with <code class="language-plaintext highlighter-rouge">ssh-ed25519 ...</code> or <code class="language-plaintext highlighter-rouge">ssh-rsa ...</code>).</li>
+          <li>Log in to your server <code class="language-plaintext highlighter-rouge">dc2.myusadc.com</code> using your existing method (e.g., password, or the old key if it still works temporarily).</li>
+          <li>On the server, open the <code class="language-plaintext highlighter-rouge">~/.ssh/authorized_keys</code> file with a text editor (like <code class="language-plaintext highlighter-rouge">nano</code> or <code class="language-plaintext highlighter-rouge">vim</code>):
+            <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>nano ~/.ssh/authorized_keys
+</code></pre></div>            </div>
+          </li>
+          <li>Paste the new public key you copied onto a new line in this file. Save and close the file.</li>
+          <li>Ensure correct permissions on the server:
+            <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">chmod </span>700 ~/.ssh
+<span class="nb">chmod </span>600 ~/.ssh/authorized_keys
+</code></pre></div>            </div>
+          </li>
+        </ol>
+      </li>
+    </ul>
+  </li>
+  <li><strong>Test Login with Your NEW Key:</strong>
+    <ul>
+      <li>From your local machine, try to SSH into the server using your new key. If you set a passphrase, you’ll be prompted for it.
+        <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>ssh <span class="nt">-i</span> ~/.ssh/your_new_private_key_filename ibbsbbry@dc2.myusadc.com
+</code></pre></div>        </div>
+        <p>If it works, proceed to the next step.</p>
+      </li>
+    </ul>
+  </li>
+  <li><strong>Remove the COMPROMISED Public Key from the Server:</strong>
+    <ul>
+      <li>Log in to <code class="language-plaintext highlighter-rouge">dc2.myusadc.com</code> (preferably with your new key).</li>
+      <li>Edit the <code class="language-plaintext highlighter-rouge">~/.ssh/authorized_keys</code> file again:
+        <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>nano ~/.ssh/authorized_keys
+</code></pre></div>        </div>
+      </li>
+      <li>Carefully find and delete the line corresponding to the old, compromised public key (the one starting with <code class="language-plaintext highlighter-rouge">ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDHVjjq...</code>).</li>
+      <li>Save and close the file.</li>
+    </ul>
+  </li>
+  <li><strong>Delete the COMPROMISED Private Key:</strong>
+    <ul>
+      <li>Delete the private key file that you accidentally shared from wherever it was stored.</li>
+      <li>If this key was also stored on your client machine, delete it from there as well.</li>
+    </ul>
+  </li>
+</ol>
+
+<p>Once these steps are completed, your server access will be secured with your new, uncompromised SSH key pair.</p>
+
+<p>—</p>
+
+<p>Now, here is the tutorial on how to leverage your server information for remote connections and file transfers, assuming you are using your <strong>new, secure SSH keys</strong>.</p>
+
+<p><strong>Section 1: Understanding Your Server Information (Recap)</strong></p>
+
+<p>Based on your command outputs, here’s what we know about your server:</p>
+
+<ul>
+  <li><strong>Your Username on the Server:</strong> <code class="language-plaintext highlighter-rouge">ibbsbbry</code></li>
+  <li><strong>Server Hostname:</strong> <code class="language-plaintext highlighter-rouge">dc2.myusadc.com</code></li>
+  <li><strong>Server IP Address (Public):</strong> <code class="language-plaintext highlighter-rouge">15.204.42.250</code></li>
+  <li><strong>Your (Compromised) SSH Public Key on Server:</strong> The one you listed, starting with <code class="language-plaintext highlighter-rouge">ssh-rsa AAAAB3NzaC...</code>. <strong>This should be removed as per Section 0.</strong></li>
+  <li><strong>SSH Port:</strong> Assumed to be the default, port <code class="language-plaintext highlighter-rouge">22</code>. If it’s different, you’ll need to specify it in your commands.</li>
+</ul>
+
+<p><strong>Section 2: Connecting Remotely with SSH (Secure Shell)</strong></p>
+
+<p>SSH allows secure command-line access to your server.</p>
+
+<p><strong>Prerequisites:</strong></p>
+<ul>
+  <li><strong>SSH Client on Your Local Machine:</strong>
+    <ul>
+      <li><strong>Linux/macOS:</strong> OpenSSH client is usually pre-installed. Use the <code class="language-plaintext highlighter-rouge">Terminal</code>.</li>
+      <li><strong>Windows:</strong>
+        <ul>
+          <li>Windows 10/11: OpenSSH client can be installed via “Optional Features” or use PowerShell.</li>
+          <li>Alternatively, use a third-party client like PuTTY.</li>
+        </ul>
+      </li>
+    </ul>
+  </li>
+  <li><strong>Your NEW Secure SSH Key Pair:</strong> Generated and configured as per Section 0.</li>
+</ul>
+
+<p><strong>2.1. Key-Based Authentication (Recommended &amp; Most Secure)</strong></p>
+
+<p>This uses your private key (on your local client machine) and its corresponding public key (in <code class="language-plaintext highlighter-rouge">~/.ssh/authorized_keys</code> on the server).</p>
+
+<ol>
+  <li><strong>Ensure Your NEW Public Key is in <code class="language-plaintext highlighter-rouge">authorized_keys</code> on the Server:</strong> Done in Section 0, Step 3.</li>
+  <li><strong>Ensure Your NEW Private Key is Secure on Your Client Machine:</strong>
+    <ul>
+      <li>Stored in a known location (e.g., <code class="language-plaintext highlighter-rouge">~/.ssh/id_ed25519</code>).</li>
+      <li>Has correct permissions: <code class="language-plaintext highlighter-rouge">chmod 600 ~/.ssh/your_new_private_key_filename</code>.</li>
+    </ul>
+  </li>
+  <li>
+    <p><strong>Connecting:</strong></p>
+
+    <ul>
+      <li><strong>From Linux/macOS Terminal, or Windows PowerShell (with OpenSSH client):</strong>
+Use the server’s hostname or IP address. If your private key is not the default (<code class="language-plaintext highlighter-rouge">~/.ssh/id_rsa</code> or <code class="language-plaintext highlighter-rouge">~/.ssh/id_ed25519</code>), or if you have multiple keys, specify it with the <code class="language-plaintext highlighter-rouge">-i</code> option.
+        <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># If your new key is the default and loaded by the agent or has no passphrase</span>
+ssh ibbsbbry@dc2.myusadc.com
+<span class="c"># OR using IP</span>
+ssh ibbsbbry@15.204.42.250
+<span class="c"># OR specifying your new private key file</span>
+ssh <span class="nt">-i</span> ~/.ssh/your_new_private_key_filename ibbsbbry@dc2.myusadc.com
+</code></pre></div>        </div>
+        <p><strong>If using a non-standard SSH port (e.g., 2222):</strong></p>
+        <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>ssh <span class="nt">-i</span> ~/.ssh/your_new_private_key_filename <span class="nt">-p</span> 2222 ibbsbbry@dc2.myusadc.com
+</code></pre></div>        </div>
+        <p>The first time you connect to a new server, you’ll be asked to verify the host’s fingerprint. Type <code class="language-plaintext highlighter-rouge">yes</code>. If you used a passphrase for your private key, you’ll be prompted to enter it.</p>
+      </li>
+      <li><strong>From Windows using PuTTY:</strong>
+        <ol>
+          <li>Open PuTTY.</li>
+          <li><strong>Session Tab:</strong>
+            <ul>
+              <li>Host Name (or IP address): <code class="language-plaintext highlighter-rouge">dc2.myusadc.com</code> or <code class="language-plaintext highlighter-rouge">15.204.42.250</code></li>
+              <li>Port: <code class="language-plaintext highlighter-rouge">22</code> (or your non-standard port).</li>
+            </ul>
+          </li>
+          <li><strong>Connection &gt; SSH &gt; Auth Tab:</strong>
+            <ul>
+              <li>Click “Browse…” next to “Private key file for authentication”.</li>
+              <li>Select your <strong>new</strong> private key file. PuTTY uses the <code class="language-plaintext highlighter-rouge">.ppk</code> format. If your new key is in OpenSSH format (e.g., <code class="language-plaintext highlighter-rouge">id_ed25519</code>), you’ll need to convert it using <strong>PuTTYgen</strong> (comes with PuTTY). Open PuTTYgen, load your OpenSSH private key file, and then “Save private key” as a <code class="language-plaintext highlighter-rouge">.ppk</code> file.</li>
+            </ul>
+          </li>
+          <li>(Optional) Go back to “Session”, name your session under “Saved Sessions”, and click “Save”.</li>
+          <li>Click “Open”. You’ll be prompted for your username (<code class="language-plaintext highlighter-rouge">ibbsbbry</code>) and then your private key’s passphrase if it has one.</li>
+        </ol>
+      </li>
+    </ul>
+  </li>
+</ol>
+
+<p><strong>2.2. Using <code class="language-plaintext highlighter-rouge">ssh-agent</code> for Convenience (Optional)</strong></p>
+
+<p>If your private key has a passphrase, <code class="language-plaintext highlighter-rouge">ssh-agent</code> can store the decrypted key in memory, so you only need to enter the passphrase once per session.</p>
+
+<ol>
+  <li><strong>Start <code class="language-plaintext highlighter-rouge">ssh-agent</code> (usually starts automatically on modern systems):</strong>
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">eval</span> “<span class="si">$(</span>ssh-agent <span class="nt">-s</span><span class="si">)</span>”
+</code></pre></div>    </div>
+  </li>
+  <li><strong>Add your new private key to the agent:</strong>
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>ssh-add ~/.ssh/your_new_private_key_filename
+</code></pre></div>    </div>
+    <p>You’ll be prompted for the key’s passphrase once. Now, subsequent <code class="language-plaintext highlighter-rouge">ssh</code>, <code class="language-plaintext highlighter-rouge">scp</code>, <code class="language-plaintext highlighter-rouge">sftp</code> commands using this key won’t ask for the passphrase until the agent stops or the key is removed.</p>
+  </li>
+</ol>
+
+<p><strong>2.3. Password Authentication (Less Secure - Discouraged if Key Auth is Set Up)</strong></p>
+
+<p>If key authentication fails or is not configured, and if the server allows password authentication (often disabled for security), you might be prompted for <code class="language-plaintext highlighter-rouge">ibbsbbry</code>’s password.</p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>ssh ibbsbbry@dc2.myusadc.com
+</code></pre></div></div>
+<p>It’s highly recommended to disable password authentication on your server once key-based authentication is working reliably.</p>
+
+<p><strong>Section 3: Transferring Files Securely</strong></p>
+
+<p>Always use secure methods like SFTP or SCP, which leverage your SSH connection. <strong>Avoid plain FTP as it’s insecure.</strong></p>
+
+<p><strong>3.1. SFTP (SSH File Transfer Protocol) - Interactive Session</strong></p>
+
+<ul>
+  <li><strong>From Linux/macOS Terminal, or Windows PowerShell:</strong>
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>sftp ibbsbbry@dc2.myusadc.com
+<span class="c"># OR, if using a non-standard port (e.g., 2222) and specific key:</span>
+sftp <span class="nt">-i</span> ~/.ssh/your_new_private_key_filename <span class="nt">-P</span> 2222 ibbsbbry@dc2.myusadc.com
+<span class="c"># Note: OpenSSH sftp client often uses -oPort= for non-standard ports:</span>
+<span class="c"># sftp -i ~/.ssh/your_new_private_key_filename -oPort=2222 ibbsbbry@dc2.myusadc.com</span>
+</code></pre></div>    </div>
+    <p>Common SFTP commands at the <code class="language-plaintext highlighter-rouge">sftp&gt;</code> prompt:</p>
+    <ul>
+      <li><code class="language-plaintext highlighter-rouge">put /local/path/file.txt [/remote/path/file.txt]</code>: Upload.</li>
+      <li><code class="language-plaintext highlighter-rouge">get /remote/path/file.txt [/local/path/file.txt]</code>: Download.</li>
+      <li><code class="language-plaintext highlighter-rouge">lpwd</code>, <code class="language-plaintext highlighter-rouge">pwd</code>, <code class="language-plaintext highlighter-rouge">lls</code>, <code class="language-plaintext highlighter-rouge">ls</code>, <code class="language-plaintext highlighter-rouge">lcd</code>, <code class="language-plaintext highlighter-rouge">cd</code>, <code class="language-plaintext highlighter-rouge">mkdir</code>, <code class="language-plaintext highlighter-rouge">rm</code>, <code class="language-plaintext highlighter-rouge">help</code>, <code class="language-plaintext highlighter-rouge">exit</code>.</li>
+    </ul>
+  </li>
+  <li><strong>From Windows using a GUI client (e.g., WinSCP, FileZilla):</strong>
+    <ol>
+      <li><strong>WinSCP:</strong>
+        <ul>
+          <li>File protocol: <code class="language-plaintext highlighter-rouge">SFTP</code></li>
+          <li>Host name: <code class="language-plaintext highlighter-rouge">dc2.myusadc.com</code></li>
+          <li>Port number: <code class="language-plaintext highlighter-rouge">22</code> (or your custom port)</li>
+          <li>User name: <code class="language-plaintext highlighter-rouge">ibbsbbry</code></li>
+          <li>For key auth: Click “Advanced…” &gt; “SSH” &gt; “Authentication”, select your <strong>new</strong> <code class="language-plaintext highlighter-rouge">.ppk</code> private key file.</li>
+          <li>Login.</li>
+        </ul>
+      </li>
+      <li><strong>FileZilla:</strong>
+        <ul>
+          <li>Host: <code class="language-plaintext highlighter-rouge">sftp://dc2.myusadc.com</code> (prefix with <code class="language-plaintext highlighter-rouge">sftp://</code>)</li>
+          <li>Username: <code class="language-plaintext highlighter-rouge">ibbsbbry</code></li>
+          <li>Port: <code class="language-plaintext highlighter-rouge">22</code> (or your custom port)</li>
+          <li>For key auth: <code class="language-plaintext highlighter-rouge">Edit &gt; Settings &gt; Connection &gt; SFTP</code>, add your <strong>new</strong> private key file (OpenSSH format or <code class="language-plaintext highlighter-rouge">.ppk</code> often works).</li>
+          <li>Quickconnect or use Site Manager.</li>
+        </ul>
+      </li>
+    </ol>
+  </li>
+</ul>
+
+<p><strong>3.2. SCP (Secure Copy Protocol) - Direct File Copy</strong></p>
+
+<ul>
+  <li>
+    <p><strong>From Linux or macOS Terminal, or Windows PowerShell:</strong></p>
+
+    <ul>
+      <li><strong>Local to Server:</strong>
+        <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>scp <span class="nt">-i</span> ~/.ssh/your_new_private_key_filename /path/to/local/file.txt ibbsbbry@dc2.myusadc.com:/remote/path/
+<span class="c"># If using a non-standard port (e.g., 2222), use uppercase -P:</span>
+scp <span class="nt">-i</span> ~/.ssh/your_new_private_key_filename <span class="nt">-P</span> 2222 /path/to/local/file.txt ibbsbbry@dc2.myusadc.com:/remote/path/
+</code></pre></div>        </div>
+      </li>
+      <li><strong>Server to Local:</strong>
+        <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>scp <span class="nt">-i</span> ~/.ssh/your_new_private_key_filename <span class="nt">-P</span> 2222 ibbsbbry@dc2.myusadc.com:/remote/path/file.txt /local/path/
+</code></pre></div>        </div>
+      </li>
+      <li><strong>Copy directories recursively with <code class="language-plaintext highlighter-rouge">-r</code>:</strong>
+        <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>scp <span class="nt">-r</span> <span class="nt">-i</span> ~/.ssh/your_new_private_key_filename <span class="nt">-P</span> 2222 /local/directory ibbsbbry@dc2.myusadc.com:/remote/parent_directory/
+</code></pre></div>        </div>
+      </li>
+    </ul>
+  </li>
+</ul>
+
+<p><strong>3.3. <code class="language-plaintext highlighter-rouge">rsync</code> (Advanced File Synchronization)</strong></p>
+
+<p><code class="language-plaintext highlighter-rouge">rsync</code> is powerful for efficiently synchronizing files and directories. It only transfers differences, can resume, and preserves permissions.</p>
+
+<ul>
+  <li><strong>Local to Server (archive mode, verbose, compress, progress):</strong>
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>rsync <span class="nt">-avz</span> —progress <span class="nt">-e</span> “ssh <span class="nt">-i</span> ~/.ssh/your_new_private_key_filename <span class="nt">-p</span> 2222” /path/to/local/source/ ibbsbbry@dc2.myusadc.com:/path/to/remote/destination/
+</code></pre></div>    </div>
+    <p>(Note the trailing slash on the source <code class="language-plaintext highlighter-rouge">/path/to/local/source/</code> means “copy the contents of source”).</p>
+  </li>
+  <li><strong>Server to Local:</strong>
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>rsync <span class="nt">-avz</span> —progress <span class="nt">-e</span> “ssh <span class="nt">-i</span> ~/.ssh/your_new_private_key_filename <span class="nt">-p</span> 2222” ibbsbbry@dc2.myusadc.com:/path/to/remote/source/ /path/to/local/destination/
+</code></pre></div>    </div>
+  </li>
+</ul>
+
+<p><strong>Section 4: Important General Considerations</strong></p>
+
+<ul>
+  <li><strong>Server-Side Firewall:</strong> Ensure the firewall on <code class="language-plaintext highlighter-rouge">dc2.myusadc.com</code> (e.g., <code class="language-plaintext highlighter-rouge">ufw</code>, <code class="language-plaintext highlighter-rouge">firewalld</code>) allows incoming connections on your SSH port (default 22).</li>
+  <li><strong>SSH Server Configuration (<code class="language-plaintext highlighter-rouge">sshd_config</code>):</strong> Located at <code class="language-plaintext highlighter-rouge">/etc/ssh/sshd_config</code> on the server. Key settings include:
+    <ul>
+      <li><code class="language-plaintext highlighter-rouge">Port 22</code> (or your custom port)</li>
+      <li><code class="language-plaintext highlighter-rouge">PubkeyAuthentication yes</code> (essential for key auth)</li>
+      <li><code class="language-plaintext highlighter-rouge">PasswordAuthentication no</code> (recommended once key auth is solid)</li>
+      <li><code class="language-plaintext highlighter-rouge">PermitRootLogin no</code> (recommended)
+If you change <code class="language-plaintext highlighter-rouge">sshd_config</code>, restart the SSH service (e.g., <code class="language-plaintext highlighter-rouge">sudo systemctl restart sshd</code>).</li>
+    </ul>
+  </li>
+  <li><strong>Client-Side Private Key Security:</strong> Reiterating: protect your new private key. Use a strong passphrase.</li>
+</ul>
+
+<p><strong>Section 5: Basic SSH Troubleshooting</strong></p>
+
+<ul>
+  <li><strong><code class="language-plaintext highlighter-rouge">Connection refused</code> on port 22 (or custom port):</strong>
+    <ul>
+      <li>Is the server <code class="language-plaintext highlighter-rouge">dc2.myusadc.com</code> online and reachable (try <code class="language-plaintext highlighter-rouge">ping dc2.myusadc.com</code>)?</li>
+      <li>Is the SSH service (<code class="language-plaintext highlighter-rouge">sshd</code>) running on the server? (Check with <code class="language-plaintext highlighter-rouge">sudo systemctl status sshd</code> on the server).</li>
+      <li>Is a firewall on the server or network blocking the SSH port?</li>
+    </ul>
+  </li>
+  <li><strong><code class="language-plaintext highlighter-rouge">Permission denied (publickey,gssapi-keyex,gssapi-with-mic...)</code>:</strong>
+    <ul>
+      <li>Is your <strong>new</strong> public key correctly added to <code class="language-plaintext highlighter-rouge">~/.ssh/authorized_keys</code> on the server?</li>
+      <li>Are permissions correct on the server: <code class="language-plaintext highlighter-rouge">~/.ssh</code> (700), <code class="language-plaintext highlighter-rouge">~/.ssh/authorized_keys</code> (600)?</li>
+      <li>Are permissions correct for your <strong>new</strong> private key on your client machine (600)?</li>
+      <li>Are you explicitly telling your SSH client to use the correct new private key (e.g., with <code class="language-plaintext highlighter-rouge">ssh -i ~/.ssh/your_new_key</code>) if it’s not the default or if <code class="language-plaintext highlighter-rouge">ssh-agent</code> isn’t managing it?</li>
+      <li>Check SSH server logs on <code class="language-plaintext highlighter-rouge">dc2.myusadc.com</code> (often in <code class="language-plaintext highlighter-rouge">/var/log/auth.log</code> or <code class="language-plaintext highlighter-rouge">/var/log/secure</code>) for more detailed error messages. Use <code class="language-plaintext highlighter-rouge">ssh -v user@host</code> (verbose) or <code class="language-plaintext highlighter-rouge">-vvv</code> (very verbose) on the client for more diagnostic output.</li>
+    </ul>
+  </li>
+  <li><strong>Prompted for password unexpectedly:</strong>
+    <ul>
+      <li>The server might not be configured for public key authentication, or your public key setup is incorrect.</li>
+      <li><code class="language-plaintext highlighter-rouge">ssh-agent</code> might not have your key loaded, or you typed the passphrase incorrectly.</li>
+    </ul>
+  </li>
+</ul>]]></content><author><name></name></author><category term="scratchpad" /></entry><entry><title type="html">Optimizing RK3588 Performance</title><link href="https://ib.bsb.br/optimizing-rk3588-performance/" rel="alternate" type="text/html" title="Optimizing RK3588 Performance" /><published>2025-05-24T00:00:00+00:00</published><updated>2025-05-24T16:13:25+00:00</updated><id>https://ib.bsb.br/optimizing-rk3588-performance</id><content type="html" xml:base="https://ib.bsb.br/optimizing-rk3588-performance/"><![CDATA[<p>This article details methods to enhance the performance of the Rockchip RK3588 system-on-chip (SoC). By adjusting configurations for the <strong>CPU</strong>, <strong>GPU</strong>, and <strong>RAM</strong>, it is possible to achieve significant performance improvements beyond default settings, potentially increasing overall system performance by <strong>up to 40%</strong> in specific benchmarks.</p>
 
 <p>The techniques described leverage capabilities present in the hardware that may not be fully utilized by standard software configurations. This guide is based on testing performed using the latest Armbian Build with the Rockchip BSP Kernel version <code class="language-plaintext highlighter-rouge">6.1.115</code> but the overlays can be adapted to any distro.</p>
 
@@ -4282,487 +4611,4 @@ Many examples in the <code class="language-plaintext highlighter-rouge">examples
   </li>
 </ul>
 
-<p>Running complex RAG pipelines on ARM64 is feasible, especially with newer, more powerful ARM64 processors. However, managing expectations and carefully selecting models appropriate for your hardware are key to a successful deployment.</p>]]></content><author><name></name></author><category term="scratchpad" /></entry><entry><title type="html">LightRAG - extracting relevant information from mixed data</title><link href="https://ib.bsb.br/lightrag-extracting-relevant-information-from-mixed-data/" rel="alternate" type="text/html" title="LightRAG - extracting relevant information from mixed data" /><published>2025-05-21T00:00:00+00:00</published><updated>2025-05-21T17:13:45+00:00</updated><id>https://ib.bsb.br/lightrag-extracting-relevant-information-from-mixed-data</id><content type="html" xml:base="https://ib.bsb.br/lightrag-extracting-relevant-information-from-mixed-data/"><![CDATA[<h2 id="introduction-can-lightrag-solve-your-problem">Introduction: Can LightRAG Solve Your Problem?</h2>
-
-<p>Based on the provided <code class="language-plaintext highlighter-rouge">LightRAG</code> documentation, your assessment of its capabilities is largely correct—and, in some respects, the tool is even more powerful than you might expect. <code class="language-plaintext highlighter-rouge">LightRAG</code> is designed as a lightweight, high-performance Retrieval-Augmented Generation (RAG) system with a strong focus on knowledge graph construction, semantic search, and efficient document management. It supports a range of file formats, offers robust document ingestion and indexing pipelines, and provides advanced querying and referencing features. Its architecture is optimized for handling large, disorganized collections, making it well-suited to your scenario: quickly filtering, searching, and referencing only the relevant content from a “sea of mixed files.”</p>
-
-<p>While <code class="language-plaintext highlighter-rouge">LightRAG</code> has specific requirements for certain file types (e.g., legacy <code class="language-plaintext highlighter-rouge">.doc</code> files), it covers many common research file formats. The system is also extensible, supporting multiple storage backends and LLM/embedding providers, and can be operated entirely via its user-friendly web interface or API.</p>
-
-<p><strong>Please note:</strong> This tutorial is based <em>exclusively</em> on the <code class="language-plaintext highlighter-rouge">LightRAG</code> documentation provided. Features, UI elements, and behavior might differ with other <code class="language-plaintext highlighter-rouge">LightRAG</code> versions or if the documentation isn’t fully comprehensive for your setup.</p>
-
-<p>This tutorial will guide you step-by-step from the <code class="language-plaintext highlighter-rouge">LightRAG</code> homepage, focusing on how to leverage its features to tackle your specific file organization and information retrieval challenges.</p>
-
-<hr />
-
-<h2 id="part-1-getting-started-with-lightrags-web-interface">Part 1: Getting Started with LightRAG’s Web Interface</h2>
-
-<p>This part guides you through accessing the <code class="language-plaintext highlighter-rouge">LightRAG</code> WebUI and understanding its main layout, assuming you have successfully installed <code class="language-plaintext highlighter-rouge">LightRAG</code> via <code class="language-plaintext highlighter-rouge">Docker</code> and created an account.</p>
-
-<h3 id="step-1-access-the-lightrag-webui">Step 1: Access the LightRAG WebUI</h3>
-
-<ol>
-  <li><strong>Open</strong> your web browser.</li>
-  <li><strong>Navigate</strong> to <code class="language-plaintext highlighter-rouge">http://localhost:9621/webui</code>. (This is the default URL; if you configured a different port during <code class="language-plaintext highlighter-rouge">Docker</code> setup, use that port number instead of <code class="language-plaintext highlighter-rouge">9621</code>.)</li>
-  <li>You should be greeted by the <code class="language-plaintext highlighter-rouge">LightRAG</code> homepage. If authentication is enabled (as configured in your <code class="language-plaintext highlighter-rouge">.env</code> file or server arguments), you will be prompted to <strong>log in</strong>.</li>
-</ol>
-
-<h3 id="step-2-overview-of-the-homepage-and-main-sections">Step 2: Overview of the Homepage and Main Sections</h3>
-
-<p>The <code class="language-plaintext highlighter-rouge">LightRAG</code> web interface, as suggested by its source files (e.g., <code class="language-plaintext highlighter-rouge">lightrag_webui/src/features/SiteHeader.tsx</code>) and UI text definitions (<code class="language-plaintext highlighter-rouge">lightrag_webui/src/locales/en.json</code>), typically presents a top navigation bar. This bar provides access to the main sections of the application:</p>
-
-<ul>
-  <li><strong>Documents:</strong> Your primary workspace for uploading, managing, and monitoring the processing status of your research files. (Tab label: <strong>“Documents”</strong>)</li>
-  <li><strong>Knowledge Graph:</strong> Allows you to visualize and interactively explore the entities (e.g., concepts, people, organizations) and relationships that <code class="language-plaintext highlighter-rouge">LightRAG</code> automatically extracts from your documents. (Tab label: <strong>“Knowledge Graph”</strong>)</li>
-  <li><strong>Retrieval:</strong> The main interface for querying your indexed documents to find specific information and get answers. (Tab label: <strong>“Retrieval”</strong>)</li>
-  <li><strong>API:</strong> Provides access to <code class="language-plaintext highlighter-rouge">LightRAG</code>’s API documentation (usually Swagger UI or ReDoc), which is useful for developers or for understanding the underlying API endpoints. (Tab label: <strong>“API”</strong>)</li>
-  <li><strong>Project Repository:</strong> A direct link to the <code class="language-plaintext highlighter-rouge">LightRAG</code> GitHub project page.</li>
-  <li><strong>Logout:</strong> Allows you to <strong>log out</strong> of your <code class="language-plaintext highlighter-rouge">LightRAG</code> session.</li>
-  <li><strong>Settings (Gear Icon):</strong> Access application-level settings, such as theme preferences and language selection.</li>
-  <li><strong>Theme Toggle (Sun/Moon Icon):</strong> Quickly <strong>switch</strong> between light and dark visual themes for the interface.</li>
-</ul>
-
-<p>For your immediate goal of organizing files and extracting information, this tutorial will focus primarily on the <strong>Documents</strong> and <strong>Retrieval</strong> sections.</p>
-
-<hr />
-
-<h2 id="part-2-ingesting-your-research-files-into-lightrag">Part 2: Ingesting Your Research Files into LightRAG</h2>
-
-<p>This crucial step involves preparing your files and getting them into <code class="language-plaintext highlighter-rouge">LightRAG</code> for processing.</p>
-
-<h3 id="step-1-understand-supported-file-formats-and-important-notes">Step 1: Understand Supported File Formats and Important Notes</h3>
-
-<p><code class="language-plaintext highlighter-rouge">LightRAG</code>’s ability to process your files effectively depends on their format. Based on the <code class="language-plaintext highlighter-rouge">Dockerfile</code> and the backend code (<code class="language-plaintext highlighter-rouge">lightrag/api/routers/document_routes.py</code>):</p>
-
-<ul>
-  <li><strong>Well-Supported by Default <code class="language-plaintext highlighter-rouge">Docker</code> Installation:</strong>
-    <ul>
-      <li><strong>PDF (<code class="language-plaintext highlighter-rouge">.pdf</code>):</strong> Processed using <code class="language-plaintext highlighter-rouge">PyPDF2</code>. <strong>Crucial:</strong> Ensure your PDFs are text-searchable (contain actual selectable text, not just scanned images).</li>
-      <li><strong>Microsoft Word (<code class="language-plaintext highlighter-rouge">.docx</code>):</strong> Processed using <code class="language-plaintext highlighter-rouge">python-docx</code>.</li>
-      <li><strong>Text Files (<code class="language-plaintext highlighter-rouge">.txt</code>, <code class="language-plaintext highlighter-rouge">.md</code>):</strong> Read directly. Markdown (<code class="language-plaintext highlighter-rouge">.md</code>) is also supported.</li>
-      <li><strong>Microsoft PowerPoint (<code class="language-plaintext highlighter-rouge">.pptx</code>):</strong> Processed using <code class="language-plaintext highlighter-rouge">python-pptx</code>.</li>
-      <li><strong>Microsoft Excel (<code class="language-plaintext highlighter-rouge">.xlsx</code>):</strong> Processed using <code class="language-plaintext highlighter-rouge">openpyxl</code>.</li>
-      <li><strong>Common Text-Based Formats:</strong> Many other formats listed in <code class="language-plaintext highlighter-rouge">DocumentManager</code>’s <code class="language-plaintext highlighter-rouge">SUPPORTED_EXTENSIONS</code> (e.g., <code class="language-plaintext highlighter-rouge">.csv</code>, <code class="language-plaintext highlighter-rouge">.json</code>, <code class="language-plaintext highlighter-rouge">.xml</code>, <code class="language-plaintext highlighter-rouge">.html</code>, <code class="language-plaintext highlighter-rouge">.py</code>, <code class="language-plaintext highlighter-rouge">.java</code>, <code class="language-plaintext highlighter-rouge">.css</code>) are generally processed by attempting a UTF-8 decode.</li>
-    </ul>
-  </li>
-  <li><strong>Critical Note on Legacy <code class="language-plaintext highlighter-rouge">.doc</code> files (Microsoft Word 97-2003):</strong>
-    <ul>
-      <li>The <code class="language-plaintext highlighter-rouge">SUPPORTED_EXTENSIONS</code> list in <code class="language-plaintext highlighter-rouge">DocumentManager</code> (<code class="language-plaintext highlighter-rouge">document_routes.py</code>) does <strong>not</strong> include <code class="language-plaintext highlighter-rouge">.doc</code>.</li>
-      <li>The <code class="language-plaintext highlighter-rouge">Dockerfile</code> for <code class="language-plaintext highlighter-rouge">LightRAG</code> <strong>does not install</strong> the <code class="language-plaintext highlighter-rouge">docling</code> library, which the backend code (<code class="language-plaintext highlighter-rouge">pipeline_enqueue_file</code> function in <code class="language-plaintext highlighter-rouge">document_routes.py</code>) would conditionally attempt to use for converting some other formats (like RTF, ODT).</li>
-      <li><strong>Conclusion:</strong> <code class="language-plaintext highlighter-rouge">LightRAG</code>, with its default <code class="language-plaintext highlighter-rouge">Docker</code> setup, will <strong>fail to process <code class="language-plaintext highlighter-rouge">.doc</code> files</strong>.</li>
-      <li><strong>Action Required:</strong> You <strong>must convert</strong> your <code class="language-plaintext highlighter-rouge">.doc</code> files to a supported format like <code class="language-plaintext highlighter-rouge">.docx</code>, text-searchable <code class="language-plaintext highlighter-rouge">.pdf</code>, or <code class="language-plaintext highlighter-rouge">.txt</code> <em>before</em> uploading them to <code class="language-plaintext highlighter-rouge">LightRAG</code>.</li>
-    </ul>
-  </li>
-  <li><strong>Other Listed Formats (e.g., <code class="language-plaintext highlighter-rouge">.rtf</code>, <code class="language-plaintext highlighter-rouge">.odt</code>, <code class="language-plaintext highlighter-rouge">.epub</code>, <code class="language-plaintext highlighter-rouge">.tex</code>, <code class="language-plaintext highlighter-rouge">.htm</code>):</strong>
-    <ul>
-      <li>While these extensions are listed in <code class="language-plaintext highlighter-rouge">SUPPORTED_EXTENSIONS</code> (<code class="language-plaintext highlighter-rouge">document_routes.py</code>), the <code class="language-plaintext highlighter-rouge">pipeline_enqueue_file</code> function attempts to process them using <code class="language-plaintext highlighter-rouge">docling</code> if available.</li>
-      <li>Since <code class="language-plaintext highlighter-rouge">docling</code> is <strong>not installed by default</strong> in the <code class="language-plaintext highlighter-rouge">Docker</code> image, these formats will also <strong>likely fail to process</strong>.</li>
-      <li><strong>Recommendation:</strong> For critical research files in these formats, it’s safest to <strong>convert</strong> them to <code class="language-plaintext highlighter-rouge">PDF</code> (text-searchable), <code class="language-plaintext highlighter-rouge">DOCX</code>, or <code class="language-plaintext highlighter-rouge">TXT</code> if you encounter processing issues.</li>
-    </ul>
-  </li>
-</ul>
-
-<h3 id="step-2-choose-your-file-ingestion-method">Step 2: Choose Your File Ingestion Method</h3>
-
-<p><code class="language-plaintext highlighter-rouge">LightRAG</code> offers two main ways to ingest your documents:</p>
-
-<ol>
-  <li><strong>Direct Upload via the Web UI:</strong> Select files from your computer and upload them through the interface.</li>
-  <li><strong>Input Directory Scan:</strong> Place files into a specific directory that <code class="language-plaintext highlighter-rouge">LightRAG</code> monitors, then trigger a scan.</li>
-</ol>
-
-<p>For your initial large, disorganized collection, using the <strong>“Upload”</strong> feature via the UI (Method B below) might be more straightforward as you can directly <strong>select</strong> files. If you later establish a workflow where new research files are regularly saved to a specific folder, setting up that folder as <code class="language-plaintext highlighter-rouge">LightRAG</code>’s <code class="language-plaintext highlighter-rouge">INPUT_DIR</code> and using the <strong>“Scan”</strong> feature (Method A) can be very efficient for ongoing updates.</p>
-
-<h4 id="method-a-placing-files-directly-in-the-input-directory-and-scanning">Method A: Placing Files Directly in the Input Directory and Scanning</h4>
-
-<p>This method is efficient for batch processing if you can easily copy files into <code class="language-plaintext highlighter-rouge">LightRAG</code>’s monitored folder.</p>
-
-<ol>
-  <li><strong>Locate and Prepare Your Input Directory:</strong>
-    <ul>
-      <li>Your <code class="language-plaintext highlighter-rouge">LightRAG</code> <code class="language-plaintext highlighter-rouge">Docker</code> setup (as per <code class="language-plaintext highlighter-rouge">docker-compose.yml</code>) maps a directory on your host machine to its internal input directory. By default, this is usually a folder named <code class="language-plaintext highlighter-rouge">./data/inputs</code> located in the same directory where you run <code class="language-plaintext highlighter-rouge">docker-compose up</code>. The <code class="language-plaintext highlighter-rouge">Dockerfile</code> and <code class="language-plaintext highlighter-rouge">lightrag/api/config.py</code> reference this as <code class="language-plaintext highlighter-rouge">INPUT_DIR</code> (defaulting to <code class="language-plaintext highlighter-rouge">/app/data/inputs</code> inside the container).</li>
-      <li><strong>Action:</strong> <strong>Copy</strong> your selected research files (ensuring all <code class="language-plaintext highlighter-rouge">.doc</code> files are converted to a supported format!) into this <code class="language-plaintext highlighter-rouge">./data/inputs</code> directory on your computer.</li>
-    </ul>
-  </li>
-  <li><strong>Initiate a Scan from the Web UI:</strong>
-    <ul>
-      <li>In the <code class="language-plaintext highlighter-rouge">LightRAG</code> WebUI, <strong>navigate</strong> to the <strong>“Documents”</strong> tab.</li>
-      <li>Look for a button labeled <strong>“Scan”</strong> (often accompanied by a refresh icon, as per <code class="language-plaintext highlighter-rouge">lightrag_webui/src/locales/en.json</code>: <code class="language-plaintext highlighter-rouge">"documentPanel.documentManager.scanButton": "Scan"</code>).</li>
-      <li><strong>Action:</strong> <strong>Click</strong> the <strong>“Scan”</strong> button.</li>
-      <li><strong>Purpose:</strong> This tells <code class="language-plaintext highlighter-rouge">LightRAG</code> to check its <code class="language-plaintext highlighter-rouge">INPUT_DIR</code> for any new files it hasn’t processed yet and begin indexing them.</li>
-      <li><strong>Expected Feedback:</strong> A notification might appear (e.g., “Scanning documents started.”). The document list in the UI should update as new files are discovered and their processing status changes.</li>
-    </ul>
-  </li>
-</ol>
-
-<h4 id="method-b-uploading-files-directly-via-the-web-ui">Method B: Uploading Files Directly via the Web UI</h4>
-
-<p>This method allows you to select specific files from any location on your computer.</p>
-
-<ol>
-  <li><strong>Access the Upload Dialog:</strong>
-    <ul>
-      <li>In the <code class="language-plaintext highlighter-rouge">LightRAG</code> WebUI, <strong>navigate</strong> to the <strong>“Documents”</strong> tab.</li>
-      <li>Look for a button labeled <strong>“Upload”</strong> (as per <code class="language-plaintext highlighter-rouge">lightrag_webui/src/locales/en.json</code>: <code class="language-plaintext highlighter-rouge">"documentPanel.uploadDocuments.button": "Upload"</code>).</li>
-      <li><strong>Action:</strong> <strong>Click</strong> the <strong>“Upload”</strong> button.</li>
-      <li><strong>Expected Feedback:</strong> An <strong>“Upload Documents”</strong> dialog will appear (controlled by <code class="language-plaintext highlighter-rouge">lightrag_webui/src/components/documents/UploadDocumentsDialog.tsx</code>). It will likely prompt you to “Drag and drop your documents here or click to browse.” (from <code class="language-plaintext highlighter-rouge">"documentPanel.uploadDocuments.description"</code>).</li>
-    </ul>
-  </li>
-  <li><strong>Select Your Research Files:</strong>
-    <ul>
-      <li><strong>Action:</strong> Inside the <strong>“Upload Documents”</strong> dialog:
-        <ul>
-          <li>Either <strong>drag and drop</strong> your selected research files (PDF, TXT, DOCX, etc., ensuring <code class="language-plaintext highlighter-rouge">.doc</code> files are converted!) onto the designated area.</li>
-          <li>Or, <strong>click</strong> on the upload area to open your computer’s file selection window. <strong>Navigate</strong> to your disorganized folder and <strong>select</strong> the files you want to upload.</li>
-        </ul>
-      </li>
-      <li>The documentation (<code class="language-plaintext highlighter-rouge">lightrag/api/routers/document_routes.py</code> for the <code class="language-plaintext highlighter-rouge">/documents/batch</code> endpoint, and <code class="language-plaintext highlighter-rouge">UploadDocumentsDialog.tsx</code>) confirms you can <strong>select</strong> and <strong>upload</strong> multiple files at once.</li>
-    </ul>
-  </li>
-  <li><strong>Initiate Upload:</strong>
-    <ul>
-      <li>After <strong>selecting</strong> files, they will appear listed in the dialog.</li>
-      <li><strong>Action:</strong> <strong>Click</strong> the primary confirmation button (likely labeled <strong>“Upload”</strong> or similar, based on the UI’s general “confirm” action text).</li>
-      <li><strong>Expected Feedback:</strong> <code class="language-plaintext highlighter-rouge">LightRAG</code> will begin uploading and then processing your files. The dialog or the main <strong>“Documents”</strong> page should display progress. You might see messages like “Uploading : %” for individual files (from <code class="language-plaintext highlighter-rouge">locales/en.json</code>: <code class="language-plaintext highlighter-rouge">"documentPanel.uploadDocuments.single.uploading"</code>).</li>
-      <li>This ingestion step might take some time, depending on the number and size of your files.</li>
-    </ul>
-  </li>
-</ol>
-
-<h3 id="step-3-understanding-what-happens-behind-the-scenes-conceptual-overview">Step 3: Understanding What Happens Behind the Scenes (Conceptual Overview)</h3>
-
-<p>You don’t need to perform these actions directly, but understanding this background process helps in troubleshooting and using <code class="language-plaintext highlighter-rouge">LightRAG</code> effectively. After you upload or scan files, <code class="language-plaintext highlighter-rouge">LightRAG</code> (as inferred from <code class="language-plaintext highlighter-rouge">lightrag.py</code>, <code class="language-plaintext highlighter-rouge">operate.py</code>, and the <code class="language-plaintext highlighter-rouge">lightrag/core/</code> module structure):</p>
-
-<ol>
-  <li><strong>Parses Content:</strong> <strong>Reads</strong> and <strong>extracts</strong> text and structural information from your files.</li>
-  <li><strong>Chunks Documents:</strong> <strong>Divides</strong> long documents into smaller, semantically coherent “chunks” (default is 1200 tokens per chunk, with some overlap to maintain context, configurable via <code class="language-plaintext highlighter-rouge">chunk_token_size</code> in the <code class="language-plaintext highlighter-rouge">LightRAG</code> class). This is crucial for efficient retrieval.</li>
-  <li><strong>Extracts Entities &amp; Relationships:</strong> <strong>Identifies</strong> key entities (like people, organizations, specific topics) and the relationships between them within the text. This data forms the basis of the knowledge graph.</li>
-  <li><strong>Generates Embeddings:</strong> <strong>Converts</strong> each text chunk, entity, and relationship into a numerical representation called an “embedding” using a sophisticated language model (as referenced in <code class="language-plaintext highlighter-rouge">lightrag/core/embedder.py</code>). Embeddings capture the semantic meaning, enabling searches based on concepts rather than just exact keywords.</li>
-  <li><strong>Indexes Data:</strong> <strong>Stores</strong> these embeddings and their associated text/metadata in specialized databases (a vector store for similarity search and a graph store for relationship data). This allows for rapid retrieval.</li>
-</ol>
-
-<hr />
-
-<h2 id="part-3-monitoring-document-processing--understanding-the-pipeline">Part 3: Monitoring Document Processing &amp; Understanding the Pipeline</h2>
-
-<p>After initiating file ingestion, it’s important to monitor the progress and status of your documents.</p>
-
-<h3 id="step-1-view-document-statuses-in-the-document-manager">Step 1: View Document Statuses in the Document Manager</h3>
-
-<p>The <strong>“Documents”</strong> tab (<code class="language-plaintext highlighter-rouge">lightrag_webui/src/features/DocumentManager.tsx</code>) is your central dashboard for this.</p>
-
-<ul>
-  <li><strong>Document List:</strong> A table will display your ingested documents.</li>
-  <li><strong>Key Columns to Observe</strong> (based on <code class="language-plaintext highlighter-rouge">lightrag_webui/src/locales/en.json</code> and the <code class="language-plaintext highlighter-rouge">DocStatusResponse</code> model in <code class="language-plaintext highlighter-rouge">lightrag/api/routers/document_routes.py</code>):
-    <ul>
-      <li><strong>ID</strong> / <strong>File Name</strong>: You can usually <strong>toggle</strong> between a system ID and the original file name (look for a <strong>“File Name”</strong> toggle or button, as suggested by <code class="language-plaintext highlighter-rouge">DocumentManager.tsx</code> and <code class="language-plaintext highlighter-rouge">locales/en.json</code>’s <code class="language-plaintext highlighter-rouge">"fileNameLabel"</code>). The <strong>File Path</strong> is also tracked internally and is crucial for referencing.</li>
-      <li><strong>Summary</strong>: A brief preview of the document’s content.</li>
-      <li><strong>Status</strong>: The current processing state of the document.</li>
-      <li><strong>Length</strong>: The size or length of the document content.</li>
-      <li><strong>Chunks</strong>: The number of chunks the document was divided into.</li>
-      <li><strong>Created / Updated</strong>: Timestamps for document creation and last update.</li>
-    </ul>
-  </li>
-  <li><strong>Document Status Categories</strong> (<code class="language-plaintext highlighter-rouge">DocStatus</code> enum in <code class="language-plaintext highlighter-rouge">lightrag/base.py</code> and <code class="language-plaintext highlighter-rouge">document_routes.py</code>):
-    <ul>
-      <li><strong>Pending</strong>: Queued for processing.</li>
-      <li><strong>Processing</strong>: Actively being analyzed (chunking, embedding, entity extraction).</li>
-      <li><strong>Processed</strong> (or <strong>Completed</strong>): Successfully indexed and ready for querying.</li>
-      <li><strong>Failed</strong>: An error occurred during processing. The <code class="language-plaintext highlighter-rouge">error</code> field in the status might provide details.</li>
-    </ul>
-  </li>
-  <li><strong>Filtering by Status:</strong> The UI typically allows you to <strong>filter</strong> the document list by these statuses (e.g., view only “Failed” documents to troubleshoot).</li>
-</ul>
-
-<h3 id="step-2-check-the-pipeline-status-dialog-for-detailed-progress">Step 2: Check the Pipeline Status Dialog for Detailed Progress</h3>
-
-<p>For a more granular view of <code class="language-plaintext highlighter-rouge">LightRAG</code>’s background operations:</p>
-
-<ol>
-  <li><strong>Open Pipeline Status Dialog:</strong>
-    <ul>
-      <li>On the <strong>“Documents”</strong> page, look for and <strong>click</strong> the <strong>“Pipeline Status”</strong> button (as per <code class="language-plaintext highlighter-rouge">lightrag_webui/src/locales/en.json</code>).</li>
-      <li><strong>Expected Feedback:</strong> A dialog titled <strong>“Pipeline Status”</strong> should open (controlled by <code class="language-plaintext highlighter-rouge">lightrag_webui/src/components/documents/PipelineStatusDialog.tsx</code>).</li>
-    </ul>
-  </li>
-  <li><strong>Interpret Pipeline Information</strong> (based on <code class="language-plaintext highlighter-rouge">PipelineStatusResponse</code> in <code class="language-plaintext highlighter-rouge">document_routes.py</code> and <code class="language-plaintext highlighter-rouge">lightrag_webui/src/locales/en.json</code>):
-    <ul>
-      <li><strong>“Pipeline Busy”</strong>: Indicates if the system is actively processing documents.</li>
-      <li><strong>“Request Pending”</strong>: Shows if there are more documents in the queue waiting to be processed.</li>
-      <li><strong>“Job Name”</strong>: Describes the current high-level task (e.g., “indexing files”).</li>
-      <li><strong>“Progress”</strong>: Displays batch processing information (e.g., “Current Batch: X / Y total documents”).</li>
-      <li><strong>“Latest Message”</strong> and <strong>“History Messages”</strong>: Provide logs and specific updates from the processing pipeline, which can be helpful for diagnosing issues.</li>
-    </ul>
-  </li>
-</ol>
-
-<h3 id="step-3-handling-processing-errors">Step 3: Handling Processing Errors</h3>
-
-<ul>
-  <li>If a document’s <strong>Status</strong> is “Failed,” <strong>examine</strong> any error messages provided in the document list or pipeline status.</li>
-  <li><strong>Common Causes for Failure:</strong>
-    <ul>
-      <li>Unsupported file format (e.g., an uncoverted <code class="language-plaintext highlighter-rouge">.doc</code> file).</li>
-      <li>Corrupted or unreadable file.</li>
-      <li>Password-protected documents that <code class="language-plaintext highlighter-rouge">LightRAG</code> cannot decrypt.</li>
-    </ul>
-  </li>
-  <li><strong>Action:</strong>
-    <ol>
-      <li><strong>Identify</strong> the problematic file(s).</li>
-      <li><strong>Address</strong> the issue (e.g., <strong>convert</strong> the file to a supported format like <code class="language-plaintext highlighter-rouge">.docx</code> or text-searchable PDF, <strong>ensure</strong> it’s not corrupted).</li>
-      <li>You can then either <strong>re-upload</strong> the corrected file(s) or, if you placed them in the <code class="language-plaintext highlighter-rouge">INPUT_DIR</code>, <strong>trigger</strong> another <strong>“Scan”</strong>. The documentation (<code class="language-plaintext highlighter-rouge">lightrag/api/README.md</code>) notes: “Reprocessing of failed files can be initiated by pressing the ‘Scan’ button on the web UI.”</li>
-    </ol>
-  </li>
-</ul>
-
-<hr />
-
-<h2 id="part-4-finding-relevant-information-querying-your-knowledge-base">Part 4: Finding Relevant Information: Querying Your Knowledge Base</h2>
-
-<p>Once your documents show a “Processed” status, you can start extracting the information you need for your research paper.</p>
-
-<h3 id="step-1-navigate-to-the-retrieval-interface">Step 1: Navigate to the Retrieval Interface</h3>
-
-<ol>
-  <li>In the main navigation bar of the <code class="language-plaintext highlighter-rouge">LightRAG</code> WebUI, <strong>click</strong> on the tab labeled <strong>“Retrieval”</strong> (as per <code class="language-plaintext highlighter-rouge">lightrag_webui/src/locales/en.json</code>).</li>
-  <li>This will <strong>open</strong> the query interface, which is likely a chat-style window (controlled by <code class="language-plaintext highlighter-rouge">lightrag_webui/src/features/RetrievalTesting.tsx</code>).</li>
-</ol>
-
-<h3 id="step-2-formulating-and-running-queries">Step 2: Formulating and Running Queries</h3>
-
-<ol>
-  <li><strong>Query Input:</strong>
-    <ul>
-      <li>You’ll see an input box, typically at the bottom of the chat interface. The placeholder text might be “Enter your query (Support prefix: /<Query Mode="">)" (from `lightrag_webui/src/locales/en.json`: `"retrievePanel.retrieval.placeholder"`).</Query></li>
-      <li><strong>Action:</strong> <strong>Type</strong> your research question or keywords into this box. For example: “What are the main arguments against Theory X discussed in these papers?” or “key findings on renewable energy adoption in Brazil.”</li>
-    </ul>
-  </li>
-  <li><strong>Understanding and Selecting Query Modes:</strong>
-    <ul>
-      <li><code class="language-plaintext highlighter-rouge">LightRAG</code> offers several query modes to tailor how it searches for information and synthesizes answers. These modes are defined in the <code class="language-plaintext highlighter-rouge">QueryRequest</code> model (<code class="language-plaintext highlighter-rouge">lightrag/api/routers/query_routes.py</code>) and are selectable in the UI (<code class="language-plaintext highlighter-rouge">lightrag_webui/src/components/retrieval/QuerySettings.tsx</code>).</li>
-      <li><strong>Accessing Query Mode Settings:</strong> Look for a <strong>“Parameters”</strong> section or a settings icon on the <strong>“Retrieval”</strong> page. This panel will contain a <strong>“Query Mode”</strong> dropdown.</li>
-      <li><strong>Available Modes:</strong>
-        <ul>
-          <li><strong><code class="language-plaintext highlighter-rouge">/naive</code></strong>: Performs a basic, straightforward search.</li>
-          <li><strong><code class="language-plaintext highlighter-rouge">/local</code></strong>: Focuses on context-dependent information, likely retrieving specific text chunks and entities directly related to the query terms.</li>
-          <li><strong><code class="language-plaintext highlighter-rouge">/global</code></strong>: Utilizes the broader knowledge graph, emphasizing relationships between entities across your entire document set.</li>
-          <li><strong><code class="language-plaintext highlighter-rouge">/hybrid</code></strong>: Combines aspects of both local and global retrieval. <strong>This is the default mode if no prefix is specified</strong> (as stated in <code class="language-plaintext highlighter-rouge">lightrag/api/README.md</code>).</li>
-          <li><strong><code class="language-plaintext highlighter-rouge">/mix</code></strong>: Integrates knowledge graph traversal with vector-based similarity search for comprehensive results.</li>
-          <li><strong><code class="language-plaintext highlighter-rouge">/bypass</code></strong>: Sends the query directly to the underlying Large Language Model (LLM) without performing any retrieval from your documents. This is generally not what you want for finding information <em>within</em> your research files.</li>
-        </ul>
-      </li>
-      <li><strong>Action:</strong> You can either <strong>select</strong> the desired mode from the <strong>“Query Mode”</strong> dropdown in the UI settings or <strong>type</strong> the mode prefix directly into the chat input before your query (e.g., <code class="language-plaintext highlighter-rouge">/mix your question here</code>).</li>
-    </ul>
-  </li>
-  <li><strong>Adjusting Query Settings (Parameters Section):</strong>
-    <ul>
-      <li>The <strong>“Parameters”</strong> section (<code class="language-plaintext highlighter-rouge">QuerySettings.tsx</code>) allows you to fine-tune your queries:
-        <ul>
-          <li><strong>“Response Format”</strong>: <strong>Choose</strong> how the LLM should structure its answer (e.g., “Multiple Paragraphs,” “Single Paragraph,” “Bullet Points” - from <code class="language-plaintext highlighter-rouge">lightrag_webui/src/locales/en.json</code>).</li>
-          <li><strong>“Top K Results”</strong>: (Default: 60) <strong>Set</strong> the number of top relevant items (entities, relationships, or text chunks) <code class="language-plaintext highlighter-rouge">LightRAG</code> should retrieve to form the context for the LLM.</li>
-          <li><strong>“Max Tokens for Text Unit / Global Context / Local Context”</strong>: These settings control the maximum length of different types of context provided to the LLM. Defaults are usually around 4000 tokens.</li>
-          <li><strong>“History Turns”</strong>: (Default: 3) <strong>Set</strong> how many previous turns of your current conversation with <code class="language-plaintext highlighter-rouge">LightRAG</code> are included as context for the LLM, enabling follow-up questions.</li>
-          <li><strong>“Stream Response”</strong>: If checked, the LLM’s response will appear token by token, which can feel more interactive for longer answers.</li>
-          <li><strong>“User Prompt”</strong>: This is a powerful feature. You can <strong>enter</strong> specific instructions here to guide the LLM on <em>how to format its answer</em> or <em>what aspects to emphasize</em>, separate from your main query content. For example: “Please summarize the findings and list the source documents for each point.”</li>
-        </ul>
-      </li>
-    </ul>
-  </li>
-  <li><strong>Executing the Query:</strong>
-    <ul>
-      <li>After <strong>typing</strong> your query and <strong>adjusting</strong> any settings, <strong>click</strong> the <strong>“Send”</strong> button (usually an icon like a paper airplane, labeled “Send” as per <code class="language-plaintext highlighter-rouge">lightrag_webui/src/locales/en.json</code>: <code class="language-plaintext highlighter-rouge">"retrievePanel.retrieval.send"</code>).</li>
-      <li><strong>Expected Feedback:</strong> <code class="language-plaintext highlighter-rouge">LightRAG</code> will process your query. If streaming is enabled, the assistant’s response will appear incrementally in the chat window. Otherwise, you’ll wait a moment for the complete response to be generated.</li>
-    </ul>
-  </li>
-</ol>
-
-<hr />
-
-<h2 id="part-5-utilizing-query-results-for-your-paper--referencing">Part 5: Utilizing Query Results for Your Paper &amp; Referencing</h2>
-
-<p>This part explains how to use the information <code class="language-plaintext highlighter-rouge">LightRAG</code> provides and how it supports your citation needs.</p>
-
-<h3 id="step-1-reviewing-and-copying-responses">Step 1: Reviewing and Copying Responses</h3>
-
-<ol>
-  <li><strong>Response Display:</strong> The LLM-generated answer will appear in the chat area, rendered by the <code class="language-plaintext highlighter-rouge">ChatMessage.tsx</code> component. This component supports Markdown formatting, code blocks, and can even display Mermaid diagrams if the LLM generates graph descriptions in that format.</li>
-  <li><strong>Copying Information:</strong>
-    <ul>
-      <li><strong>Action:</strong> Look for a <strong>Copy</strong> icon next to the assistant’s message. <strong>Click</strong> it to copy the response text to your clipboard.</li>
-      <li><strong>Purpose:</strong> This allows you to easily transfer quotes, summaries, or key points into your research paper draft.</li>
-    </ul>
-  </li>
-</ol>
-
-<h3 id="step-2-referencing-your-sources-with-lightrag">Step 2: Referencing Your Sources with LightRAG</h3>
-
-<p>Properly citing your sources is critical. Here’s how <code class="language-plaintext highlighter-rouge">LightRAG</code> helps:</p>
-
-<ol>
-  <li><strong><code class="language-plaintext highlighter-rouge">LightRAG</code>’s Built-in Source Tracking:</strong>
-    <ul>
-      <li>The <code class="language-plaintext highlighter-rouge">lightrag/api/README.md</code> states: “<code class="language-plaintext highlighter-rouge">LightRAG</code> now supports citation functionality, enabling proper source attribution.”</li>
-      <li>The backend system (<code class="language-plaintext highlighter-rouge">lightrag/operate.py</code>) includes the <code class="language-plaintext highlighter-rouge">file_path</code> (and sometimes <code class="language-plaintext highlighter-rouge">created_at</code> timestamps) of the original documents when it constructs the context for the LLM. This means the LLM <em>has access</em> to the source file information when generating its response.</li>
-    </ul>
-  </li>
-  <li><strong>Obtaining Source Information for Your Citations:</strong>
-    <ul>
-      <li><strong>Direct UI Display of Sources:</strong> The <code class="language-plaintext highlighter-rouge">LightRAG</code> WebUI’s chat response area (<code class="language-plaintext highlighter-rouge">ChatMessage.tsx</code>) does <strong>not</strong> automatically display a list of source files or page numbers for every statement made by the LLM.</li>
-      <li><strong>Strategy 1: Prompting the LLM for Sources:</strong>
-        <ul>
-          <li><strong>Action:</strong> When you formulate your query, or by using the <strong>“User Prompt”</strong> field in the Query Settings, explicitly <strong>ask</strong> the LLM to identify its sources from the context it was given.</li>
-          <li><strong>Example Query Addition:</strong> “… For each point, please indicate the source document name.”</li>
-          <li><strong>Example User Prompt:</strong> “Cite the source file for each key finding mentioned in your response.”</li>
-          <li><strong>Expected Outcome:</strong> The LLM, having received <code class="language-plaintext highlighter-rouge">file_path</code> information in its context, <em>may</em> include these source file names in its generated answer. The success of this depends on the LLM’s ability to follow such instructions.</li>
-        </ul>
-      </li>
-      <li><strong>Strategy 2: Using “Only Need Context” Mode (Most Reliable for Source Identification):</strong>
-        <ul>
-          <li><strong>Action:</strong> In the Query Settings panel, <strong>check</strong> the box for <strong>“Only Need Context”</strong>. Then, <strong>run</strong> your query as usual.</li>
-          <li><strong>Expected Outcome:</strong> Instead of an LLM-generated summary or answer, <code class="language-plaintext highlighter-rouge">LightRAG</code> will display the raw retrieved context that <em>would have been sent</em> to the LLM. This raw context will include the text chunks, entities, and relationships, along with their associated metadata, which critically includes the <code class="language-plaintext highlighter-rouge">file_path</code>.</li>
-          <li><strong>Purpose:</strong> You can then directly see which document(s) contributed to the relevant information for your query and use these <code class="language-plaintext highlighter-rouge">file_path</code> details for your citations.</li>
-        </ul>
-      </li>
-    </ul>
-  </li>
-  <li><strong>Source Granularity:</strong>
-    <ul>
-      <li>The documentation confirms that <code class="language-plaintext highlighter-rouge">file_path</code> is tracked and available.</li>
-      <li>While specific page numbers for PDFs or precise section headers within documents are not explicitly guaranteed to be part of the metadata for <em>every</em> retrieved chunk across all file types, the source <em>file</em> itself will be identifiable.</li>
-    </ul>
-  </li>
-  <li><strong>Final Citation Formatting:</strong>
-    <ul>
-      <li>Once you have identified the relevant content and its source file path using <code class="language-plaintext highlighter-rouge">LightRAG</code>, you will still need to:
-        <ol>
-          <li><strong>Open</strong> the original document to verify the context and gather full bibliographic details (author, year, title, etc.).</li>
-          <li>Manually <strong>format</strong> your citations according to your required academic style (e.g., APA, MLA, Chicago) in your word processor or using dedicated reference management software (like Zotero, Mendeley, EndNote).</li>
-        </ol>
-      </li>
-      <li><code class="language-plaintext highlighter-rouge">LightRAG</code> excels at the <em>discovery</em> and <em>sourcing</em> of information from your vast collection, but it does not automate the final step of bibliographic formatting.</li>
-    </ul>
-  </li>
-</ol>
-
-<hr />
-
-<h2 id="part-6-advanced-exploration--workflow-enhancement">Part 6: Advanced Exploration &amp; Workflow Enhancement</h2>
-
-<p>Beyond basic querying, <code class="language-plaintext highlighter-rouge">LightRAG</code> offers features for deeper analysis and customization.</p>
-
-<h3 id="step-1-exploring-connections-with-the-knowledge-graph">Step 1: Exploring Connections with the Knowledge Graph</h3>
-
-<p>The Knowledge Graph (KG) provides a visual representation of the entities and relationships extracted from your documents. This can help you discover connections you might not have noticed.</p>
-
-<ol>
-  <li><strong>Navigate to the Knowledge Graph Section:</strong>
-    <ul>
-      <li>In the main navigation bar, <strong>click</strong> on the <strong>“Knowledge Graph”</strong> tab. This will load the interactive 3D graph visualization interface (controlled by <code class="language-plaintext highlighter-rouge">lightrag_webui/src/features/GraphViewer.tsx</code>).</li>
-    </ul>
-  </li>
-  <li><strong>Interacting with the Graph:</strong>
-    <ul>
-      <li><strong>Select Query Label:</strong> On the left sidebar, use the <strong>“Label”</strong> dropdown or search bar (<code class="language-plaintext highlighter-rouge">lightrag_webui/src/components/graph/GraphLabels.tsx</code>) to focus the graph. You can <strong>select</strong> an entity type (e.g., “person,” “organization”) or <strong>search</strong> for a specific entity name. Selecting <code class="language-plaintext highlighter-rouge">*</code> (asterisk) attempts to load all nodes (be mindful of the “Max Nodes” setting).</li>
-      <li><strong>Refresh Graph Data vs. Layout:</strong>
-        <ul>
-          <li>To reload graph data after adding new files or making backend changes, <strong>click</strong> the <strong>“Refresh”</strong> button (circular arrow icon) next to the label selection in the <strong>“Label”</strong> section (<code class="language-plaintext highlighter-rouge">GraphLabels.tsx</code>).</li>
-          <li>To visually re-arrange the currently displayed nodes, use the <strong>“Layout Graph”</strong> control (<code class="language-plaintext highlighter-rouge">lightrag_webui/src/components/graph/LayoutsControl.tsx</code>) to <strong>select</strong> and <strong>apply</strong> different layout algorithms (e.g., “Circular,” “Force Directed”).</li>
-        </ul>
-      </li>
-      <li><strong>Node Interaction:</strong>
-        <ul>
-          <li><strong>Hover</strong> your mouse over nodes to highlight them.</li>
-          <li><strong>Click</strong> on a node to select it. This opens the <strong>“Properties”</strong> panel on the right (<code class="language-plaintext highlighter-rouge">lightrag_webui/src/components/graph/PropertiesView.tsx</code>).</li>
-        </ul>
-      </li>
-      <li><strong>Camera Controls:</strong> Use <strong>W, A, S, D</strong> keys for panning, <strong>Q</strong> and <strong>E</strong> for up/down movement. <strong>Hold</strong> the <strong>right mouse button</strong> and <strong>drag</strong> to rotate the view. Use <strong>“Zoom In”</strong> / <strong>“Zoom Out”</strong> buttons or your mouse scroll wheel. <strong>“Reset Zoom”</strong> returns to the default view.</li>
-      <li><strong>Search within Graph:</strong> Use the graph-specific search bar (“Search nodes…” from <code class="language-plaintext highlighter-rouge">GraphSearch.tsx</code>) to find nodes in the current view.</li>
-    </ul>
-  </li>
-  <li><strong>Viewing and Editing Node/Relationship Properties:</strong>
-    <ul>
-      <li>When a node or edge is selected, the <strong>“Properties”</strong> panel displays its details: “ID,” “Labels,” “Degree,” and other properties like “Description,” “Name,” “Type,” “Source ID,” “File Path,” “Keywords,” “Weight.”</li>
-      <li>The documentation suggests that you can <strong>edit</strong> these properties directly from this panel (as supported by <code class="language-plaintext highlighter-rouge">lightrag_webui/src/components/graph/EditablePropertyRow.tsx</code> and backend routes in <code class="language-plaintext highlighter-rouge">lightrag/api/routers/graph_routes.py</code>). This is useful for refining your knowledge graph.</li>
-      <li>Buttons like <strong>“Expand Node”</strong> and <strong>“Prune Node”</strong> in the properties panel allow you to dynamically add or remove connected nodes from the visualization, helping you focus on specific subgraphs.</li>
-    </ul>
-  </li>
-</ol>
-
-<h3 id="step-2-entity-merging-advanced-data-cleaning---conceptual">Step 2: Entity Merging (Advanced Data Cleaning - Conceptual)</h3>
-
-<p><code class="language-plaintext highlighter-rouge">LightRAG</code>’s core library supports merging multiple entities into a single target entity, automatically handling relationships (<code class="language-plaintext highlighter-rouge">rag.merge_entities()</code> in <code class="language-plaintext highlighter-rouge">lightrag.py</code>). This is useful for de-duplicating concepts.</p>
-
-<ul>
-  <li><strong>From the Web UI:</strong> The provided documentation does <strong>not</strong> explicitly detail a direct “Merge Entities” button or feature within the Web UI. This functionality is primarily described as a Python function in the <code class="language-plaintext highlighter-rouge">LightRAG</code> Core.</li>
-  <li><strong>Conceptual Use:</strong> If you identify duplicate entities, you would typically use the <code class="language-plaintext highlighter-rouge">merge_entities</code> function via the <code class="language-plaintext highlighter-rouge">LightRAG</code> Core API (e.g., in a Python script) or look for such features if they are added to the UI in future versions.</li>
-</ul>
-
-<hr />
-
-<h2 id="part-7-maintaining-your-lightrag-instance--data">Part 7: Maintaining Your LightRAG Instance &amp; Data</h2>
-
-<h3 id="step-1-clearing-documents-and-cache">Step 1: Clearing Documents and Cache</h3>
-
-<p>For maintenance or to start fresh with a new set of documents:</p>
-
-<ol>
-  <li><strong>Clear All Documents:</strong>
-    <ul>
-      <li><strong>Navigate</strong> to the <strong>“Documents”</strong> tab.</li>
-      <li>Look for the <strong>“Clear”</strong> button (often an eraser icon, as per <code class="language-plaintext highlighter-rouge">lightrag_webui/src/locales/en.json</code>: <code class="language-plaintext highlighter-rouge">"documentPanel.clearDocuments.button": "Clear"</code>).</li>
-      <li><strong>Action:</strong> Clicking this button opens a <strong>“Clear Documents”</strong> dialog (<code class="language-plaintext highlighter-rouge">lightrag_webui/src/components/documents/ClearDocumentsDialog.tsx</code>).</li>
-      <li><strong>WARNING:</strong> This action, as described in the UI text (<code class="language-plaintext highlighter-rouge">"documentPanel.clearDocuments.warning"</code>), “will permanently delete all documents and cannot be undone!” It removes all documents, entities, relationships, and files from the system. You will need to <strong>type</strong> <code class="language-plaintext highlighter-rouge">yes</code> in a confirmation box to proceed.</li>
-      <li><strong>Purpose:</strong> Use this if you want to completely reset your <code class="language-plaintext highlighter-rouge">LightRAG</code> instance and re-ingest a new set of documents.</li>
-    </ul>
-  </li>
-  <li><strong>Clear LLM Cache:</strong>
-    <ul>
-      <li>Within the <strong>“Clear Documents”</strong> dialog, there’s also an option to <strong>“Clear LLM cache”</strong> (as per <code class="language-plaintext highlighter-rouge">lightrag_webui/src/locales/en.json</code>).</li>
-      <li><strong>Purpose:</strong> This clears <code class="language-plaintext highlighter-rouge">LightRAG</code>’s cache of responses from the Large Language Model (LLM) (e.g., from previous queries or entity extractions). This can be useful if you’ve changed LLM models or configurations and want to ensure fresh responses, without re-indexing all your documents. It does <em>not</em> delete your documents or the knowledge graph itself.</li>
-    </ul>
-  </li>
-</ol>
-
-<h3 id="step-2-exporting-your-knowledge-graph-data-conceptual">Step 2: Exporting Your Knowledge Graph Data (Conceptual)</h3>
-
-<p>For your research paper, you might want to export the structured data from <code class="language-plaintext highlighter-rouge">LightRAG</code> for further analysis or to include as supplementary material.</p>
-
-<ul>
-  <li>The <code class="language-plaintext highlighter-rouge">lightrag/api/README.md</code> and <code class="language-plaintext highlighter-rouge">lightrag/lightrag.py</code> documentation mention an <code class="language-plaintext highlighter-rouge">export_data()</code> Python function in the <code class="language-plaintext highlighter-rouge">LightRAG</code> Core library, which supports exporting data to formats like CSV, Excel, Markdown, and plain text.</li>
-  <li><strong>From the Web UI:</strong> The provided documentation for the WebUI components does <strong>not</strong> explicitly show a direct “Export Data” button or feature for the knowledge graph or document list. This functionality is primarily exposed via the <code class="language-plaintext highlighter-rouge">LightRAG</code> Core API.</li>
-  <li><strong>Conceptual Export Process (if no direct UI button):</strong> If you need to export data and a direct UI button is not present, you would conceptually need to:
-    <ol>
-      <li><strong>Interact</strong> with the underlying API endpoints. You can explore these via the Swagger UI, typically accessible at <code class="language-plaintext highlighter-rouge">http://localhost:9621/docs</code>.</li>
-      <li>Alternatively, <strong>use</strong> the <code class="language-plaintext highlighter-rouge">LightRAG</code> Core library programmatically in a Python script to call the <code class="language-plaintext highlighter-rouge">export_data</code> function.</li>
-    </ol>
-  </li>
-</ul>
-
-<hr />
-
-<h2 id="part-8-limitations-and-important-notes">Part 8: Limitations and Important Notes</h2>
-
-<ul>
-  <li><strong>Legacy <code class="language-plaintext highlighter-rouge">.doc</code> Files:</strong> <code class="language-plaintext highlighter-rouge">LightRAG</code> (with default <code class="language-plaintext highlighter-rouge">Docker</code> setup) does <strong>not</strong> natively support legacy <code class="language-plaintext highlighter-rouge">.doc</code> files. You <strong>must convert</strong> these to <code class="language-plaintext highlighter-rouge">.docx</code>, text-searchable <code class="language-plaintext highlighter-rouge">.pdf</code>, or <code class="language-plaintext highlighter-rouge">.txt</code> before uploading.</li>
-  <li><strong>Image-Only PDFs:</strong> For best results with PDF files, <strong>ensure</strong> they are text-searchable (i.e., contain actual selectable text, not just scanned images).</li>
-  <li><strong>Other File Formats:</strong> While <code class="language-plaintext highlighter-rouge">LightRAG</code> lists many file extensions as supported (in <code class="language-plaintext highlighter-rouge">DocumentManager</code>), some (like RTF, ODT, EPUB, TEX) might require additional, non-default system libraries (e.g., <code class="language-plaintext highlighter-rouge">docling</code>) for full processing. If you encounter issues with these, <strong>convert</strong> them to more reliably supported formats like PDF, DOCX, or TXT.</li>
-  <li><strong>No Manual Folder Organization Needed:</strong> <code class="language-plaintext highlighter-rouge">LightRAG</code> is designed to work with a flat collection of files in its input directory. You do not need to manually <strong>sort</strong> your files into subdirectories before uploading or scanning.</li>
-  <li><strong>Final Judgment Rests with User:</strong> Always critically <strong>review</strong> the information retrieved by <code class="language-plaintext highlighter-rouge">LightRAG</code> and <strong>consult</strong> the original source document to ensure accuracy and proper context before using it in your research paper.</li>
-</ul>
-
-<hr />
-
-<h2 id="conclusion-empowering-your-research">Conclusion: Empowering Your Research</h2>
-
-<p><code class="language-plaintext highlighter-rouge">LightRAG</code>, based on its documented features, offers a robust and user-friendly way to tackle your disorganized research files. By following this tutorial, you can:</p>
-
-<ul>
-  <li>Successfully <strong>ingest and index</strong> your mixed-format documents (after necessary conversions, especially for <code class="language-plaintext highlighter-rouge">.doc</code> files).</li>
-  <li><strong>Utilize</strong> a powerful query interface with various modes to efficiently find specific information.</li>
-  <li><strong>Leverage</strong> <code class="language-plaintext highlighter-rouge">LightRAG</code>’s <strong>source tracking (<code class="language-plaintext highlighter-rouge">file_path</code>)</strong> to support your referencing needs.</li>
-  <li>Optionally, <strong>explore</strong> your data visually through the <strong>knowledge graph</strong>.</li>
-</ul>
-
-<p>This system has the potential to significantly reduce the time you spend sifting through documents, allowing you to focus more on the critical tasks of analyzing information and writing your paper. Remember to <strong>consult</strong> the <code class="language-plaintext highlighter-rouge">lightrag/api/README.md</code> and the UI tooltips (many are defined in <code class="language-plaintext highlighter-rouge">lightrag_webui/src/locales/en.json</code>) for quick reminders as you use the tool.</p>
-
-<p>Good luck with your research!</p>]]></content><author><name></name></author><category term="scratchpad" /></entry></feed>
+<p>Running complex RAG pipelines on ARM64 is feasible, especially with newer, more powerful ARM64 processors. However, managing expectations and carefully selecting models appropriate for your hardware are key to a successful deployment.</p>]]></content><author><name></name></author><category term="scratchpad" /></entry></feed>
