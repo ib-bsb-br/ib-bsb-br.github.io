@@ -67,8 +67,8 @@
         
           <span class="post-updated">
             ↣
-            <time datetime="2025-05-18T01:38:11+00:00">
-              18 May 2025
+            <time datetime="2025-05-25T02:51:19+00:00">
+              25 May 2025
             </time>
           </span>
         
@@ -90,11 +90,11 @@
         <div class="page-stats mt-3" role="status" aria-label="Page statistics">
       
       <span class="badge bg-primary">
-        58139 characters
+        60368 characters
       </span>
         <span class="separator mx-2" aria-hidden="true">•</span>
         <span class="badge bg-primary">
-        7441 words
+        7544 words
       </span>
       </div>
         <div class="action-buttons d-flex flex-wrap gap-2">
@@ -211,542 +211,560 @@ wget https://go.dev/dl/go<span class="k">${</span><span class="nv">GO_VER</span>
     
   </h3>
       
-<div class="language-bash highlighter-rouge"><div class="highlight"><section><code><span class="c"># 1. Exit if not interactive</span>
-<span class="k">case</span> <span class="s2">"</span><span class="nv">$-</span><span class="s2">"</span> <span class="k">in</span> <span class="k">*</span>i<span class="k">*</span><span class="p">)</span> <span class="p">;;</span> <span class="k">*</span><span class="p">)</span> <span class="k">return</span><span class="p">;;</span> <span class="k">esac</span>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><section><code># 1. Exit if not interactive
+case "$-" in *i*) ;; *) return;; esac
 
-<span class="c"># 2. History</span>
-<span class="nv">HISTCONTROL</span><span class="o">=</span>ignoreboth <span class="c"># space-prefixed commands and duplicates are not saved</span>
-<span class="nb">shopt</span> <span class="nt">-s</span> histappend <span class="c"># Append to history file, don't overwrite</span>
-<span class="nv">HISTSIZE</span><span class="o">=</span>5000 <span class="c"># Number of commands to keep in memory</span>
-<span class="nv">HISTFILESIZE</span><span class="o">=</span>10000 <span class="c"># Number of commands to keep in the history file</span>
-<span class="c"># Save history after each command and reload it to make it available across terminals.</span>
-<span class="c"># `history -a` appends the current session's history to HISTFILE.</span>
-<span class="c"># `PROMPT_COMMAND="history -a; ${PROMPT_COMMAND}"` ensures this happens before each prompt.</span>
-<span class="c"># Rely on histappend for merging on shell exit.</span>
-<span class="nv">PROMPT_COMMAND</span><span class="o">=</span><span class="s2">"history -a; </span><span class="k">${</span><span class="nv">PROMPT_COMMAND</span><span class="k">}</span><span class="s2">"</span>
+# 2. History
+HISTCONTROL=ignoreboth # space-prefixed commands and duplicates are not saved
+shopt -s histappend # Append to history file, don't overwrite
+HISTSIZE=5000 # Number of commands to keep in memory
+HISTFILESIZE=10000 # Number of commands to keep in the history file
+# Save history after each command and reload it to make it available across terminals.
+# `history -a` appends the current session's history to HISTFILE.
+# `PROMPT_COMMAND="history -a; ${PROMPT_COMMAND}"` ensures this happens before each prompt.
+# Rely on histappend for merging on shell exit.
+PROMPT_COMMAND="history -a; ${PROMPT_COMMAND}"
 
-<span class="c"># 3. XDG directories</span>
-<span class="nb">export </span><span class="nv">XDG_CONFIG_HOME</span><span class="o">=</span><span class="s2">"</span><span class="k">${</span><span class="nv">XDG_CONFIG_HOME</span><span class="k">:-</span><span class="nv">$HOME</span><span class="p">/.config</span><span class="k">}</span><span class="s2">"</span>
-<span class="nb">export </span><span class="nv">XDG_CACHE_HOME</span><span class="o">=</span><span class="s2">"</span><span class="k">${</span><span class="nv">XDG_CACHE_HOME</span><span class="k">:-</span><span class="nv">$HOME</span><span class="p">/.cache</span><span class="k">}</span><span class="s2">"</span>
-<span class="nb">export </span><span class="nv">XDG_DATA_HOME</span><span class="o">=</span><span class="s2">"</span><span class="k">${</span><span class="nv">XDG_DATA_HOME</span><span class="k">:-</span><span class="nv">$HOME</span><span class="p">/.local/share</span><span class="k">}</span><span class="s2">"</span>
+# 3. XDG directories
+export XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
+export XDG_CACHE_HOME="${XDG_CACHE_HOME:-$HOME/.cache}"
+export XDG_DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}"
 
-<span class="c"># Ensure critical XDG directories exist</span>
-<span class="nb">mkdir</span> <span class="nt">-p</span> <span class="s2">"</span><span class="nv">$XDG_CONFIG_HOME</span><span class="s2">"</span> <span class="s2">"</span><span class="nv">$XDG_CACHE_HOME</span><span class="s2">"</span> <span class="s2">"</span><span class="nv">$XDG_DATA_HOME</span><span class="s2">"</span>
+# Ensure critical XDG directories exist
+mkdir -p "$XDG_CONFIG_HOME" "$XDG_CACHE_HOME" "$XDG_DATA_HOME"
 
-<span class="c"># Append Flatpak XDG data dirs to the system default XDG_DATA_DIRS</span>
-<span class="nv">_FLATPAK_USER_DATA_DIR</span><span class="o">=</span><span class="s2">"</span><span class="nv">$XDG_DATA_HOME</span><span class="s2">/flatpak/exports/share"</span>
-<span class="nv">_FLATPAK_SYSTEM_DATA_DIR</span><span class="o">=</span><span class="s2">"/var/lib/flatpak/exports/share"</span>
-<span class="nv">_SYSTEM_XDG_DATA_DIRS</span><span class="o">=</span><span class="s2">"</span><span class="k">${</span><span class="nv">XDG_DATA_DIRS</span><span class="k">:-</span><span class="p">/usr/local/share/</span>:/usr/share/<span class="k">}</span><span class="s2">"</span>
+# Append Flatpak XDG data dirs to the system default XDG_DATA_DIRS
+_FLATPAK_USER_DATA_DIR="$XDG_DATA_HOME/flatpak/exports/share"
+_FLATPAK_SYSTEM_DATA_DIR="/var/lib/flatpak/exports/share"
+_SYSTEM_XDG_DATA_DIRS="${XDG_DATA_DIRS:-/usr/local/share/:/usr/share/}"
 
-<span class="nb">export </span><span class="nv">XDG_DATA_DIRS</span><span class="o">=</span><span class="s2">"</span><span class="k">${</span><span class="nv">_FLATPAK_USER_DATA_DIR</span><span class="k">}</span><span class="s2">:</span><span class="k">${</span><span class="nv">_FLATPAK_SYSTEM_DATA_DIR</span><span class="k">}</span><span class="s2">:</span><span class="k">${</span><span class="nv">_SYSTEM_XDG_DATA_DIRS</span><span class="k">}</span><span class="s2">"</span>
-<span class="c"># Clean up temporary variables</span>
-<span class="nb">unset </span>_FLATPAK_USER_DATA_DIR _FLATPAK_SYSTEM_DATA_DIR _SYSTEM_XDG_DATA_DIRS
+export XDG_DATA_DIRS="${_FLATPAK_USER_DATA_DIR}:${_FLATPAK_SYSTEM_DATA_DIR}:${_SYSTEM_XDG_DATA_DIRS}"
+# Clean up temporary variables
+unset _FLATPAK_USER_DATA_DIR _FLATPAK_SYSTEM_DATA_DIR _SYSTEM_XDG_DATA_DIRS
 
-<span class="c"># XDG_RUNTIME_DIR is critical and typically set by pam_systemd.</span>
-<span class="c"># If it's not set, it indicates a problem with the system's session management (e.g., pam_systemd).</span>
-<span class="c"># Do not attempt to set it manually to a /tmp path here as it can cause issues.</span>
-<span class="k">if</span> <span class="o">[</span> <span class="nt">-z</span> <span class="s2">"</span><span class="nv">$XDG_RUNTIME_DIR</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then</span>
-    <span class="c"># Log an error or warning if preferred, but avoid setting a non-standard fallback</span>
-    <span class="c"># echo "Warning: XDG_RUNTIME_DIR is not set. User services may not function correctly." &gt;&amp;2</span>
-    : <span class="c"># No action, rely on system setup</span>
-<span class="k">else
-    </span><span class="nb">export </span>XDG_RUNTIME_DIR <span class="c"># Ensure it's exported if set by pam_systemd</span>
-<span class="k">fi</span>
-
-
-<span class="c"># 4. PATH updates</span>
-<span class="nb">export </span><span class="nv">GOPATH</span><span class="o">=</span><span class="s2">"</span><span class="nv">$HOME</span><span class="s2">/go"</span>
-
-_add_to_path_if_missing<span class="o">()</span> <span class="o">{</span>
-    <span class="nb">local </span><span class="nv">dir_to_add</span><span class="o">=</span><span class="s2">"</span><span class="nv">$1</span><span class="s2">"</span>
-    <span class="nb">local </span><span class="nv">prepend</span><span class="o">=</span><span class="s2">"</span><span class="nv">$2</span><span class="s2">"</span> <span class="c"># "prepend" or "append"</span>
-    <span class="k">if</span> <span class="o">[</span> <span class="nt">-d</span> <span class="s2">"</span><span class="nv">$dir_to_add</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then
-        case</span> <span class="s2">":</span><span class="nv">$PATH</span><span class="s2">:"</span> <span class="k">in</span>
-            <span class="k">*</span><span class="s2">":</span><span class="nv">$dir_to_add</span><span class="s2">:"</span><span class="k">*</span><span class="p">)</span> :<span class="p">;;</span> <span class="c"># Already in PATH</span>
-            <span class="k">*</span><span class="p">)</span> <span class="k">if</span> <span class="o">[</span> <span class="s2">"</span><span class="nv">$prepend</span><span class="s2">"</span> <span class="o">=</span> <span class="s2">"prepend"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then
-                   </span><span class="nv">PATH</span><span class="o">=</span><span class="s2">"</span><span class="nv">$dir_to_add</span><span class="s2">:</span><span class="nv">$PATH</span><span class="s2">"</span> <span class="c"># Prepend for higher priority</span>
-               <span class="k">else
-                   </span><span class="nv">PATH</span><span class="o">=</span><span class="s2">"</span><span class="nv">$PATH</span><span class="s2">:</span><span class="nv">$dir_to_add</span><span class="s2">"</span> <span class="c"># Append</span>
-               <span class="k">fi</span>
-               <span class="p">;;</span>
-        <span class="k">esac</span>
-    <span class="k">fi</span>
-<span class="o">}</span>
-
-_add_to_path_if_missing <span class="s2">"/usr/local/go/bin"</span> <span class="s2">"prepend"</span> <span class="c"># Go system binaries</span>
-_add_to_path_if_missing <span class="s2">"</span><span class="nv">$GOPATH</span><span class="s2">/bin"</span> <span class="s2">"prepend"</span> <span class="c"># User-installed Go binaries</span>
-_add_to_path_if_missing <span class="s2">"</span><span class="nv">$HOME</span><span class="s2">/.local/bin"</span> <span class="s2">"prepend"</span> <span class="c"># User-local pip installs, etc.</span>
-<span class="c"># Rust path is handled by sourcing .cargo/env, which also prepends.</span>
-<span class="nb">unset </span>_add_to_path_if_missing
-<span class="nb">export </span>PATH
+# XDG_RUNTIME_DIR is critical and typically set by pam_systemd.
+# If it's not set, it indicates a problem with the system's session management (e.g., pam_systemd).
+# Do not attempt to set it manually to a /tmp path here as it can cause issues.
+if [ -z "$XDG_RUNTIME_DIR" ]; then
+    # Log an error or warning if preferred, but avoid setting a non-standard fallback
+    # echo "Warning: XDG_RUNTIME_DIR is not set. User services may not function correctly." &gt;&amp;2
+    : # No action, rely on system setup
+else
+    export XDG_RUNTIME_DIR # Ensure it's exported if set by pam_systemd
+fi
 
 
-<span class="c"># 5. Rust environment</span>
-<span class="o">[</span> <span class="nt">-f</span> <span class="s2">"</span><span class="nv">$HOME</span><span class="s2">/.cargo/env"</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="nb">source</span> <span class="s2">"</span><span class="nv">$HOME</span><span class="s2">/.cargo/env"</span>
+# 4. PATH updates
+export GOPATH="$HOME/go"
 
-<span class="c"># 6. Bash completion</span>
-<span class="k">if</span> <span class="o">!</span> <span class="nb">shopt</span> <span class="nt">-oq</span> posix<span class="p">;</span> <span class="k">then
-  if</span> <span class="o">[</span> <span class="nt">-f</span> /usr/share/bash-completion/bash_completion <span class="o">]</span><span class="p">;</span> <span class="k">then
-    </span><span class="nb">source</span> /usr/share/bash-completion/bash_completion
-  <span class="k">elif</span> <span class="o">[</span> <span class="nt">-f</span> /etc/bash_completion <span class="o">]</span><span class="p">;</span> <span class="k">then
-    </span><span class="nb">source</span> /etc/bash_completion
-  <span class="k">fi
-fi</span>
-
-<span class="c"># 7. SSH agent: Prioritize systemd-user, then GNOME Keyring if in desktop session</span>
-<span class="c"># This logic determines which SSH_AUTH_SOCK to use.</span>
-
-<span class="c"># Path for the systemd user ssh-agent socket</span>
-<span class="nv">_SYSTEMD_SSH_AGENT_SOCK</span><span class="o">=</span><span class="s2">"</span><span class="nv">$XDG_RUNTIME_DIR</span><span class="s2">/ssh-agent.sock"</span>
-
-<span class="k">if</span> <span class="o">[</span> <span class="nt">-n</span> <span class="s2">"</span><span class="nv">$XDG_RUNTIME_DIR</span><span class="s2">"</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="o">[</span> <span class="nt">-S</span> <span class="s2">"</span><span class="nv">$_SYSTEMD_SSH_AGENT_SOCK</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then</span>
-  <span class="c"># systemd user agent socket exists, use it.</span>
-  <span class="nb">export </span><span class="nv">SSH_AUTH_SOCK</span><span class="o">=</span><span class="s2">"</span><span class="nv">$_SYSTEMD_SSH_AGENT_SOCK</span><span class="s2">"</span>
-<span class="k">elif</span> <span class="o">[</span> <span class="nt">-n</span> <span class="s2">"</span><span class="nv">$DESKTOP_SESSION</span><span class="s2">"</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="nb">command</span> <span class="nt">-v</span> gnome-keyring-daemon <span class="o">&gt;</span>/dev/null<span class="p">;</span> <span class="k">then</span>
-  <span class="c"># No systemd user agent socket found (or XDG_RUNTIME_DIR not set),</span>
-  <span class="c"># but in a desktop session. Attempt to use/start GNOME Keyring.</span>
-  <span class="c"># GNOME Keyring might already be running via its own systemd user service or XDG autostart.</span>
-  <span class="c"># This eval will set SSH_AUTH_SOCK if gnome-keyring-daemon starts/is running and manages SSH.</span>
-  <span class="nb">eval</span> <span class="s2">"</span><span class="si">$(</span>gnome-keyring-daemon <span class="nt">--start</span> <span class="nt">--components</span><span class="o">=</span>secrets,ssh<span class="si">)</span><span class="s2">"</span>
-  <span class="nb">export </span>SSH_AUTH_SOCK <span class="c"># Ensure it's exported from eval</span>
-<span class="k">fi
-</span><span class="nb">unset </span>_SYSTEMD_SSH_AGENT_SOCK
-
-<span class="c"># Attempt to add default SSH key (id_rsa) if an agent is running and has no keys.</span>
-<span class="k">if </span><span class="nb">command</span> <span class="nt">-v</span> ssh-add <span class="o">&gt;</span>/dev/null<span class="p">;</span> <span class="k">then
-    if</span> <span class="o">!</span> ssh-add <span class="nt">-l</span> &amp;&gt;/dev/null<span class="p">;</span> <span class="k">then</span> <span class="c"># Check if agent has ANY keys</span>
-        <span class="k">if</span> <span class="o">[</span> <span class="nt">-n</span> <span class="s2">"</span><span class="k">${</span><span class="nv">SSH_AUTH_SOCK</span><span class="k">}</span><span class="s2">"</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="o">[</span> <span class="nt">-S</span> <span class="s2">"</span><span class="k">${</span><span class="nv">SSH_AUTH_SOCK</span><span class="k">}</span><span class="s2">"</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="o">[</span> <span class="nt">-f</span> <span class="s2">"</span><span class="nv">$HOME</span><span class="s2">/.ssh/id_rsa"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then</span>
-            <span class="c"># Agent seems to be running (socket exists), but no keys listed. Add id_rsa.</span>
-            <span class="c"># Suppress errors (e.g., passphrase needed but no tty, or key already added by another mechanism).</span>
-            ssh-add <span class="s2">"</span><span class="nv">$HOME</span><span class="s2">/.ssh/id_rsa"</span> 2&gt;/dev/null <span class="o">||</span> <span class="nb">true
-        </span><span class="k">fi
+_add_to_path_if_missing() {
+    local dir_to_add="$1"
+    local prepend="$2" # "prepend" or "append"
+    if [ -d "$dir_to_add" ]; then
+        case ":$PATH:" in
+            *":$dir_to_add:"*) :;; # Already in PATH
+            *) if [ "$prepend" = "prepend" ]; then
+                   PATH="$dir_to_add:$PATH" # Prepend for higher priority
+               else
+                   PATH="$PATH:$dir_to_add" # Append
+               fi
+               ;;
+        esac
     fi
-fi</span>
+}
 
-<span class="c"># 9. Prompt</span>
-<span class="k">if</span> <span class="o">[[</span> <span class="s2">"</span><span class="k">${</span><span class="nv">EUID</span><span class="k">}</span><span class="s2">"</span> <span class="o">==</span> <span class="s2">"0"</span> <span class="o">]]</span><span class="p">;</span> <span class="k">then</span> <span class="c"># Root prompt</span>
-  <span class="nv">PS1</span><span class="o">=</span><span class="s1">'\[\033[01;31m\]\h\[\033[01;34m\] \W \$\[\033[00m\] '</span>
-<span class="k">else</span> <span class="c"># User prompt</span>
-  <span class="nv">PS1</span><span class="o">=</span><span class="s1">'\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ '</span>
-<span class="k">fi</span>
+_add_to_path_if_missing "/usr/local/go/bin" "prepend" # Go system binaries
+_add_to_path_if_missing "$GOPATH/bin" "prepend" # User-installed Go binaries
+_add_to_path_if_missing "$HOME/.local/bin" "prepend" # User-local pip installs, etc.
+# Rust path is handled by sourcing .cargo/env, which also prepends.
+unset _add_to_path_if_missing
+export PATH
 
-<span class="c"># 10. Aliases (!!! REVIEW AND REPLACE PLACEHOLDERS !!!)</span>
-<span class="nb">alias ls</span><span class="o">=</span><span class="s1">'ls --color=auto -hF'</span> <span class="c"># Added -h for human-readable sizes, -F for type indicators</span>
-<span class="nb">alias </span><span class="nv">ll</span><span class="o">=</span><span class="s1">'ls -alFh'</span> <span class="c"># Added -h</span>
-<span class="nb">alias </span><span class="nv">la</span><span class="o">=</span><span class="s1">'ls -Ah'</span> <span class="c"># Added -h</span>
-<span class="nb">alias </span><span class="nv">l</span><span class="o">=</span><span class="s1">'ls -CFh'</span> <span class="c"># Added -h</span>
 
-<span class="nb">alias grep</span><span class="o">=</span><span class="s1">'grep --color=auto'</span>
-<span class="nb">alias </span><span class="nv">egrep</span><span class="o">=</span><span class="s1">'egrep --color=auto'</span>
-<span class="nb">alias </span><span class="nv">fgrep</span><span class="o">=</span><span class="s1">'fgrep --color=auto'</span>
+# 5. Rust environment
+[ -f "$HOME/.cargo/env" ] &amp;&amp; source "$HOME/.cargo/env"
 
-<span class="c"># Example ping alias (uses default system ping)</span>
-<span class="nb">alias </span><span class="nv">p</span><span class="o">=</span><span class="s1">'ping -c 4 example.com'</span> <span class="c"># Pings example.com 4 times</span>
+# 6. Bash completion
+if ! shopt -oq posix; then
+  if [ -f /usr/share/bash-completion/bash_completion ]; then
+    source /usr/share/bash-completion/bash_completion
+  elif [ -f /etc/bash_completion ]; then
+    source /etc/bash_completion
+  fi
+fi
 
-<span class="c"># Swaks alias for email testing</span>
-<span class="c"># !!! REPLACE with your actual email, app password, and possibly SMTP server !!!</span>
-<span class="c"># For Gmail, you'll need an "App Password". See Google's help documentation.</span>
-<span class="c"># alias Z='swaks -4 -tls -f you@gmail.com -t recipient@example.com -s smtp.gmail.com:587 -au you@gmail.com -ap YOUR_GMAIL_APP_PASSWORD -d'</span>
-<span class="nb">alias </span><span class="nv">Z</span><span class="o">=</span><span class="s1">'echo "Swaks alias Z not configured. Edit ~/.bashrc with your email details and an App Password for services like Gmail."'</span>
+# 7. SSH agent: Prioritize systemd-user, then GNOME Keyring if in desktop session
+# This logic determines which SSH_AUTH_SOCK to use.
 
-<span class="c"># Git project aliases</span>
-<span class="c"># !!! REPLACE 'REPO' with your actual repository directory name if different !!!</span>
-<span class="c"># And ensure ~/projects/REPO is a git repository.</span>
-<span class="nv">PROJECTS_DIR</span><span class="o">=</span><span class="s2">"</span><span class="nv">$HOME</span><span class="s2">/projects"</span>
-<span class="c"># Example: alias project1-pull='(cd "$PROJECTS_DIR/my-actual-project" &amp;&amp; git pull) || echo "Failed to cd or pull in $PROJECTS_DIR/my-actual-project"'</span>
-<span class="nb">alias </span><span class="nv">pullrepo</span><span class="o">=</span><span class="s1">'(cd "$PROJECTS_DIR/REPO" &amp;&amp; git pull) || echo "Failed to cd to $PROJECTS_DIR/REPO or pull"'</span>
-<span class="nb">alias </span><span class="nv">pushrepo</span><span class="o">=</span><span class="s1">'(cd "$PROJECTS_DIR/REPO" &amp;&amp; git push) || echo "Failed to cd to $PROJECTS_DIR/REPO or push"'</span>
+# Path for the systemd user ssh-agent socket
+_SYSTEMD_SSH_AGENT_SOCK="$XDG_RUNTIME_DIR/ssh-agent.sock"
 
-<span class="c"># Update system</span>
-<span class="nb">alias </span><span class="nv">update</span><span class="o">=</span><span class="s1">'sudo apt update &amp;&amp; sudo apt full-upgrade -y &amp;&amp; sudo apt autoremove -y &amp;&amp; sudo apt clean &amp;&amp; echo "System update process completed."'</span>
+if [ -n "$XDG_RUNTIME_DIR" ] &amp;&amp; [ -S "$_SYSTEMD_SSH_AGENT_SOCK" ]; then
+  # systemd user agent socket exists, use it.
+  export SSH_AUTH_SOCK="$_SYSTEMD_SSH_AGENT_SOCK"
+elif [ -n "$DESKTOP_SESSION" ] &amp;&amp; command -v gnome-keyring-daemon &gt;/dev/null; then
+  # No systemd user agent socket found (or XDG_RUNTIME_DIR not set),
+  # but in a desktop session. Attempt to use/start GNOME Keyring.
+  # GNOME Keyring might already be running via its own systemd user service or XDG autostart.
+  # This eval will set SSH_AUTH_SOCK if gnome-keyring-daemon starts/is running and manages SSH.
+  eval "$(gnome-keyring-daemon --start --components=secrets,ssh)"
+  export SSH_AUTH_SOCK # Ensure it's exported from eval
+fi
+unset _SYSTEMD_SSH_AGENT_SOCK
 
-<span class="c"># Check for listening ports</span>
-<span class="nb">alias </span><span class="nv">listports</span><span class="o">=</span><span class="s1">'sudo ss -tulnp'</span>
+# Attempt to add default SSH key (id_rsa) if an agent is running and has no keys.
+if command -v ssh-add &gt;/dev/null; then
+    if ! ssh-add -l &amp;&gt;/dev/null; then # Check if agent has ANY keys
+        if [ -n "${SSH_AUTH_SOCK}" ] &amp;&amp; [ -S "${SSH_AUTH_SOCK}" ] &amp;&amp; [ -f "$HOME/.ssh/id_rsa" ]; then
+            # Agent seems to be running (socket exists), but no keys listed. Add id_rsa.
+            # Suppress errors (e.g., passphrase needed but no tty, or key already added by another mechanism).
+            ssh-add "$HOME/.ssh/id_rsa" 2&gt;/dev/null || true
+        fi
+    fi
+fi
 
-fix_ownership_preserve_permissions_final<span class="o">()</span> <span class="o">{</span>
-    <span class="nb">local </span><span class="nv">home_dir</span><span class="o">=</span><span class="s2">"/home/linaro"</span>
-    <span class="nb">local </span><span class="nv">target_user</span><span class="o">=</span><span class="s2">"linaro"</span>
-    <span class="nb">local </span><span class="nv">target_group</span><span class="o">=</span><span class="s2">"linaro"</span> <span class="c"># Assuming group is the same as the user</span>
-    <span class="nb">local </span><span class="nv">overall_success</span><span class="o">=</span><span class="nb">true</span> <span class="c"># Flag to track if all critical operations succeeded</span>
+# 9. Prompt
+if [[ "${EUID}" == "0" ]]; then # Root prompt
+  PS1='\[\033[01;31m\]\h\[\033[01;34m\] \W \$\[\033[00m\] '
+else # User prompt
+  PS1='\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ '
+fi
 
-    <span class="nb">echo</span> <span class="s2">"-----------------------------------------------------------------------------"</span>
-    <span class="nb">echo</span> <span class="s2">"Home Directory Ownership &amp; Permission Corrector (Preserve &amp; Secure)"</span>
-    <span class="nb">echo</span> <span class="s2">"-----------------------------------------------------------------------------"</span>
-    <span class="nb">echo</span> <span class="s2">"This script will perform the following actions within '</span><span class="k">${</span><span class="nv">home_dir</span><span class="k">}</span><span class="s2">':"</span>
-    <span class="nb">echo</span> <span class="s2">"1. Phase 1 (Symbolic Links): Change ownership of symbolic LINKS THEMSELVES to '</span><span class="k">${</span><span class="nv">target_user</span><span class="k">}</span><span class="s2">:</span><span class="k">${</span><span class="nv">target_group</span><span class="k">}</span><span class="s2">'."</span>
-    <span class="nb">echo</span> <span class="s2">"2. Phase 2 (All Items): Change ownership of all files, directories, and symlink TARGETS"</span>
-    <span class="nb">echo</span> <span class="s2">"   to '</span><span class="k">${</span><span class="nv">target_user</span><span class="k">}</span><span class="s2">:</span><span class="k">${</span><span class="nv">target_group</span><span class="k">}</span><span class="s2">' AND re-apply their original permission bits."</span>
-    <span class="nb">echo</span> <span class="s2">"3. Phase 3 (Security): For '</span><span class="k">${</span><span class="nv">home_dir</span><span class="k">}</span><span class="s2">/.ssh' and '</span><span class="k">${</span><span class="nv">home_dir</span><span class="k">}</span><span class="s2">/.gnupg', ENFORCE known-good secure permissions."</span>
-    <span class="nb">echo</span> <span class="s2">""</span>
-    <span class="nb">echo</span> <span class="s2">"WARNING:"</span>
-    <span class="nb">echo</span> <span class="s2">"- This operation uses 'sudo' and modifies file ownership and permissions recursively."</span>
-    <span class="nb">echo</span> <span class="s2">"- If a non-SSH/GPG file had insecure permissions (e.g., 777) while owned by root,"</span>
-    <span class="nb">echo</span> <span class="s2">"  Phase 2 will preserve those permissions under '</span><span class="k">${</span><span class="nv">target_user</span><span class="k">}</span><span class="s2">' ownership."</span>
-    <span class="nb">echo</span> <span class="s2">"  Review permissions of sensitive non-SSH/GPG files afterwards."</span>
-    <span class="nb">echo</span> <span class="s2">"- Ensure you have a backup if you are uncertain about any consequences."</span>
-    <span class="nb">echo</span> <span class="s2">"-----------------------------------------------------------------------------"</span>
-    <span class="nb">read</span> <span class="nt">-p</span> <span class="s2">"Are you absolutely sure you want to proceed? (Type 'yes' to continue): "</span> confirmation
+# 10. Aliases (!!! REVIEW AND REPLACE PLACEHOLDERS !!!)
+alias ls='ls --color=auto -hF' # Added -h for human-readable sizes, -F for type indicators
+alias ll='ls -alFh' # Added -h
+alias la='ls -Ah' # Added -h
+alias l='ls -CFh' # Added -h
 
-    <span class="k">if</span> <span class="o">[[</span> <span class="s2">"</span><span class="nv">$confirmation</span><span class="s2">"</span> <span class="o">!=</span> <span class="s2">"yes"</span> <span class="o">]]</span><span class="p">;</span> <span class="k">then
-        </span><span class="nb">echo</span> <span class="s2">"Operation cancelled by user."</span>
-        <span class="k">return </span>1
-    <span class="k">fi
+alias grep='grep --color=auto'
+alias egrep='egrep --color=auto'
+alias fgrep='fgrep --color=auto'
 
-    </span><span class="nb">echo</span> <span class="s2">""</span>
-    <span class="nb">echo</span> <span class="s2">"Proceeding with ownership and permission changes..."</span>
+# Example ping alias (uses default system ping)
+alias p='ping -c 4 example.com' # Pings example.com 4 times
 
-    <span class="c"># --- Phase 1: Set ownership of Symbolic Links themselves ---</span>
-    <span class="nb">echo</span> <span class="s2">""</span>
-    <span class="nb">echo</span> <span class="s2">"Phase 1: Setting ownership of symbolic links themselves to '</span><span class="k">${</span><span class="nv">target_user</span><span class="k">}</span><span class="s2">:</span><span class="k">${</span><span class="nv">target_group</span><span class="k">}</span><span class="s2">'..."</span>
-    <span class="nb">sudo </span>find <span class="s2">"</span><span class="k">${</span><span class="nv">home_dir</span><span class="k">}</span><span class="s2">"</span> <span class="nt">-type</span> l <span class="nt">-print0</span> | <span class="k">while </span><span class="nv">IFS</span><span class="o">=</span> <span class="nb">read</span> <span class="nt">-r</span> <span class="nt">-d</span> <span class="s1">$'</span><span class="se">\0</span><span class="s1">'</span> symlink_item<span class="p">;</span> <span class="k">do
-        </span><span class="nb">echo</span> <span class="s2">"  Processing symlink: </span><span class="k">${</span><span class="nv">symlink_item</span><span class="k">}</span><span class="s2">"</span>
-        <span class="k">if</span> <span class="o">!</span> <span class="nb">sudo chown</span> <span class="nt">-h</span> <span class="s2">"</span><span class="k">${</span><span class="nv">target_user</span><span class="k">}</span><span class="s2">:</span><span class="k">${</span><span class="nv">target_group</span><span class="k">}</span><span class="s2">"</span> <span class="s2">"</span><span class="k">${</span><span class="nv">symlink_item</span><span class="k">}</span><span class="s2">"</span><span class="p">;</span> <span class="k">then
-            </span><span class="nb">echo</span> <span class="s2">"    ERROR: Failed to change ownership of symlink '</span><span class="k">${</span><span class="nv">symlink_item</span><span class="k">}</span><span class="s2">'."</span>
-            <span class="nv">overall_success</span><span class="o">=</span><span class="nb">false
-        </span><span class="k">else
-            </span><span class="nb">echo</span> <span class="s2">"    Ownership of symlink set."</span>
-        <span class="k">fi
+# Swaks alias for email testing
+# !!! REPLACE with your actual email, app password, and possibly SMTP server !!!
+# For Gmail, you'll need an "App Password". See Google's help documentation.
+# alias Z='swaks -4 -tls -f you@gmail.com -t recipient@example.com -s smtp.gmail.com:587 -au you@gmail.com -ap YOUR_GMAIL_APP_PASSWORD -d'
+alias Z='echo "Swaks alias Z not configured. Edit ~/.bashrc with your email details and an App Password for services like Gmail."'
+
+# Git project aliases
+# !!! REPLACE 'REPO' with your actual repository directory name if different !!!
+# And ensure ~/projects/REPO is a git repository.
+PROJECTS_DIR="$HOME/projects"
+# Example: alias project1-pull='(cd "$PROJECTS_DIR/my-actual-project" &amp;&amp; git pull) || echo "Failed to cd or pull in $PROJECTS_DIR/my-actual-project"'
+alias pullrepo='(cd "$PROJECTS_DIR/REPO" &amp;&amp; git pull) || echo "Failed to cd to $PROJECTS_DIR/REPO or pull"'
+alias pushrepo='(cd "$PROJECTS_DIR/REPO" &amp;&amp; git push) || echo "Failed to cd to $PROJECTS_DIR/REPO or push"'
+
+# Update system
+alias update='sudo apt update &amp;&amp; sudo apt full-upgrade -y &amp;&amp; sudo apt autoremove -y &amp;&amp; sudo apt clean &amp;&amp; echo "System update process completed."'
+
+alias f2p='f2p.py --xml --max-depth 9 --include-hidden --ignore-gitignore --output /home/linaro/Downloads/f2put.txt'
+
+# Check for listening ports
+alias listports='sudo ss -tulnp'
+
+fix_ownership_preserve_permissions_final() {
+    local home_dir="/home/linaro"
+    local target_user="linaro"
+    local target_group="linaro" # Assuming group is the same as the user
+    local overall_success=true # Flag to track if all critical operations succeeded
+
+    echo "-----------------------------------------------------------------------------"
+    echo "Home Directory Ownership &amp; Permission Corrector (Preserve &amp; Secure)"
+    echo "-----------------------------------------------------------------------------"
+    echo "This script will perform the following actions within '${home_dir}':"
+    echo "1. Phase 1 (Symbolic Links): Change ownership of symbolic LINKS THEMSELVES to '${target_user}:${target_group}'."
+    echo "2. Phase 2 (All Items): Change ownership of all files, directories, and symlink TARGETS"
+    echo "   to '${target_user}:${target_group}' AND re-apply their original permission bits."
+    echo "3. Phase 3 (Security): For '${home_dir}/.ssh' and '${home_dir}/.gnupg', ENFORCE known-good secure permissions."
+    echo ""
+    echo "WARNING:"
+    echo "- This operation uses 'sudo' and modifies file ownership and permissions recursively."
+    echo "- If a non-SSH/GPG file had insecure permissions (e.g., 777) while owned by root,"
+    echo "  Phase 2 will preserve those permissions under '${target_user}' ownership."
+    echo "  Review permissions of sensitive non-SSH/GPG files afterwards."
+    echo "- Ensure you have a backup if you are uncertain about any consequences."
+    echo "-----------------------------------------------------------------------------"
+    read -p "Are you absolutely sure you want to proceed? (Type 'yes' to continue): " confirmation
+
+    if [[ "$confirmation" != "yes" ]]; then
+        echo "Operation cancelled by user."
+        return 1
+    fi
+
+    echo ""
+    echo "Proceeding with ownership and permission changes..."
+
+    # --- Phase 1: Set ownership of Symbolic Links themselves ---
+    echo ""
+    echo "Phase 1: Setting ownership of symbolic links themselves to '${target_user}:${target_group}'..."
+    sudo find "${home_dir}" -type l -print0 | while IFS= read -r -d $'\0' symlink_item; do
+        echo "  Processing symlink: ${symlink_item}"
+        if ! sudo chown -h "${target_user}:${target_group}" "${symlink_item}"; then
+            echo "    ERROR: Failed to change ownership of symlink '${symlink_item}'."
+            overall_success=false
+        else
+            echo "    Ownership of symlink set."
+        fi
     done
-    </span><span class="nb">echo</span> <span class="s2">"Phase 1 complete."</span>
+    echo "Phase 1 complete."
 
-    <span class="c"># --- Phase 2: Change ownership and re-apply original permissions for all items ---</span>
-    <span class="c"># For symlinks, this phase will operate on their TARGETS.</span>
-    <span class="nb">echo</span> <span class="s2">""</span>
-    <span class="nb">echo</span> <span class="s2">"Phase 2: Changing ownership to '</span><span class="k">${</span><span class="nv">target_user</span><span class="k">}</span><span class="s2">' and re-applying original permissions for all items (including symlink targets)..."</span>
-    <span class="nb">sudo </span>find <span class="s2">"</span><span class="k">${</span><span class="nv">home_dir</span><span class="k">}</span><span class="s2">"</span> <span class="nt">-print0</span> | <span class="k">while </span><span class="nv">IFS</span><span class="o">=</span> <span class="nb">read</span> <span class="nt">-r</span> <span class="nt">-d</span> <span class="s1">$'</span><span class="se">\0</span><span class="s1">'</span> item<span class="p">;</span> <span class="k">do
-        </span><span class="nb">echo</span> <span class="s2">"  Processing item: </span><span class="k">${</span><span class="nv">item</span><span class="k">}</span><span class="s2">"</span>
-        <span class="nv">item_type</span><span class="o">=</span><span class="si">$(</span><span class="nb">sudo stat</span> <span class="nt">-L</span> <span class="nt">-c</span> <span class="s2">"%F"</span> <span class="s2">"</span><span class="k">${</span><span class="nv">item</span><span class="k">}</span><span class="s2">"</span><span class="si">)</span> <span class="c"># Get type, dereferencing symlink</span>
+    # --- Phase 2: Change ownership and re-apply original permissions for all items ---
+    # For symlinks, this phase will operate on their TARGETS.
+    echo ""
+    echo "Phase 2: Changing ownership to '${target_user}' and re-applying original permissions for all items (including symlink targets)..."
+    sudo find "${home_dir}" -print0 | while IFS= read -r -d $'\0' item; do
+        echo "  Processing item: ${item}"
+        item_type=$(sudo stat -L -c "%F" "${item}") # Get type, dereferencing symlink
 
-        <span class="c"># Get current permissions in octal format (dereferences symlinks by default)</span>
-        <span class="nv">current_perms_octal</span><span class="o">=</span><span class="si">$(</span><span class="nb">sudo stat</span> <span class="nt">-c</span> <span class="s2">"%a"</span> <span class="s2">"</span><span class="k">${</span><span class="nv">item</span><span class="k">}</span><span class="s2">"</span><span class="si">)</span>
-        <span class="k">if</span> <span class="o">[[</span> <span class="nt">-z</span> <span class="s2">"</span><span class="nv">$current_perms_octal</span><span class="s2">"</span> <span class="o">]]</span><span class="p">;</span> <span class="k">then
-            </span><span class="nb">echo</span> <span class="s2">"    ERROR: Could not get permissions for '</span><span class="k">${</span><span class="nv">item</span><span class="k">}</span><span class="s2">'. Skipping permission change."</span>
-            <span class="c"># Still attempt chown if possible</span>
-            <span class="k">if</span> <span class="o">!</span> <span class="nb">sudo chown</span> <span class="s2">"</span><span class="k">${</span><span class="nv">target_user</span><span class="k">}</span><span class="s2">:</span><span class="k">${</span><span class="nv">target_group</span><span class="k">}</span><span class="s2">"</span> <span class="s2">"</span><span class="k">${</span><span class="nv">item</span><span class="k">}</span><span class="s2">"</span><span class="p">;</span> <span class="k">then
-                 </span><span class="nb">echo</span> <span class="s2">"    ERROR: Failed to change ownership for '</span><span class="k">${</span><span class="nv">item</span><span class="k">}</span><span class="s2">' as well."</span>
-                 <span class="nv">overall_success</span><span class="o">=</span><span class="nb">false
-            </span><span class="k">fi
+        # Get current permissions in octal format (dereferences symlinks by default)
+        current_perms_octal=$(sudo stat -c "%a" "${item}")
+        if [[ -z "$current_perms_octal" ]]; then
+            echo "    ERROR: Could not get permissions for '${item}'. Skipping permission change."
+            # Still attempt chown if possible
+            if ! sudo chown "${target_user}:${target_group}" "${item}"; then
+                 echo "    ERROR: Failed to change ownership for '${item}' as well."
+                 overall_success=false
+            fi
             continue
         fi
-        </span><span class="nb">echo</span> <span class="s2">"    Original Permissions (of item/target): </span><span class="k">${</span><span class="nv">current_perms_octal</span><span class="k">}</span><span class="s2">, Type: </span><span class="k">${</span><span class="nv">item_type</span><span class="k">}</span><span class="s2">"</span>
+        echo "    Original Permissions (of item/target): ${current_perms_octal}, Type: ${item_type}"
 
-        <span class="c"># 1. Change ownership to the target user and group (dereferences symlinks by default)</span>
-        <span class="k">if</span> <span class="o">!</span> <span class="nb">sudo chown</span> <span class="s2">"</span><span class="k">${</span><span class="nv">target_user</span><span class="k">}</span><span class="s2">:</span><span class="k">${</span><span class="nv">target_group</span><span class="k">}</span><span class="s2">"</span> <span class="s2">"</span><span class="k">${</span><span class="nv">item</span><span class="k">}</span><span class="s2">"</span><span class="p">;</span> <span class="k">then
-            </span><span class="nb">echo</span> <span class="s2">"    ERROR: Failed to change ownership for '</span><span class="k">${</span><span class="nv">item</span><span class="k">}</span><span class="s2">'. Skipping chmod for this item."</span>
-            <span class="nv">overall_success</span><span class="o">=</span><span class="nb">false
-            </span><span class="k">continue
+        # 1. Change ownership to the target user and group (dereferences symlinks by default)
+        if ! sudo chown "${target_user}:${target_group}" "${item}"; then
+            echo "    ERROR: Failed to change ownership for '${item}'. Skipping chmod for this item."
+            overall_success=false
+            continue
         fi
-        </span><span class="nb">echo</span> <span class="s2">"    Ownership changed to </span><span class="k">${</span><span class="nv">target_user</span><span class="k">}</span><span class="s2">:</span><span class="k">${</span><span class="nv">target_group</span><span class="k">}</span><span class="s2">."</span>
+        echo "    Ownership changed to ${target_user}:${target_group}."
 
-        <span class="c"># 2. Re-apply the original permissions (dereferences symlinks by default)</span>
-        <span class="c">#    Skip chmod for symbolic links themselves (their permissions are special: lrwxrwxrwx)</span>
-        <span class="c">#    We are interested in the target's permissions, which stat already gave us.</span>
-        <span class="k">if</span> <span class="o">[[</span> <span class="s2">"</span><span class="k">${</span><span class="nv">item_type</span><span class="k">}</span><span class="s2">"</span> <span class="o">!=</span> <span class="s2">"symbolic link"</span> <span class="o">]]</span><span class="p">;</span> <span class="k">then</span> <span class="c"># Only chmod non-symlinks directly</span>
-            <span class="k">if</span> <span class="o">!</span> <span class="nb">sudo chmod</span> <span class="s2">"</span><span class="k">${</span><span class="nv">current_perms_octal</span><span class="k">}</span><span class="s2">"</span> <span class="s2">"</span><span class="k">${</span><span class="nv">item</span><span class="k">}</span><span class="s2">"</span><span class="p">;</span> <span class="k">then
-                </span><span class="nb">echo</span> <span class="s2">"    ERROR: Failed to re-apply original permissions '</span><span class="k">${</span><span class="nv">current_perms_octal</span><span class="k">}</span><span class="s2">' to '</span><span class="k">${</span><span class="nv">item</span><span class="k">}</span><span class="s2">'."</span>
-                <span class="nv">overall_success</span><span class="o">=</span><span class="nb">false
-            </span><span class="k">else
-                </span><span class="nb">echo</span> <span class="s2">"    Original permissions '</span><span class="k">${</span><span class="nv">current_perms_octal</span><span class="k">}</span><span class="s2">' re-applied."</span>
-            <span class="k">fi
-        else</span>
-            <span class="c"># For symlinks, we've already processed the target's permissions if 'item' was a symlink.</span>
-            <span class="c"># The link's own permissions (lrwxrwxrwx) are not changed by chmod.</span>
-            <span class="nb">echo</span> <span class="s2">"    Item is a symbolic link. Its target's ownership/permissions handled. Link's own perms (lrwxrwxrwx) unchanged by chmod."</span>
-        <span class="k">fi
-        </span><span class="nb">echo</span> <span class="s2">"  ---"</span>
-    <span class="k">done
-    </span><span class="nb">echo</span> <span class="s2">"Phase 2 complete."</span>
+        # 2. Re-apply the original permissions (dereferences symlinks by default)
+        #    Skip chmod for symbolic links themselves (their permissions are special: lrwxrwxrwx)
+        #    We are interested in the target's permissions, which stat already gave us.
+        if [[ "${item_type}" != "symbolic link" ]]; then # Only chmod non-symlinks directly
+            if ! sudo chmod "${current_perms_octal}" "${item}"; then
+                echo "    ERROR: Failed to re-apply original permissions '${current_perms_octal}' to '${item}'."
+                overall_success=false
+            else
+                echo "    Original permissions '${current_perms_octal}' re-applied."
+            fi
+        else
+            # For symlinks, we've already processed the target's permissions if 'item' was a symlink.
+            # The link's own permissions (lrwxrwxrwx) are not changed by chmod.
+            echo "    Item is a symbolic link. Its target's ownership/permissions handled. Link's own perms (lrwxrwxrwx) unchanged by chmod."
+        fi
+        echo "  ---"
+    done
+    echo "Phase 2 complete."
 
-    <span class="c"># --- Phase 3: Enforce specific secure permissions for critical directories ---</span>
-    <span class="nb">echo</span> <span class="s2">""</span>
-    <span class="nb">echo</span> <span class="s2">"Phase 3: Enforcing specific secure permissions for critical directories..."</span>
+    # --- Phase 3: Enforce specific secure permissions for critical directories ---
+    echo ""
+    echo "Phase 3: Enforcing specific secure permissions for critical directories..."
 
-    <span class="c"># For .ssh directory</span>
-    <span class="k">if</span> <span class="o">[</span> <span class="nt">-d</span> <span class="s2">"</span><span class="k">${</span><span class="nv">home_dir</span><span class="k">}</span><span class="s2">/.ssh"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then
-        </span><span class="nb">echo</span> <span class="s2">"  Enforcing secure permissions for '</span><span class="k">${</span><span class="nv">home_dir</span><span class="k">}</span><span class="s2">/.ssh'..."</span>
-        <span class="nb">sudo chown</span> <span class="nt">-R</span> <span class="s2">"</span><span class="k">${</span><span class="nv">target_user</span><span class="k">}</span><span class="s2">:</span><span class="k">${</span><span class="nv">target_group</span><span class="k">}</span><span class="s2">"</span> <span class="s2">"</span><span class="k">${</span><span class="nv">home_dir</span><span class="k">}</span><span class="s2">/.ssh"</span> <span class="c"># Robustness</span>
-        <span class="nb">sudo chmod </span>700 <span class="s2">"</span><span class="k">${</span><span class="nv">home_dir</span><span class="k">}</span><span class="s2">/.ssh"</span>
-        <span class="nb">sudo </span>find <span class="s2">"</span><span class="k">${</span><span class="nv">home_dir</span><span class="k">}</span><span class="s2">/.ssh"</span> <span class="nt">-type</span> f <span class="se">\(</span> <span class="nt">-name</span> <span class="s2">"id_rsa"</span> <span class="nt">-o</span> <span class="nt">-name</span> <span class="s2">"id_dsa"</span> <span class="nt">-o</span> <span class="nt">-name</span> <span class="s2">"id_ecdsa"</span> <span class="nt">-o</span> <span class="nt">-name</span> <span class="s2">"id_ed25519"</span> <span class="se">\)</span> <span class="nt">-exec</span> <span class="nb">sudo chmod </span>600 <span class="o">{}</span> <span class="se">\;</span>
-        <span class="nb">sudo </span>find <span class="s2">"</span><span class="k">${</span><span class="nv">home_dir</span><span class="k">}</span><span class="s2">/.ssh"</span> <span class="nt">-type</span> f <span class="se">\(</span> <span class="nt">-name</span> <span class="s2">"*.pub"</span> <span class="se">\)</span> <span class="nt">-exec</span> <span class="nb">sudo chmod </span>644 <span class="o">{}</span> <span class="se">\;</span>
-        <span class="o">[</span> <span class="nt">-f</span> <span class="s2">"</span><span class="k">${</span><span class="nv">home_dir</span><span class="k">}</span><span class="s2">/.ssh/authorized_keys"</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="nb">sudo chmod </span>600 <span class="s2">"</span><span class="k">${</span><span class="nv">home_dir</span><span class="k">}</span><span class="s2">/.ssh/authorized_keys"</span>
-        <span class="o">[</span> <span class="nt">-f</span> <span class="s2">"</span><span class="k">${</span><span class="nv">home_dir</span><span class="k">}</span><span class="s2">/.ssh/known_hosts"</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="nb">sudo chmod </span>644 <span class="s2">"</span><span class="k">${</span><span class="nv">home_dir</span><span class="k">}</span><span class="s2">/.ssh/known_hosts"</span>
-        <span class="o">[</span> <span class="nt">-f</span> <span class="s2">"</span><span class="k">${</span><span class="nv">home_dir</span><span class="k">}</span><span class="s2">/.ssh/config"</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="nb">sudo chmod </span>600 <span class="s2">"</span><span class="k">${</span><span class="nv">home_dir</span><span class="k">}</span><span class="s2">/.ssh/config"</span>
-        <span class="nb">sudo </span>find <span class="s2">"</span><span class="k">${</span><span class="nv">home_dir</span><span class="k">}</span><span class="s2">/.ssh"</span> <span class="nt">-mindepth</span> 1 <span class="nt">-type</span> f <span class="se">\</span>
-            <span class="o">!</span> <span class="se">\(</span> <span class="nt">-name</span> <span class="s2">"id_rsa"</span> <span class="nt">-o</span> <span class="nt">-name</span> <span class="s2">"id_dsa"</span> <span class="nt">-o</span> <span class="nt">-name</span> <span class="s2">"id_ecdsa"</span> <span class="nt">-o</span> <span class="nt">-name</span> <span class="s2">"id_ed25519"</span> <span class="se">\</span>
-            <span class="nt">-o</span> <span class="nt">-name</span> <span class="s2">"*.pub"</span> <span class="nt">-o</span> <span class="nt">-name</span> <span class="s2">"authorized_keys"</span> <span class="nt">-o</span> <span class="nt">-name</span> <span class="s2">"known_hosts"</span> <span class="nt">-o</span> <span class="nt">-name</span> <span class="s2">"config"</span> <span class="se">\)</span> <span class="nt">-exec</span> <span class="nb">sudo chmod </span>600 <span class="o">{}</span> <span class="se">\;</span>
-        <span class="nb">sudo </span>find <span class="s2">"</span><span class="k">${</span><span class="nv">home_dir</span><span class="k">}</span><span class="s2">/.ssh"</span> <span class="nt">-mindepth</span> 1 <span class="nt">-type</span> d <span class="nt">-exec</span> <span class="nb">sudo chmod </span>700 <span class="o">{}</span> <span class="se">\;</span>
-        <span class="nb">echo</span> <span class="s2">"  Permissions for '</span><span class="k">${</span><span class="nv">home_dir</span><span class="k">}</span><span class="s2">/.ssh' secured."</span>
-    <span class="k">fi</span>
+    # For .ssh directory
+    if [ -d "${home_dir}/.ssh" ]; then
+        echo "  Enforcing secure permissions for '${home_dir}/.ssh'..."
+        sudo chown -R "${target_user}:${target_group}" "${home_dir}/.ssh" # Robustness
+        sudo chmod 700 "${home_dir}/.ssh"
+        sudo find "${home_dir}/.ssh" -type f \( -name "id_rsa" -o -name "id_dsa" -o -name "id_ecdsa" -o -name "id_ed25519" \) -exec sudo chmod 600 {} \;
+        sudo find "${home_dir}/.ssh" -type f \( -name "*.pub" \) -exec sudo chmod 644 {} \;
+        [ -f "${home_dir}/.ssh/authorized_keys" ] &amp;&amp; sudo chmod 600 "${home_dir}/.ssh/authorized_keys"
+        [ -f "${home_dir}/.ssh/known_hosts" ] &amp;&amp; sudo chmod 644 "${home_dir}/.ssh/known_hosts"
+        [ -f "${home_dir}/.ssh/config" ] &amp;&amp; sudo chmod 600 "${home_dir}/.ssh/config"
+        sudo find "${home_dir}/.ssh" -mindepth 1 -type f \
+            ! \( -name "id_rsa" -o -name "id_dsa" -o -name "id_ecdsa" -o -name "id_ed25519" \
+            -o -name "*.pub" -o -name "authorized_keys" -o -name "known_hosts" -o -name "config" \) -exec sudo chmod 600 {} \;
+        sudo find "${home_dir}/.ssh" -mindepth 1 -type d -exec sudo chmod 700 {} \;
+        echo "  Permissions for '${home_dir}/.ssh' secured."
+    fi
 
-    <span class="c"># For .gnupg directory</span>
-    <span class="k">if</span> <span class="o">[</span> <span class="nt">-d</span> <span class="s2">"</span><span class="k">${</span><span class="nv">home_dir</span><span class="k">}</span><span class="s2">/.gnupg"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then
-        </span><span class="nb">echo</span> <span class="s2">"  Enforcing secure permissions for '</span><span class="k">${</span><span class="nv">home_dir</span><span class="k">}</span><span class="s2">/.gnupg'..."</span>
-        <span class="nb">sudo chown</span> <span class="nt">-R</span> <span class="s2">"</span><span class="k">${</span><span class="nv">target_user</span><span class="k">}</span><span class="s2">:</span><span class="k">${</span><span class="nv">target_group</span><span class="k">}</span><span class="s2">"</span> <span class="s2">"</span><span class="k">${</span><span class="nv">home_dir</span><span class="k">}</span><span class="s2">/.gnupg"</span> <span class="c"># Robustness</span>
-        <span class="nb">sudo chmod </span>700 <span class="s2">"</span><span class="k">${</span><span class="nv">home_dir</span><span class="k">}</span><span class="s2">/.gnupg"</span>
-        <span class="nb">sudo </span>find <span class="s2">"</span><span class="k">${</span><span class="nv">home_dir</span><span class="k">}</span><span class="s2">/.gnupg"</span> <span class="nt">-type</span> f <span class="nt">-exec</span> <span class="nb">sudo chmod </span>600 <span class="o">{}</span> <span class="se">\;</span>
-        <span class="nb">sudo </span>find <span class="s2">"</span><span class="k">${</span><span class="nv">home_dir</span><span class="k">}</span><span class="s2">/.gnupg"</span> <span class="nt">-mindepth</span> 1 <span class="nt">-type</span> d <span class="nt">-exec</span> <span class="nb">sudo chmod </span>700 <span class="o">{}</span> <span class="se">\;</span>
-        <span class="nb">echo</span> <span class="s2">"  Permissions for '</span><span class="k">${</span><span class="nv">home_dir</span><span class="k">}</span><span class="s2">/.gnupg' secured."</span>
-    <span class="k">fi
-    </span><span class="nb">echo</span> <span class="s2">"Phase 3 complete."</span>
+    # For .gnupg directory
+    if [ -d "${home_dir}/.gnupg" ]; then
+        echo "  Enforcing secure permissions for '${home_dir}/.gnupg'..."
+        sudo chown -R "${target_user}:${target_group}" "${home_dir}/.gnupg" # Robustness
+        sudo chmod 700 "${home_dir}/.gnupg"
+        sudo find "${home_dir}/.gnupg" -type f -exec sudo chmod 600 {} \;
+        sudo find "${home_dir}/.gnupg" -mindepth 1 -type d -exec sudo chmod 700 {} \;
+        echo "  Permissions for '${home_dir}/.gnupg' secured."
+    fi
+    echo "Phase 3 complete."
 
-    <span class="nb">echo</span> <span class="s2">"-----------------------------------------------------------------------------"</span>
-    <span class="k">if</span> <span class="o">[[</span> <span class="s2">"</span><span class="nv">$overall_success</span><span class="s2">"</span> <span class="o">==</span> <span class="nb">true</span> <span class="o">]]</span><span class="p">;</span> <span class="k">then
-        </span><span class="nb">echo</span> <span class="s2">"Ownership and permission adjustment process completed successfully."</span>
-    <span class="k">else
-        </span><span class="nb">echo</span> <span class="s2">"Ownership and permission adjustment process completed with SOME ERRORS (see log above)."</span>
-    <span class="k">fi
-    </span><span class="nb">echo</span> <span class="s2">"IMPORTANT: Review permissions of sensitive files outside of .ssh and .gnupg."</span>
-    <span class="nb">echo</span> <span class="s2">"If they had overly permissive settings, those have been preserved under"</span>
-    <span class="nb">echo</span> <span class="s2">"'</span><span class="k">${</span><span class="nv">target_user</span><span class="k">}</span><span class="s2">' ownership. Adjust manually if needed."</span>
-    <span class="nb">echo</span> <span class="s2">"Verify that all applications function as expected."</span>
-    <span class="nb">echo</span> <span class="s2">"-----------------------------------------------------------------------------"</span>
+    echo "-----------------------------------------------------------------------------"
+    if [[ "$overall_success" == true ]]; then
+        echo "Ownership and permission adjustment process completed successfully."
+    else
+        echo "Ownership and permission adjustment process completed with SOME ERRORS (see log above)."
+    fi
+    echo "IMPORTANT: Review permissions of sensitive files outside of .ssh and .gnupg."
+    echo "If they had overly permissive settings, those have been preserved under"
+    echo "'${target_user}' ownership. Adjust manually if needed."
+    echo "Verify that all applications function as expected."
+    echo "-----------------------------------------------------------------------------"
 
-    <span class="k">if</span> <span class="o">[[</span> <span class="s2">"</span><span class="nv">$overall_success</span><span class="s2">"</span> <span class="o">==</span> <span class="nb">true</span> <span class="o">]]</span><span class="p">;</span> <span class="k">then
-        return </span>0
-    <span class="k">else
-        return </span>1
-    <span class="k">fi</span>
-<span class="o">}</span>
+    if [[ "$overall_success" == true ]]; then
+        return 0
+    else
+        return 1
+    fi
+}
 
-<span class="c"># Alias to call the enhanced function</span>
-<span class="nb">alias </span><span class="nv">fixmyhome</span><span class="o">=</span><span class="s1">'fix_ownership_preserve_permissions_final'</span>
-<span class="nb">.</span> <span class="s2">"</span><span class="nv">$HOME</span><span class="s2">/.cargo/env"</span>
-<span class="nb">source</span> ~/.bash_completion/alacritty
+# Alias to call the enhanced function
+alias fixmyhome='fix_ownership_preserve_permissions_final'
+. "$HOME/.cargo/env"
+source ~/.bash_completion/alacritty
 
-<span class="c"># restic backup function: resto /path/to/backup</span>
-resto<span class="o">()</span> <span class="o">{</span>
-    <span class="c"># --- Configuration ---</span>
-    <span class="nb">local </span><span class="nv">restic_cmd</span><span class="o">=</span><span class="s2">"restic_0.18"</span>
-    <span class="nb">local </span><span class="nv">repository_location</span><span class="o">=</span><span class="s2">"rclone:storj:rest-3588"</span>
-    <span class="nb">local </span><span class="nv">hardcoded_password</span><span class="o">=</span><span class="s2">"&lt;!-- placeholder --&gt;"</span>
+# restic backup function: resto /path/to/backup
+resto() {
+    # --- Configuration ---
+    local restic_cmd="restic_0.18"
+    local repository_location="rclone:storj:rest-3588"
+    local hardcoded_password="marioqBD0p&amp;" # &lt;&lt;&lt; YOUR HARDCODED PASSWORD (QUOTED)
 
-    <span class="c"># --- Argument Validation ---</span>
-    <span class="k">if</span> <span class="o">[</span> <span class="nt">-z</span> <span class="s2">"</span><span class="nv">$1</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then
-        </span><span class="nb">echo</span> <span class="s2">"Error: You must specify the path to back up."</span> <span class="o">&gt;</span>&amp;2
-        <span class="nb">echo</span> <span class="s2">"Usage: resto /path/to/your/data"</span> <span class="o">&gt;</span>&amp;2
-        <span class="k">return </span>1 <span class="c"># Return an error code</span>
-    <span class="k">fi</span>
+    # --- Argument Validation ---
+    if [ -z "$1" ]; then
+        echo "Error: You must specify the path to back up." &gt;&amp;2
+        echo "Usage: resto /path/to/your/data" &gt;&amp;2
+        return 1 # Return an error code
+    fi
 
-    <span class="c"># --- Variable Setup ---</span>
-    <span class="nb">local </span><span class="nv">backup_path</span><span class="o">=</span><span class="s2">"</span><span class="nv">$1</span><span class="s2">"</span>
-    <span class="nb">local </span>current_date_tag
-    <span class="nv">current_date_tag</span><span class="o">=</span><span class="si">$(</span><span class="nb">date</span> +%Y%m%d<span class="si">)</span> <span class="c"># Generates tag like YYYYMMDD (e.g., 20250516)</span>
+    # --- Variable Setup ---
+    local backup_path="$1"
+    local current_date_tag
+    current_date_tag=$(date +%Y%m%d) # Generates tag like YYYYMMDD (e.g., 20250516)
 
-    <span class="c"># --- User Feedback ---</span>
-    <span class="nb">echo</span> <span class="s2">"--------------------------------------------------"</span>
-    <span class="nb">echo</span> <span class="s2">"Attempting restic backup:"</span>
-    <span class="nb">echo</span> <span class="s2">"  Source:      </span><span class="k">${</span><span class="nv">backup_path</span><span class="k">}</span><span class="s2">"</span>
-    <span class="nb">echo</span> <span class="s2">"  Repository:  </span><span class="k">${</span><span class="nv">repository_location</span><span class="k">}</span><span class="s2">"</span>
-    <span class="nb">echo</span> <span class="s2">"  Tag:         </span><span class="k">${</span><span class="nv">current_date_tag</span><span class="k">}</span><span class="s2">"</span>
-    <span class="nb">echo</span> <span class="s2">"  Restic cmd:  </span><span class="k">${</span><span class="nv">restic_cmd</span><span class="k">}</span><span class="s2">"</span>
-    <span class="nb">echo</span> <span class="s2">"  Auth Method: Hardcoded password (WARNING: SERIOUS SECURITY RISK!)"</span> <span class="c"># Emphasize risk</span>
-    <span class="nb">echo</span> <span class="s2">"--------------------------------------------------"</span>
+    # --- User Feedback ---
+    echo "--------------------------------------------------"
+    echo "Attempting restic backup:"
+    echo "  Source:      ${backup_path}"
+    echo "  Repository:  ${repository_location}"
+    echo "  Tag:         ${current_date_tag}"
+    echo "  Restic cmd:  ${restic_cmd}"
+    echo "  Auth Method: Hardcoded password (WARNING: SERIOUS SECURITY RISK!)" # Emphasize risk
+    echo "--------------------------------------------------"
 
-    <span class="c"># --- Command Execution ---</span>
-    <span class="c"># The RESTIC_PASSWORD environment variable is set *only* for this specific command's environment.</span>
-    <span class="c"># It does not persist in the current shell session afterwards.</span>
-    <span class="c"># Quotes around "${hardcoded_password}" are crucial, especially since your password</span>
-    <span class="c"># contains '&amp;', a special shell metacharacter (used for backgrounding processes).</span>
-    <span class="c"># The backslashes (\) at the end of lines are for line continuation, allowing</span>
-    <span class="c"># a single command to be split across multiple lines for readability.</span>
-    <span class="nv">RESTIC_PASSWORD</span><span class="o">=</span><span class="s2">"</span><span class="k">${</span><span class="nv">hardcoded_password</span><span class="k">}</span><span class="s2">"</span> <span class="s2">"</span><span class="k">${</span><span class="nv">restic_cmd</span><span class="k">}</span><span class="s2">"</span> <span class="se">\</span>
-        <span class="nt">-r</span> <span class="s2">"</span><span class="k">${</span><span class="nv">repository_location</span><span class="k">}</span><span class="s2">"</span> <span class="se">\</span>
-        <span class="nt">-o</span> rclone.connections<span class="o">=</span>8 <span class="se">\</span>
-        backup <span class="s2">"</span><span class="k">${</span><span class="nv">backup_path</span><span class="k">}</span><span class="s2">"</span> <span class="se">\</span>
-        <span class="nt">--verbose</span> <span class="se">\</span>
-        <span class="nt">--pack-size</span><span class="o">=</span>60 <span class="se">\</span>
-        <span class="nt">--tag</span> <span class="s2">"</span><span class="k">${</span><span class="nv">current_date_tag</span><span class="k">}</span><span class="s2">"</span>
+    # --- Command Execution ---
+    # The RESTIC_PASSWORD environment variable is set *only* for this specific command's environment.
+    # It does not persist in the current shell session afterwards.
+    # Quotes around "${hardcoded_password}" are crucial, especially since your password
+    # contains '&amp;', a special shell metacharacter (used for backgrounding processes).
+    # The backslashes (\) at the end of lines are for line continuation, allowing
+    # a single command to be split across multiple lines for readability.
+    RESTIC_PASSWORD="${hardcoded_password}" "${restic_cmd}" \
+        -r "${repository_location}" \
+        -o rclone.connections=8 \
+        backup "${backup_path}" \
+        --verbose \
+        --pack-size=60 \
+        --tag "${current_date_tag}"
 
-    <span class="c"># --- Post-Execution Feedback ---</span>
-    <span class="nb">local </span><span class="nv">exit_status</span><span class="o">=</span><span class="nv">$?</span>
-    <span class="k">if</span> <span class="o">[</span> <span class="k">${</span><span class="nv">exit_status</span><span class="k">}</span> <span class="nt">-eq</span> 0 <span class="o">]</span><span class="p">;</span> <span class="k">then
-        </span><span class="nb">echo</span> <span class="s2">"--------------------------------------------------"</span>
-        <span class="nb">echo</span> <span class="s2">"SUCCESS: Backup completed for: </span><span class="k">${</span><span class="nv">backup_path</span><span class="k">}</span><span class="s2">"</span>
-        <span class="nb">echo</span> <span class="s2">"--------------------------------------------------"</span>
-    <span class="k">else
-        </span><span class="nb">echo</span> <span class="s2">"--------------------------------------------------"</span>
-        <span class="nb">echo</span> <span class="s2">"ERROR: Backup FAILED for: </span><span class="k">${</span><span class="nv">backup_path</span><span class="k">}</span><span class="s2"> (Exit status: </span><span class="k">${</span><span class="nv">exit_status</span><span class="k">}</span><span class="s2">)"</span> <span class="o">&gt;</span>&amp;2
-        <span class="nb">echo</span> <span class="s2">"  (Verify repository settings, password, rclone configuration, and target path.)"</span>
-        <span class="nb">echo</span> <span class="s2">"--------------------------------------------------"</span>
-    <span class="k">fi
-    return</span> <span class="k">${</span><span class="nv">exit_status</span><span class="k">}</span>
-<span class="o">}</span>
+    # --- Post-Execution Feedback ---
+    local exit_status=$?
+    if [ ${exit_status} -eq 0 ]; then
+        echo "--------------------------------------------------"
+        echo "SUCCESS: Backup completed for: ${backup_path}"
+        echo "--------------------------------------------------"
+    else
+        echo "--------------------------------------------------"
+        echo "ERROR: Backup FAILED for: ${backup_path} (Exit status: ${exit_status})" &gt;&amp;2
+        echo "  (Verify repository settings, password, rclone configuration, and target path.)"
+        echo "--------------------------------------------------"
+    fi
+    return ${exit_status}
+}
 
-<span class="c">#!/bin/bash</span>
-<span class="c"># fpsync wrapper 'cesto' for Debian Bullseye</span>
-<span class="c"># Designed to maximize fpsync's parallel transfer capabilities by ensuring</span>
-<span class="c"># fpsync always operates on a directory whose contents can be partitioned by fpart.</span>
-<span class="c">#</span>
-<span class="c"># - If a single directory is provided as source, it's passed directly to fpsync.</span>
-<span class="c"># - If multiple files/directories or a single file are provided as sources,</span>
-<span class="c">#   they are copied into a temporary aggregation directory. This aggregation</span>
-<span class="c">#   directory is then passed to fpsync, allowing fpart to see all individual</span>
-<span class="c">#   items and partition them effectively for parallel rsync workers.</span>
+#!/bin/bash
+# fpsync wrapper 'cesto' for Debian Bullseye
+# Designed to maximize fpsync's parallel transfer capabilities by ensuring
+# fpsync always operates on a directory whose contents can be partitioned by fpart.
+#
+# - If a single directory is provided as source, it's passed directly to fpsync.
+# - If multiple files/directories or a single file are provided as sources,
+#   they are copied into a temporary aggregation directory. This aggregation
+#   directory is then passed to fpsync, allowing fpart to see all individual
+#   items and partition them effectively for parallel rsync workers.
 
-cesto<span class="o">()</span> <span class="o">{</span>
-  <span class="c"># --- Argument Validation ---</span>
-  <span class="c"># Ensures at least two arguments: one or more sources, and one destination.</span>
-  <span class="k">if</span> <span class="o">[</span> <span class="s2">"$#"</span> <span class="nt">-lt</span> 2 <span class="o">]</span><span class="p">;</span> <span class="k">then
-    </span><span class="nb">echo</span> <span class="s2">"Error: At least one source item and a destination directory are required."</span> <span class="o">&gt;</span>&amp;2
-    <span class="nb">echo</span> <span class="s2">"Usage: cesto &lt;source_item_1&gt; [source_item_2...] &lt;destination_directory/&gt;"</span> <span class="o">&gt;</span>&amp;2
-    <span class="nb">echo</span> <span class="s2">"   or: cesto &lt;single_source_directory&gt; &lt;destination_directory&gt;"</span> <span class="o">&gt;</span>&amp;2
-    <span class="nb">echo</span> <span class="s2">"Example (multiple files for aggregation): cesto report.pdf image.png data_files/*.csv ./backup/aggregated_reports_images_data"</span> <span class="o">&gt;</span>&amp;2
-    <span class="nb">echo</span> <span class="s2">"Example (single large directory for direct sync): cesto ./my_entire_dataset/ /mnt/archive/dataset_backup/"</span> <span class="o">&gt;</span>&amp;2
-    <span class="k">return </span>1
-  <span class="k">fi</span>
+cesto() {
+  # --- Argument Validation ---
+  # Ensures at least two arguments: one or more sources, and one destination.
+  if [ "$#" -lt 2 ]; then
+    echo "Error: At least one source item and a destination directory are required." &gt;&amp;2
+    echo "Usage: cesto &lt;source_item_1&gt; [source_item_2...] &lt;destination_directory/&gt;" &gt;&amp;2
+    echo "   or: cesto &lt;single_source_directory&gt; &lt;destination_directory&gt;" &gt;&amp;2
+    echo "Example (multiple files for aggregation): cesto report.pdf image.png data_files/*.csv ./backup/aggregated_reports_images_data" &gt;&amp;2
+    echo "Example (single large directory for direct sync): cesto ./my_entire_dataset/ /mnt/archive/dataset_backup/" &gt;&amp;2
+    return 1
+  fi
 
-  <span class="c"># --- Variable Initialization ---</span>
-  <span class="nb">local </span><span class="nv">user_dest_dir</span><span class="o">=</span><span class="s2">"</span><span class="k">${</span><span class="p">!#</span><span class="k">}</span><span class="s2">"</span>          <span class="c"># Last argument is the destination directory path provided by the user.</span>
-  <span class="nb">local </span><span class="nv">sources_array</span><span class="o">=(</span><span class="s2">"</span><span class="k">${</span><span class="p">@</span>:1:<span class="nv">$#-1</span><span class="k">}</span><span class="s2">"</span><span class="o">)</span>  <span class="c"># All arguments except the last are considered source items.</span>
-  <span class="nb">local </span><span class="nv">num_sources</span><span class="o">=</span><span class="s2">"</span><span class="k">${#</span><span class="nv">sources_array</span><span class="p">[@]</span><span class="k">}</span><span class="s2">"</span> <span class="c"># Count of source items.</span>
+  # --- Variable Initialization ---
+  local user_dest_dir="${!#}"          # Last argument is the destination directory path provided by the user.
+  local sources_array=("${@:1:$#-1}")  # All arguments except the last are considered source items.
+  local num_sources="${#sources_array[@]}" # Count of source items.
 
-  <span class="nb">local </span><span class="nv">num_workers</span><span class="o">=</span>4                 <span class="c"># Number of parallel fpsync workers (as per original alias request).</span>
-  <span class="nb">local </span><span class="nv">fpsync_opts</span><span class="o">=</span><span class="s2">"-v"</span>              <span class="c"># Default options for fpsync (verbose).</span>
+  local num_workers=4                 # Number of parallel fpsync workers (as per original alias request).
+  local fpsync_opts="-v"              # Default options for fpsync (verbose).
 
-  <span class="c"># Path for the temporary aggregation directory, if needed. Local to this function call.</span>
-  <span class="nb">local </span><span class="nv">tmp_aggregation_dir</span><span class="o">=</span><span class="s2">""</span>
+  # Path for the temporary aggregation directory, if needed. Local to this function call.
+  local tmp_aggregation_dir=""
 
-  <span class="c"># Setup a 'trap' for robust cleanup of the temporary aggregation directory.</span>
-  <span class="c"># This command executes when the function exits (EXIT signal) or on common interrupt signals.</span>
-  <span class="c"># The command string is in single quotes, so '$tmp_aggregation_dir' is evaluated</span>
-  <span class="c"># *when the trap is triggered*, using its value at that moment.</span>
-  <span class="c"># 'trap - ...' at the end of the trap command aims to make it a self-disabling one-shot trap.</span>
-  <span class="nb">trap</span> <span class="s1">'if [ -n "$tmp_aggregation_dir" ] &amp;&amp; [ -d "$tmp_aggregation_dir" ]; then echo "INFO: (Trap) Cleaning up temporary aggregation directory: $tmp_aggregation_dir"; rm -rf "$tmp_aggregation_dir"; fi; trap - EXIT HUP INT QUIT TERM'</span> EXIT HUP INT QUIT TERM
+  # Setup a 'trap' for robust cleanup of the temporary aggregation directory.
+  # This command executes when the function exits (EXIT signal) or on common interrupt signals.
+  # The command string is in single quotes, so '$tmp_aggregation_dir' is evaluated
+  # *when the trap is triggered*, using its value at that moment.
+  # 'trap - ...' at the end of the trap command aims to make it a self-disabling one-shot trap.
+  trap 'if [ -n "$tmp_aggregation_dir" ] &amp;&amp; [ -d "$tmp_aggregation_dir" ]; then echo "INFO: (Trap) Cleaning up temporary aggregation directory: $tmp_aggregation_dir"; rm -rf "$tmp_aggregation_dir"; fi; trap - EXIT HUP INT QUIT TERM' EXIT HUP INT QUIT TERM
 
-  <span class="c"># --- Destination Path Preparation ---</span>
-  <span class="c"># This section ensures the destination path is an absolute directory path with a trailing slash.</span>
-  <span class="nb">echo</span> <span class="s2">"INFO: Preparing destination directory: </span><span class="se">\"</span><span class="nv">$user_dest_dir</span><span class="se">\"</span><span class="s2">"</span>
-  <span class="c"># 'mkdir -p' creates the directory including any necessary parent directories.</span>
-  <span class="c"># It doesn't error if the directory already exists, making it idempotent.</span>
-  <span class="k">if</span> <span class="o">!</span> <span class="nb">mkdir</span> <span class="nt">-p</span> <span class="s2">"</span><span class="nv">$user_dest_dir</span><span class="s2">"</span><span class="p">;</span> <span class="k">then
-    </span><span class="nb">echo</span> <span class="s2">"Error: Failed to create or access directory structure for destination </span><span class="se">\"</span><span class="nv">$user_dest_dir</span><span class="se">\"</span><span class="s2">."</span> <span class="o">&gt;</span>&amp;2
-    <span class="k">return </span>1
-  <span class="k">fi
-  </span><span class="nb">local </span>abs_dest_dir <span class="c"># Will hold the canonical, absolute path to the destination.</span>
-  <span class="c"># 'readlink -f' resolves all symlinks, '..' and '.', making the path absolute.</span>
-  <span class="c"># This requires the path (or its components up to the symlink target) to exist.</span>
-  <span class="nv">abs_dest_dir</span><span class="o">=</span><span class="si">$(</span><span class="nb">readlink</span> <span class="nt">-f</span> <span class="s2">"</span><span class="nv">$user_dest_dir</span><span class="s2">"</span><span class="si">)</span>
-  <span class="k">if</span> <span class="o">[</span> <span class="nt">-z</span> <span class="s2">"</span><span class="nv">$abs_dest_dir</span><span class="s2">"</span> <span class="o">]</span> <span class="o">||</span> <span class="o">[</span> <span class="o">!</span> <span class="nt">-d</span> <span class="s2">"</span><span class="nv">$abs_dest_dir</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then
-      </span><span class="nb">echo</span> <span class="s2">"Error: Could not resolve destination </span><span class="se">\"</span><span class="nv">$user_dest_dir</span><span class="se">\"</span><span class="s2"> to an absolute directory path, or it's not a directory after 'mkdir -p'."</span> <span class="o">&gt;</span>&amp;2
-      <span class="k">return </span>1
-  <span class="k">fi</span>
-  <span class="c"># Ensures a single trailing slash, signifying to fpsync/rsync to sync *into* this directory.</span>
-  <span class="nb">local </span><span class="nv">final_dest_dir_for_fpsync</span><span class="o">=</span><span class="s2">"</span><span class="k">${</span><span class="nv">abs_dest_dir</span><span class="p">%/</span><span class="k">}</span><span class="s2">/"</span>
+  # --- Destination Path Preparation ---
+  # This section ensures the destination path is an absolute directory path with a trailing slash.
+  echo "INFO: Preparing destination directory: \"$user_dest_dir\""
+  # 'mkdir -p' creates the directory including any necessary parent directories.
+  # It doesn't error if the directory already exists, making it idempotent.
+  if ! mkdir -p "$user_dest_dir"; then
+    echo "Error: Failed to create or access directory structure for destination \"$user_dest_dir\"." &gt;&amp;2
+    return 1
+  fi
+  local abs_dest_dir # Will hold the canonical, absolute path to the destination.
+  # 'readlink -f' resolves all symlinks, '..' and '.', making the path absolute.
+  # This requires the path (or its components up to the symlink target) to exist.
+  abs_dest_dir=$(readlink -f "$user_dest_dir")
+  if [ -z "$abs_dest_dir" ] || [ ! -d "$abs_dest_dir" ]; then
+      echo "Error: Could not resolve destination \"$user_dest_dir\" to an absolute directory path, or it's not a directory after 'mkdir -p'." &gt;&amp;2
+      return 1
+  fi
+  # Ensures a single trailing slash, signifying to fpsync/rsync to sync *into* this directory.
+  local final_dest_dir_for_fpsync="${abs_dest_dir%/}/"
 
 
-  <span class="c"># --- Source Path Handling ---</span>
-  <span class="c"># This variable will hold the final, absolute source directory path (with trailing slash) for fpsync.</span>
-  <span class="nb">local </span>path_to_sync_via_fpsync
+  # --- Source Path Handling ---
+  # This variable will hold the final, absolute source directory path (with trailing slash) for fpsync.
+  local path_to_sync_via_fpsync
 
-  <span class="c"># Case 1: A single source item is provided by the user.</span>
-  <span class="c"># We check if this single item is a directory. If so, it's used directly.</span>
-  <span class="c"># This is the most straightforward and often most performant case for fpsync.</span>
-  <span class="k">if</span> <span class="o">[</span> <span class="s2">"</span><span class="nv">$num_sources</span><span class="s2">"</span> <span class="nt">-eq</span> 1 <span class="o">]</span><span class="p">;</span> <span class="k">then
-    </span><span class="nb">local </span><span class="nv">single_src_item_orig</span><span class="o">=</span><span class="s2">"</span><span class="k">${</span><span class="nv">sources_array</span><span class="p">[0]</span><span class="k">}</span><span class="s2">"</span>
-    <span class="nb">local </span>single_src_item_abs <span class="c"># Will hold the absolute path of the single source.</span>
-    <span class="nv">single_src_item_abs</span><span class="o">=</span><span class="si">$(</span><span class="nb">readlink</span> <span class="nt">-f</span> <span class="s2">"</span><span class="nv">$single_src_item_orig</span><span class="s2">"</span><span class="si">)</span>
+  # Case 1: A single source item is provided by the user.
+  # We check if this single item is a directory. If so, it's used directly.
+  # This is the most straightforward and often most performant case for fpsync.
+  if [ "$num_sources" -eq 1 ]; then
+    local single_src_item_orig="${sources_array[0]}"
+    local single_src_item_abs # Will hold the absolute path of the single source.
+    single_src_item_abs=$(readlink -f "$single_src_item_orig")
 
-    <span class="k">if</span> <span class="o">[</span> <span class="nt">-z</span> <span class="s2">"</span><span class="nv">$single_src_item_abs</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then
-      </span><span class="nb">echo</span> <span class="s2">"Error: Source </span><span class="se">\"</span><span class="nv">$single_src_item_orig</span><span class="se">\"</span><span class="s2"> could not be resolved to an absolute path."</span> <span class="o">&gt;</span>&amp;2
-      <span class="k">return </span>1
-    <span class="k">fi
+    if [ -z "$single_src_item_abs" ]; then
+      echo "Error: Source \"$single_src_item_orig\" could not be resolved to an absolute path." &gt;&amp;2
+      return 1
+    fi
 
-    if</span> <span class="o">[</span> <span class="nt">-d</span> <span class="s2">"</span><span class="nv">$single_src_item_abs</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then
-      </span><span class="nb">echo</span> <span class="s2">"INFO: Mode: Single source directory detected (</span><span class="se">\"</span><span class="k">${</span><span class="nv">single_src_item_abs</span><span class="k">}</span><span class="se">\"</span><span class="s2">). Using direct fpsync for maximum parallelism of its contents."</span>
-      <span class="nv">path_to_sync_via_fpsync</span><span class="o">=</span><span class="s2">"</span><span class="k">${</span><span class="nv">single_src_item_abs</span><span class="p">%/</span><span class="k">}</span><span class="s2">/"</span> <span class="c"># Ensure trailing slash.</span>
-    <span class="c"># If the single source item is not a directory (e.g., it's a file),</span>
-    <span class="c"># 'path_to_sync_via_fpsync' remains unset. The script will then proceed to the</span>
-    <span class="c"># aggregation logic (Case 2) to handle this single file.</span>
-    <span class="k">fi
-  fi</span>
+    if [ -d "$single_src_item_abs" ]; then
+      echo "INFO: Mode: Single source directory detected (\"${single_src_item_abs}\"). Using direct fpsync for maximum parallelism of its contents."
+      path_to_sync_via_fpsync="${single_src_item_abs%/}/" # Ensure trailing slash.
+    # If the single source item is not a directory (e.g., it's a file),
+    # 'path_to_sync_via_fpsync' remains unset. The script will then proceed to the
+    # aggregation logic (Case 2) to handle this single file.
+    fi
+  fi
 
-  <span class="c"># Case 2: Multiple source items were provided, OR it was a single source item that was not a directory.</span>
-  <span class="c"># (This is triggered if 'path_to_sync_via_fpsync' was not set in Case 1).</span>
-  <span class="c"># In this scenario, all specified source items are copied into a temporary aggregation directory.</span>
-  <span class="c"># This aggregation directory then becomes the source for fpsync.</span>
-  <span class="k">if</span> <span class="o">[</span> <span class="nt">-z</span> <span class="s2">"</span><span class="nv">$path_to_sync_via_fpsync</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then
-    </span><span class="nb">echo</span> <span class="s2">"INFO: Mode: Multiple sources or single file source detected. Aggregating into a temporary directory to enable optimal fpsync parallelism."</span>
+  # Case 2: Multiple source items were provided, OR it was a single source item that was not a directory.
+  # (This is triggered if 'path_to_sync_via_fpsync' was not set in Case 1).
+  # In this scenario, all specified source items are copied into a temporary aggregation directory.
+  # This aggregation directory then becomes the source for fpsync.
+  if [ -z "$path_to_sync_via_fpsync" ]; then
+    echo "INFO: Mode: Multiple sources or single file source detected. Aggregating into a temporary directory to enable optimal fpsync parallelism."
     
-    <span class="c"># Create a unique temporary directory.</span>
-    <span class="c"># Uses $TMPDIR if set (standard practice), otherwise defaults to /tmp.</span>
-    <span class="c"># The XXXXXX template ensures mktemp generates a unique, secure name.</span>
-    <span class="c"># Note: This temporary directory may consume significant disk space if source items are large.</span>
-    <span class="nv">tmp_aggregation_dir</span><span class="o">=</span><span class="si">$(</span><span class="nb">mktemp</span> <span class="nt">-d</span> <span class="s2">"</span><span class="k">${</span><span class="nv">TMPDIR</span><span class="k">:-</span><span class="p">/tmp</span><span class="k">}</span><span class="s2">/cesto_aggregate_src.XXXXXXXXXX"</span><span class="si">)</span>
-    <span class="c"># Check if mktemp was successful and created a directory.</span>
-    <span class="k">if</span> <span class="o">[</span> <span class="nv">$?</span> <span class="nt">-ne</span> 0 <span class="o">]</span> <span class="o">||</span> <span class="o">[</span> <span class="nt">-z</span> <span class="s2">"</span><span class="nv">$tmp_aggregation_dir</span><span class="s2">"</span> <span class="o">]</span> <span class="o">||</span> <span class="o">[</span> <span class="o">!</span> <span class="nt">-d</span> <span class="s2">"</span><span class="nv">$tmp_aggregation_dir</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then
-      </span><span class="nb">echo</span> <span class="s2">"Error: Failed to create temporary aggregation directory using mktemp."</span> <span class="o">&gt;</span>&amp;2
-      <span class="nv">tmp_aggregation_dir</span><span class="o">=</span><span class="s2">""</span> <span class="c"># Ensure var is empty for the trap's conditional check.</span>
-      <span class="k">return </span>1
-    <span class="k">fi</span>
-    <span class="c"># The trap (set earlier) will now be responsible for cleaning up this specific '$tmp_aggregation_dir' path.</span>
+    # Create a unique temporary directory.
+    # Uses $TMPDIR if set (standard practice), otherwise defaults to /tmp.
+    # The XXXXXX template ensures mktemp generates a unique, secure name.
+    # Note: This temporary directory may consume significant disk space if source items are large.
+    tmp_aggregation_dir=$(mktemp -d "/mnt/mSATA/tmp_cesto/cesto_aggregate_src.XXXXXXXXXX")
+    # Check if mktemp was successful and created a directory.
+    if [ $? -ne 0 ] || [ -z "$tmp_aggregation_dir" ] || [ ! -d "$tmp_aggregation_dir" ]; then
+      echo "Error: Failed to create temporary aggregation directory using mktemp." &gt;&amp;2
+      tmp_aggregation_dir="" # Ensure var is empty for the trap's conditional check.
+      return 1
+    fi
+    # The trap (set earlier) will now be responsible for cleaning up this specific '$tmp_aggregation_dir' path.
 
-    <span class="nb">local </span><span class="nv">item_copied_successfully</span><span class="o">=</span>0 <span class="c"># Flag to track if any items were actually copied.</span>
-    <span class="nb">echo</span> <span class="s2">"INFO: Populating temporary aggregation directory: </span><span class="k">${</span><span class="nv">tmp_aggregation_dir</span><span class="k">}</span><span class="s2">"</span>
-    <span class="k">for </span>src_item_orig <span class="k">in</span> <span class="s2">"</span><span class="k">${</span><span class="nv">sources_array</span><span class="p">[@]</span><span class="k">}</span><span class="s2">"</span><span class="p">;</span> <span class="k">do
-      </span><span class="nb">local </span>src_item_abs <span class="c"># Absolute path of the current source item.</span>
-      <span class="nv">src_item_abs</span><span class="o">=</span><span class="si">$(</span><span class="nb">readlink</span> <span class="nt">-f</span> <span class="s2">"</span><span class="nv">$src_item_orig</span><span class="s2">"</span><span class="si">)</span>
+    local item_copied_successfully=0 # Flag to track if any items were actually copied.
+    echo "INFO: Populating temporary aggregation directory: ${tmp_aggregation_dir}"
+    for src_item_orig in "${sources_array[@]}"; do
+      local src_item_abs # Absolute path of the current source item.
+      src_item_abs=$(readlink -f "$src_item_orig")
 
-      <span class="k">if</span> <span class="o">[</span> <span class="nt">-z</span> <span class="s2">"</span><span class="nv">$src_item_abs</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then
-        </span><span class="nb">echo</span> <span class="s2">"Warning: Could not resolve source item </span><span class="se">\"</span><span class="nv">$src_item_orig</span><span class="se">\"</span><span class="s2"> to an absolute path. Skipping."</span> <span class="o">&gt;</span>&amp;2
-        <span class="k">continue
+      if [ -z "$src_item_abs" ]; then
+        echo "Warning: Could not resolve source item \"$src_item_orig\" to an absolute path. Skipping." &gt;&amp;2
+        continue
       fi
-      if</span> <span class="o">[</span> <span class="o">!</span> <span class="nt">-e</span> <span class="s2">"</span><span class="nv">$src_item_abs</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then</span> <span class="c"># Check if the resolved path actually exists.</span>
-        <span class="nb">echo</span> <span class="s2">"Warning: Source item </span><span class="se">\"</span><span class="nv">$src_item_orig</span><span class="se">\"</span><span class="s2"> (resolved to </span><span class="se">\"</span><span class="nv">$src_item_abs</span><span class="se">\"</span><span class="s2">) does not exist. Skipping."</span> <span class="o">&gt;</span>&amp;2
-        <span class="k">continue
-      fi</span>
+      if [ ! -e "$src_item_abs" ]; then # Check if the resolved path actually exists.
+        echo "Warning: Source item \"$src_item_orig\" (resolved to \"$src_item_abs\") does not exist. Skipping." &gt;&amp;2
+        continue
+      fi
 
-      <span class="c"># Use 'cp -aL' to copy items into the aggregation directory:</span>
-      <span class="c">#   -a (archive mode): Equivalent to -dR --preserve=all.</span>
-      <span class="c">#     -d: same as --no-dereference --preserve=links (preserves symlinks as symlinks).</span>
-      <span class="c">#     -R: copy directories recursively.</span>
-      <span class="c">#     --preserve=all: preserves mode, ownership, timestamps, links, context, xattr.</span>
-      <span class="c">#   -L (dereference): When copying, if a source argument is a symbolic link,</span>
-      <span class="c">#     copy the file or directory it points to, rather than the link itself.</span>
-      <span class="c"># This ensures the actual data/directory structures are placed into the aggregation directory.</span>
-      <span class="c"># If 'src_item_abs' is a directory, it will be copied recursively into 'tmp_aggregation_dir'.</span>
-      <span class="nb">echo</span> <span class="s2">"      Copying </span><span class="se">\"</span><span class="nv">$src_item_orig</span><span class="se">\"</span><span class="s2"> (as </span><span class="se">\"</span><span class="nv">$src_item_abs</span><span class="se">\"</span><span class="s2">) into temporary aggregation directory..."</span>
-      <span class="k">if </span><span class="nb">cp</span> <span class="nt">-aL</span> <span class="s2">"</span><span class="nv">$src_item_abs</span><span class="s2">"</span> <span class="s2">"</span><span class="nv">$tmp_aggregation_dir</span><span class="s2">/"</span><span class="p">;</span> <span class="k">then
-        </span><span class="nv">item_copied_successfully</span><span class="o">=</span>1
-      <span class="k">else
-        </span><span class="nb">echo</span> <span class="s2">"Warning: Failed to copy </span><span class="se">\"</span><span class="nv">$src_item_orig</span><span class="se">\"</span><span class="s2"> (resolved to </span><span class="se">\"</span><span class="nv">$src_item_abs</span><span class="se">\"</span><span class="s2">) to temporary aggregation directory. Skipping."</span> <span class="o">&gt;</span>&amp;2
-      <span class="k">fi
+      # Use 'cp -aL' to copy items into the aggregation directory:
+      #   -a (archive mode): Equivalent to -dR --preserve=all.
+      #     -d: same as --no-dereference --preserve=links (preserves symlinks as symlinks).
+      #     -R: copy directories recursively.
+      #     --preserve=all: preserves mode, ownership, timestamps, links, context, xattr.
+      #   -L (dereference): When copying, if a source argument is a symbolic link,
+      #     copy the file or directory it points to, rather than the link itself.
+      # This ensures the actual data/directory structures are placed into the aggregation directory.
+      # If 'src_item_abs' is a directory, it will be copied recursively into 'tmp_aggregation_dir'.
+      echo "      Copying \"$src_item_orig\" (as \"$src_item_abs\") into temporary aggregation directory..."
+      if cp -aL "$src_item_abs" "$tmp_aggregation_dir/"; then
+        item_copied_successfully=1
+      else
+        echo "Warning: Failed to copy \"$src_item_orig\" (resolved to \"$src_item_abs\") to temporary aggregation directory. Skipping." &gt;&amp;2
+      fi
     done
 
-    if</span> <span class="o">[</span> <span class="s2">"</span><span class="nv">$item_copied_successfully</span><span class="s2">"</span> <span class="nt">-eq</span> 0 <span class="o">]</span><span class="p">;</span> <span class="k">then
-      </span><span class="nb">echo</span> <span class="s2">"Error: No source items were successfully copied to the temporary aggregation directory."</span> <span class="o">&gt;</span>&amp;2
-      <span class="c"># The EXIT trap will handle cleaning up the (empty or partially filled) tmp_aggregation_dir.</span>
-      <span class="k">return </span>1
-    <span class="k">fi</span>
-    <span class="c"># The source for fpsync will be this populated temporary aggregation directory.</span>
-    <span class="c"># A trailing slash is crucial for fpsync to synchronize the *contents* of this directory.</span>
-    <span class="nv">path_to_sync_via_fpsync</span><span class="o">=</span><span class="s2">"</span><span class="k">${</span><span class="nv">tmp_aggregation_dir</span><span class="p">%/</span><span class="k">}</span><span class="s2">/"</span>
-  <span class="k">fi</span>
+    if [ "$item_copied_successfully" -eq 0 ]; then
+      echo "Error: No source items were successfully copied to the temporary aggregation directory." &gt;&amp;2
+      # The EXIT trap will handle cleaning up the (empty or partially filled) tmp_aggregation_dir.
+      return 1
+    fi
+    # The source for fpsync will be this populated temporary aggregation directory.
+    # A trailing slash is crucial for fpsync to synchronize the *contents* of this directory.
+    path_to_sync_via_fpsync="${tmp_aggregation_dir%/}/"
+  fi
 
-  <span class="c"># --- Execution ---</span>
-  <span class="nb">echo</span> <span class="s2">"INFO: Running fpsync with source </span><span class="se">\"</span><span class="k">${</span><span class="nv">path_to_sync_via_fpsync</span><span class="k">}</span><span class="se">\"</span><span class="s2"> and destination </span><span class="se">\"</span><span class="k">${</span><span class="nv">final_dest_dir_for_fpsync</span><span class="k">}</span><span class="se">\"</span><span class="s2">"</span>
-  <span class="c"># fpsync will now operate on 'path_to_sync_via_fpsync'.</span>
-  <span class="c"># If this is a user's single source directory, fpsync processes it directly.</span>
-  <span class="c"># If this is the temporary aggregation directory, fpsync processes all the items copied into it.</span>
-  <span class="c"># In both scenarios, fpart (within fpsync) can see a directory structure containing all</span>
-  <span class="c"># individual files and sub-directories, allowing it to partition the workload effectively</span>
-  <span class="c"># for the parallel rsync workers, thus maximizing parallelism.</span>
-  <span class="c"># rsync (used by fpsync) can also provide benefits like delta-transfer if files are being updated.</span>
-  fpsync <span class="nt">-n</span> <span class="s2">"</span><span class="k">${</span><span class="nv">num_workers</span><span class="k">}</span><span class="s2">"</span> <span class="k">${</span><span class="nv">fpsync_opts</span><span class="k">}</span> <span class="s2">"</span><span class="k">${</span><span class="nv">path_to_sync_via_fpsync</span><span class="k">}</span><span class="s2">"</span> <span class="s2">"</span><span class="k">${</span><span class="nv">final_dest_dir_for_fpsync</span><span class="k">}</span><span class="s2">"</span>
+  # --- Execution ---
+  echo "INFO: Running fpsync with source \"${path_to_sync_via_fpsync}\" and destination \"${final_dest_dir_for_fpsync}\""
+  # fpsync will now operate on 'path_to_sync_via_fpsync'.
+  # If this is a user's single source directory, fpsync processes it directly.
+  # If this is the temporary aggregation directory, fpsync processes all the items copied into it.
+  # In both scenarios, fpart (within fpsync) can see a directory structure containing all
+  # individual files and sub-directories, allowing it to partition the workload effectively
+  # for the parallel rsync workers, thus maximizing parallelism.
+  # rsync (used by fpsync) can also provide benefits like delta-transfer if files are being updated.
+  fpsync -n "${num_workers}" ${fpsync_opts} "${path_to_sync_via_fpsync}" "${final_dest_dir_for_fpsync}"
 
-  <span class="nb">local </span><span class="nv">fpsync_status</span><span class="o">=</span><span class="nv">$?</span> <span class="c"># Capture the exit status of fpsync for reliable error checking.</span>
+  local fpsync_status=$? # Capture the exit status of fpsync for reliable error checking.
 
-  <span class="k">if</span> <span class="o">[</span> <span class="k">${</span><span class="nv">fpsync_status</span><span class="k">}</span> <span class="nt">-ne</span> 0 <span class="o">]</span><span class="p">;</span> <span class="k">then
-    </span><span class="nb">echo</span> <span class="s2">"Warning: fpsync operation completed with errors (status: </span><span class="k">${</span><span class="nv">fpsync_status</span><span class="k">}</span><span class="s2">)."</span> <span class="o">&gt;</span>&amp;2
-  <span class="k">else
-    </span><span class="nb">echo</span> <span class="s2">"INFO: fpsync operation completed successfully."</span>
-  <span class="k">fi</span>
+  if [ ${fpsync_status} -ne 0 ]; then
+    echo "Warning: fpsync operation completed with errors (status: ${fpsync_status})." &gt;&amp;2
+  else
+    echo "INFO: fpsync operation completed successfully."
+  fi
   
-  <span class="c"># The EXIT trap (if '$tmp_aggregation_dir' was set and points to a created directory)</span>
-  <span class="c"># will automatically clean up the source-side temporary aggregation directory.</span>
-  <span class="c"># The function returns fpsync's exit status, allowing the caller (e.g., another script)</span>
-  <span class="c"># to check for success or failure of the cesto command.</span>
-  <span class="k">return</span> <span class="k">${</span><span class="nv">fpsync_status</span><span class="k">}</span>
-<span class="o">}</span>
+  # The EXIT trap (if '$tmp_aggregation_dir' was set and points to a created directory)
+  # will automatically clean up the source-side temporary aggregation directory.
+  # The function returns fpsync's exit status, allowing the caller (e.g., another script)
+  # to check for success or failure of the cesto command.
+  return ${fpsync_status}
+}
+
+alias hands='/opt/chromium.org/thorium/thorium-browser --profile-directory=Default --app-id=aafcjomacmnbaahoofemlheilcimkppb &amp; exit'
+alias drive='/opt/chromium.org/thorium/thorium-browser --profile-directory=Default --app-id=aghbiahbpaijignceidepookljebhfak &amp; exit'
+alias gemini='/opt/chromium.org/thorium/thorium-browser --profile-directory=Default --app-id=caidcmannjgahlnbpmidmiecjcoiiigg &amp; exit'
+alias openai='/opt/chromium.org/thorium/thorium-browser --profile-directory=Default --app-id=cfbmnkmmjhboeflpgnckjneljkhagell &amp; exit'
+alias ide='/opt/chromium.org/thorium/thorium-browser --profile-directory=Default --app-id=ehjakkgkdlikfiplhaghbilnpdlmfgbo &amp; exit'
+alias gingko='/opt/chromium.org/thorium/thorium-browser --profile-directory=Default --app-id=glpafmialolpdohgeinpjffpbnjjfhhc &amp; exit'
+alias whats='/opt/chromium.org/thorium/thorium-browser --profile-directory=Default --app-id=hnpfjngllnobngcgfapefoaidbinmjnm &amp; exit'
+alias devin='/opt/chromium.org/thorium/thorium-browser --profile-directory=Default --app-id=jeanpambhekpchfnadhifbfdfhfjonag &amp; exit'
+alias workspace='/opt/chromium.org/thorium/thorium-browser --profile-directory=Default --app-id=kejlbheaeffmkkfopajhgmefbpmgelfp &amp; exit'
+alias jules='/opt/chromium.org/thorium/thorium-browser --profile-directory=Default --app-id=kfhlllhpifmmhopbnlabhbmcmkokpgge &amp; exit'
+alias github='/opt/chromium.org/thorium/thorium-browser --profile-directory=Default --app-id=mjoklplbddabcmpepnokjaffbmgbkkgg &amp; exit'
+alias studio='/opt/chromium.org/thorium/thorium-browser --profile-directory=Default --app-id=mojogeknlbnppmajemmkcfkilgaapppk &amp; exit'
+alias khoj='/opt/chromium.org/thorium/thorium-browser --profile-directory=Default --app-id=oojcbbhlpifpfcefjdoppjkdmljbjnda &amp; exit'
+alias doc2plan='/opt/chromium.org/thorium/thorium-browser --profile-directory=Default --app-id=paomcjbhlkmgamkbcllamfnkmiefidhg &amp; exit'
+alias codespace='/opt/chromium.org/thorium/thorium-browser --profile-directory=Default --app-id=pdeapfppmifikfghhlchhocndoingjbc &amp; exit'
 </code></section></div></div><hr />
   <h2 id="4-systemd-user-ssh-agent-service-user">
     
@@ -1665,7 +1683,7 @@ p <span class="c"># Should attempt to ping example.com</span>
         
         
         <a href="https://ib.bsb.br/404" aria-label="404">
-          2025-05-24 20:54:38
+          2025-05-24 23:54:42
         </a>
         &#x23;
     
@@ -1733,7 +1751,7 @@ p <span class="c"># Should attempt to ping example.com</span>
         "headline": "/.bashrc",
         "description": "",
         "datePublished": "2024-04-14T00:00:00+00:00",
-        "dateModified": "2025-05-18T01:38:11+00:00",
+        "dateModified": "2025-05-25T02:51:19+00:00",
         "author": {
           "@type": "Person",
           "name": "Author"
