@@ -64,607 +64,600 @@ Create and configure the ~/.ratpoisonrc file in the home directory of the autolo
 Here’s a comprehensive example configuration:  
 `# ~/.ratpoisonrc for linaro`
 {% codeblock %}
-set winname title
-set winliststyle column
-set wingravity n
-set winfmt "%n: %t (%c)"
-set waitcursor 1
-set transgravity center
-set padding 0 0 0 24
-set inputwidth 600
-set historysize 1000
-set gravity center
-set framesels 1234567890
-set font "Intel One Mono:size=13"
-set border 0
-set bgcolor silver
-set barpadding 4 4
-set bargravity c
+unbind A
+unbind ampersand
+unbind apostrophe
+unbind asciicircum
+unbind asciitilde
+unbind asterisk
+unbind at
+unbind b
+unbind B
+unbind backslash
+unbind bar
+unbind braceleft
+unbind braceright
+unbind bracketleft
+unbind bracketright
+unbind c
+unbind C
+unbind C-0
+unbind C-1
+unbind C-2
+unbind C-3
+unbind C-4
+unbind C-5
+unbind C-6
+unbind C-7
+unbind C-8
+unbind C-9
+unbind C-a
+unbind C-A
+unbind C-ampersand
+unbind C-apostrophe
+unbind C-asciicircum
+unbind C-asciitilde
+unbind C-asterisk
+unbind C-at
+unbind C-b
+unbind C-B
+unbind C-backslash
+unbind C-bar
+unbind C-braceleft
+unbind C-braceright
+unbind C-bracketleft
+unbind C-bracketright
+unbind C-c
+unbind C-C
+unbind C-colon
+unbind C-comma
+unbind C-d
+unbind C-D
+unbind C-dollar
+unbind C-Down
+unbind C-e
+unbind C-E
+unbind C-End
+unbind C-equal
+unbind C-Escape
+unbind C-f
+unbind C-F
+unbind C-g
+unbind C-G
+unbind C-grave
+unbind C-greater
+unbind C-h
+unbind C-H
+unbind C-Home
+unbind C-i
+unbind C-I
+unbind C-j
+unbind C-J
+unbind C-k
+unbind C-K
+unbind C-l
+unbind C-L
+unbind C-Left
+unbind C-less
+unbind C-m
+unbind C-M
+unbind C-M-0
+unbind C-M-1
+unbind C-M-2
+unbind C-M-3
+unbind C-M-4
+unbind C-M-5
+unbind C-M-6
+unbind C-M-7
+unbind C-M-8
+unbind C-M-9
+unbind C-M-a
+unbind C-M-A
+unbind C-M-ampersand
+unbind C-M-apostrophe
+unbind C-M-asciicircum
+unbind C-M-asciitilde
+unbind C-M-asterisk
+unbind C-M-at
+unbind C-M-b
+unbind C-M-B
+unbind C-M-backslash
+unbind C-M-bar
+unbind C-M-braceleft
+unbind C-M-braceright
+unbind C-M-bracketleft
+unbind C-M-bracketright
+unbind C-M-c
+unbind C-M-C
+unbind C-M-colon
+unbind C-M-comma
+unbind C-M-d
+unbind C-M-D
+unbind C-M-dollar
+unbind C-M-Down
+unbind C-M-e
+unbind C-M-E
+unbind C-M-End
+unbind C-M-equal
+unbind C-M-Escape
+unbind C-M-f
+unbind C-M-F
+unbind C-M-g
+unbind C-M-G
+unbind C-M-grave
+unbind C-M-greater
+unbind C-M-h
+unbind C-M-H
+unbind C-M-Home
+unbind C-M-i
+unbind C-M-I
+unbind C-minus
+unbind C-M-j
+unbind C-M-J
+unbind C-M-k
+unbind C-M-K
+unbind C-M-l
+unbind C-M-L
+unbind C-M-Left
+unbind C-M-less
+unbind C-M-m
+unbind C-M-M
+unbind C-M-minus
+unbind C-M-n
+unbind C-M-N
+unbind C-M-numbersign
+unbind C-M-o
+unbind C-M-O
+unbind C-M-p
+unbind C-M-P
+unbind C-M-Page_Down
+unbind C-M-Page_Up
+unbind C-M-parenleft
+unbind C-M-parenright
+unbind C-M-percent
+unbind C-M-period
+unbind C-M-plus
+unbind C-M-q
+unbind C-M-Q
+unbind C-M-question
+unbind C-M-quotedbl
+unbind C-M-r
+unbind C-M-R
+unbind C-M-Return
+unbind C-M-Right
+unbind C-M-s
+unbind C-M-S
+unbind C-M-semicolon
+unbind C-M-slash
+unbind C-M-space
+unbind C-M-t
+unbind C-M-T
+unbind C-M-Tab
+unbind C-M-u
+unbind C-M-U
+unbind C-M-underscore
+unbind C-M-Up
+unbind C-M-v
+unbind C-M-V
+unbind C-M-w
+unbind C-M-W
+unbind C-M-x
+unbind C-M-X
+unbind C-M-y
+unbind C-M-Y
+unbind C-M-z
+unbind C-M-Z
+unbind C-n
+unbind C-N
+unbind C-numbersign
+unbind C-o
+unbind C-O
+unbind comma
+unbind C-p
+unbind C-P
+unbind C-Page_Down
+unbind C-Page_Up
+unbind C-parenleft
+unbind C-parenright
+unbind C-percent
+unbind C-period
+unbind C-plus
+unbind C-q
+unbind C-Q
+unbind C-question
+unbind C-quotedbl
+unbind C-r
+unbind C-R
+unbind C-Return
+unbind C-Right
+unbind C-s
+unbind C-S
+unbind C-semicolon
+unbind C-slash
+unbind C-space
+unbind C-t
+unbind C-T
+unbind C-Tab
+unbind C-u
+unbind C-U
+unbind C-underscore
+unbind C-Up
+unbind C-v
+unbind C-V
+unbind C-w
+unbind C-W
+unbind C-x
+unbind C-X
+unbind C-y
+unbind C-Y
+unbind C-z
+unbind C-Z
+unbind d
+unbind D
+unbind dollar
+unbind Down
+unbind e
+unbind E
+unbind End
+unbind equal
+unbind Escape
+unbind f
+unbind F
+unbind g
+unbind G
+unbind grave
+unbind greater
+unbind h
+unbind H
+unbind Home
+unbind i
+unbind I
+unbind j
+unbind J
+unbind k
+unbind K
+unbind l
+unbind L
+unbind Left
+unbind less
+unbind m
+unbind M
+unbind M-0
+unbind M-1
+unbind M-2
+unbind M-3
+unbind M-4
+unbind M-5
+unbind M-6
+unbind M-7
+unbind M-8
+unbind M-9
+unbind M-a
+unbind M-A
+unbind M-ampersand
+unbind M-apostrophe
+unbind M-asciicircum
+unbind M-asciitilde
+unbind M-asterisk
+unbind M-at
+unbind M-b
+unbind M-B
+unbind M-backslash
+unbind M-bar
+unbind M-braceleft
+unbind M-braceright
+unbind M-bracketleft
+unbind M-bracketright
+unbind M-c
+unbind M-C
+unbind M-colon
+unbind M-comma
+unbind M-d
+unbind M-D
+unbind M-dollar
+unbind M-Down
+unbind M-e
+unbind M-E
+unbind M-End
+unbind M-equal
+unbind M-Escape
+unbind M-f
+unbind M-F
+unbind M-g
+unbind M-G
+unbind M-grave
+unbind M-greater
+unbind M-h
+unbind M-H
+unbind M-Home
+unbind M-i
+unbind M-I
+unbind minus
+unbind M-j
+unbind M-J
+unbind M-k
+unbind M-K
+unbind M-l
+unbind M-L
+unbind M-Left
+unbind M-less
+unbind M-m
+unbind M-M
+unbind M-minus
+unbind M-n
+unbind M-N
+unbind M-numbersign
+unbind M-o
+unbind M-O
+unbind M-p
+unbind M-P
+unbind M-Page_Down
+unbind M-Page_Up
+unbind M-parenleft
+unbind M-parenright
+unbind M-percent
+unbind M-period
+unbind M-plus
+unbind M-q
+unbind M-Q
+unbind M-question
+unbind M-quotedbl
+unbind M-r
+unbind M-R
+unbind M-Return
+unbind M-Right
+unbind M-s
+unbind M-S
+unbind M-semicolon
+unbind M-slash
+unbind M-space
+unbind M-t
+unbind M-T
+unbind M-Tab
+unbind M-u
+unbind M-U
+unbind M-underscore
+unbind M-Up
+unbind M-v
+unbind M-V
+unbind M-w
+unbind M-W
+unbind M-x
+unbind M-X
+unbind M-y
+unbind M-Y
+unbind M-z
+unbind M-Z
+unbind n
+unbind N
+unbind numbersign
+unbind o
+unbind O
+unbind p
+unbind P
+unbind Page_Down
+unbind Page_Up
+unbind parenleft
+unbind parenright
+unbind percent
+unbind period
+unbind plus
+unbind q
+unbind Q
+unbind quotedbl
+unbind r
+unbind R
+unbind Return
+unbind Right
+unbind s
+unbind S
+unbind semicolon
+unbind slash
+unbind space
+unbind t
+unbind T
+unbind Tab
+unbind u
+unbind U
+unbind underscore
+unbind Up
+unbind v
+unbind V
+unbind w
+unbind W
+unbind x
+unbind X
+unbind y
+unbind Y
+unbind z
+unbind Z
+
 set barborder 0
+set bargravity c
+set barpadding 4 4
+set bgcolor silver
+set border 0
+set font "Intel One Mono:size=13"
+set framesels 1234567890
+set gravity center
+set historysize 1000
+set inputwidth 600
+set padding 0 0 0 24
+set transgravity center
+set waitcursor 1
+set winfmt "%n: %t (%c)"
+set wingravity n
+set winliststyle column
+set winname title
 
 escape Super_L
-escape F13
-
-banish
-warp 1
-unmanage rpbar
 startup_message on
+unmanage rpbar
+warp 1
+banish
 
-addhook titlechanged exec rpbarsend
-addhook switchwin exec rpbarsend
-addhook switchgroup exec rpbarsend
-addhook switchframe exec rpbarsend
-addhook newwindow exec rpbarsend
-addhook deletewindow exec rpbarsend
-
-unbind Z
-unbind z
-unbind Y
-unbind y
-unbind X
-unbind x
-unbind W
-unbind w
-unbind V
-unbind v
-unbind Up
-unbind underscore
-unbind U
-unbind u
-unbind Tab
-unbind T
-unbind t
-unbind space
-unbind slash
-unbind semicolon
-unbind S
-unbind s
-unbind Right
-unbind Return
-unbind R
-unbind r
-unbind quotedbl
-unbind question
-unbind Q
-unbind q
-unbind plus
-unbind period
-unbind percent
-unbind parenright
-unbind parenleft
-unbind Page_Up
-unbind Page_Down
-unbind P
-unbind p
-unbind O
-unbind o
-unbind numbersign
-unbind N
-unbind n
-unbind minus
-unbind M-Z
-unbind M-z
-unbind M-Y
-unbind M-y
-unbind M-X
-unbind M-x
-unbind M-W
-unbind M-w
-unbind M-V
-unbind M-v
-unbind M-Up
-unbind M-underscore
-unbind M-U
-unbind M-u
-unbind M-Tab
-unbind M-T
-unbind M-t
-unbind M-space
-unbind M-slash
-unbind M-semicolon
-unbind M-S
-unbind M-s
-unbind M-Right
-unbind M-Return
-unbind M-R
-unbind M-r
-unbind M-quotedbl
-unbind M-question
-unbind M-Q
-unbind M-q
-unbind M-plus
-unbind M-period
-unbind M-percent
-unbind M-parenright
-unbind M-parenleft
-unbind M-Page_Up
-unbind M-Page_Down
-unbind M-P
-unbind M-p
-unbind M-O
-unbind M-o
-unbind M-numbersign
-unbind M-N
-unbind M-n
-unbind M-minus
-unbind M-M
-unbind M-m
-unbind M-less
-unbind M-Left
-unbind M-L
-unbind M-l
-unbind M-K
-unbind M-k
-unbind M-J
-unbind M-j
-unbind M-I
-unbind M-i
-unbind M-Home
-unbind M-H
-unbind M-h
-unbind M-greater
-unbind M-grave
-unbind M-G
-unbind M-g
-unbind M-F
-unbind M-f
-unbind M-exclam
-unbind M-Escape
-unbind M-equal
-unbind M-End
-unbind M-E
-unbind M-e
-unbind M-Down
-unbind M-dollar
-unbind M-D
-unbind M-d
-unbind M-comma
-unbind M-colon
-unbind M-C
-unbind M-c
-unbind M-bracketright
-unbind M-bracketleft
-unbind M-braceright
-unbind M-braceleft
-unbind M-bar
-unbind M-backslash
-unbind M-B
-unbind M-b
-unbind M-at
-unbind M-asterisk
-unbind M-asciitilde
-unbind M-asciicircum
-unbind M-apostrophe
-unbind M-ampersand
-unbind M-A
-unbind M-a
-unbind M-9
-unbind M-8
-unbind M-7
-unbind M-6
-unbind M-5
-unbind M-4
-unbind M-3
-unbind M-2
-unbind M-1
-unbind M-0
-unbind M
-unbind m
-unbind less
-unbind Left
-unbind L
-unbind l
-unbind K
-unbind k
-unbind J
-unbind j
-unbind I
-unbind i
-unbind Home
-unbind H
-unbind h
-unbind greater
-unbind grave
-unbind G
-unbind g
-unbind F
-unbind f
-unbind exclam
-unbind Escape
-unbind equal
-unbind End
-unbind E
-unbind e
-unbind Down
-unbind dollar
-unbind D
-unbind d
-unbind comma
-unbind colon
-unbind C-Z
-unbind C-z
-unbind C-Y
-unbind C-y
-unbind C-X
-unbind C-x
-unbind C-W
-unbind C-w
-unbind C-V
-unbind C-v
-unbind C-Up
-unbind C-underscore
-unbind C-U
-unbind C-u
-unbind C-Tab
-unbind C-T
-unbind C-t
-unbind C-space
-unbind C-slash
-unbind C-semicolon
-unbind C-S
-unbind C-s
-unbind C-Right
-unbind C-Return
-unbind C-R
-unbind C-r
-unbind C-quotedbl
-unbind C-question
-unbind C-Q
-unbind C-q
-unbind C-plus
-unbind C-period
-unbind C-percent
-unbind C-parenright
-unbind C-parenleft
-unbind C-Page_Up
-unbind C-Page_Down
-unbind C-P
-unbind C-p
-unbind C-O
-unbind C-o
-unbind C-numbersign
-unbind C-N
-unbind C-n
-unbind C-minus
-unbind C-M-Z
-unbind C-M-z
-unbind C-M-Y
-unbind C-M-y
-unbind C-M-X
-unbind C-M-x
-unbind C-M-W
-unbind C-M-w
-unbind C-M-V
-unbind C-M-v
-unbind C-M-Up
-unbind C-M-underscore
-unbind C-M-U
-unbind C-M-u
-unbind C-M-Tab
-unbind C-M-T
-unbind C-M-t
-unbind C-M-space
-unbind C-M-slash
-unbind C-M-semicolon
-unbind C-M-S
-unbind C-M-s
-unbind C-M-Right
-unbind C-M-Return
-unbind C-M-R
-unbind C-M-r
-unbind C-M-quotedbl
-unbind C-M-question
-unbind C-M-Q
-unbind C-M-q
-unbind C-M-plus
-unbind C-M-period
-unbind C-M-percent
-unbind C-M-parenright
-unbind C-M-parenleft
-unbind C-M-Page_Up
-unbind C-M-Page_Down
-unbind C-M-P
-unbind C-M-p
-unbind C-M-O
-unbind C-M-o
-unbind C-M-numbersign
-unbind C-M-N
-unbind C-M-n
-unbind C-M-minus
-unbind C-M-M
-unbind C-M-m
-unbind C-M-less
-unbind C-M-Left
-unbind C-M-L
-unbind C-M-l
-unbind C-M-K
-unbind C-M-k
-unbind C-M-J
-unbind C-M-j
-unbind C-M-I
-unbind C-M-i
-unbind C-M-Home
-unbind C-M-H
-unbind C-M-h
-unbind C-M-greater
-unbind C-M-grave
-unbind C-M-G
-unbind C-M-g
-unbind C-M-F
-unbind C-M-f
-unbind C-M-exclam
-unbind C-M-Escape
-unbind C-M-equal
-unbind C-M-End
-unbind C-M-E
-unbind C-M-e
-unbind C-M-Down
-unbind C-M-dollar
-unbind C-M-D
-unbind C-M-d
-unbind C-M-comma
-unbind C-M-colon
-unbind C-M-C
-unbind C-M-c
-unbind C-M-bracketright
-unbind C-M-bracketleft
-unbind C-M-braceright
-unbind C-M-braceleft
-unbind C-M-bar
-unbind C-M-backslash
-unbind C-M-B
-unbind C-M-b
-unbind C-M-at
-unbind C-M-asterisk
-unbind C-M-asciitilde
-unbind C-M-asciicircum
-unbind C-M-apostrophe
-unbind C-M-ampersand
-unbind C-M-A
-unbind C-M-a
-unbind C-M-9
-unbind C-M-8
-unbind C-M-7
-unbind C-M-6
-unbind C-M-5
-unbind C-M-4
-unbind C-M-3
-unbind C-M-2
-unbind C-M-1
-unbind C-M-0
-unbind C-M
-unbind C-m
-unbind C-less
-unbind C-Left
-unbind C-L
-unbind C-l
-unbind C-K
-unbind C-k
-unbind C-J
-unbind C-j
-unbind C-I
-unbind C-i
-unbind C-Home
-unbind C-H
-unbind C-h
-unbind C-greater
-unbind C-grave
-unbind C-G
-unbind C-g
-unbind C-F
-unbind C-f
-unbind C-exclam
-unbind C-Escape
-unbind C-equal
-unbind C-End
-unbind C-E
-unbind C-e
-unbind C-Down
-unbind C-dollar
-unbind C-D
-unbind C-d
-unbind C-comma
-unbind C-colon
-unbind C-C
-unbind C-c
-unbind C-bracketright
-unbind C-bracketleft
-unbind C-braceright
-unbind C-braceleft
-unbind C-bar
-unbind C-backslash
-unbind C-B
-unbind C-b
-unbind C-at
-unbind C-asterisk
-unbind C-asciitilde
-unbind C-asciicircum
-unbind C-apostrophe
-unbind C-ampersand
-unbind C-A
-unbind C-a
-unbind C-9
-unbind C-8
-unbind C-7
-unbind C-6
-unbind C-5
-unbind C-4
-unbind C-3
-unbind C-2
-unbind C-1
-unbind C-0
-unbind C
-unbind c
-unbind bracketright
-unbind bracketleft
-unbind braceright
-unbind braceleft
-unbind bar
-unbind backslash
-unbind B
-unbind b
-unbind at
-unbind asterisk
-unbind asciitilde
-unbind asciicircum
-unbind apostrophe
-unbind ampersand
-unbind A
-unbind a
-unbind 0
-
-definekey top Print exec xfce4-screenshooter
-definekey top M-Tab next
-definekey top M-ISO_Left_Tab prev
-
-exec xsetroot -bitmap /home/linaro/Desktop/02-media/pics/wallpaper1.xbm -bg "#073642" -fg "#345345"
-exec xrdb -merge /home/linaro/.Xresources
-exec xfce4-power-manager
-exec unclutter --timeout 2 --jitter 5
-exec rpws init 9
-exec rpbar
-exec numlockx on &
-exec nm-applet
-exec env HOME=$HOME/.config rpbar &
-exec clipse -listen
 exec brightnessctl s 7
-exec /usr/bin/rpws restore /home/linaro/Desktop/01-document/dotfiles/rpws_layouts.dmp
+exec clipse -listen
+exec env HOME=$HOME/.config rpbar
+exec env HOME=$HOME rpbar
+exec nm-applet
+exec rpws init 9
+exec unclutter --timeout 2 --jitter 5
+exec xfce4-power-manager
+exec xrdb -merge /home/linaro/.Xresources
+# exec xsetroot -bitmap /home/linaro/Desktop/02-media/pics/wallpaper1.xbm -bg "#073642" -fg "#345345"
 
-bind z undo
-bind x swap
-bind w exec thorium-browser
-bind v exec paste_clipboard_from_file.sh
-bind Up focusup
-bind u exec /usr/bin/rpws dump /home/linaro/Desktop/01-document/dotfiles/rpws_layouts.dmp
-bind Tab focus 
-bind Tab focus
-bind t exec pcmanfm-qt --daemon-mode
-bind space exec xboomx
-bind s-z redo
-bind s-x fselect
-bind s-w select
-bind s-Up exchangeup
-bind s-u exec /usr/bin/rpws restore /home/linaro/Desktop/01-document/dotfiles/rpws_layouts.dmp
-bind s-Tab focuslast
-bind s-t exec sudo pcmanfm-qt
-bind s-space exec python3 /home/linaro/.local/bin/dratmenu.py
-bind s-Right exchangeright
-bind s-Return exec sudo x-terminal-emulator
+exec xsetroot -name "x33:20 10:06"
+
+
 bind s-Print exec scrot -s '/home/linaro/Downloads/temp.png' -e 'echo "/home/linaro/Downloads/temp.png" | xsel --clipboard --input && echo "/home/linaro/Downloads/temp.png" | xsel --primary --input && (sleep 20 && rm "/home/linaro/Downloads/temp.png") &'
-bind s-Page_Up exec rpws movenext
-bind s-Page_Down exec rpws moveprev
-bind s-o iother
-bind s-minus exec amixer set Master 5%-
-bind s-M-Tab inext
-bind s-Left exchangeleft
-bind s-KP_9 exec rpws move9
-bind s-KP_8 exec rpws move8
-bind s-KP_7 exec rpws move7
-bind s-KP_6 exec rpws move6
-bind s-KP_5 exec rpws move5
-bind s-KP_4 exec rpws move4
-bind s-KP_3 exec rpws move3
-bind s-KP_2 exec rpws move2
-bind s-KP_1 exec rpws move1
-bind s-ISO_Left_Tab exec rpws movenext
-bind s-i exec nm-connection-editor
-bind s-g exec galculator
-bind s-F13 other
-bind s-F1 exec reverse-thermal.sh
-bind s-Escape kill
-bind s-equal exec amixer set Master 5%+
-bind s-e exec xnc
-bind s-Down exchangedown
-bind s-BackSpace prev
-bind s-apostrophe colon exec x-terminal-emulator -e sudo 
-bind s-a title
-bind s-9 exec swap 9
-bind s-8 exec swap 8
-bind s-7 exec swap 7
-bind s-6 exec swap 6
-bind s-5 exec swap 5
-bind s-4 exec swap 4
-bind s-3 exec swap 3
-bind s-2 exec swap 2
-bind s-1 exec swap 1
-bind s-0 exec amixer set Master toggle
-bind Right focusright
-bind Return exec x-terminal-emulator
-bind r resize
-bind q delete
-bind Print exec scrot -s -e 'xclip -selection clipboard -t image/png -i $f && rm $f'
-bind Page_Up exec rpws next
-bind Page_Down exec rpws prev
-bind p dedicate
-bind o cother
-bind minus vsplit
-bind M-Tab cnext
-bind M-KP_Separator exec xdotool key dead_circumflex key dead_circumflex key dead_circumflex
-bind M-KP_0 exec xdotool key Ccedilla key Ccedilla key Ccedilla
-bind M-F7 exec x-terminal-emulator -e /home/linaro/.local/bin/llm_sF12_extract_last.sh
-bind M-F6 exec x-terminal-emulator -e /home/linaro/.local/bin/llm_sF9_attachment.sh
-bind M-F5 exec x-terminal-emulator -e /home/linaro/.local/bin/llm_analyze_file.sh
-bind M-F4 exec x-terminal-emulator -e /home/linaro/.local/bin/llm_sF8_fragment.sh
-bind M-F3 exec x-terminal-emulator -e /home/linaro/.local/bin/llm_pipe_selected_sys.sh
-bind M-F2 exec x-terminal-emulator -e /home/linaro/.local/bin/llm_sF6_system_prompt.sh
-bind M-F1 exec x-terminal-emulator -e /home/linaro/.local/bin/llm_sF4_prompt.sh
-bind M-3 ratclick 3
-bind M-2 ratclick 2
-bind M-1 ratclick 1
-bind Left focusleft
-bind KP_Separator exec xdotool key quotedbl key quotedbl key quotedbl
-bind KP_9 exec rpws 9
-bind KP_8 exec rpws 8
-bind KP_7 exec rpws 7
-bind KP_6 exec rpws 6
-bind KP_5 exec rpws 5
-bind KP_4 exec rpws 4
-bind KP_3 exec rpws 3
-bind KP_2 exec rpws 2
-bind KP_1 exec rpws 1
-bind KP_0 exec xdotool key apostrophe key apostrophe key apostrophe
-bind k exec x-terminal-emulator -e /home/linaro/.local/bin/clipse
-bind ISO_Left_Tab exec rpws next
-bind i exec viewnior
-bind h exec x-terminal-emulator -e bpytop
-bind g exec gsimplecal
-bind F13 nextscreen
-bind F8 exec flatpak run io.github.zaps166.QMPlay2
-bind F7 exec flatpak run com.github.ryonakano.reco
-bind F6 exec flatpak run com.strlen.TreeSheets
-bind F5 exec flatpak run com.github.tenderowl.frog
-bind F4 exec flatpak run org.filezillaproject.Filezilla
-bind F1 exec thermal.sh
-bind f only
-bind Escape abort
-bind equal hsplit
-bind e exec xnedit
-bind Down focusdown
-bind C-Tab exec rpws prev
-bind C-s-Tab exec rpws moveprev
-bind C-s-9 exec rpws move9
-bind C-s-8 exec rpws move8
-bind C-s-7 exec rpws move7
-bind C-s-6 exec rpws move6
-bind C-s-5 exec rpws move5
-bind C-s-4 exec rpws move4
-bind C-s-3 exec rpws move3
-bind C-s-2 exec rpws move2
-bind C-s-1 exec rpws move1
-bind C-9 exec rpws 9
-bind C-8 exec rpws 8
-bind C-7 exec rpws 7
-bind C-6 exec rpws 6
-bind C-5 exec rpws 5
-bind C-4 exec rpws 4
-bind C-3 exec rpws 3
-bind C-2 exec rpws 2
-bind C-1 exec rpws 1
-bind c exec write_clipboard_to_file.sh
+bind apostrophe colon exec x-terminal-emulator -e 
 bind BackSpace next
 bind b exec vorta
-bind apostrophe colon exec x-terminal-emulator -e 
-bind 0 remove
+bind C-1 exec rpws 1
+bind C-2 exec rpws 2
+bind C-3 exec rpws 3
+bind C-4 exec rpws 4
+bind C-5 exec rpws 5
+bind C-6 exec rpws 6
+bind C-7 exec rpws 7
+bind C-8 exec rpws 8
+bind C-9 exec rpws 9
+bind c exec write_clipboard_to_file.sh
+bind C-s-1 exec rpws move1
+bind C-s-2 exec rpws move2
+bind C-s-3 exec rpws move3
+bind C-s-4 exec rpws move4
+bind C-s-5 exec rpws move5
+bind C-s-6 exec rpws move6
+bind C-s-7 exec rpws move7
+bind C-s-8 exec rpws move8
+bind C-s-9 exec rpws move9
+bind C-s-Tab exec rpws moveprev
+bind C-Tab exec rpws prev
+bind Down focusdown
+bind e exec xnedit
+bind equal hsplit
+bind Escape abort
+bind VoidSymbol nextscreen
+bind F1 colon exec xnc /home/linaro/RAM.txt
+bind s-F1 exec thermal.sh
+bind F4 exec flatpak run org.filezillaproject.Filezilla
+bind F5 exec flatpak run com.github.tenderowl.frog
+bind F6 exec flatpak run com.strlen.TreeSheets
+bind F7 exec flatpak run com.github.ryonakano.reco
+bind F8 exec flatpak run io.github.zaps166.QMPlay2
+bind f only
+bind g exec gsimplecal
+bind h exec x-terminal-emulator -e bpytop
+bind i exec viewnior
+bind ISO_Left_Tab exec rpws next
+bind k exec x-terminal-emulator -e /home/linaro/.local/bin/clipse
+bind KP_0 exec xdotool key apostrophe key apostrophe key apostrophe
+bind KP_1 exec rpws 1
+bind KP_2 exec rpws 2
+bind KP_3 exec rpws 3
+bind KP_4 exec rpws 4
+bind KP_5 exec rpws 5
+bind KP_6 exec rpws 6
+bind KP_7 exec rpws 7
+bind KP_8 exec rpws 8
+bind KP_9 exec rpws 9
+bind KP_Separator exec xdotool key quotedbl key quotedbl key quotedbl
+bind Left focusleft
+bind M-1 ratclick 1
+bind M-2 ratclick 2
+bind M-3 ratclick 3
+bind M-F1 exec x-terminal-emulator -e /home/linaro/.local/bin/llm_sF4_prompt.sh
+bind M-F2 exec x-terminal-emulator -e /home/linaro/.local/bin/llm_sF6_system_prompt.sh
+bind M-F3 exec x-terminal-emulator -e /home/linaro/.local/bin/llm_pipe_selected_sys.sh
+bind M-F4 exec x-terminal-emulator -e /home/linaro/.local/bin/llm_sF8_fragment.sh
+bind M-F5 exec x-terminal-emulator -e /home/linaro/.local/bin/llm_analyze_file.sh
+bind M-F6 exec x-terminal-emulator -e /home/linaro/.local/bin/llm_sF9_attachment.sh
+bind M-F7 exec x-terminal-emulator -e /home/linaro/.local/bin/llm_sF12_extract_last.sh
+bind minus vsplit
+bind M-KP_0 exec xdotool key Ccedilla key Ccedilla key Ccedilla
+bind M-KP_Separator exec xdotool key dead_circumflex key dead_circumflex key dead_circumflex
+bind M-Tab cnext
+bind o cother
+bind Page_Down exec rpws prev
+bind Page_Up exec rpws next
+bind p dedicate
+bind Print exec scrot -s -e 'xclip -selection clipboard -t image/png -i $f && rm $f'
+bind q delete
+bind Return exec x-terminal-emulator
+bind Right focusright
+bind r resize
+bind s-0 swap 0
+bind s-1 swap 1
+bind s-2 swap 2
+bind s-3 swap 3
+bind s-4 swap 4
+bind s-5 swap 5
+bind s-6 swap 6
+bind s-7 swap 7
+bind s-8 swap 8
+bind s-9 swap 9
+bind s-apostrophe colon exec x-terminal-emulator -e sudo 
+bind s-a title
+bind s-BackSpace prev
+bind s-Down exchangedown
+bind s-e exec xnc
+bind s-Escape kill
+bind s-F9 exec amixer set Master toggle
+bind s-F10 exec amixer set Master 5%-
+bind s-F11 exec amixer set Master 5%+
+bind s-VoidSymbol other
+bind s-g exec galculator
+bind s-i exec nm-connection-editor
+bind s-ISO_Left_Tab exec rpws movenext
+bind s-KP_1 exec rpws move1
+bind s-KP_2 exec rpws move2
+bind s-KP_3 exec rpws move3
+bind s-KP_4 exec rpws move4
+bind s-KP_5 exec rpws move5
+bind s-KP_6 exec rpws move6
+bind s-KP_7 exec rpws move7
+bind s-KP_8 exec rpws move8
+bind s-KP_9 exec rpws move9
+bind s-Left exchangeleft
+bind s-M-Tab inext
+bind s-o iother
+bind space exec xboomx
+bind s-Page_Down exec rpws moveprev
+bind s-Page_Up exec rpws movenext
+bind s-Return exec sudo x-terminal-emulator
+bind s-Right exchangeright
+bind s-r remove
+bind s-space exec python3 /home/linaro/.local/bin/dratmenu.py
+bind s-Tab focuslast
+bind s-t exec sudo pcmanfm-qt
+bind s-u exec /usr/bin/rpws restore /home/linaro/Desktop/01-document/dotfiles/rpws_layouts.dmp
+bind s-Up exchangeup
+bind s-w select
+bind s-x fselect
+bind s-z redo
+bind Tab focus
+bind t exec pcmanfm-qt --daemon-mode
+bind u exec /usr/bin/rpws dump /home/linaro/Desktop/01-document/dotfiles/rpws_layouts.dmp
+bind Up focusup
+bind v exec paste_clipboard_from_file.sh
+bind w exec thorium-browser
+bind x swap
+bind z undo
+bind s-minus exec home/linaro/.local/bin/split1.sh
+bind s-equal exec home/linaro/.local/bin/split2.sh
+
+definekey top M-ISO_Left_Tab prev
+definekey top M-Tab next
+definekey top Print exec xfce4-screenshooter
+
+addhook deletewindow exec rpbarsend
+addhook newwindow exec rpbarsend
+addhook switchframe exec rpbarsend
+addhook switchgroup exec rpbarsend
+addhook switchwin exec rpbarsend
+addhook titlechanged exec rpbarsend
 {% endcodeblock %}
 
 #### ~/.local/bin/*.sh shell scripts
@@ -2297,39 +2290,44 @@ Add your configurations, for example:
 {% codeblock %}
 #!/bin/sh
 
-# Exit immediately if a command exits with a non-zero status.
-# set -e
-
 # Optional: Uncomment to log script execution for debugging
 LOG_FILE=~/xsessionrc_debug.log
 echo "$(date): .xsessionrc started" >> "$LOG_FILE"
 
+# --- Step 1: Disable Caps Lock's default toggle behavior ---
+# This command uses the X Keyboard Extension (XKB) to make the Caps Lock key
+# stop toggling character case. It essentially turns it into a "neutral" key.
+echo "$(date): Applying setxkbmap -option caps:none" >> "$LOG_FILE"
+setxkbmap -option caps:none >> "$LOG_FILE" 2>&1
+
+# --- Step 2: Apply custom key mappings using xmodmap ---
+# This command loads your .xmodmaprc file, which should contain the
+# instructions to remap the (now neutral) Caps Lock key to F13.
+# It's important this runs AFTER setxkbmap has modified the Caps Lock behavior.
+# You can verify your Caps Lock keycode using the 'xev' command in a terminal.
+# Run 'xev', press Caps Lock, and note the keycode. It's usually 66.
+if [ -f /home/linaro/.xmodmaprc ]; then
+  echo "$(date): Applying xmodmap /home/linaro/.xmodmaprc" >> "$LOG_FILE"
+  xmodmap /home/linaro/.xmodmaprc >> "$LOG_FILE" 2>&1
+else
+  echo "$(date): WARNING - /home/linaro/.xmodmaprc not found." >> "$LOG_FILE"
+fi
+
+# --- XRandR display configuration (existing from your file) ---
 # Define custom mode for DP-1 (1152x864 @ 60Hz)
-# Ensure standard spaces are used in the modeline string.
-# Modeline: "1152x864_60.00" 81.75 1152 1216 1336 1520 864 867 871 897 -hsync +vsync
-xrandr --newmode "1152x864_60.00" 81.75 1152 1216 1336 1520 864 867 871 897 -hsync +vsync # 2>&1 | tee -a "$LOG_FILE"
+xrandr --newmode "1152x864_60.00" 81.75 1152 1216 1336 1520 864 867 871 897 -hsync +vsync # >> "$LOG_FILE" 2>&1
 
 # Define custom mode for HDMI-1 (2560x1080 @ 60Hz)
-# Modeline: "2560x1080_60.00" 230.00 2560 2720 2992 3424 1080 1083 1093 1120 -hsync +vsync
-xrandr --newmode "2560x1080_60.00" 230.00 2560 2720 2992 3424 1080 1083 1093 1120 -hsync +vsync # 2>&1 | tee -a "$LOG_FILE"
+xrandr --newmode "2560x1080_60.00" 230.00 2560 2720 2992 3424 1080 1083 1093 1120 -hsync +vsync # >> "$LOG_FILE" 2>&1
 
 # Add the new modes to the respective outputs
-xrandr --addmode DP-1 "1152x864_60.00" # 2>&1 | tee -a "$LOG_FILE"
-xrandr --addmode HDMI-1 "2560x1080_60.00" # 2>&1 | tee -a "$LOG_FILE"
+xrandr --addmode DP-1 "1152x864_60.00" # >> "$LOG_FILE" 2>&1
+xrandr --addmode HDMI-1 "2560x1080_60.00" # >> "$LOG_FILE" 2>&1
 
 # Apply the modes and set the layout.
-# NOTE: The command below sets DP-1 as primary.
-# Your comment "# makes HDMI-1 primary" conflicts with this.
-# Adjust --primary flag if HDMI-1 should be the primary display.
 xrandr \
-    --output DP-1 --primary --mode "1152x864_60.00" --below HDMI-1 \
-    --output HDMI-1 --mode "2560x1080_60.00" # 2>&1 | tee -a "$LOG_FILE"
-
-# Example: Start a key remapper or other background utility
-# xmodmap /home/ linaro/.Xmodmap
-
-# Example: Set an environment variable
-# export QT_QPA_PLATFORMTHEME=qt5ct
+--output DP-1 --primary --mode "1152x864_60.00" --below HDMI-1 \
+--output HDMI-1 --mode "2560x1080_60.00" # >> "$LOG_FILE" 2>&1
 
 echo "$(date): .xsessionrc finished successfully" >> "$LOG_FILE"
 {% endcodeblock %}
@@ -2365,7 +2363,8 @@ If you choose not to use LightDM or wish to start Ratpoison manually from a TTY 
 
 1. Create ~/.xmodmaprc
 ```
-remove lock = Caps_Lock
+remove Lock = Caps_Lock
+clear Lock
 keycode 66 = F13
 ```
 3. Ensure xinit is installed: sudo apt install xinit.
@@ -2375,23 +2374,11 @@ keycode 66 = F13
 
 ```
 #!/bin/sh
-# ~/.xinitrc for linaro
 
-# Source user-specific X settings if desired (contents similar to .xsessionrc)
-# if [ -f /home/linaro/.xprofile_custom ]; then
-#  . /home/linaro/.xprofile_custom
-# fi
-# For xrandr, etc., you might call them directly here or source .xsessionrc
 if [ -f /home/linaro/.xsessionrc ]; then
   . /home/linaro/.xsessionrc
 fi
 
-xmodmap .xmodmaprc
-while true
-do
-	xsetroot -name "$(date '+%m|%d %H.%M')"
-	sleep 1
-done &
 exec ratpoison
 ```
 
