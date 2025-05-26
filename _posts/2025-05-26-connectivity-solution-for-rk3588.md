@@ -8,6 +8,12 @@ published: true
 slug: connectivity-solution-for-rk3588
 title: 'Connectivity Solution for RK3588'
 ---
+
+# sudo apt install
+```
+sudo apt install -y dialog network-manager wpasupplicant isc-dhcp-client iproute2 iw iputils-ping wireless-tools procps mawk
+```
+
 Section 1: Introduction and Script Objective
 The primary objective of this document and the accompanying shell script (universal_connect.sh) is to furnish a robust and interactive solution for establishing internet connectivity on the RK3588 VPC-3588 single-board computer, specifically when operating under Debian Bullseye. This system is designed to address the common challenge encountered when the device is relocated to new physical environments where existing network configurations—be it wired Ethernet or wireless Wi-Fi—are unknown.
 
