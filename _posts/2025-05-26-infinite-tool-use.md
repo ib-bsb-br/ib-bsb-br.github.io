@@ -1,14 +1,16 @@
 ---
-tags: [scratchpad]
+tags:
+- scratchpad
 info: aberto.
 date: 2025-05-26
 type: post
 layout: post
 published: true
 slug: infinite-tool-use
-title: 'Infinite tool use'
+title: Infinite tool use
+comment: https://snimu.github.io/2025/05/23/infinite-tool-use.html
 ---
-bibref https://snimu.github.io/2025/05/23/infinite-tool-use.html
+
 
 An LLM should never output anything but tool calls and their arguments.
 
