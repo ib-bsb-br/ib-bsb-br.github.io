@@ -1,4 +1,1006 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2025-05-26T05:03:34+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">network diag</title><link href="https://ib.bsb.br/network-diag/" rel="alternate" type="text/html" title="network diag" /><published>2025-05-26T00:00:00+00:00</published><updated>2025-05-26T04:49:44+00:00</updated><id>https://ib.bsb.br/network-diag</id><content type="html" xml:base="https://ib.bsb.br/network-diag/"><![CDATA[<section class="code-block-container" role="group" aria-label="Bash Code Block" data-filename="bash_code_block.sh" data-code="#!/bin/bash
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2025-05-26T13:44:21+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">Connectivity Solution for RK3588 v1</title><link href="https://ib.bsb.br/connectivity-solution-for-rk3588-v1/" rel="alternate" type="text/html" title="Connectivity Solution for RK3588 v1" /><published>2025-05-26T00:00:00+00:00</published><updated>2025-05-26T13:41:01+00:00</updated><id>https://ib.bsb.br/connectivity-solution-for-rk3588-v1</id><content type="html" xml:base="https://ib.bsb.br/connectivity-solution-for-rk3588-v1/"><![CDATA[<p>Comprehensive Connectivity Solution for RK3588 VPC-3588 (Debian Bullseye)Section 1: Introduction and Script ObjectiveThe primary objective of this document and the accompanying shell script is to furnish a robust and interactive solution for establishing internet connectivity on the RK3588 VPC-3588 single-board computer, specifically when operating under Debian Bullseye. This system is designed to address the common challenge encountered when the device is relocated to new physical environments where existing network configurations—be it wired Ethernet or wireless Wi-Fi—are unknown.The core problem addressed is the unpredictability of network availability and parameters in such new environments. This includes uncertainty regarding the type of connection available (Ethernet or Wi-Fi), the method of IP address assignment (DHCP or static), and the necessary credentials or authentication protocols for secure networks.The proposed solution is a comprehensive bash script that, when executed with root privileges, systematically attempts various methods to connect to the internet. It prioritizes a user-friendly, interactive approach, prompting for essential information such as Wi-Fi SSIDs, passwords, or static IP details only when necessary. The script leverages standard, widely available Linux networking utilities to maximize compatibility and reliability.The target hardware, the VPC-3588 motherboard, is based on the Rockchip RK3588 high-performance application processor.1 This hardware platform is equipped with a Gigabit Ethernet port and a built-in Wi-Fi 6 module, providing the physical interfaces the script will manage.1 The script is tailored for the Debian Bullseye operating system, considering its typical networking stack.Key features of the script include:
+Adaptability: Capable of handling both Ethernet and Wi-Fi connections.
+Interactivity: Employs a terminal user interface (TUI) using dialog to prompt the user for necessary information like SSIDs, passwords, authentication details, and static IP configurations if required.
+Multi-tool Approach: Utilizes a range of system utilities, including NetworkManager (via nmcli), wpa_supplicant (and wpa_cli), dhclient (from isc-dhcp-client), and iproute2 commands (ip).
+Systematic Probing: Follows a logical sequence of attempts, starting with simpler methods (like Ethernet DHCP) and progressing to more complex configurations if initial attempts fail.
+The inherent nature of an “unknown physical environment” dictates that the script must be maximally flexible. It cannot presuppose any pre-existing network profiles or the types of networks that will be available. Consequently, the script is designed to first discover available network interfaces, then scan for accessible networks, and subsequently interact with the user to obtain any missing information, such as credentials or specific IP addressing requirements. This hierarchical approach, moving from automated discovery to interactive configuration, is fundamental to its design.The aim to “guarantee an internet connection” is ambitious. While a 100% guarantee is contingent on external factors (e.g., physical network presence, functional internet service from the provider), the script endeavors to exhaust all software-controllable avenues. This involves not only attempting connections with primary tools like nmcli but also incorporating fallback mechanisms using wpa_supplicant directly or dhclient, coupled with robust error checking and user feedback. The presence of a Wi-Fi 6 module on the VPC-3588 1 implies potential encounters with newer security protocols like WPA3. The script, by leveraging standard Debian Bullseye utilities like wpa_supplicant and NetworkManager, should inherently support WPA3 if these underlying tools provide such support, as they typically do in modern distributions.Section 2: Prerequisites and System EnvironmentFor the connectivity script to function optimally and reliably on the RK3588 VPC-3588 running Debian Bullseye, certain software packages must be present, and an understanding of the system’s network interface management is beneficial.Essential Software Packages:The script relies on a suite of standard Linux networking utilities. While many of these are often pre-installed on Debian systems, their presence is crucial. The script will attempt to check for these and, if they are missing and an internet connection can be temporarily established (e.g., via a previously known configuration or a simple open network), it may offer to install them.A critical consideration for this specific RK3588 system, as highlighted in system usage guides, is the warning against using sudo apt-get upgrade or sudo apt full-upgrade, as these commands may lead to system instability on the provided image.1 Therefore, any package installation initiated by the script will be limited to sudo apt-get update followed by sudo apt-get install <package_name>.The following table outlines essential packages:Table 1: Essential Software Packages
+Tool/UtilityDebian Package NamePrimary Role in ScriptSnippet Referencenmclinetwork-managerPrimary tool for managing Ethernet/Wi-Fi connections if NetworkManager service is active.1wpa_cliwpasupplicantCommand-line client for wpa_supplicant, used for Wi-Fi configuration (PSK, EAP).1wpa_supplicantwpasupplicantManages Wi-Fi security (WPA/WPA2/WPA3).1dhclientisc-dhcp-clientDHCP client for obtaining IP addresses automatically. Fallback or direct use.1ipiproute2Utility for showing/manipulating routing, network devices, interfaces, and tunnels.1iw / iwlistiw / wireless-toolsUtilities for configuring wireless extensions and scanning for Wi-Fi networks (iw is preferred).1dialogdialogFor creating interactive TUI prompts for user input (SSID, password, static IP, menus).1pingiputils-pingFor testing network connectivity.1
+The script's robustness is directly tied to the availability of these tools. Should essential utilities like dialog or nmcli be absent, the script is designed to detect this, inform the user, and offer to attempt their installation, adhering to the package management restrictions mentioned.Target Hardware Interfaces:The VPC-3588 motherboard features one Gigabit Ethernet RJ45 port and a built-in Wi-Fi 6 module.1 The script must dynamically identify the names of these interfaces (e.g., eth0, enpXsY for Ethernet; wlan0, wlpXsY for Wi-Fi). This dynamic detection is crucial because interface names can vary based on kernel versions, device probing order, or udev rules. The wifish setup script, for instance, employs iw dev and ip link show type wlan for Wi-Fi interface detection 1, a practice adopted by this solution for both interface types to ensure broad compatibility.Debian Bullseye Considerations:Debian Bullseye, the target operating system, utilizes systemd as its init system. NetworkManager is commonly available and often enabled by default on desktop or interactive installations, providing a user-friendly layer for network configuration.1 However, ifupdown (managed via /etc/network/interfaces) might still be configured for certain interfaces or act as a fallback.1 The script needs to be aware of which system is actively managing the network to avoid conflicts. For instance, checking systemctl is-active NetworkManager determines if NetworkManager is running, not just installed.1 If NetworkManager is installed but inactive, the script might offer to start it or proceed with alternative configuration methods. This layered check enhances the script's intelligence in adapting to the system's state.Section 3: Script Architecture and Operational FlowThe connectivity script is designed with a modular architecture and a clear operational flow to systematically address various network scenarios. It prioritizes user interaction through a terminal user interface (TUI) facilitated by the dialog utility.High-level Design:The script is structured into multiple functions, each responsible for a distinct task, such as interface detection, network scanning, DHCP attempts, static IP configuration, and connectivity verification. Global variables are used to store detected interface names, user-provided inputs, and the status of network services like NetworkManager. Comprehensive logging messages are echoed to the terminal to keep the user informed of the script's progress, actions, and any encountered issues. For robust error handling, the script initiates with set -e (exit immediately if a command exits with a non-zero status) and set -o pipefail (a pipeline's exit status is that of the last command to exit with a non-zero status).3.1. Initial Checks and Interface Discovery:Upon execution, the script first verifies the presence of essential command-line utilities. If critical tools like dialog or nmcli (if NetworkManager is intended as the primary manager) are missing, it will prompt the user for permission to install them.Next, it discovers available network interfaces:
+Ethernet Interfaces: Commands like ip -o link show type ether are parsed to identify potential Ethernet interfaces (e.g., eth0, enp2s0). If multiple Ethernet interfaces are found, the user will be prompted to select the one to use.
+Wi-Fi Interfaces: Similarly, iw dev or ip -o link show type wlan are used to list Wi-Fi interfaces (e.g., wlan0, wlp3s0).1 If multiple are present, user selection is requested.
+Discovered and selected interfaces are stored in variables (e.g., ACTIVE_ETH_IFACE, ACTIVE_WIFI_IFACE) for subsequent operations.
+3.2. Network Management Service Detection:To determine the most appropriate tools for configuration and avoid conflicts, the script ascertains the active network management service:
+It checks if NetworkManager is active using systemctl is-active NetworkManager. If so, a flag (e.g., NM_IS_ACTIVE=true) is set, and nmcli becomes the preferred configuration tool.1
+If NetworkManager is not active, the script may infer that ifupdown (via /etc/network/interfaces) or direct wpa_supplicant management is in play, guiding its fallback strategies.1
+This detection step is vital. If NetworkManager is active, it should be the primary interface for network changes to ensure consistency and leverage its profile management capabilities. Direct manipulation of interfaces via ip commands or wpa_supplicant when NetworkManager is running can lead to conflicts or temporary configurations that NetworkManager might override.3.3. Ethernet Connection Protocol:If an Ethernet interface is available and selected, the script attempts connection in phases:
+Phase 1: Automated DHCP Attempt:</package_name></p>
+
+<p>If NetworkManager is active (NM_IS_ACTIVE=true), the script uses nmcli device connect “$ACTIVE_ETH_IFACE” or ensures an existing connection profile for the interface is set to auto-connect and attempts to bring it up.
+If NetworkManager is not active or the nmcli attempt fails, it falls back to using dhclient -v “$ACTIVE_ETH_IFACE” to request an IP address directly.1 The wifish setup script also advises using dhclient.1
+Connectivity is then verified.</p>
+
+<p>Phase 2: Interactive Static IP Configuration:</p>
+
+<p>This phase is entered if DHCP fails or if the user explicitly chooses to configure a static IP.
+The dialog utility prompts the user for the IP Address (optionally with CIDR notation, e.g., 192.168.1.50/24), Netmask (if not using CIDR), Gateway, and DNS Servers.1 While nmcli and ip addr add prefer CIDR notation for netmasks (e.g., /24), users are often more familiar with dotted decimal notation (e.g., 255.255.255.0). The script will prompt for the IP address and CIDR suffix (e.g., /24) together for simplicity with nmcli and ip commands, or it could include a helper function to convert if separate inputs were taken. For this implementation, CIDR input is preferred for direct use with underlying tools.
+If NetworkManager is active:</p>
+
+<p>The script attempts to find an existing connection profile for $ACTIVE_ETH_IFACE.
+If a profile exists, it’s modified: nmcli connection modify “$PROFILE_NAME” ipv4.method manual ipv4.addresses “$STATIC_IP_CIDR” ipv4.gateway “$GATEWAY_IP” ipv4.dns “$DNS_SERVERS”.
+If no profile exists, a new one is added: nmcli connection add type ethernet con-name “Static-$ACTIVE_ETH_IFACE” ifname “$ACTIVE_ETH_IFACE” ipv4.method manual ipv4.addresses “$STATIC_IP_CIDR” ipv4.gateway “$GATEWAY_IP” ipv4.dns “$DNS_SERVERS”.
+The connection is then activated: nmcli connection up “<profile_name_or_uuid>".</profile_name_or_uuid></p>
+
+<p>If NetworkManager is not active (using iproute2):</p>
+
+<p>The interface is configured directly: ip addr flush dev “$ACTIVE_ETH_IFACE”, ip addr add “$STATIC_IP_CIDR” dev “$ACTIVE_ETH_IFACE”, ip link set dev “$ACTIVE_ETH_IFACE” up, ip route add default via “$GATEWAY_IP” dev “$ACTIVE_ETH_IFACE”.
+DNS servers are written to /etc/resolv.conf (e.g., echo “nameserver $DNS1” &gt; /etc/resolv.conf). If /etc/resolv.conf is managed by resolvconf or systemd-resolved, this direct write might be temporary; however, for an immediate connection attempt, it’s often effective.</p>
+
+<p>Connectivity is verified.</p>
+
+<p>3.4. Wi-Fi Connection Protocol:If Ethernet connection attempts fail or if Wi-Fi is chosen, the script proceeds with Wi-Fi configuration:
+Phase 1: Scanning for Available Wi-Fi Networks:</p>
+
+<p>If NetworkManager is active: nmcli device wifi list is used to retrieve a list of available SSIDs, their signal strength, and security protocols.1
+If NetworkManager is not active: sudo iwlist “$ACTIVE_WIFI_IFACE” scan is used, and its output is parsed to extract SSIDs and security information.1
+The scanned networks are presented to the user in a dialog –menu.</p>
+
+<p>Phase 2: Interactive Selection and Credential Input:</p>
+
+<p>The user selects the desired SSID from the list.
+Based on the detected security of the selected network (or if ambiguous, by prompting the user), the script requests necessary credentials.</p>
+
+<p>For WPA-PSK (WPA/WPA2/WPA3 Personal): dialog –passwordbox prompts for the passphrase.1
+For Open networks: No password is required.
+For WPA-EAP (Enterprise): This is more complex. The script will prompt for Identity and Password. For simplicity in this version, it might assume common EAP methods like PEAP with MSCHAPv2, or guide the user that for highly complex EAP setups, manual configuration via nmcli connection edit or a detailed wpa_supplicant.conf file might be needed outside the script’s direct interactive flow.</p>
+
+<p>Phase 3: Connection Attempt:</p>
+
+<p>If NetworkManager is active:</p>
+
+<p>For PSK: nmcli device wifi connect “$SELECTED_SSID” password “$WIFI_PASSWORD” ifname “$ACTIVE_WIFI_IFACE”.
+For EAP: A more detailed nmcli connection add or modify command sequence would be used, setting various 802-1x.* properties based on the prompted EAP details.</p>
+
+<p>If NetworkManager is not active (using wpa_supplicant and wpa_cli):</p>
+
+<p>A temporary wpa_supplicant configuration snippet may be generated, or wpa_cli commands are used directly to add and configure the network.
+Example wpa_cli sequence:
+wpa_cli -i “$ACTIVE_WIFI_IFACE” add_network
+wpa_cli -i “$ACTIVE_WIFI_IFACE” set_network <network_id> ssid '"$SELECTED_SSID"'
+wpa_cli -i "$ACTIVE_WIFI_IFACE" set_network <network_id> psk '"$WIFI_PASSWORD"' (for PSK)
+(For EAP, set_network commands for key_mgmt WPA-EAP, identity, password, eap, phase2 would be used.)
+wpa_cli -i "$ACTIVE_WIFI_IFACE" enable_network <network_id>
+wpa_cli -i "$ACTIVE_WIFI_IFACE" select_network <network_id> (or reassociate)
+wpa_supplicant is ensured to be running, possibly started with: wpa_supplicant -B -i "$ACTIVE_WIFI_IFACE" -c /etc/wpa_supplicant/wpa_supplicant.conf -D nl80211,wext. The script ensures /etc/wpa_supplicant/wpa_supplicant.conf has ctrl_interface=DIR=/run/wpa_supplicant GROUP=netdev and update_config=1 for proper operation and potential persistence, similar to the wifish setup.1</network_id></network_id></network_id></network_id></p>
+
+<p>Phase 4: IP Address Acquisition for Wi-Fi:</p>
+
+<p>Once associated with the Wi-Fi network, an IP address is needed.
+DHCP is attempted first: dhclient -v “$ACTIVE_WIFI_IFACE”.1
+If DHCP fails or the user opts for static IP, the dialog prompts for static IP details are shown, and configuration proceeds similarly to Ethernet static IP (using nmcli if active, or iproute2 commands).
+Connectivity is verified.</p>
+
+<p>The script aims for persistent configurations where possible. nmcli commands typically create persistent profiles. When using wpa_supplicant directly, setting update_config=1 in its main configuration file and using wpa_cli save_config (if appropriate after a successful connection) can make Wi-Fi network details persistent. Direct ip commands are generally not persistent across reboots unless explicitly saved into configuration files like /etc/network/interfaces, which the script might offer as an option if ifupdown seems to be the manager.3.5. Interactive User Interface (TUI):The dialog utility is central to user interaction, providing a more structured and user-friendly experience than simple read prompts.
+–yesno: For confirmations (e.g., “Attempt Ethernet connection?”).
+–menu: For selecting from lists (e.g., available interfaces, scanned Wi-Fi networks, DHCP/Static choice).
+–inputbox: For text input (e.g., static IP components, DNS servers, EAP identity).
+–passwordbox: For sensitive input like Wi-Fi passphrases.
+–infobox / –msgbox: For displaying status messages, progress updates, and final results.
+The script consistently checks the exit status of dialog calls ($?) to handle user cancellations (e.g., pressing “Cancel” or Esc) gracefully, allowing the user to back out of operations or exit sections of the script.
+Table 2: Core dialog Prompts and User Interaction Flowdialog TypePurpose/Question for UserVariable Storing Input (Example)Next Logical Step/Function Called (Example)–yesno”No internet detected. Attempt to configure Ethernet?”ATTEMPT_ETHIf yes, proceed to Ethernet configuration functions.–menu”Select Ethernet interface to use:” (lists detected interfaces)ACTIVE_ETH_IFACEStore selection and proceed with this interface.–menu”Select IP configuration method for Ethernet:” (DHCP, Static)ETH_IP_METHODIf DHCP, call attempt_ethernet_dhcp(); if Static, call prompt_static_config_eth().–inputbox”Enter Static IP Address/CIDR (e.g., 192.168.1.50/24):”STATIC_IP_CIDRStore for static IP configuration.–passwordbox”Enter Wi-Fi Password for SSID ‘$SSID’:”WIFI_PASSStore for Wi-Fi connection attempt.–menu”Select Wi-Fi network (SSID):” (lists scanned networks)SELECTED_SSIDStore selection, then prompt for credentials if needed.–msgbox / –infobox”Connecting to $SELECTED_SSID…” / “Internet connection successful!”N/AInform user of status.3.6. Fallback and Retry Mechanisms:The script follows a logical fallback sequence:
+Attempt Ethernet (DHCP first, then Static if chosen/failed).
+If Ethernet fails or is skipped, attempt Wi-Fi (Scan, select, connect with DHCP first, then Static if chosen/failed).
+If a particular step (e.g., DHCP request, Wi-Fi association) fails, the user is informed, and the script may offer to retry the step, try an alternative (e.g., static IP after DHCP failure), or move to the next major connection method (e.g., Wi-Fi after Ethernet failure). Timeouts are incorporated for operations like DHCP requests to prevent indefinite hanging.
+3.7. Final Connectivity Verification:A dedicated function, check_internet_connectivity(), is used to confirm internet access:
+It first pings a reliable public IP address (e.g., ping -c 3 -W 2 8.8.8.8) to test basic network layer connectivity without relying on DNS.1
+If the IP ping is successful, it then pings a reliable hostname (e.g., ping -c 3 -W 2 google.com) to test DNS resolution and end-to-end connectivity.1
+The function returns a success or failure status, which is reported to the user.
+Section 4: The Comprehensive Connectivity Bash ScriptThis section presents the bash script designed to meet the outlined objectives. The script is heavily commented to explain its logic and the purpose of various commands.Bash#!/bin/bash
+#</p>
+<h1 id="universal-network-connectivity-script-for-rk3588-vpc-3588-debian-bullseye">Universal Network Connectivity Script for RK3588 VPC-3588 (Debian Bullseye)</h1>
+<p>#</p>
+<h1 id="this-script-attempts-to-establish-an-internet-connection-via-ethernet-or-wi-fi">This script attempts to establish an internet connection via Ethernet or Wi-Fi,</h1>
+<h1 id="interactively-prompting-the-user-for-necessary-information">interactively prompting the user for necessary information.</h1>
+<h1 id="it-must-be-run-with-root-privileges">It must be run with root privileges.</h1>
+<p>#</p>
+
+<h1 id="-script-setup-">— Script Setup —</h1>
+<h1 id="exit-immediately-if-a-command-exits-with-a-non-zero-status">Exit immediately if a command exits with a non-zero status.</h1>
+<p>set -e</p>
+<h1 id="treat-unset-variables-as-an-error-when-substituting">Treat unset variables as an error when substituting.</h1>
+<h1 id="set--u--can-be-too-strict-for-optional-dialog-inputs-handle-manually">set -u # Can be too strict for optional dialog inputs, handle manually.</h1>
+<h1 id="the-return-value-of-a-pipeline-is-the-status-of-the-last-command-to-exit">The return value of a pipeline is the status of the last command to exit</h1>
+<h1 id="with-a-non-zero-status-or-zero-if-no-command-exited-with-a-non-zero-status">with a non-zero status, or zero if no command exited with a non-zero status.</h1>
+<p>set -o pipefail</p>
+
+<h1 id="-global-variables-">— Global Variables —</h1>
+<p>ETH_IFACES=()
+WIFI_IFACES=()
+SELECTED_ETH_IFACE=””
+SELECTED_WIFI_IFACE=””
+NM_IS_ACTIVE=false
+DIALOG_CANCEL_CODE=1
+DIALOG_ESC_CODE=255
+DIALOG_DEFAULT_HEIGHT=15
+DIALOG_DEFAULT_WIDTH=70
+DIALOG_INPUT_WIDTH=50</p>
+
+<h1 id="ping-targets-for-connectivity-check">Ping targets for connectivity check</h1>
+<p>PING_IP_TARGET=”8.8.8.8”
+PING_HOSTNAME_TARGET=”google.com”
+PING_COUNT=3
+PING_TIMEOUT=2 # seconds</p>
+
+<h1 id="-logging-functions-">— Logging Functions —</h1>
+<p>log_info() {
+    echo “[INFO] $1”
+    dialog –title “Information” –infobox “$1” 6 60 2&gt;/dev/null
+    sleep 1 # Give time for user to see infobox
+}</p>
+
+<p>log_msg() {
+    echo “ $1”
+    dialog –title “Message” –msgbox “$1” 8 60
+}</p>
+
+<p>log_error() {
+    echo “ $1” &gt;&amp;2
+    dialog –title “Error” –msgbox “$1” 8 60
+}</p>
+
+<p>log_warning() {
+    echo “ $1”
+    dialog –title “Warning” –msgbox “$1” 8 60
+}</p>
+
+<h1 id="-prerequisite-checks-">— Prerequisite Checks —</h1>
+<p>check_command() {
+    command -v “$1” &gt;/dev/null 2&gt;&amp;1
+}</p>
+
+<p>install_packages() {
+    local missing_packages=()
+    for pkg_info in “$@”; do
+        IFS=’,’ read -r cmd pkg_name «&lt; “$pkg_info”
+        if! check_command “$cmd”; then
+            missing_packages+=(“$pkg_name”)
+        fi
+    done</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>if [ ${#missing_packages[@]} -gt 0 ]; then
+    dialog --title "Missing Packages" --yesno "The following essential packages are missing: ${missing_packages[*]}.\\n\\nDo you want to try and install them now?\\n(Requires an existing temporary internet connection or cached packages)" 12 ${DIALOG_DEFAULT_WIDTH}
+    if [ $? -eq 0 ]; then
+        log_info "Attempting to install missing packages: ${missing_packages[*]}..."
+        # Adhere to [1] warning: NO apt-get upgrade
+        if apt-get update -qq &amp;&amp; apt-get install -y "${missing_packages[@]}"; then
+            log_info "Successfully installed missing packages."
+        else
+            log_error "Failed to install some packages. Please install them manually and re-run the script.\\nPackages: ${missing_packages[*]}"
+            exit 1
+        fi
+    else
+        log_error "Cannot proceed without essential packages: ${missing_packages[*]}. Exiting."
+        exit 1
+    fi
+fi }
+</code></pre></div></div>
+
+<h1 id="-network-interface-and-manager-detection-">— Network Interface and Manager Detection —</h1>
+<p>detect_ethernet_interfaces() {
+    ETH_IFACES=()
+    # Using ip -o link filters better than ifconfig -a which might not be installed
+    # Filters for common Ethernet prefixes and excludes virtual/bridge interfaces
+    local detected
+    detected=$(ip -o link show type ether | awk -F’: ‘ ‘!/master|link\/ether 00:00:00:00:00:00/{print $2}’ | awk ‘{print $1}’)
+    if [ -n “$detected” ]; then
+        # shellcheck disable=SC2207 # Word splitting is intended here
+        ETH_IFACES=($(echo “$detected”))
+    fi
+    log_info “Detected Ethernet interfaces: ${ETH_IFACES[*]}”
+}</p>
+
+<p>detect_wifi_interfaces() {
+    WIFI_IFACES=()
+    local detected
+    # Try ‘iw dev’ first (more reliable for Wi-Fi)
+    if check_command iw; then
+        detected=$(iw dev | awk ‘$1==”Interface”{print $2}’)
+    fi
+    # Fallback to ‘ip link’ if ‘iw dev’ fails or not present
+    if [ -z “$detected” ] &amp;&amp; check_command ip; then
+        detected=$(ip -o link show type wlan | awk -F’: ‘ ‘{print $2}’ | awk ‘{print $1}’)
+    fi</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>if [ -n "$detected" ]; then
+    # shellcheck disable=SC2207
+    WIFI_IFACES=($(echo "$detected"))
+fi
+log_info "Detected Wi-Fi interfaces: ${WIFI_IFACES[*]}" }
+</code></pre></div></div>
+
+<p>check_network_manager_active() {
+    if check_command systemctl &amp;&amp; systemctl is-active –quiet NetworkManager; then
+        NM_IS_ACTIVE=true
+        log_info “NetworkManager service is active.”
+    else
+        NM_IS_ACTIVE=false
+        log_info “NetworkManager service is not active or not found.”
+    fi
+}</p>
+
+<h1 id="-user-interaction-and-selection-">— User Interaction and Selection —</h1>
+<p>prompt_select_interface() {
+    local type=”$1”
+    shift
+    local interfaces_array=(“$@”)
+    local dialog_options=()
+    local choice
+    local i=0</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>if [ ${#interfaces_array[@]} -eq 0 ]; then
+    log_warning "No $type interfaces found."
+    return 1
+elif [ ${#interfaces_array[@]} -eq 1 ]; then
+    # Only one interface, auto-select
+    log_info "Auto-selecting $type interface: ${interfaces_array}"
+    echo "${interfaces_array}"
+    return 0
+fi
+
+for iface in "${interfaces_array[@]}"; do
+    dialog_options+=("$iface" "Use $iface")
+    i=$((i + 1))
+done
+
+choice=$(dialog --title "Select $type Interface" \
+    --menu "Choose the $type interface to configure:" ${DIALOG_DEFAULT_HEIGHT} ${DIALOG_DEFAULT_WIDTH} ${#interfaces_array[@]} \
+    "${dialog_options[@]}" \
+    2&gt;&amp;1 &gt;/dev/tty)
+
+local exit_status=$?
+if ||; then
+    log_info "$type interface selection cancelled."
+    return 1
+fi
+echo "$choice"
+return 0 }
+</code></pre></div></div>
+
+<p>prompt_static_config() {
+    local interface_type=”$1” # “Ethernet” or “Wi-Fi”
+    local static_ip static_gateway static_dns</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>static_ip=$(dialog --title "Static IP Configuration ($interface_type)" \
+    --inputbox "Enter Static IP Address with CIDR (e.g., 192.168.1.100/24):" \
+    10 ${DIALOG_INPUT_WIDTH} 2&gt;&amp;1 &gt;/dev/tty)
+[ $? -ne 0 ] &amp;&amp; return 1
+
+static_gateway=$(dialog --title "Static IP Configuration ($interface_type)" \
+    --inputbox "Enter Gateway IP Address (e.g., 192.168.1.1):" \
+    10 ${DIALOG_INPUT_WIDTH} 2&gt;&amp;1 &gt;/dev/tty)
+[ $? -ne 0 ] &amp;&amp; return 1
+
+static_dns=$(dialog --title "Static IP Configuration ($interface_type)" \
+    --inputbox "Enter DNS Server(s) (comma-separated, e.g., 8.8.8.8,1.1.1.1):" \
+    10 ${DIALOG_INPUT_WIDTH} 2&gt;&amp;1 &gt;/dev/tty)
+[ $? -ne 0 ] &amp;&amp; return 1
+
+# Validate inputs (basic validation)
+if [[ -z "$static_ip" | | -z "$static_gateway" ]]; then
+    log_error "Static IP and Gateway cannot be empty."
+    return 1
+fi
+# A more robust IP/CIDR validation could be added here
+
+echo "$static_ip:$static_gateway:$static_dns" # Return as colon-separated string
+return 0 }
+</code></pre></div></div>
+
+<h1 id="-connectivity-check-">— Connectivity Check —</h1>
+<p>check_internet_connectivity() {
+    log_info “Checking internet connectivity…”
+    # Test 1: Ping a reliable IP address (tests basic connectivity, gateway, routing)
+    if ping -c ${PING_COUNT} -W ${PING_TIMEOUT} “${PING_IP_TARGET}” &gt;/dev/null 2&gt;&amp;1; then
+        log_info “Successfully pinged IP address (${PING_IP_TARGET}). Basic connectivity OK.”
+        # Test 2: Ping a reliable hostname (tests DNS resolution)
+        if ping -c ${PING_COUNT} -W ${PING_TIMEOUT} “${PING_HOSTNAME_TARGET}” &gt;/dev/null 2&gt;&amp;1; then
+            log_msg “Internet connection established and DNS resolution working (pinged ${PING_HOSTNAME_TARGET}).”
+            return 0 # Success
+        else
+            log_warning “Successfully pinged IP, but DNS resolution failed (cannot ping ${PING_HOSTNAME_TARGET}). Check DNS settings.”
+            return 2 # DNS issue
+        fi
+    else
+        log_warning “Failed to ping IP address (${PING_IP_TARGET}). No internet connectivity.”
+        return 1 # No basic connectivity
+    fi
+}</p>
+
+<h1 id="-ethernet-configuration-">— Ethernet Configuration —</h1>
+<p>attempt_ethernet_dhcp() {
+    local iface=”$1”
+    log_info “Attempting DHCP on Ethernet interface: $iface”</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>if; then
+    # Check if connection profile exists
+    local profile_name
+    profile_name=$(nmcli -g NAME,DEVICE connection show --active | grep "$iface" | cut -d':' -f1 | head -n1)
+    if [ -z "$profile_name" ]; then
+         profile_name=$(nmcli -g NAME,DEVICE connection show | grep "$iface" | cut -d':' -f1 | head -n1)
+    fi
+
+    if [ -n "$profile_name" ]; then
+        log_info "Found existing NetworkManager profile '$profile_name' for $iface. Ensuring DHCP and activating..."
+        if nmcli connection modify "$profile_name" ipv4.method auto ipv6.method auto &amp;&amp; \
+           nmcli connection up "$profile_name" ifname "$iface"; then
+            log_info "NetworkManager activated DHCP profile '$profile_name' for $iface."
+            sleep 5 # Give time for IP acquisition
+            return 0
+        else
+            log_warning "Failed to activate DHCP profile '$profile_name' for $iface via NetworkManager. Trying to add a new one."
+        fi
+    fi
+    # If no profile or activation failed, try adding a new one
+    log_info "Attempting to add and activate a new DHCP Ethernet connection for $iface via NetworkManager..."
+    if nmcli connection add type ethernet con-name "Eth-DHCP-$iface" ifname "$iface" ipv4.method auto ipv6.method auto &amp;&amp; \
+       nmcli connection up "Eth-DHCP-$iface"; then
+        log_info "NetworkManager added and activated DHCP connection for $iface."
+        sleep 5 # Give time for IP acquisition
+        return 0
+    else
+        log_warning "Failed to configure Ethernet DHCP for $iface via NetworkManager. Will try dhclient."
+    fi
+fi
+
+# Fallback or if NM is not active: use dhclient
+log_info "Bringing interface $iface up..."
+ip link set "$iface" up
+# Release any old leases first
+dhclient -r "$iface" &gt;/dev/null 2&gt;&amp;1 | | true
+log_info "Attempting DHCP with dhclient on $iface..."
+if dhclient -v "$iface"; then
+    log_info "dhclient successfully obtained lease on $iface."
+    sleep 2
+    return 0
+else
+    log_error "dhclient failed to obtain lease on $iface."
+    return 1
+fi }
+</code></pre></div></div>
+
+<p>configure_ethernet_static() {
+    local iface=”$1”
+    local config_str</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>config_str=$(prompt_static_config "Ethernet")
+[ $? -ne 0 ] &amp;&amp; return 1
+
+local static_ip_cidr gateway dns_servers
+IFS=':' read -r static_ip_cidr gateway dns_servers &lt;&lt;&lt; "$config_str"
+
+log_info "Configuring static IP for Ethernet interface $iface: IP=$static_ip_cidr, GW=$gateway, DNS=$dns_servers"
+
+if; then
+    local profile_name="Static-Eth-$iface"
+    # Delete existing profile with this name if it exists to ensure clean setup
+    nmcli connection delete "$profile_name" &gt;/dev/null 2&gt;&amp;1 | | true
+    
+    log_info "Attempting to add and activate static Ethernet connection via NetworkManager..."
+    # Construct nmcli command parts
+    local nm_cmd_parts=("nmcli" "connection" "add" "type" "ethernet" "con-name" "$profile_name" "ifname" "$iface" "ipv4.method" "manual" "ipv4.addresses" "$static_ip_cidr" "ipv4.gateway" "$gateway")
+    if [ -n "$dns_servers" ]; then
+        nm_cmd_parts+=("ipv4.dns" "$dns_servers")
+    fi
+    # Add ipv6.method disabled to avoid potential issues if IPv6 is not needed/configured
+    nm_cmd_parts+=("ipv6.method" "disabled")
+
+    if "${nm_cmd_parts[@]}" &amp;&amp; nmcli connection up "$profile_name"; then
+        log_info "NetworkManager configured and activated static IP on $iface."
+        sleep 3
+        return 0
+    else
+        log_error "Failed to configure static IP on $iface via NetworkManager."
+        # Clean up potentially partially created profile
+        nmcli connection delete "$profile_name" &gt;/dev/null 2&gt;&amp;1 | | true
+        return 1
+    fi
+fi
+
+# Fallback or if NM is not active: use iproute2
+log_info "Configuring static IP on $iface using iproute2..."
+ip addr flush dev "$iface" | | true # Clear existing IPs
+ip link set "$iface" down
+ip link set "$iface" up
+if ip addr add "$static_ip_cidr" dev "$iface" &amp;&amp; \
+   ip route add default via "$gateway" dev "$iface"; then
+    log_info "iproute2 configured IP address and gateway on $iface."
+    if [ -n "$dns_servers" ]; then
+        # Create /etc/resolv.conf. Note: this might be overwritten by other services.
+        # For a robust solution, systemd-resolved or resolvconf should be configured.
+        # This is a temporary measure for immediate connectivity.
+        local resolv_conf_content=""
+        IFS=',' read -ra dns_array &lt;&lt;&lt; "$dns_servers"
+        for dns in "${dns_array[@]}"; do
+            resolv_conf_content+="nameserver $dns\n"
+        done
+        echo -e "$resolv_conf_content" &gt; /etc/resolv.conf
+        log_info "Configured DNS servers in /etc/resolv.conf: $dns_servers"
+    fi
+    sleep 3
+    return 0
+else
+    log_error "Failed to configure static IP on $iface using iproute2."
+    return 1
+fi }
+</code></pre></div></div>
+
+<p>handle_ethernet_connection() {
+    if} -eq 0 ]; then
+        log_warning “No Ethernet interfaces detected. Skipping Ethernet setup.”
+        return 1
+    fi</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>SELECTED_ETH_IFACE=$(prompt_select_interface "Ethernet" "${ETH_IFACES[@]}")
+[ $? -ne 0 ] &amp;&amp; return 1
+&amp;&amp; return 1
+
+
+dialog --title "Ethernet Configuration" --yesno "Attempt to configure Ethernet interface '$SELECTED_ETH_IFACE' using DHCP (automatic IP)?" ${DIALOG_DEFAULT_HEIGHT} ${DIALOG_DEFAULT_WIDTH}
+local choice=$?
+
+if [ $choice -eq 0 ]; then # Yes (DHCP)
+    if attempt_ethernet_dhcp "$SELECTED_ETH_IFACE"; then
+        if check_internet_connectivity; then return 0; fi
+    fi
+    log_warning "DHCP on $SELECTED_ETH_IFACE failed or did not result in internet connectivity."
+elif &amp;&amp;; then # No (selected, not cancelled)
+    log_info "Skipping DHCP for $SELECTED_ETH_IFACE."
+else # Cancelled
+    log_info "Ethernet DHCP choice cancelled."
+    return 1
+fi
+
+# Offer static IP if DHCP was skipped, failed, or user wants to try static
+dialog --title "Ethernet Configuration" --yesno "Do you want to configure a static IP for Ethernet interface '$SELECTED_ETH_IFACE'?" ${DIALOG_DEFAULT_HEIGHT} ${DIALOG_DEFAULT_WIDTH}
+if [ $? -eq 0 ]; then # Yes (Static IP)
+    if configure_ethernet_static "$SELECTED_ETH_IFACE"; then
+        if check_internet_connectivity; then return 0; fi
+    fi
+    log_warning "Static IP configuration on $SELECTED_ETH_IFACE failed or did not result in internet connectivity."
+else
+    log_info "Skipping static IP configuration for $SELECTED_ETH_IFACE."
+fi
+return 1 }
+</code></pre></div></div>
+
+<h1 id="-wi-fi-configuration-">— Wi-Fi Configuration —</h1>
+<p>scan_wifi_networks() {
+    local iface=”$1”
+    local networks_list=()
+    local line ssid signal security</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>log_info "Scanning for Wi-Fi networks on $iface..."
+# Ensure interface is up for scanning
+ip link set "$iface" up | | log_warning "Could not bring $iface up for scanning."
+
+if &amp;&amp; check_command nmcli; then
+    # Using nmcli device wifi list ifname &lt;iface&gt;
+    # Format: SSID,MODE,CHAN,RATE,SIGNAL,BARS,SECURITY
+    # We need SSID, SIGNAL, SECURITY
+    # Use a temp file for dialog --menu as nmcli output can be tricky with spaces in SSIDs
+    local tmp_nmcli_scan="/tmp/nmcli_scan.$$"
+    # Rescan to get fresh list
+    nmcli device wifi rescan ifname "$iface" &gt;/dev/null 2&gt;&amp;1 | | true 
+    sleep 3 # Give time for rescan
+    
+    # Exclude lines starting with '*' (current connection) or '--' (header separator)
+    # Ensure we get unique SSIDs, prioritizing stronger signals if duplicates exist
+    nmcli -f SSID,SIGNAL,SECURITY device wifi list ifname "$iface" --rescan no | \
+        tail -n +2 | grep -v "^\*" | grep -v "^\-\-" | \
+        awk -F'  +' '{gsub(/^[ \t]+|[ \t]+$/, "", $1); gsub(/^[ \t]+|[ \t]+$/, "", $2); gsub(/^[ \t]+|[ \t]+$/, "", $3); print $1 ";" $2 ";" $3}' | \
+        sort -t';' -k1,1 -k2,2nr | awk -F';' '!seen[$1]++' &gt; "$tmp_nmcli_scan"
+
+    while IFS=';' read -r ssid signal security; do
+        if [ -n "$ssid" ] &amp;&amp; [ "$ssid"!= "--" ]; then # Filter out empty or separator SSIDs
+             # Truncate long SSIDs for dialog display
+            local display_ssid="${ssid:0:25}"
+            if [ "${#ssid}" -gt 25 ]; then display_ssid="${display_ssid}.."; fi
+            networks_list+=("$ssid" "Sig: $signal | Sec: ${security:-Open} | $display_ssid")
+        fi
+    done &lt; "$tmp_nmcli_scan"
+    rm -f "$tmp_nmcli_scan"
+
+else # Fallback to iwlist
+    # iwlist scan output is less structured
+    # This is a simplified parser; more robust parsing might be needed for all cases
+    # Ensure wpa_supplicant is not exclusively controlling the interface if we use iwlist
+    # May need to temporarily stop wpa_supplicant if it blocks scans
+    
+    # Stop wpa_supplicant if it's running on the interface to allow iwlist scan
+    # This is a bit aggressive, might need refinement.
+    pgrep -f "wpa_supplicant.*${iface}" | xargs kill -9 &gt;/dev/null 2&gt;&amp;1 | | true
+    sleep 1
+
+    local scan_output
+    scan_output=$(iwlist "$iface" scan 2&gt;/dev/null)
+    local current_ssid=""
+    local current_signal=""
+    local current_security="Open"
+
+    while IFS= read -r line; do
+        if]; then
+            # Save previous network if one was being processed
+            if [ -n "$current_ssid" ]; then
+                local display_ssid="${current_ssid:0:25}"
+                if [ "${#current_ssid}" -gt 25 ]; then display_ssid="${display_ssid}.."; fi
+                networks_list+=("$current_ssid" "Sig: ${current_signal:-N/A} | Sec: $current_security | $display_ssid")
+                current_security="Open" # Reset for next
+            fi
+            current_ssid=$(echo "$line" | sed -e 's/.*ESSID:"\(.*\)"/\1/')
+        elif [[ "$line" == *"Quality="* ]]; then # Signal Strength
+            current_signal=$(echo "$line" | sed -n -e 's/.*Signal level=\(-\?[0-9]* dBm\).*/\1/p' -e 's/.*Quality=\([0-9]*\/[0-9]*\).*/\1/p')
+        elif [[ "$line" == *"Encryption key:on"* ]]; then
+            current_security="Protected" # Generic, need more parsing for WPA/WPA2/WEP
+        elif [[ "$line" == *"IE: IEEE 802.11i/WPA2 Version 1"* ]]; then
+            current_security="WPA2"
+        elif [[ "$line" == *"IE: WPA Version 1"* ]]; then
+            current_security="WPA"
+        fi
+    done &lt;&lt;&lt; "$scan_output"
+    # Add the last processed network
+    if [ -n "$current_ssid" ]; then
+        local display_ssid="${current_ssid:0:25}"
+        if [ "${#current_ssid}" -gt 25 ]; then display_ssid="${display_ssid}.."; fi
+        networks_list+=("$current_ssid" "Sig: ${current_signal:-N/A} | Sec: $current_security | $display_ssid")
+    fi
+fi
+
+if [ ${#networks_list[@]} -eq 0 ]; then
+    log_warning "No Wi-Fi networks found on $iface after scan."
+    return 1
+fi
+
+# Return as a flat array for dialog
+echo "${networks_list[@]}"
+return 0 }
+</code></pre></div></div>
+
+<p>connect_wifi() {
+    local iface=”$1”
+    local networks_flat_array</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>networks_flat_array=($(scan_wifi_networks "$iface"))
+if [ $? -ne 0 ] | | [ ${#networks_flat_array[@]} -eq 0 ]; then
+    return 1 # Scan failed or no networks
+fi
+
+local selected_ssid_tag
+selected_ssid_tag=$(dialog --title "Select Wi-Fi Network" \
+    --menu "Choose the Wi-Fi network (SSID) to connect to on $iface:" \
+    $((DIALOG_DEFAULT_HEIGHT + 5)) ${DIALOG_DEFAULT_WIDTH} $((${#networks_flat_array[@]} / 2)) \
+    "${networks_flat_array[@]}" \
+    2&gt;&amp;1 &gt;/dev/tty)
+
+local exit_status=$?
+if ||; then
+    log_info "Wi-Fi network selection cancelled."
+    return 1
+fi
+local selected_ssid="$selected_ssid_tag" # This is the actual SSID
+
+# Determine if network is open or needs password
+local security_type="Unknown"
+for ((i=0; i&lt;${#networks_flat_array[@]}; i+=2)); do
+    if [ "${networks_flat_array[i]}" == "$selected_ssid" ]; then
+        # Example description: "Sig: 70 | Sec: WPA2 PSK | MyNetworkSSID"
+        if [[ "${networks_flat_array[i+1]}" == *"Sec: Open"* ]]; then
+            security_type="Open"
+        elif [[ "${networks_flat_array[i+1]}" == *"Sec: WEP"* ]]; then
+            security_type="WEP" # Basic WEP handling
+        elif [[ "${networks_flat_array[i+1]}" == *"Sec: WPA"* | | "${networks_flat_array[i+1]}" == *"Sec: WPA2"* | | "${networks_flat_array[i+1]}" == *"Sec: WPA3"* ]]; then
+            security_type="PSK" # Assume PSK for simplicity, could add EAP detection
+        fi
+        break
+    fi
+done
+
+local wifi_password=""
+if | | [ "$security_type" == "WEP" ]; then
+    wifi_password=$(dialog --title "Wi-Fi Password" \
+        --passwordbox "Enter password for SSID '$selected_ssid':" \
+        10 ${DIALOG_INPUT_WIDTH} 2&gt;&amp;1 &gt;/dev/tty)
+    exit_status=$?
+    if | | || [ -z "$wifi_password" ]; then
+        log_warning "Password entry cancelled or empty. Cannot connect."
+        return 1
+    fi
+elif [ "$security_type" == "Unknown" ]; then
+     dialog --title "Unknown Security" --yesno "Security type for '$selected_ssid' is unknown or complex (e.g. Enterprise/EAP). Attempt to connect as an open network or provide a password?" 12 ${DIALOG_DEFAULT_WIDTH}
+     if [ $? -eq 0 ]; then # Yes, provide password
+        wifi_password=$(dialog --title "Wi-Fi Password" \
+            --passwordbox "Enter password/key for SSID '$selected_ssid' (if any):" \
+            10 ${DIALOG_INPUT_WIDTH} 2&gt;&amp;1 &gt;/dev/tty)
+        [ $? -ne 0 ] &amp;&amp; return 1 # Cancelled
+     else
+        security_type="Open" # Assume open if user chooses not to provide password
+     fi
+fi
+
+log_info "Attempting to connect to Wi-Fi: $selected_ssid on $iface"
+if; then
+    # Disconnect any existing connection on the Wi-Fi interface first
+    nmcli device disconnect "$iface" &gt;/dev/null 2&gt;&amp;1 | | true
+    sleep 1
+    # Delete old connection profile for this SSID if it exists to avoid conflicts
+    local old_profile_uuid
+    old_profile_uuid=$(nmcli -g UUID,TYPE,NAME connection show | grep "wireless" | grep "$selected_ssid" | cut -d':' -f1 | head -n1)
+    if [ -n "$old_profile_uuid" ]; then
+        log_info "Deleting existing NetworkManager profile for $selected_ssid."
+        nmcli connection delete uuid "$old_profile_uuid" &gt;/dev/null 2&gt;&amp;1 | | true
+    fi
+
+    if [ "$security_type" == "Open" ] &amp;&amp; [ -z "$wifi_password" ]; then
+         if nmcli device wifi connect "$selected_ssid" ifname "$iface"; then
+            log_info "Successfully connected to open Wi-Fi $selected_ssid via NetworkManager."
+         else
+            log_error "Failed to connect to open Wi-Fi $selected_ssid via NetworkManager."
+            return 1
+         fi
+    else
+        if nmcli device wifi connect "$selected_ssid" password "$wifi_password" ifname "$iface"; then
+            log_info "Successfully connected to Wi-Fi $selected_ssid via NetworkManager."
+        else
+            log_error "Failed to connect to Wi-Fi $selected_ssid via NetworkManager. Check password/security."
+            return 1
+        fi
+    fi
+else # Use wpa_supplicant
+    # Ensure wpa_supplicant is running for the interface
+    # Stop any existing wpa_supplicant for this interface to ensure clean state
+    pgrep -f "wpa_supplicant.*${iface}" | xargs kill -9 &gt;/dev/null 2&gt;&amp;1 | | true
+    sleep 1
+    
+    # Basic wpa_supplicant.conf for this connection
+    local wpa_conf_temp="/tmp/wpa_temp_${iface}.conf"
+    echo "ctrl_interface=DIR=/run/wpa_supplicant GROUP=netdev" &gt; "$wpa_conf_temp"
+    echo "update_config=1" &gt;&gt; "$wpa_conf_temp"
+    echo "" &gt;&gt; "$wpa_conf_temp"
+    echo "network={" &gt;&gt; "$wpa_conf_temp"
+    echo "    ssid=\"$selected_ssid\"" &gt;&gt; "$wpa_conf_temp"
+    if [ "$security_type" == "Open" ] &amp;&amp; [ -z "$wifi_password" ]; then
+        echo "    key_mgmt=NONE" &gt;&gt; "$wpa_conf_temp"
+    elif [ "$security_type" == "WEP" ]; then
+        echo "    key_mgmt=NONE" &gt;&gt; "$wpa_conf_temp"
+        echo "    wep_key0=\"$wifi_password\"" &gt;&gt; "$wpa_conf_temp" # Basic WEP, might need hex
+    else # PSK (WPA/WPA2/WPA3)
+        echo "    psk=\"$wifi_password\"" &gt;&gt; "$wpa_conf_temp"
+        # For WPA3, wpa_supplicant might need 'key_mgmt=SAE' or 'WPA-PSK WPA-PSK-SHA256 SAE'
+        # For broader compatibility:
+        echo "    key_mgmt=WPA-PSK WPA-PSK-SHA256 SAE" &gt;&gt; "$wpa_conf_temp"
+        echo "    proto=RSN WPA" &gt;&gt; "$wpa_conf_temp"
+        echo "    pairwise=CCMP TKIP" &gt;&gt; "$wpa_conf_temp"
+        echo "    group=CCMP TKIP" &gt;&gt; "$wpa_conf_temp"
+    fi
+    echo "}" &gt;&gt; "$wpa_conf_temp"
+    chmod 600 "$wpa_conf_temp"
+
+    if! wpa_supplicant -B -i "$iface" -c "$wpa_conf_temp" -Dnl80211,wext; then
+        log_error "Failed to start wpa_supplicant for $iface."
+        rm -f "$wpa_conf_temp"
+        return 1
+    fi
+    log_info "wpa_supplicant started for $iface. Waiting for association..."
+    # Wait for connection (check status with wpa_cli)
+    local connect_tries=15 # Approx 15 seconds
+    while [ $connect_tries -gt 0 ]; do
+        if wpa_cli -i "$iface" status | grep -q "wpa_state=COMPLETED"; then
+            log_info "Successfully associated with Wi-Fi $selected_ssid via wpa_supplicant."
+            # Optional: make it persistent in main wpa_supplicant.conf
+            # wpa_cli -i "$iface" save_config
+            rm -f "$wpa_conf_temp" # Clean up temp file
+            break
+        fi
+        sleep 1
+        connect_tries=$((connect_tries - 1))
+    done
+    if [ $connect_tries -eq 0 ]; then
+        log_error "Failed to associate with Wi-Fi $selected_ssid via wpa_supplicant."
+        # kill wpa_supplicant process started by this script
+        pgrep -f "wpa_supplicant -B -i $iface -c $wpa_conf_temp" | xargs kill -9 &gt;/dev/null 2&gt;&amp;1 | | true
+        rm -f "$wpa_conf_temp"
+        return 1
+    fi
+fi
+
+# After Wi-Fi association, attempt DHCP
+log_info "Attempting DHCP on Wi-Fi interface $iface..."
+# Release old lease if any
+dhclient -r "$iface" &gt;/dev/null 2&gt;&amp;1 | | true
+if dhclient -v "$iface"; then
+    log_info "dhclient successfully obtained lease on $iface."
+    sleep 2
+    return 0 # DHCP successful
+else
+    log_warning "dhclient failed to obtain lease on $iface after Wi-Fi connection."
+    # Offer static IP configuration for Wi-Fi
+    dialog --title "Wi-Fi IP Configuration" --yesno "DHCP failed for '$selected_ssid' on $iface.\\nDo you want to configure a static IP for this Wi-Fi connection?" ${DIALOG_DEFAULT_HEIGHT} ${DIALOG_DEFAULT_WIDTH}
+    if [ $? -eq 0 ]; then
+        local static_config_str
+        static_config_str=$(prompt_static_config "Wi-Fi ($selected_ssid)")
+        [ $? -ne 0 ] &amp;&amp; return 1
+
+        local static_ip_cidr gw dns
+        IFS=':' read -r static_ip_cidr gw dns &lt;&lt;&lt; "$static_config_str"
+
+        log_info "Configuring static IP for Wi-Fi $iface: IP=$static_ip_cidr, GW=$gw, DNS=$dns"
+        if; then
+            # Modify the current active Wi-Fi connection to static
+            local active_wifi_conn
+            active_wifi_conn=$(nmcli -g UUID,DEVICE connection show --active | grep "$iface" | cut -d':' -f1 | head -n1)
+            if [ -n "$active_wifi_conn" ]; then
+                local nm_modify_cmd=("nmcli" "connection" "modify" "$active_wifi_conn" "ipv4.method" "manual" "ipv4.addresses" "$static_ip_cidr" "ipv4.gateway" "$gw")
+                 if [ -n "$dns" ]; then nm_modify_cmd+=("ipv4.dns" "$dns"); fi
+                 nm_modify_cmd+=("ipv6.method" "disabled")
+                if "${nm_modify_cmd[@]}" &amp;&amp; nmcli connection up "$active_wifi_conn"; then
+                    log_info "NetworkManager configured static IP for Wi-Fi $iface."
+                    return 0
+                else
+                    log_error "Failed to configure static IP for Wi-Fi via NetworkManager."
+                    return 1
+                fi
+            else
+                log_error "Could not find active NetworkManager Wi-Fi connection to modify for static IP."
+                return 1
+            fi
+        else # iproute2 for Wi-Fi static IP
+            ip addr flush dev "$iface" | | true
+            ip link set "$iface" up # Ensure it's up
+            if ip addr add "$static_ip_cidr" dev "$iface" &amp;&amp; \
+               ip route add default via "$gw" dev "$iface"; then
+                log_info "iproute2 configured static IP for Wi-Fi $iface."
+                 if [ -n "$dns" ]; then
+                    local resolv_conf_content_wifi=""
+                    IFS=',' read -ra dns_array_wifi &lt;&lt;&lt; "$dns"
+                    for dns_val in "${dns_array_wifi[@]}"; do
+                        resolv_conf_content_wifi+="nameserver $dns_val\n"
+                    done
+                    echo -e "$resolv_conf_content_wifi" &gt; /etc/resolv.conf
+                    log_info "Configured DNS servers in /etc/resolv.conf: $dns"
+                fi
+                return 0
+            else
+                log_error "Failed to configure static IP for Wi-Fi $iface using iproute2."
+                return 1
+            fi
+        fi
+    else
+        log_info "Skipping static IP for Wi-Fi."
+        return 1 # DHCP failed, static skipped
+    fi
+fi
+return 1 # Should not be reached if DHCP worked }
+</code></pre></div></div>
+
+<p>handle_wifi_connection() {
+    if} -eq 0 ]; then
+        log_warning “No Wi-Fi interfaces detected. Skipping Wi-Fi setup.”
+        return 1
+    fi</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>SELECTED_WIFI_IFACE=$(prompt_select_interface "Wi-Fi" "${WIFI_IFACES[@]}")
+[ $? -ne 0 ] &amp;&amp; return 1
+&amp;&amp; return 1
+
+if connect_wifi "$SELECTED_WIFI_IFACE"; then
+    if check_internet_connectivity; then return 0; fi
+fi
+log_warning "Wi-Fi connection on $SELECTED_WIFI_IFACE failed or did not result in internet connectivity."
+return 1 }
+</code></pre></div></div>
+
+<h1 id="-main-script-logic-">— Main Script Logic —</h1>
+<p>main() {
+    # Check if running as root
+    if [ “$(id -u)” -ne 0 ]; then
+      echo “This script must be run as root. Please use ‘sudo $0’” &gt;&amp;2
+      # No dialog here as it might not be installed yet
+      exit 1
+    fi</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code># Trap SIGINT (Ctrl+C) and SIGTERM for cleanup
+trap 'echo "Script interrupted. Exiting."; exit 130' SIGINT SIGTERM
+
+# Install prerequisites
+# Order: dialog first for user interaction, then others
+install_packages "dialog,dialog" \
+                 "nmcli,network-manager" \
+                 "wpa_cli,wpasupplicant" \
+                 "wpa_supplicant,wpasupplicant" \
+                 "dhclient,isc-dhcp-client" \
+                 "ip,iproute2" \
+                 "iw,iw" \
+                 "ping,iputils-ping"
+                 # wireless-tools for iwlist is a fallback, iw is generally preferred
+
+# Initial checks
+detect_ethernet_interfaces
+detect_wifi_interfaces
+check_network_manager_active
+
+# Check current connectivity first
+if check_internet_connectivity; then
+    dialog --title "Success" --msgbox "Internet connection is already active!" ${DIALOG_DEFAULT_HEIGHT} ${DIALOG_DEFAULT_WIDTH}
+    exit 0
+fi
+log_info "No active internet connection detected. Starting configuration process..."
+
+# Main connection attempt loop
+while true; do
+    options=()
+    if} -gt 0 ]; then
+        options+=("ETH" "Configure Ethernet Connection")
+    fi
+    if} -gt 0 ]; then
+        options+=("WIFI" "Configure Wi-Fi Connection")
+    fi
+    options+=("CHECK" "Re-check Internet Connectivity")
+    options+=("EXIT" "Exit Script")
+
+    if [ ${#options[@]} -eq 2 ]; then # Only CHECK and EXIT means no interfaces
+        log_error "No usable network interfaces (Ethernet or Wi-Fi) were detected. Cannot proceed."
+        exit 1
+    fi
+    
+    main_choice=$(dialog --title "Main Menu - Universal Network Connector" \
+        --menu "Select an action:" ${DIALOG_DEFAULT_HEIGHT} ${DIALOG_DEFAULT_WIDTH} $((${#options[@]}/2)) \
+        "${options[@]}" \
+        2&gt;&amp;1 &gt;/dev/tty)
+    
+    exit_status=$?
+    if | | ||; then
+        log_info "Exiting script."
+        break
+    fi
+
+    case "$main_choice" in
+        ETH)
+            if handle_ethernet_connection; then
+                # Success path will call check_internet_connectivity and exit if OK
+                # If it returns here, it means success and internet is up.
+                dialog --title "Success" --msgbox "Ethernet connection established and internet is accessible." ${DIALOG_DEFAULT_HEIGHT} ${DIALOG_DEFAULT_WIDTH}
+                exit 0
+            else
+                log_warning "Ethernet configuration attempt finished without establishing internet connection."
+            fi
+            ;;
+        WIFI)
+            if handle_wifi_connection; then
+                dialog --title "Success" --msgbox "Wi-Fi connection established and internet is accessible." ${DIALOG_DEFAULT_HEIGHT} ${DIALOG_DEFAULT_WIDTH}
+                exit 0
+            else
+                log_warning "Wi-Fi configuration attempt finished without establishing internet connection."
+            fi
+            ;;
+        CHECK)
+            if check_internet_connectivity; then
+                dialog --title "Success" --msgbox "Internet connection is active!" ${DIALOG_DEFAULT_HEIGHT} ${DIALOG_DEFAULT_WIDTH}
+                exit 0
+            else
+                log_warning "Internet connection is still not active."
+            fi
+            ;;
+        *)
+            log_warning "Invalid choice. Please try again."
+            ;;
+    esac
+done
+exit 0 }
+</code></pre></div></div>
+
+<h1 id="-run-main-">— Run Main —</h1>
+<p>main “$@”
+Section 5: Execution and Usage GuideThis section provides instructions on how to prepare and execute the universal_connect.sh script, navigate its interactive prompts, and understand its expected outcomes.Preparing the Script:</p>
+
+<p>Save the Script: Copy the entire bash script code provided in Section 4 and save it to a file on your RK3588 VPC-3588 system. A common name would be universal_connect.sh. You can use a text editor like nano or vim:
+Bashnano universal_connect.sh</p>
+
+<p>Paste the script content into the editor, save, and exit.</p>
+
+<p>Make it Executable: After saving, you need to grant execute permissions to the script file:
+Bashchmod +x universal_connect.sh</p>
+
+<p>This command allows the system to run the file as a program.1</p>
+
+<p>Running the Script:The script requires root privileges to perform network configuration tasks such as modifying interface settings, managing network services, and writing to protected configuration files.Execute the script using sudo:Bashsudo./universal_connect.sh
+The use of sudo is essential because most underlying network commands (ip, nmcli modify, wpa_supplicant control, dhclient) require administrative rights to function.1Navigating Interactive Prompts:The script utilizes the dialog utility to create a text-based user interface (TUI). Navigation is typically done using:
+Arrow Keys (Up/Down): To move between options in menus or fields in forms.
+Tab Key: To move between buttons (like “OK”, “Cancel”, “Yes”, “No”) or input fields.
+Enter Key: To select an option, confirm an input, or activate a highlighted button.
+Spacebar: To toggle checkboxes if they were used (though this script primarily uses menus and input boxes).
+Esc Key: Often used to cancel a dialog or go back, equivalent to selecting the “Cancel” button.
+You will be prompted for various pieces of information depending on the connection method:
+Interface Selection: If multiple Ethernet or Wi-Fi interfaces are detected, you’ll be asked to choose one.
+Connection Method: You may be asked if you want to use DHCP (automatic IP) or configure a static IP.
+Wi-Fi SSID: When configuring Wi-Fi, you’ll select a network name (SSID) from a scanned list.
+Wi-Fi Password/Passphrase: For secured Wi-Fi networks (WPA-PSK, WEP), you’ll be prompted to enter the password. Input will be masked.
+Static IP Details: If configuring a static IP, you’ll need to provide:</p>
+
+<p>Static IP Address with CIDR (e.g., 192.168.1.100/24)
+Gateway IP Address (e.g., 192.168.1.1)
+DNS Server(s) (e.g., 8.8.8.8,1.1.1.1, comma-separated)</p>
+
+<p>Confirmations: dialog –yesno boxes will ask for confirmation before certain actions (e.g., “Attempt to configure Ethernet?”).
+If you wish to cancel an operation or exit a particular prompt, look for a “Cancel” button or try pressing the Esc key. The script is designed to handle cancellations gracefully.Expected Outcomes:
+Successful Connection: If the script successfully establishes an internet connection, it will display a final success message (e.g., “Internet connection established and DNS resolution working”). The script performs internal ping tests to verify connectivity to both an IP address and a hostname.1
+Failure to Connect: If all attempted methods fail, the script will inform you that it could not establish an internet connection. It will provide messages about which steps failed.
+Package Installation: If essential packages like dialog are missing, the script will ask for permission to install them. This step requires a temporary internet connection or cached packages.
+While the primary goal is interactive setup in a new environment, a potential future enhancement for advanced users could involve a non-interactive mode. This might allow connection parameters to be supplied via command-line arguments or a configuration file, streamlining deployments in environments where network details are known beforehand but differ from a primary location.Section 6: Advanced Customization and TroubleshootingWhile the script aims to be universally applicable, some scenarios might require minor adjustments or deeper troubleshooting if connectivity issues persist.Modifying Default Behaviors:Several variables are defined at the beginning of the universal_connect.sh script that advanced users might consider tweaking:
+PING_IP_TARGET: Default is 8.8.8.8. Can be changed to another reliable public IP.
+PING_HOSTNAME_TARGET: Default is google.com. Can be changed to another reliable hostname.
+PING_COUNT: Number of ping packets to send for verification (default 3).
+PING_TIMEOUT: Timeout in seconds for each ping packet (default 2).
+DIALOG_DEFAULT_HEIGHT, DIALOG_DEFAULT_WIDTH: Dimensions for dialog boxes, adjustable for different terminal sizes.
+Modifying these requires editing the script file directly.Diagnosing Common Issues:If the script fails to establish a connection, consider the following:
+“No interfaces found” (Ethernet or Wi-Fi):</p>
+
+<p>Physically check cable connections for Ethernet.
+Ensure the Wi-Fi antenna (if external) is properly connected for the VPC-3588’s Wi-Fi module.
+Use ip link show to list all interfaces. If an expected interface is missing or DOWN, there might be a hardware or driver issue.
+Check kernel messages with dmesg | tail -n 50 for errors related to network hardware or drivers immediately after boot or when the script tries to bring an interface up.</p>
+
+<p>“Wi-Fi scan shows no networks”:</p>
+
+<p>Verify the Wi-Fi interface is not administratively disabled: rfkill list wifi. If blocked, unblock with sudo rfkill unblock wifi.
+Ensure the device is within range of Wi-Fi access points.
+The Wi-Fi module on the VPC-3588 is a Wi-Fi 6 module 1; ensure drivers are correctly loaded (dmesg).</p>
+
+<p>“Password rejected” for Wi-Fi:</p>
+
+<p>Carefully re-enter the password, paying attention to case sensitivity and special characters.
+Check your keyboard layout to ensure characters are being typed as expected.
+Verify CAPS LOCK is not accidentally engaged.</p>
+
+<p>“DHCP failed” (Ethernet or Wi-Fi):</p>
+
+<p>Ensure the network cable is securely connected (for Ethernet).
+Verify that the network router or DHCP server is operational and configured to assign IP addresses.
+Check logs for dhclient or NetworkManager. For NetworkManager, use journalctl -u NetworkManager. For dhclient, messages might appear in journalctl -u isc-dhcp-client (or the relevant service name for your Debian’s DHCP client) or /var/log/syslog (the network_diagnostics.sh script includes a grep for DHCP messages in syslog 1).</p>
+
+<p>“Static IP configured but no internet”:</p>
+
+<p>Double-check all entered static IP parameters: IP address, subnet mask (or CIDR suffix), gateway, and DNS servers. They must be correct for the specific network.
+Ensure the gateway IP address is reachable (e.g., ping <gateway_ip>).
+Verify that the DNS servers are valid and reachable.</gateway_ip></p>
+
+<p>General Troubleshooting Tool: The network_diagnostics.sh script, referenced in the provided materials 1, is an excellent resource for gathering comprehensive network status information if the main connectivity script encounters persistent issues. It checks interface status, routing tables, DNS configuration, and more.
+Log Review for Deeper Diagnosis:The script’s own output provides high-level status, but for intricate problems, system logs are invaluable. Understanding where to look can pinpoint issues that the script itself might not fully diagnose, especially those related to hardware, drivers, or underlying service failures.
+Kernel Messages (dmesg): Crucial for hardware detection, driver loading, firmware issues, and low-level interface errors. Use dmesg or dmesg | grep -i <interface_name> (e.g., dmesg | grep -i wlan0).
+NetworkManager Logs (journalctl): If NetworkManager is active, its logs are key: sudo journalctl -u NetworkManager. Look for errors related to device activation, profile management, or DHCP/Wi-Fi association.
+wpa_supplicant Logs (journalctl): If wpa_supplicant is managed directly or by NetworkManager for Wi-Fi: sudo journalctl -u wpa_supplicant (or wpa_supplicant@<interface_name>.service). These logs detail Wi-Fi association, authentication, and potential errors with security protocols.
+DHCP Client Logs (journalctl or /var/log/syslog): As mentioned, logs for dhclient (e.g., sudo journalctl -xe | grep dhclient) can show details of DHCP discovery, offers, requests, and acknowledgments, or reasons for failure.
+It's also important to recognize that some network environments present challenges beyond basic L2/L3 connectivity, such as:
+Captive Portals: Common in public Wi-Fi (hotels, airports), requiring web browser authentication after initial network connection. The script does not handle these.
+MAC Address Filtering: Some networks restrict access based on MAC addresses. The device's MAC address would need to be added to the router's allow list.
+Proxy Servers: Corporate or institutional networks may require proxy server configuration to access the internet, which is outside the scope of this script's automated setup.
+If the script establishes a local network connection (e.g., gets an IP address and can ping the gateway) but internet access (e.g., pinging external hostnames) fails, these external factors should be investigated.Section 7: Conclusion and Best PracticesThe universal_connect.sh script offers a powerful, interactive means to establish internet connectivity for the RK3588 VPC-3588 system running Debian Bullseye, particularly when faced with unfamiliar network environments. By systematically attempting connections via Ethernet and Wi-Fi, supporting both DHCP and static IP configurations, and leveraging standard Linux utilities like NetworkManager, wpa_supplicant, and dhclient, it significantly increases the probability of getting online.Recap of Script Capabilities:
+Dynamic detection of Ethernet and Wi-Fi interfaces.
+Detection of active NetworkManager service to prioritize nmcli.
+Interactive TUI using dialog for user choices and data input.
+Automated DHCP attempts for both Ethernet and Wi-Fi.
+Interactive static IP configuration for both Ethernet and Wi-Fi.
+Wi-Fi network scanning and connection to Open, WPA/WPA2/WPA3-PSK, and basic WEP networks.
+Built-in connectivity verification using ping.
+Graceful error handling and user feedback throughout the process.
+Limitations:While comprehensive, the script has limitations:
+It does not handle web-based captive portal authentication.
+Complex WPA-EAP (Enterprise) Wi-Fi configurations might require manual setup beyond the script's simplified prompts.
+It does not configure HTTP/SOCKS proxy settings.
+It does not install or troubleshoot missing kernel drivers or firmware for network interfaces, assuming the underlying OS has them.
+Persistence of configurations made via direct iproute2 commands (when NetworkManager is not used) might require manual additions to /etc/network/interfaces or similar for changes to survive reboots, though the script aims for persistence when using nmcli or wpa_supplicant with update_config=1.
+Recommendations for Ongoing Network Management:
+Permanent Configuration: Once the script helps establish a stable connection in a new, recurring location, consider making the configuration permanent using the system's standard tools. For NetworkManager, profiles created by nmcli are usually persistent. If ifupdown is preferred, manually edit /etc/network/interfaces.
+System Updates: Keep the Debian Bullseye system's packages updated, especially networking components like network-manager, wpasupplicant, and isc-dhcp-client. However, strictly adhere to the specific system guidance to avoid sudo apt-get upgrade or sudo apt full-upgrade if these are known to cause instability on the RK3588 image being used.1 Instead, update specific packages if necessary and safe: sudo apt-get update &amp;&amp; sudo apt-get install --only-upgrade <package_name>.
+Diagnostic Tools: Regularly utilize tools like the network_diagnostics.sh script 1 or commands like ip addr, ip route, nmcli dev status, and log reviews (dmesg, journalctl) to monitor network health and troubleshoot issues.
+Final Thoughts:The universal_connect.sh script should be viewed as an expert "first aid" kit for network connectivity. Its primary role is to navigate the uncertainty of new network environments and establish an initial connection. Once online, users can then employ more specialized or preferred tools for fine-tuning or long-term network management. By combining automation with guided user interaction, this script provides a valuable asset for ensuring the RK3588 VPC-3588 remains a versatile and connected platform across diverse operational settings. The security of credentials, especially Wi-Fi passwords, is handled by prompting at runtime; if nmcli is used, it leverages NetworkManager's more secure credential storage mechanisms. If wpa_supplicant is configured directly by the script using a temporary file, that file is removed after use to minimize exposure.</package_name></interface_name></interface_name></p>]]></content><author><name></name></author><category term="scratchpad" /></entry><entry><title type="html">network diag</title><link href="https://ib.bsb.br/network-diag/" rel="alternate" type="text/html" title="network diag" /><published>2025-05-26T00:00:00+00:00</published><updated>2025-05-26T04:49:44+00:00</updated><id>https://ib.bsb.br/network-diag</id><content type="html" xml:base="https://ib.bsb.br/network-diag/"><![CDATA[<section class="code-block-container" role="group" aria-label="Bash Code Block" data-filename="bash_code_block.sh" data-code="#!/bin/bash
 #
 # network_diagnostics.sh
 #
@@ -4589,158 +5591,4 @@ run_and_log <span class="s2">"dmesg (Kernel messages related to </span><span cla
 <span class="nb">echo</span> <span class="s2">"Please review the contents of this file carefully."</span>
 
 <span class="nb">exit </span>0
-</code></pre></div></div>]]></content><author><name></name></author><category term="scratchpad" /></entry><entry><title type="html">Generate `.bashrc` aliases from .desktop files</title><link href="https://ib.bsb.br/generate-bashrc-aliases-from-desktop-files/" rel="alternate" type="text/html" title="Generate `.bashrc` aliases from .desktop files" /><published>2025-05-22T00:00:00+00:00</published><updated>2025-05-22T15:31:11+00:00</updated><id>https://ib.bsb.br/generate-bashrc-aliases-from-desktop-files</id><content type="html" xml:base="https://ib.bsb.br/generate-bashrc-aliases-from-desktop-files/"><![CDATA[<section class="code-block-container" role="group" aria-label="Bash Code Block" data-filename="bash_code_block.sh" data-code="#!/bin/bash
-
-# Script to extract Exec= lines from .desktop files
-# and create a list of bash aliases in a deterministic order.
-
-# --- Configuration ---
-DESKTOP_DIR=&quot;/home/linaro/.local/share/applications&quot;
-OUTPUT_FILE=&quot;/home/linaro/desktop-exec-alias.txt&quot;
-ALIAS_COUNTER=0
-# --- End Configuration ---
-
-echo &quot;--- Script Starting ---&quot;
-echo &quot;Desktop directory: $DESKTOP_DIR&quot;
-echo &quot;Output file: $OUTPUT_FILE&quot;
-
-# Ensure the target directory for .desktop files exists
-if [ ! -d &quot;$DESKTOP_DIR&quot; ]; then
-    echo &quot;Error: Directory $DESKTOP_DIR does not exist.&quot; &gt;&amp;2
-    exit 1
-fi
-echo &quot;Desktop directory confirmed to exist.&quot;
-
-# Clear or create the output file for a fresh list
-# This ensures that if the script is run multiple times,
-# the output file contains only the latest aliases.
-&gt; &quot;$OUTPUT_FILE&quot;
-echo &quot;Output file initialized (cleared or created).&quot;
-
-echo &quot;Finding .desktop files...&quot;
-# Find all files ending with .desktop in the specified directory.
-# -print0 outputs filenames null-terminated.
-# sort -z sorts null-terminated input (ensures deterministic order of aliases).
-# The while loop with IFS= and read -r -d $&#39;\0&#39;
-# robustly handles filenames that might contain spaces or special characters.
-find &quot;$DESKTOP_DIR&quot; -name &quot;*.desktop&quot; -type f -print0 | sort -z | while IFS= read -r -d $&#39;\0&#39; desktop_file; do
-    echo &quot;----------------------------------------&quot; # Separator for each file
-    echo &quot;Processing file: $desktop_file&quot; # DEBUG
-
-    # Try to get the Exec line using grep first for debugging
-    # This helps see if the line is even present in a way grep recognizes
-    echo &quot;Attempting to grep &#39;^Exec=&#39; from file...&quot; # DEBUG
-    grep_exec_line=$(grep &#39;^Exec=&#39; &quot;$desktop_file&quot;) # DEBUG
-    if [ -n &quot;$grep_exec_line&quot; ]; then
-        echo &quot;DEBUG: grep found the following Exec line(s):&quot; # DEBUG
-        echo &quot;$grep_exec_line&quot; # DEBUG
-    else
-        echo &quot;DEBUG: grep did NOT find any line starting with &#39;Exec=&#39;&quot; # DEBUG
-    fi
-
-    # Original sed command to extract the value
-    echo &quot;Attempting to extract Exec value with sed...&quot; # DEBUG
-    exec_value=$(sed -n &#39;s/^Exec=//p&#39; &quot;$desktop_file&quot; | head -n 1)
-    
-    if [ -n &quot;$exec_value&quot; ]; then
-        echo &quot;DEBUG: sed extracted value: &#39;$exec_value&#39;&quot; # DEBUG
-        # Append the alias command to the output file.
-        # Single quotes around &#39;$exec_value&#39; are important to preserve
-        # the command exactly as it is, including spaces and special characters,
-        # when writing to the alias file.
-        echo &quot;alias $ALIAS_COUNTER=&#39;$exec_value&#39;&quot; &gt;&gt; &quot;$OUTPUT_FILE&quot;
-        ALIAS_COUNTER=$((ALIAS_COUNTER + 1)) # Increment the alias number
-    else
-        echo &quot;DEBUG: sed did NOT extract any value for Exec=&quot; # DEBUG
-        # Output a warning to the standard error stream if an Exec line
-        # couldn&#39;t be found or its value was empty in a specific .desktop file.
-        echo &quot;Warning: Could not extract Exec value from $desktop_file (or line was not found/empty after &#39;Exec=&#39;)&quot; &gt;&amp;2
-    fi
-done
-
-echo &quot;----------------------------------------&quot;
-echo &quot;File processing loop finished.&quot;
-echo &quot;Alias list generation complete.&quot;
-echo &quot;Output saved to: $OUTPUT_FILE&quot;
-echo &quot;Total aliases generated: $ALIAS_COUNTER&quot; # Shows actual count
-echo &quot;--- Script Finished ---&quot;
-
-exit 0" data-download-link="" data-download-label="Download Bash">
-  <code class="language-bash">#!/bin/bash
-
-# Script to extract Exec= lines from .desktop files
-# and create a list of bash aliases in a deterministic order.
-
-# --- Configuration ---
-DESKTOP_DIR=&quot;/home/linaro/.local/share/applications&quot;
-OUTPUT_FILE=&quot;/home/linaro/desktop-exec-alias.txt&quot;
-ALIAS_COUNTER=0
-# --- End Configuration ---
-
-echo &quot;--- Script Starting ---&quot;
-echo &quot;Desktop directory: $DESKTOP_DIR&quot;
-echo &quot;Output file: $OUTPUT_FILE&quot;
-
-# Ensure the target directory for .desktop files exists
-if [ ! -d &quot;$DESKTOP_DIR&quot; ]; then
-    echo &quot;Error: Directory $DESKTOP_DIR does not exist.&quot; &gt;&amp;2
-    exit 1
-fi
-echo &quot;Desktop directory confirmed to exist.&quot;
-
-# Clear or create the output file for a fresh list
-# This ensures that if the script is run multiple times,
-# the output file contains only the latest aliases.
-&gt; &quot;$OUTPUT_FILE&quot;
-echo &quot;Output file initialized (cleared or created).&quot;
-
-echo &quot;Finding .desktop files...&quot;
-# Find all files ending with .desktop in the specified directory.
-# -print0 outputs filenames null-terminated.
-# sort -z sorts null-terminated input (ensures deterministic order of aliases).
-# The while loop with IFS= and read -r -d $&#39;\0&#39;
-# robustly handles filenames that might contain spaces or special characters.
-find &quot;$DESKTOP_DIR&quot; -name &quot;*.desktop&quot; -type f -print0 | sort -z | while IFS= read -r -d $&#39;\0&#39; desktop_file; do
-    echo &quot;----------------------------------------&quot; # Separator for each file
-    echo &quot;Processing file: $desktop_file&quot; # DEBUG
-
-    # Try to get the Exec line using grep first for debugging
-    # This helps see if the line is even present in a way grep recognizes
-    echo &quot;Attempting to grep &#39;^Exec=&#39; from file...&quot; # DEBUG
-    grep_exec_line=$(grep &#39;^Exec=&#39; &quot;$desktop_file&quot;) # DEBUG
-    if [ -n &quot;$grep_exec_line&quot; ]; then
-        echo &quot;DEBUG: grep found the following Exec line(s):&quot; # DEBUG
-        echo &quot;$grep_exec_line&quot; # DEBUG
-    else
-        echo &quot;DEBUG: grep did NOT find any line starting with &#39;Exec=&#39;&quot; # DEBUG
-    fi
-
-    # Original sed command to extract the value
-    echo &quot;Attempting to extract Exec value with sed...&quot; # DEBUG
-    exec_value=$(sed -n &#39;s/^Exec=//p&#39; &quot;$desktop_file&quot; | head -n 1)
-    
-    if [ -n &quot;$exec_value&quot; ]; then
-        echo &quot;DEBUG: sed extracted value: &#39;$exec_value&#39;&quot; # DEBUG
-        # Append the alias command to the output file.
-        # Single quotes around &#39;$exec_value&#39; are important to preserve
-        # the command exactly as it is, including spaces and special characters,
-        # when writing to the alias file.
-        echo &quot;alias $ALIAS_COUNTER=&#39;$exec_value&#39;&quot; &gt;&gt; &quot;$OUTPUT_FILE&quot;
-        ALIAS_COUNTER=$((ALIAS_COUNTER + 1)) # Increment the alias number
-    else
-        echo &quot;DEBUG: sed did NOT extract any value for Exec=&quot; # DEBUG
-        # Output a warning to the standard error stream if an Exec line
-        # couldn&#39;t be found or its value was empty in a specific .desktop file.
-        echo &quot;Warning: Could not extract Exec value from $desktop_file (or line was not found/empty after &#39;Exec=&#39;)&quot; &gt;&amp;2
-    fi
-done
-
-echo &quot;----------------------------------------&quot;
-echo &quot;File processing loop finished.&quot;
-echo &quot;Alias list generation complete.&quot;
-echo &quot;Output saved to: $OUTPUT_FILE&quot;
-echo &quot;Total aliases generated: $ALIAS_COUNTER&quot; # Shows actual count
-echo &quot;--- Script Finished ---&quot;
-
-exit 0</code>
-</section>]]></content><author><name></name></author><category term="scratchpad" /></entry></feed>
+</code></pre></div></div>]]></content><author><name></name></author><category term="scratchpad" /></entry></feed>
