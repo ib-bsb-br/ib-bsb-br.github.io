@@ -1,14 +1,16 @@
 ---
-tags: [scratchpad]
+tags:
+- scratchpad
 info: aberto.
 date: 2025-05-26
 type: post
 layout: post
 published: true
 slug: highlights-from-the-claude-4-system-prompt
-title: 'Highlights from the Claude 4 system prompt'
+title: Highlights from the Claude 4 system prompt
+comment: https://simonwillison.net/2025/May/25/claude-4-system-prompt/
 ---
-bibref https://simonwillison.net/2025/May/25/claude-4-system-prompt/
+
 
 Markdown Content:
 25th May 2025
