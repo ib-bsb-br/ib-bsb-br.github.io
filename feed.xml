@@ -1,4 +1,368 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2025-05-25T23:00:30+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">coolice remote access and file transfer (ssh/ftp)</title><link href="https://ib.bsb.br/coolice-remote-access-and-file-transfer-sshftp/" rel="alternate" type="text/html" title="coolice remote access and file transfer (ssh/ftp)" /><published>2025-05-25T00:00:00+00:00</published><updated>2025-05-25T14:20:53+00:00</updated><id>https://ib.bsb.br/coolice-remote-access-and-file-transfer-sshftp</id><content type="html" xml:base="https://ib.bsb.br/coolice-remote-access-and-file-transfer-sshftp/"><![CDATA[<p><strong>Section 0: Immediate Steps to Secure Your Server Access After Key Compromise</strong></p>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2025-05-26T04:53:15+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">network diag</title><link href="https://ib.bsb.br/network-diag/" rel="alternate" type="text/html" title="network diag" /><published>2025-05-26T00:00:00+00:00</published><updated>2025-05-26T04:49:44+00:00</updated><id>https://ib.bsb.br/network-diag</id><content type="html" xml:base="https://ib.bsb.br/network-diag/"><![CDATA[<section class="code-block-container" role="group" aria-label="Bash Code Block" data-filename="bash_code_block.sh" data-code="#!/bin/bash
+#
+# network_diagnostics.sh
+#
+# This script is designed to collect as much information as possible about the
+# network connection on a Debian Bullseye machine that uses dynamic IP addresses via DHCP.
+#
+# Note: Some commands may require root privileges.
+#
+# Usage:
+#   chmod +x network_diagnostics.sh
+#   sudo ./network_diagnostics.sh
+#
+# Feel free to modify or expand this script for your needs.
+#
+
+# -----------------------------------------------------------------------------
+# Helper function to check if a command exists and print a header
+function section_header() {
+    echo &quot;========================================&quot;
+    echo &quot;$1&quot;
+    echo &quot;========================================&quot;
+}
+
+# -----------------------------------------------------------------------------
+section_header &quot;NETWORK DIAGNOSTICS REPORT&quot;
+echo &quot;Report generated on: $(date)&quot;
+echo &quot;&quot;
+
+# 1. Basic System Information
+echo &quot;&gt;&gt;&gt; SYSTEM INFORMATION&quot;
+echo &quot;Hostname: $(hostname)&quot;
+echo &quot;Kernel info: $(uname -a)&quot;
+
+if command -v lsb_release &gt;/dev/null 2&gt;&amp;1; then
+    echo &quot;Distribution Info:&quot;
+    lsb_release -a 2&gt;/dev/null
+else
+    echo &quot;/etc/issue:&quot;
+    cat /etc/issue
+fi
+echo &quot;&quot;
+
+# 2. Network Interfaces
+section_header &quot;NETWORK INTERFACES&quot;
+echo &quot;Using &#39;ip addr show&#39;:&quot;
+ip addr show
+echo &quot;&quot;
+
+if command -v ifconfig &gt;/dev/null 2&gt;&amp;1; then
+    echo &quot;Using &#39;ifconfig -a&#39;:&quot;
+    ifconfig -a
+else
+    echo &quot;ifconfig command not found (install net-tools package if needed).&quot;
+fi
+echo &quot;&quot;
+
+# 3. Routing Table
+section_header &quot;ROUTING TABLE&quot;
+echo &quot;Using &#39;ip route show&#39;:&quot;
+ip route show
+echo &quot;&quot;
+
+if command -v netstat &gt;/dev/null 2&gt;&amp;1; then
+    echo &quot;Using &#39;netstat -rn&#39;:&quot;
+    netstat -rn
+else
+    echo &quot;netstat command not found (install net-tools package if needed).&quot;
+fi
+echo &quot;&quot;
+
+# 4. DNS Configuration
+section_header &quot;DNS CONFIGURATION&quot;
+echo &quot;Contents of /etc/resolv.conf:&quot;
+cat /etc/resolv.conf
+echo &quot;&quot;
+
+# 5. DHCP Lease Information
+section_header &quot;DHCP LEASE INFORMATION&quot;
+LEASE_DIR=&quot;/var/lib/dhcp&quot;
+if [ -d &quot;$LEASE_DIR&quot; ]; then
+    foundLease=0
+    for lease_file in &quot;$LEASE_DIR&quot;/dhclient*.leases; do
+	if [ -f &quot;$lease_file&quot; ]; then
+	    echo &quot;&gt;&gt; Lease file: $lease_file&quot;
+	    cat &quot;$lease_file&quot;
+	    echo &quot;--------------------------------------&quot;
+	    foundLease=1
+	fi
+    done
+    if [ $foundLease -eq 0 ]; then
+	echo &quot;No DHCP lease files found in $LEASE_DIR.&quot;
+    fi
+else
+    echo &quot;DHCP lease directory $LEASE_DIR does not exist.&quot;
+fi
+echo &quot;&quot;
+
+# Additionally, check syslog for recent DHCP-related messages.
+section_header &quot;DHCP MESSAGES (SYSLOG)&quot;
+if [ -f /var/log/syslog ]; then
+    grep -i dhcp /var/log/syslog | tail -n 30
+else
+    echo &quot;/var/log/syslog not found.&quot;
+fi
+echo &quot;&quot;
+
+# 6. ARP Table
+section_header &quot;ARP TABLE&quot;
+ip neighbor show
+echo &quot;&quot;
+
+# 7. Interface Statistics
+section_header &quot;INTERFACE STATISTICS&quot;
+ip -s link
+echo &quot;&quot;
+
+# 8. Active Network Connections
+section_header &quot;ACTIVE NETWORK CONNECTIONS&quot;
+if command -v ss &gt;/dev/null 2&gt;&amp;1; then
+    ss -tulwn
+elif command -v netstat &gt;/dev/null 2&gt;&amp;1; then
+    netstat -tulwn
+else
+    echo &quot;Neither ss nor netstat found.&quot;
+fi
+echo &quot;&quot;
+
+# 9. Internet Connectivity Tests
+section_header &quot;INTERNET CONNECTIVITY TESTS&quot;
+
+echo &quot;Ping (IPv4) test to 8.8.8.8:&quot;
+ping -c 4 8.8.8.8
+echo &quot;&quot;
+
+echo &quot;DNS resolution test (ping google.com):&quot;
+ping -c 4 google.com
+echo &quot;&quot;
+
+# 10. External IP Detection
+section_header &quot;EXTERNAL IP ADDRESS&quot;
+if command -v curl &gt;/dev/null 2&gt;&amp;1; then
+    echo &quot;Your external IP (via https://api.ipify.org):&quot;
+    curl -s https://api.ipify.org
+    echo &quot;&quot;
+elif command -v wget &gt;/dev/null 2&gt;&amp;1; then
+    echo &quot;Your external IP (via https://api.ipify.org):&quot;
+    wget -qO- https://api.ipify.org
+    echo &quot;&quot;
+else
+    echo &quot;Neither curl nor wget is installed. Install one to detect your external IP.&quot;
+fi
+echo &quot;&quot;
+
+# 11. Traceroute
+section_header &quot;TRACEROUTE TO google.com&quot;
+if command -v traceroute &gt;/dev/null 2&gt;&amp;1; then
+    traceroute google.com
+else
+    echo &quot;traceroute command not found. Install it with &#39;sudo apt install traceroute&#39;.&quot;
+fi
+echo &quot;&quot;
+
+# 12. iptables (Firewall Rules)
+section_header &quot;IPTABLES FIREWALL RULES&quot;
+if command -v iptables &gt;/dev/null 2&gt;&amp;1; then
+    sudo iptables -L -n -v
+else
+    echo &quot;iptables command not found.&quot;
+fi
+echo &quot;&quot;
+
+# 13. NetworkManager (if applicable)
+if command -v nmcli &gt;/dev/null 2&gt;&amp;1; then
+    section_header &quot;NETWORKMANAGER DEVICE INFORMATION&quot;
+    nmcli device show
+    echo &quot;&quot;
+fi
+
+section_header &quot;DIAGNOSTICS COMPLETE&quot;
+echo &quot;The network diagnostics report is complete.&quot;
+exit 0" data-download-link="" data-download-label="Download Bash">
+  <code class="language-bash">#!/bin/bash
+#
+# network_diagnostics.sh
+#
+# This script is designed to collect as much information as possible about the
+# network connection on a Debian Bullseye machine that uses dynamic IP addresses via DHCP.
+#
+# Note: Some commands may require root privileges.
+#
+# Usage:
+#   chmod +x network_diagnostics.sh
+#   sudo ./network_diagnostics.sh
+#
+# Feel free to modify or expand this script for your needs.
+#
+
+# -----------------------------------------------------------------------------
+# Helper function to check if a command exists and print a header
+function section_header() {
+    echo &quot;========================================&quot;
+    echo &quot;$1&quot;
+    echo &quot;========================================&quot;
+}
+
+# -----------------------------------------------------------------------------
+section_header &quot;NETWORK DIAGNOSTICS REPORT&quot;
+echo &quot;Report generated on: $(date)&quot;
+echo &quot;&quot;
+
+# 1. Basic System Information
+echo &quot;&gt;&gt;&gt; SYSTEM INFORMATION&quot;
+echo &quot;Hostname: $(hostname)&quot;
+echo &quot;Kernel info: $(uname -a)&quot;
+
+if command -v lsb_release &gt;/dev/null 2&gt;&amp;1; then
+    echo &quot;Distribution Info:&quot;
+    lsb_release -a 2&gt;/dev/null
+else
+    echo &quot;/etc/issue:&quot;
+    cat /etc/issue
+fi
+echo &quot;&quot;
+
+# 2. Network Interfaces
+section_header &quot;NETWORK INTERFACES&quot;
+echo &quot;Using &#39;ip addr show&#39;:&quot;
+ip addr show
+echo &quot;&quot;
+
+if command -v ifconfig &gt;/dev/null 2&gt;&amp;1; then
+    echo &quot;Using &#39;ifconfig -a&#39;:&quot;
+    ifconfig -a
+else
+    echo &quot;ifconfig command not found (install net-tools package if needed).&quot;
+fi
+echo &quot;&quot;
+
+# 3. Routing Table
+section_header &quot;ROUTING TABLE&quot;
+echo &quot;Using &#39;ip route show&#39;:&quot;
+ip route show
+echo &quot;&quot;
+
+if command -v netstat &gt;/dev/null 2&gt;&amp;1; then
+    echo &quot;Using &#39;netstat -rn&#39;:&quot;
+    netstat -rn
+else
+    echo &quot;netstat command not found (install net-tools package if needed).&quot;
+fi
+echo &quot;&quot;
+
+# 4. DNS Configuration
+section_header &quot;DNS CONFIGURATION&quot;
+echo &quot;Contents of /etc/resolv.conf:&quot;
+cat /etc/resolv.conf
+echo &quot;&quot;
+
+# 5. DHCP Lease Information
+section_header &quot;DHCP LEASE INFORMATION&quot;
+LEASE_DIR=&quot;/var/lib/dhcp&quot;
+if [ -d &quot;$LEASE_DIR&quot; ]; then
+    foundLease=0
+    for lease_file in &quot;$LEASE_DIR&quot;/dhclient*.leases; do
+	if [ -f &quot;$lease_file&quot; ]; then
+	    echo &quot;&gt;&gt; Lease file: $lease_file&quot;
+	    cat &quot;$lease_file&quot;
+	    echo &quot;--------------------------------------&quot;
+	    foundLease=1
+	fi
+    done
+    if [ $foundLease -eq 0 ]; then
+	echo &quot;No DHCP lease files found in $LEASE_DIR.&quot;
+    fi
+else
+    echo &quot;DHCP lease directory $LEASE_DIR does not exist.&quot;
+fi
+echo &quot;&quot;
+
+# Additionally, check syslog for recent DHCP-related messages.
+section_header &quot;DHCP MESSAGES (SYSLOG)&quot;
+if [ -f /var/log/syslog ]; then
+    grep -i dhcp /var/log/syslog | tail -n 30
+else
+    echo &quot;/var/log/syslog not found.&quot;
+fi
+echo &quot;&quot;
+
+# 6. ARP Table
+section_header &quot;ARP TABLE&quot;
+ip neighbor show
+echo &quot;&quot;
+
+# 7. Interface Statistics
+section_header &quot;INTERFACE STATISTICS&quot;
+ip -s link
+echo &quot;&quot;
+
+# 8. Active Network Connections
+section_header &quot;ACTIVE NETWORK CONNECTIONS&quot;
+if command -v ss &gt;/dev/null 2&gt;&amp;1; then
+    ss -tulwn
+elif command -v netstat &gt;/dev/null 2&gt;&amp;1; then
+    netstat -tulwn
+else
+    echo &quot;Neither ss nor netstat found.&quot;
+fi
+echo &quot;&quot;
+
+# 9. Internet Connectivity Tests
+section_header &quot;INTERNET CONNECTIVITY TESTS&quot;
+
+echo &quot;Ping (IPv4) test to 8.8.8.8:&quot;
+ping -c 4 8.8.8.8
+echo &quot;&quot;
+
+echo &quot;DNS resolution test (ping google.com):&quot;
+ping -c 4 google.com
+echo &quot;&quot;
+
+# 10. External IP Detection
+section_header &quot;EXTERNAL IP ADDRESS&quot;
+if command -v curl &gt;/dev/null 2&gt;&amp;1; then
+    echo &quot;Your external IP (via https://api.ipify.org):&quot;
+    curl -s https://api.ipify.org
+    echo &quot;&quot;
+elif command -v wget &gt;/dev/null 2&gt;&amp;1; then
+    echo &quot;Your external IP (via https://api.ipify.org):&quot;
+    wget -qO- https://api.ipify.org
+    echo &quot;&quot;
+else
+    echo &quot;Neither curl nor wget is installed. Install one to detect your external IP.&quot;
+fi
+echo &quot;&quot;
+
+# 11. Traceroute
+section_header &quot;TRACEROUTE TO google.com&quot;
+if command -v traceroute &gt;/dev/null 2&gt;&amp;1; then
+    traceroute google.com
+else
+    echo &quot;traceroute command not found. Install it with &#39;sudo apt install traceroute&#39;.&quot;
+fi
+echo &quot;&quot;
+
+# 12. iptables (Firewall Rules)
+section_header &quot;IPTABLES FIREWALL RULES&quot;
+if command -v iptables &gt;/dev/null 2&gt;&amp;1; then
+    sudo iptables -L -n -v
+else
+    echo &quot;iptables command not found.&quot;
+fi
+echo &quot;&quot;
+
+# 13. NetworkManager (if applicable)
+if command -v nmcli &gt;/dev/null 2&gt;&amp;1; then
+    section_header &quot;NETWORKMANAGER DEVICE INFORMATION&quot;
+    nmcli device show
+    echo &quot;&quot;
+fi
+
+section_header &quot;DIAGNOSTICS COMPLETE&quot;
+echo &quot;The network diagnostics report is complete.&quot;
+exit 0</code>
+</section>]]></content><author><name></name></author><category term="scripts&gt;bash" /></entry><entry><title type="html">coolice remote access and file transfer (ssh/ftp)</title><link href="https://ib.bsb.br/coolice-remote-access-and-file-transfer-sshftp/" rel="alternate" type="text/html" title="coolice remote access and file transfer (ssh/ftp)" /><published>2025-05-25T00:00:00+00:00</published><updated>2025-05-25T14:20:53+00:00</updated><id>https://ib.bsb.br/coolice-remote-access-and-file-transfer-sshftp</id><content type="html" xml:base="https://ib.bsb.br/coolice-remote-access-and-file-transfer-sshftp/"><![CDATA[<p><strong>Section 0: Immediate Steps to Secure Your Server Access After Key Compromise</strong></p>
 
 <ol>
   <li><strong>Generate a NEW SSH Key Pair on Your LOCAL (Client) Machine:</strong>
@@ -4379,180 +4743,4 @@ echo &quot;Total aliases generated: $ALIAS_COUNTER&quot; # Shows actual count
 echo &quot;--- Script Finished ---&quot;
 
 exit 0</code>
-</section>]]></content><author><name></name></author><category term="scratchpad" /></entry><entry><title type="html">Google Drive API and `rclone`</title><link href="https://ib.bsb.br/google-drive-api-and-rclone/" rel="alternate" type="text/html" title="Google Drive API and `rclone`" /><published>2025-05-22T00:00:00+00:00</published><updated>2025-05-22T15:16:46+00:00</updated><id>https://ib.bsb.br/google-drive-api-and-rclone</id><content type="html" xml:base="https://ib.bsb.br/google-drive-api-and-rclone/"><![CDATA[<p><strong>Step 1: Install <code class="language-plaintext highlighter-rouge">rclone</code></strong></p>
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>apt <span class="nb">install </span>rclone
-</code></pre></div></div>
-
-<p><strong>Step 2: Configure <code class="language-plaintext highlighter-rouge">rclone</code> for Google Drive (with Own API Credentials - Highly Recommended)</strong></p>
-
-<p>Using rclone’s default API credentials can lead to rate-limiting errors during large transfers. Creating your own is more reliable.</p>
-
-<ol>
-  <li>
-    <p><strong>Create your own Google API Client ID and Secret for <code class="language-plaintext highlighter-rouge">rclone</code>:</strong>
-Follow the official <code class="language-plaintext highlighter-rouge">rclone</code> guide: <a href="https://rclone.org/drive/#making-your-own-client-id">https://rclone.org/drive/#making-your-own-client-id</a>
-This process involves using the Google Cloud Console. It might seem complex, but it’s a one-time setup that significantly improves reliability for large transfers. Keep your generated <code class="language-plaintext highlighter-rouge">client_id</code> and <code class="language-plaintext highlighter-rouge">client_secret</code> handy.</p>
-  </li>
-  <li>
-    <p><strong>Run <code class="language-plaintext highlighter-rouge">rclone config</code>:</strong></p>
-    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>rclone config
-</code></pre></div>    </div>
-    <p>Follow the interactive prompts:</p>
-    <ul>
-      <li><code class="language-plaintext highlighter-rouge">n</code> (New remote)</li>
-      <li><code class="language-plaintext highlighter-rouge">name&gt;</code>: Enter a short name (e.g., <code class="language-plaintext highlighter-rouge">gdrive_backup</code>)</li>
-      <li><code class="language-plaintext highlighter-rouge">Storage&gt;</code>: Type <code class="language-plaintext highlighter-rouge">drive</code> or select the number for Google Drive.</li>
-      <li><code class="language-plaintext highlighter-rouge">client_id&gt;</code>: <strong>Enter the Client ID you created.</strong></li>
-      <li><code class="language-plaintext highlighter-rouge">client_secret&gt;</code>: <strong>Enter the Client Secret you created.</strong></li>
-      <li><code class="language-plaintext highlighter-rouge">scope&gt;</code>: Choose <code class="language-plaintext highlighter-rouge">1</code> (Full access all files).</li>
-      <li><code class="language-plaintext highlighter-rouge">root_folder_id&gt;</code>: Press Enter (leave blank for full Drive access, or specify a folder ID if desired).</li>
-      <li><code class="language-plaintext highlighter-rouge">service_account_file&gt;</code>: Press Enter (leave blank).</li>
-      <li><code class="language-plaintext highlighter-rouge">Edit advanced config? (y/n)&gt;</code>: <code class="language-plaintext highlighter-rouge">n</code></li>
-      <li><code class="language-plaintext highlighter-rouge">Use auto config? (y/n)&gt;</code>: <code class="language-plaintext highlighter-rouge">y</code>
-        <ul>
-          <li>This will attempt to open a browser for authentication. If on a headless server, copy the URL it provides into a browser on another machine, authenticate, and then copy the verification code back to <code class="language-plaintext highlighter-rouge">rclone</code>.</li>
-        </ul>
-      </li>
-      <li><code class="language-plaintext highlighter-rouge">Configure this as a Shared Drive (Team Drive)? (y/n)&gt;</code>: <code class="language-plaintext highlighter-rouge">n</code> (unless you are using a Shared Drive).</li>
-      <li>Review the summary and if OK, choose <code class="language-plaintext highlighter-rouge">y</code>.</li>
-      <li><code class="language-plaintext highlighter-rouge">q</code> (Quit config).</li>
-    </ul>
-  </li>
-</ol>
-
-<p><strong>Step 3: Prepare for the Long Transfer (Using <code class="language-plaintext highlighter-rouge">screen</code> or <code class="language-plaintext highlighter-rouge">tmux</code>)</strong></p>
-
-<p>A 500GiB upload can take many hours or even days. If your SSH session disconnects, the <code class="language-plaintext highlighter-rouge">rclone</code> process will terminate. Use a terminal multiplexer like <code class="language-plaintext highlighter-rouge">screen</code> or <code class="language-plaintext highlighter-rouge">tmux</code> to prevent this.</p>
-
-<ul>
-  <li><strong>Using <code class="language-plaintext highlighter-rouge">screen</code> (simpler for beginners):</strong>
-    <ol>
-      <li>Install if needed: <code class="language-plaintext highlighter-rouge">sudo apt install screen</code></li>
-      <li>Start a new screen session: <code class="language-plaintext highlighter-rouge">screen -S rclone_upload_session</code></li>
-      <li>You are now “inside” the screen session. Run your <code class="language-plaintext highlighter-rouge">rclone</code> command here.</li>
-      <li>To detach (leave it running in the background): Press <code class="language-plaintext highlighter-rouge">Ctrl+A</code>, then <code class="language-plaintext highlighter-rouge">d</code>.</li>
-      <li>To reattach later: <code class="language-plaintext highlighter-rouge">screen -r rclone_upload_session</code></li>
-    </ol>
-  </li>
-</ul>
-
-<p><strong>Step 4: Perform a Dry Run (Crucial Safety Check)</strong></p>
-
-<p>Before transferring any data, simulate the process to see what <code class="language-plaintext highlighter-rouge">rclone</code> <em>would</em> do.
-Let’s assume you want to copy everything to a folder named <code class="language-plaintext highlighter-rouge">My500GB_External_Backup</code> on your Google Drive.</p>
-
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Ensure you are in your screen/tmux session</span>
-rclone copy /mnt/my_external_hdd gdrive_backup:My500GB_External_Backup <span class="nt">--dry-run</span> <span class="nt">-P</span> <span class="nt">--check-first</span> <span class="nt">--checksum</span> <span class="nt">--skip-links</span> <span class="nt">--verbose</span> <span class="nt">--log-file</span><span class="o">=</span>rclone_dry_run_<span class="si">$(</span><span class="nb">date</span> +%Y%m%d_%H%M%S<span class="si">)</span>.log
-</code></pre></div></div>
-<ul>
-  <li><code class="language-plaintext highlighter-rouge">gdrive_backup:My500GB_External_Backup</code>: Replace <code class="language-plaintext highlighter-rouge">gdrive_backup</code> with your rclone remote name.</li>
-  <li><code class="language-plaintext highlighter-rouge">--dry-run</code>: Simulates the copy.</li>
-  <li><code class="language-plaintext highlighter-rouge">-P</code> (or <code class="language-plaintext highlighter-rouge">--progress</code>): Shows progress.</li>
-  <li><code class="language-plaintext highlighter-rouge">--check-first</code>: Checks all source/destination files before starting.</li>
-  <li><code class="language-plaintext highlighter-rouge">--checksum</code>: Uses checksums for comparison (more reliable than just size/modtime).</li>
-  <li><code class="language-plaintext highlighter-rouge">--skip-links</code>: Ignores symbolic links.</li>
-  <li><code class="language-plaintext highlighter-rouge">--verbose</code>: More detailed output.</li>
-  <li><code class="language-plaintext highlighter-rouge">--log-file</code>: Logs all output. <strong>Review this log carefully.</strong></li>
-</ul>
-
-<p><strong>If the dry run output looks correct and shows no errors, proceed.</strong></p>
-
-<p><strong>Step 5: Execute the Full Data Transfer</strong></p>
-
-<p>Remove <code class="language-plaintext highlighter-rouge">--dry-run</code> and add more robustness flags:</p>
-
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Ensure you are in your screen/tmux session</span>
-rclone copy /mnt/my_external_hdd gdrive_backup:My500GB_External_Backup <span class="se">\</span>
-    <span class="nt">-P</span> <span class="se">\</span>
-    <span class="nt">--check-first</span> <span class="se">\</span>
-    <span class="nt">--checksum</span> <span class="se">\</span>
-    <span class="nt">--skip-links</span> <span class="se">\</span>
-    <span class="nt">--verbose</span> <span class="se">\</span>
-    <span class="nt">--log-file</span><span class="o">=</span>rclone_upload_<span class="si">$(</span><span class="nb">date</span> +%Y%m%d_%H%M%S<span class="si">)</span>.log <span class="se">\</span>
-    <span class="nt">--stats</span> 1m <span class="se">\</span>
-    <span class="nt">--retries</span> 5 <span class="se">\</span>
-    <span class="nt">--low-level-retries</span> 10 <span class="se">\</span>
-    <span class="nt">--buffer-size</span> 64M <span class="se">\</span>
-    <span class="nt">--drive-chunk-size</span> 64M <span class="se">\</span>
-    <span class="nt">--transfers</span> 4
-</code></pre></div></div>
-<ul>
-  <li><strong>New/Important Flags:</strong>
-    <ul>
-      <li><code class="language-plaintext highlighter-rouge">--log-file</code>: <strong>Essential for diagnosing any issues during the long transfer.</strong></li>
-      <li><code class="language-plaintext highlighter-rouge">--stats 1m</code>: Prints transfer stats every minute.</li>
-      <li><code class="language-plaintext highlighter-rouge">--retries 5</code>: Retries failed file transfers up to 5 times.</li>
-      <li><code class="language-plaintext highlighter-rouge">--low-level-retries 10</code>: Retries low-level operations (like single HTTP requests).</li>
-      <li><code class="language-plaintext highlighter-rouge">--buffer-size 64M</code>: In-memory buffer per transfer. Adjust based on your RAM (e.g., 32M, 128M).</li>
-      <li><code class="language-plaintext highlighter-rouge">--drive-chunk-size 64M</code>: Uploads large files to Google Drive in 64MB chunks. Can significantly improve speed for large files (default is 8M). Max is 256M.</li>
-      <li><code class="language-plaintext highlighter-rouge">--transfers 4</code>: Number of files to transfer in parallel. Default is 4. Adjust based on your internet upload speed and CPU (e.g., 2-8).</li>
-    </ul>
-  </li>
-</ul>
-
-<p>Monitor progress via the terminal and the log file (<code class="language-plaintext highlighter-rouge">tail -f rclone_upload_...log</code>). Be patient.</p>
-
-<p><strong>Step 6: Verify the Upload (Critical!)</strong></p>
-
-<p>After <code class="language-plaintext highlighter-rouge">rclone copy</code> finishes, you <strong>must</strong> verify that all data was transferred correctly.</p>
-
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Ensure you are in your screen/tmux session</span>
-rclone check /mnt/my_external_hdd gdrive_backup:My500GB_External_Backup <span class="se">\</span>
-    <span class="nt">-P</span> <span class="se">\</span>
-    <span class="nt">--checksum</span> <span class="se">\</span>
-    <span class="nt">--one-way</span> <span class="se">\</span>
-    <span class="nt">--log-file</span><span class="o">=</span>rclone_check_<span class="si">$(</span><span class="nb">date</span> +%Y%m%d_%H%M%S<span class="si">)</span>.log <span class="se">\</span>
-    <span class="nt">--verbose</span>
-</code></pre></div></div>
-<ul>
-  <li><code class="language-plaintext highlighter-rouge">rclone check</code>: Compares source and destination.</li>
-  <li><code class="language-plaintext highlighter-rouge">--checksum</code>: <strong>Crucial for verifying data integrity.</strong> Compares files based on content hashes.</li>
-  <li><code class="language-plaintext highlighter-rouge">--one-way</code>: Checks that every file in the source exists and is identical in the destination. It won’t report extra files in the destination (which is fine after a <code class="language-plaintext highlighter-rouge">copy</code>).</li>
-  <li><code class="language-plaintext highlighter-rouge">--log-file</code>: Logs the verification process.</li>
-</ul>
-
-<p>Review the <code class="language-plaintext highlighter-rouge">rclone_check</code> log. Ideally, it should report 0 differences or only differences that are explainable (e.g., files skipped by <code class="language-plaintext highlighter-rouge">--skip-links</code>). Any unexpected “missing on destination” or “files differ” entries need investigation.</p>
-
-<hr />
-
-<p><strong>Phase 3: Safely Unmounting the External Hard Drive</strong></p>
-
-<p><strong>Step 1: Flush Disk Caches</strong></p>
-
-<p>Before unmounting, ensure all cached data is written to the disk:</p>
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sync
-sync</span>
-</code></pre></div></div>
-<p>Running <code class="language-plaintext highlighter-rouge">sync</code> (some do it twice for good measure) flushes filesystem buffers.</p>
-
-<p><strong>Step 2: Unmount the Drive</strong></p>
-
-<ol>
-  <li>Ensure your terminal is not currently in the mount point directory:
-    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">cd</span> ~
-</code></pre></div>    </div>
-  </li>
-  <li>Unmount:
-    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>umount /mnt/my_external_hdd
-</code></pre></div>    </div>
-    <p>Or by device/UUID: <code class="language-plaintext highlighter-rouge">sudo umount UUID="69AF-5F99"</code></p>
-  </li>
-</ol>
-
-<p><strong>Step 3: Troubleshooting Unmount Issues (“target is busy”)</strong></p>
-
-<p>If you get a “target is busy” error:</p>
-<ul>
-  <li>Make sure no terminal or application is using <code class="language-plaintext highlighter-rouge">/mnt/my_external_hdd</code>.</li>
-  <li>Use these commands to find the culprit process(es):
-```bash
-sudo lsof +D /mnt/my_external_hdd
-    <h1 id="or">OR</h1>
-    <p>sudo fuser -vmM /mnt/my_external_hdd
-```    Close the identified applications or (carefully) kill the processes.</p>
-  </li>
-  <li>As a last resort, a “lazy unmount” can be used, but ensure <code class="language-plaintext highlighter-rouge">sync</code> was run:
-<code class="language-plaintext highlighter-rouge">sudo umount -l /mnt/my_external_hdd</code></li>
-</ul>
-
-<p>Once successfully unmounted, you can safely disconnect the USB drive.</p>]]></content><author><name></name></author><category term="scratchpad" /></entry></feed>
+</section>]]></content><author><name></name></author><category term="scratchpad" /></entry></feed>
