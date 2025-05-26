@@ -23,9 +23,9 @@
     <link rel="canonical" href="https://ib.bsb.br/connectivity-solution-for-rk3588/">
     <link rel="alternate" type="application/rss+xml" title="infoBAG" href="https://ib.bsb.br/rss.xml">
     
-      <meta name="keywords" content="scratchpad">
+      <meta name="keywords" content="scripts&gt;bash">
       
-        <meta property="article:tag" content="scratchpad">
+        <meta property="article:tag" content="scripts&gt;bash">
       
     
     <link rel="icon" href="/favicon.ico" type="image/x-icon">
@@ -67,7 +67,7 @@
         
           <span class="post-updated">
             ↣
-            <time datetime="2025-05-26T14:36:01+00:00">
+            <time datetime="2025-05-26T17:04:47+00:00">
               26 May 2025
             </time>
           </span>
@@ -81,7 +81,7 @@
           <p class="post-tags">
             Tags:
             
-              <a href="https://ib.bsb.br/tags/#scratchpad" class="tag">scratchpad</a>
+              <a href="https://ib.bsb.br/tags/#scripts-bash" class="tag">scripts>bash</a>
             
           </p>
         
@@ -90,11 +90,11 @@
         <div class="page-stats mt-3" role="status" aria-label="Page statistics">
       
       <span class="badge bg-primary">
-        52498 characters
+        62794 characters
       </span>
         <span class="separator mx-2" aria-hidden="true">•</span>
         <span class="badge bg-primary">
-        5410 words
+        6773 words
       </span>
       </div>
         <div class="action-buttons d-flex flex-wrap gap-2">
@@ -417,7 +417,7 @@ This revised universal_connect.sh script provides a more robust and user-friendl
   </h1>
       
 
-<section class="code-block-container" role="group" aria-label="Bash Code Block" data-filename="bash_code_block.sh" data-code="#!/bin/bash
+<section class="code-block-container" role="group" aria-label="Bash Code Block" data-filename="bash_code_block.sh" data-code="#!/usr/bin/env bash
 #
 # Universal Network Connectivity Script for RK3588 VPC-3588 (Debian Bullseye)
 #
@@ -425,8 +425,7 @@ This revised universal_connect.sh script provides a more robust and user-friendl
 # interactively prompting the user for necessary information.
 # It must be run with root privileges.
 #
-# Version 2: Incorporates fixes for dialog exit codes, WEP key handling,
-#            safer package installation, rfkill checks, and improved flow.
+# Version 2.1: Fixes premature exit in detect_ethernet_interfaces if no interfaces are found.
 
 # --- Script Setup ---
 # Exit immediately if a command exits with a non-zero status.
@@ -464,16 +463,21 @@ TMP_FILES_TO_CLEAN=()
 # --- Cleanup Function ---
 cleanup() {
     local exit_code=$?
+    # Attempt to remove temporary files
     for temp_file in &quot;${TMP_FILES_TO_CLEAN[@]}&quot;; do
         rm -f &quot;$temp_file&quot;
     done
-    # Restore cursor if dialog messed it up
-    stty sane
-    tput cnorm
+    # Restore cursor and terminal state if dialog might have altered them
+    if command -v stty &gt;/dev/null 2&gt;&amp;1; then
+        stty sane
+    fi
+    if command -v tput &gt;/dev/null 2&gt;&amp;1; then
+        tput cnorm
+    fi
     echo &quot;Script exited (Code: $exit_code). Cleanup performed.&quot;
     # If error, allow user to see last message from dialog if any
     if [ $exit_code -ne 0 ] &amp;&amp; [ $exit_code -ne 130 ]; then # 130 is Ctrl+C
-      read -rp &quot;Press Enter to close terminal...&quot;
+        read -rp &quot;Press Enter to close terminal...&quot;
     fi
 }
 trap cleanup EXIT # Handles normal exit and exit due to set -e
@@ -487,6 +491,7 @@ _show_dialog_message() {
     local message=&quot;$3&quot;
     local height=${4:-8}
     local width=${5:-60}
+    # Ensure dialog uses /dev/tty for interaction
     dialog --title &quot;$title&quot; --&quot;$type&quot; &quot;$message&quot; &quot;$height&quot; &quot;$width&quot; 2&gt;/dev/tty
     return $?
 }
@@ -499,7 +504,7 @@ log_info_persistent() { # Requires user to press OK
 log_info_transient() { # Auto-closes
     echo &quot;[INFO] $1&quot;
     # Infobox clears screen, so echo first, then show infobox briefly
-    dialog --title &quot;Information&quot; --infobox &quot;$1&quot; 6 60 2&gt;/dev/null
+    dialog --title &quot;Information&quot; --infobox &quot;$1&quot; 6 60 2&gt;/dev/null || true # Allow infobox to fail gracefully
     sleep 1 # Give time for user to see infobox
 }
 
@@ -529,7 +534,7 @@ install_packages() {
 
     for pkg_info in &quot;${package_info_array[@]}&quot;; do
         IFS=&#39;,&#39; read -r cmd pkg_name &lt;&lt;&lt; &quot;$pkg_info&quot;
-        if! check_command &quot;$cmd&quot;; then
+        if ! check_command &quot;$cmd&quot;; then
             missing_packages_to_install+=(&quot;$pkg_name&quot;)
         fi
     done
@@ -565,7 +570,8 @@ detect_ethernet_interfaces() {
     # Using ip -o link filters better than ifconfig -a which might not be installed
     # Filters for common Ethernet prefixes and excludes virtual/bridge interfaces
     # Also exclude interfaces that are part of a bridge (master) or bond
-    detected=$(ip -o link show type ether | awk -F&#39;: &#39; &#39;!/master|link\/ether 00:00:00:00:00:00|NO-CARRIER/{print $2}&#39; | awk &#39;{print $1}&#39; | grep -Ev &#39;^(br|bond|dummy|veth|virbr|docker|lo)&#39;)
+    # Added &#39;|| true&#39; to grep to prevent script exit if no interfaces are found/matched
+    detected=$(ip -o link show type ether 2&gt;/dev/null | awk -F&#39;: &#39; &#39;!/master|link\/ether 00:00:00:00:00:00|NO-CARRIER/{print $2}&#39; | awk &#39;{print $1}&#39; | grep -Ev &#39;^(br|bond|dummy|veth|virbr|docker|lo)&#39; || true)
     if [ -n &quot;$detected&quot; ]; then
         # shellcheck disable=SC2207 # Word splitting is intended here
         ETH_IFACES=($(echo &quot;$detected&quot;))
@@ -575,14 +581,15 @@ detect_ethernet_interfaces() {
 
 detect_wifi_interfaces() {
     WIFI_IFACES=()
-    local detected
+    local detected=&quot;&quot; # Initialize detected
     # Try &#39;iw dev&#39; first (more reliable for Wi-Fi)
     if check_command iw; then
-        detected=$(iw dev 2&gt;/dev/null | awk &#39;$1==&quot;Interface&quot;{print $2}&#39;)
+        # Ensure iw command does not cause exit on error if interface is down or no wifi hardware
+        detected=$(iw dev 2&gt;/dev/null | awk &#39;$1==&quot;Interface&quot;{print $2}&#39; || true)
     fi
-    # Fallback to &#39;ip link&#39; if &#39;iw dev&#39; fails or not present
+    # Fallback to &#39;ip link&#39; if &#39;iw dev&#39; fails or not present, or finds nothing
     if [ -z &quot;$detected&quot; ] &amp;&amp; check_command ip; then
-        detected=$(ip -o link show type wlan 2&gt;/dev/null | awk -F&#39;: &#39; &#39;{print $2}&#39; | awk &#39;{print $1}&#39;)
+        detected=$(ip -o link show type wlan 2&gt;/dev/null | awk -F&#39;: &#39; &#39;{print $2}&#39; | awk &#39;{print $1}&#39; || true)
     fi
 
     if [ -n &quot;$detected&quot; ]; then
@@ -609,7 +616,7 @@ prompt_select_interface() {
     local interfaces_array=(&quot;$@&quot;)
     local dialog_options=()
     local choice
-    local i=0
+    local i=1 # Start menu item numbering from 1 for dialog
 
     if [ ${#interfaces_array[@]} -eq 0 ]; then
         log_warning &quot;No $type interfaces found to select.&quot;
@@ -621,12 +628,16 @@ prompt_select_interface() {
     fi
 
     for iface_item in &quot;${interfaces_array[@]}&quot;; do
-        dialog_options+=(&quot;$iface_item&quot; &quot;Use $iface_item&quot;)
+        dialog_options+=(&quot;$i&quot; &quot;$iface_item&quot;) # Use index then name for dialog menu items
         i=$((i + 1))
     done
 
-    choice=$(dialog --title &quot;Select $type Interface&quot; \
-        --menu &quot;Choose the $type interface to configure:&quot; ${DIALOG_DEFAULT_HEIGHT} ${DIALOG_DEFAULT_WIDTH} &quot;$i&quot; \
+    # Dialog menu expects pairs of &quot;tag&quot; &quot;item&quot;. We use index as tag, then iface name as item.
+    # The choice returned by dialog will be the &quot;tag&quot; (index).
+    # We need to map this index back to the interface name.
+    # The number of choices for dialog is half the number of elements in dialog_options.
+    choice_tag=$(dialog --title &quot;Select $type Interface&quot; \
+        --menu &quot;Choose the $type interface to configure:&quot; ${DIALOG_DEFAULT_HEIGHT} ${DIALOG_DEFAULT_WIDTH} $((${#dialog_options[@]} / 2)) \
         &quot;${dialog_options[@]}&quot; \
         2&gt;&amp;1 &gt;/dev/tty)
 
@@ -635,7 +646,9 @@ prompt_select_interface() {
         log_info_persistent &quot;$type interface selection cancelled by user.&quot;
         return 1 # Indicates no interface was selected (cancelled)
     fi
-    echo &quot;$choice&quot;
+    # Map the chosen tag (index) back to the interface name
+    # The interfaces_array is 0-indexed. choice_tag is 1-indexed.
+    echo &quot;${interfaces_array[$((choice_tag - 1))]}&quot;
     return 0 # Indicates an interface was selected
 }
 
@@ -645,17 +658,17 @@ prompt_static_config() {
 
     static_ip=$(dialog --title &quot;Static IP Configuration ($interface_type)&quot; \
         --inputbox &quot;Enter Static IP Address with CIDR (e.g., 192.168.1.100/24):&quot; \
-        10 ${DIALOG_INPUT_WIDTH} 2&gt;&amp;1 &gt;/dev/tty)
+        10 ${DIALOG_INPUT_WIDTH} &quot;&quot; 2&gt;&amp;1 &gt;/dev/tty) # Added empty string for initial value
     [ $? -ne $DIALOG_SUCCESS_CODE ] &amp;&amp; return 1
 
     static_gateway=$(dialog --title &quot;Static IP Configuration ($interface_type)&quot; \
         --inputbox &quot;Enter Gateway IP Address (e.g., 192.168.1.1):&quot; \
-        10 ${DIALOG_INPUT_WIDTH} 2&gt;&amp;1 &gt;/dev/tty)
+        10 ${DIALOG_INPUT_WIDTH} &quot;&quot; 2&gt;&amp;1 &gt;/dev/tty) # Added empty string
     [ $? -ne $DIALOG_SUCCESS_CODE ] &amp;&amp; return 1
 
     static_dns=$(dialog --title &quot;Static IP Configuration ($interface_type)&quot; \
         --inputbox &quot;Enter DNS Server(s) (comma-separated, e.g., 8.8.8.8,1.1.1.1, optional):&quot; \
-        10 ${DIALOG_INPUT_WIDTH} 2&gt;&amp;1 &gt;/dev/tty)
+        10 ${DIALOG_INPUT_WIDTH} &quot;&quot; 2&gt;&amp;1 &gt;/dev/tty) # Added empty string
     [ $? -ne $DIALOG_SUCCESS_CODE ] &amp;&amp; return 1 # Even if DNS is optional, cancellation here means stop.
 
     if [[ -z &quot;$static_ip&quot; || -z &quot;$static_gateway&quot; ]]; then
@@ -667,6 +680,12 @@ prompt_static_config() {
         log_error &quot;Static IP must be in CIDR notation (e.g., 192.168.1.100/24).&quot;
         return 1
     fi
+    # Basic IP validation for gateway
+    if ! echo &quot;$static_gateway&quot; | grep -qE &quot;^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$&quot;; then
+        log_error &quot;Gateway IP Address format is invalid (e.g., 192.168.1.1).&quot;
+        return 1
+    fi
+
 
     echo &quot;$static_ip:$static_gateway:$static_dns&quot;
     return 0
@@ -700,9 +719,11 @@ attempt_ethernet_dhcp() {
 
     if $NM_IS_ACTIVE; then
         local profile_name
-        profile_name=$(nmcli -g NAME,DEVICE connection show --active | grep &quot;:$iface$&quot; | cut -d&#39;:&#39; -f1 | head -n1)
+        # Try to find an active profile for the device
+        profile_name=$(nmcli -g NAME,DEVICE connection show --active 2&gt;/dev/null | grep &quot;:$iface$&quot; | cut -d&#39;:&#39; -f1 | head -n1 || true)
         if [ -z &quot;$profile_name&quot; ]; then
-             profile_name=$(nmcli -g NAME,DEVICE connection show | grep &quot;:$iface$&quot; | cut -d&#39;:&#39; -f1 | head -n1)
+            # If not active, try to find any existing profile for the device
+             profile_name=$(nmcli -g NAME,DEVICE connection show 2&gt;/dev/null | grep &quot;:$iface$&quot; | cut -d&#39;:&#39; -f1 | head -n1 || true)
         fi
 
         if [ -n &quot;$profile_name&quot; ]; then
@@ -716,24 +737,30 @@ attempt_ethernet_dhcp() {
             fi
         fi
         log_info_transient &quot;Attempting to add and activate a new DHCP Ethernet connection for $iface via NetworkManager...&quot;
+        # Delete any potentially conflicting connection with the same auto-generated name first
+        nmcli connection delete &quot;Eth-DHCP-$iface&quot; &gt;/dev/null 2&gt;&amp;1 || true
         if nmcli connection add type ethernet con-name &quot;Eth-DHCP-$iface&quot; ifname &quot;$iface&quot; ipv4.method auto ipv6.method auto &amp;&amp; \
            nmcli connection up &quot;Eth-DHCP-$iface&quot;; then
             log_info_transient &quot;NetworkManager added and activated DHCP connection for $iface.&quot;
             sleep 5; return 0
         else
             log_warning &quot;Failed to configure Ethernet DHCP for $iface via NetworkManager. Will try dhclient.&quot;
+            # Cleanup failed attempt
+            nmcli connection delete &quot;Eth-DHCP-$iface&quot; &gt;/dev/null 2&gt;&amp;1 || true
         fi
     fi
 
     log_info_transient &quot;Bringing interface $iface up...&quot;
-    ip link set &quot;$iface&quot; up
+    ip link set &quot;$iface&quot; up || { log_warning &quot;Failed to bring interface $iface up.&quot;; return 1; }
+    # Release any old lease
     dhclient -r &quot;$iface&quot; &gt;/dev/null 2&gt;&amp;1 || true
     log_info_transient &quot;Attempting DHCP with dhclient on $iface...&quot;
-    if dhclient -v &quot;$iface&quot; &gt;/tmp/dhclient_eth.log 2&gt;&amp;1; then
+    # Run dhclient in foreground for a limited time to see if it works
+    if timeout 30 dhclient -v &quot;$iface&quot; &gt;&quot;/tmp/dhclient_eth_${iface}.log&quot; 2&gt;&amp;1; then
         log_info_transient &quot;dhclient successfully obtained lease on $iface.&quot;
         sleep 2; return 0
     else
-        log_error &quot;dhclient failed to obtain lease on $iface. Check /tmp/dhclient_eth.log&quot;
+        log_error &quot;dhclient failed or timed out for $iface. Check /tmp/dhclient_eth_${iface}.log&quot;
         return 1
     fi
 }
@@ -749,22 +776,24 @@ configure_ethernet_static() {
     local static_ip_cidr gateway dns_servers
     IFS=&#39;:&#39; read -r static_ip_cidr gateway dns_servers &lt;&lt;&lt; &quot;$config_str&quot;
 
-    log_info_transient &quot;Configuring static IP for Ethernet interface $iface: IP=$static_ip_cidr, GW=$gateway, DNS=$dns_servers&quot;
+    log_info_transient &quot;Configuring static IP for Ethernet interface $iface: IP=$static_ip_cidr, GW=$gateway, DNS=${dns_servers:-Not set}&quot;
 
     if $NM_IS_ACTIVE; then
         local profile_name=&quot;Static-Eth-$iface&quot;
+        # Delete existing profile if it exists, to ensure clean configuration
         nmcli connection delete &quot;$profile_name&quot; &gt;/dev/null 2&gt;&amp;1 || true
         
         log_info_transient &quot;Attempting to add and activate static Ethernet connection via NetworkManager...&quot;
         local nm_cmd_parts=(&quot;nmcli&quot; &quot;connection&quot; &quot;add&quot; &quot;type&quot; &quot;ethernet&quot; &quot;con-name&quot; &quot;$profile_name&quot; &quot;ifname&quot; &quot;$iface&quot; &quot;ipv4.method&quot; &quot;manual&quot; &quot;ipv4.addresses&quot; &quot;$static_ip_cidr&quot; &quot;ipv4.gateway&quot; &quot;$gateway&quot;)
         [ -n &quot;$dns_servers&quot; ] &amp;&amp; nm_cmd_parts+=(&quot;ipv4.dns&quot; &quot;$dns_servers&quot;)
-        nm_cmd_parts+=(&quot;ipv6.method&quot; &quot;disabled&quot;)
+        nm_cmd_parts+=(&quot;ipv6.method&quot; &quot;ignore&quot;) # Changed from disabled to ignore for broader compatibility
 
         if &quot;${nm_cmd_parts[@]}&quot; &amp;&amp; nmcli connection up &quot;$profile_name&quot;; then
             log_info_transient &quot;NetworkManager configured and activated static IP on $iface.&quot;
             sleep 3; return 0
         else
             log_error &quot;Failed to configure static IP on $iface via NetworkManager.&quot;
+            # Cleanup failed attempt
             nmcli connection delete &quot;$profile_name&quot; &gt;/dev/null 2&gt;&amp;1 || true
             return 1
         fi
@@ -772,21 +801,33 @@ configure_ethernet_static() {
 
     log_info_transient &quot;Configuring static IP on $iface using iproute2...&quot;
     ip addr flush dev &quot;$iface&quot; || true
-    ip link set &quot;$iface&quot; down
-    ip link set &quot;$iface&quot; up
-    if ip addr add &quot;$static_ip_cidr&quot; dev &quot;$iface&quot; &amp;&amp; \
-       ip route add default via &quot;$gateway&quot; dev &quot;$iface&quot;; then
-        log_info_transient &quot;iproute2 configured IP address and gateway on $iface.&quot;
-        if [ -n &quot;$dns_servers&quot; ]; then
-            local resolv_conf_content=&quot;&quot;
-            IFS=&#39;,&#39; read -ra dns_array &lt;&lt;&lt; &quot;$dns_servers&quot;
-            for dns in &quot;${dns_array[@]}&quot;; do resolv_conf_content+=&quot;nameserver $dns\n&quot;; done
-            echo -e &quot;$resolv_conf_content&quot; &gt; /etc/resolv.conf
-            log_info_transient &quot;Configured DNS servers in /etc/resolv.conf: $dns_servers&quot;
+    ip link set &quot;$iface&quot; down || true # Allow to fail if already down
+    ip link set &quot;$iface&quot; up || { log_warning &quot;Failed to bring interface $iface up for static config.&quot;; return 1; }
+    
+    if ip addr add &quot;$static_ip_cidr&quot; dev &quot;$iface&quot;; then
+        log_info_transient &quot;IP address $static_ip_cidr added to $iface.&quot;
+        # Add delay before setting route, interface might need a moment
+        sleep 2
+        if ip route add default via &quot;$gateway&quot; dev &quot;$iface&quot;; then
+            log_info_transient &quot;Default route via $gateway added for $iface.&quot;
+            if [ -n &quot;$dns_servers&quot; ]; then
+                local resolv_conf_content=&quot;&quot;
+                IFS=&#39;,&#39; read -ra dns_array &lt;&lt;&lt; &quot;$dns_servers&quot;
+                for dns in &quot;${dns_array[@]}&quot;; do resolv_conf_content+=&quot;nameserver $dns\n&quot;; done
+                # Check if /etc/resolv.conf is a symlink (e.g. to systemd-resolved)
+                if [ -L /etc/resolv.conf ]; then
+                    log_warning &quot;/etc/resolv.conf is a symlink. DNS might not be set correctly by overwriting it. Manual configuration or NetworkManager is advised for DNS.&quot;
+                fi
+                echo -e &quot;$resolv_conf_content&quot; &gt; /etc/resolv.conf
+                log_info_transient &quot;Configured DNS servers in /etc/resolv.conf: $dns_servers&quot;
+            fi
+            sleep 3; return 0
+        else
+            log_error &quot;Failed to add default route via $gateway for $iface.&quot;
+            return 1
         fi
-        sleep 3; return 0
     else
-        log_error &quot;Failed to configure static IP on $iface using iproute2.&quot;
+        log_error &quot;Failed to add IP address $static_ip_cidr to $iface.&quot;
         return 1
     fi
 }
@@ -800,27 +841,32 @@ handle_ethernet_connection() {
     SELECTED_ETH_IFACE=$(prompt_select_interface &quot;Ethernet&quot; &quot;${ETH_IFACES[@]}&quot;)
     local select_exit_status=$?
     [ $select_exit_status -ne $DIALOG_SUCCESS_CODE ] &amp;&amp; return 1 # User cancelled selection
+    [ -z &quot;$SELECTED_ETH_IFACE&quot; ] &amp;&amp; { log_warning &quot;No Ethernet interface was selected.&quot;; return 1; }
 
-    dialog --title &quot;Ethernet Configuration&quot; --yesno &quot;Attempt to configure Ethernet interface &#39;$SELECTED_ETH_IFACE&#39; using DHCP (automatic IP)?&quot; ${DIALOG_DEFAULT_HEIGHT} ${DIALOG_DEFAULT_WIDTH} 2&gt;/dev/tty
+
+    dialog --title &quot;Ethernet Configuration: $SELECTED_ETH_IFACE&quot; --yesno &quot;Attempt to configure Ethernet interface &#39;$SELECTED_ETH_IFACE&#39; using DHCP (automatic IP)?&quot; ${DIALOG_DEFAULT_HEIGHT} ${DIALOG_DEFAULT_WIDTH} 2&gt;/dev/tty
     local choice=$?
 
     if [ $choice -eq $DIALOG_SUCCESS_CODE ]; then # Yes (DHCP)
-        if attempt_ethernet_dhcp &quot;$SELECTED_ETH_IFACE&quot;; then return 0; fi # Return 0 if DHCP step succeeded locally
-        log_warning &quot;DHCP on $SELECTED_ETH_IFACE failed locally.&quot;
+        if attempt_ethernet_dhcp &quot;$SELECTED_ETH_IFACE&quot;; then return 0; fi 
+        log_warning &quot;DHCP on $SELECTED_ETH_IFACE failed.&quot; # Message simplified
     elif [ $choice -eq $DIALOG_CANCEL_CODE ]; then # No
-        log_info_persistent &quot;Skipping DHCP for $SELECTED_ETH_IFACE.&quot;
+        log_info_persistent &quot;DHCP for $SELECTED_ETH_IFACE skipped by user.&quot;
     else # Esc or other non-success
         log_info_persistent &quot;Ethernet DHCP choice cancelled by user.&quot;
         return 1
     fi
 
-    dialog --title &quot;Ethernet Configuration&quot; --yesno &quot;Do you want to configure a static IP for Ethernet interface &#39;$SELECTED_ETH_IFACE&#39;?&quot; ${DIALOG_DEFAULT_HEIGHT} ${DIALOG_DEFAULT_WIDTH} 2&gt;/dev/tty
+    dialog --title &quot;Ethernet Configuration: $SELECTED_ETH_IFACE&quot; --yesno &quot;Do you want to configure a static IP for Ethernet interface &#39;$SELECTED_ETH_IFACE&#39;?&quot; ${DIALOG_DEFAULT_HEIGHT} ${DIALOG_DEFAULT_WIDTH} 2&gt;/dev/tty
     choice=$?
     if [ $choice -eq $DIALOG_SUCCESS_CODE ]; then # Yes (Static IP)
-        if configure_ethernet_static &quot;$SELECTED_ETH_IFACE&quot;; then return 0; fi # Return 0 if static config step succeeded locally
-        log_warning &quot;Static IP configuration on $SELECTED_ETH_IFACE failed locally.&quot;
+        if configure_ethernet_static &quot;$SELECTED_ETH_IFACE&quot;; then return 0; fi
+        log_warning &quot;Static IP configuration on $SELECTED_ETH_IFACE failed.&quot; # Message simplified
+    elif [ $choice -eq $DIALOG_CANCEL_CODE ]; then
+        log_info_persistent &quot;Static IP configuration for $SELECTED_ETH_IFACE skipped by user.&quot;
     else
-        log_info_persistent &quot;Skipping static IP configuration for $SELECTED_ETH_IFACE.&quot;
+        log_info_persistent &quot;Ethernet Static IP choice cancelled by user.&quot;
+        return 1
     fi
     return 1 # All attempts for Ethernet failed or were skipped
 }
@@ -830,70 +876,80 @@ scan_wifi_networks() {
     local iface=&quot;$1&quot;
     local networks_list=()
     local line ssid signal security
-    local tmp_scan_file=&quot;/tmp/wifi_scan_$$&quot;
+    local tmp_scan_file=&quot;/tmp/wifi_scan_$$_${iface}&quot; # Make temp file name more unique per interface
     TMP_FILES_TO_CLEAN+=(&quot;$tmp_scan_file&quot;)
 
 
     log_info_transient &quot;Scanning for Wi-Fi networks on $iface (this may take a few seconds)...&quot;
-    ip link set &quot;$iface&quot; up 2&gt;/dev/null || log_warning &quot;Could not bring $iface up for scanning.&quot;
+    ip link set &quot;$iface&quot; up 2&gt;/dev/null || log_warning &quot;Could not bring $iface up for scanning, scan might fail.&quot;
 
     if $NM_IS_ACTIVE &amp;&amp; check_command nmcli; then
-        nmcli device wifi rescan ifname &quot;$iface&quot; &gt;/dev/null 2&gt;&amp;1 || true 
+        # Ensure rescan happens, even if it reports an error (e.g., device busy)
+        nmcli device wifi rescan ifname &quot;$iface&quot; &gt;/dev/null 2&gt;&amp;1 || true
         sleep 5 # Give time for rescan
         
-        # nmcli default output is column-based. Parsing needs to be careful.
-        # Using -g for specific fields is more robust if available and works as expected.
-        # Let&#39;s try a slightly more robust parsing for default output:
-        nmcli -f SSID,SIGNAL,SECURITY dev wifi list ifname &quot;$iface&quot; --rescan no | \
-            tail -n +2 | grep -v &quot;^\*&quot; | grep -v &quot;^\-\-&quot; | \
-            awk &#39;BEGIN {OFS=&quot;;&quot;} { $1=$1; ssid=&quot;&quot;; for(i=1;i&lt;=NF-2;i++) ssid=(ssid==&quot;&quot;?$i:ssid FS $i); gsub(/^[ \t]+|[ \t]+$/, &quot;&quot;, ssid); gsub(/^[ \t]+|[ \t]+$/, &quot;&quot;, $(NF-1)); gsub(/^[ \t]+|[ \t]+$/, &quot;&quot;, $NF); if (ssid!=&quot;&quot;) print ssid,$(NF-1),$NF}&#39; &gt; &quot;$tmp_scan_file&quot;
-        
-        while IFS=&#39;;&#39; read -r ssid signal security_field; do
-            if [ -n &quot;$ssid&quot; ] &amp;&amp; [ &quot;$ssid&quot; != &quot;--&quot; ]; then
-                local display_ssid=&quot;${ssid:0:25}&quot;
-                [ &quot;${#ssid}&quot; -gt 25 ] &amp;&amp; display_ssid=&quot;${display_ssid}..&quot;
-                networks_list+=(&quot;$ssid&quot; &quot;Sig: $signal | Sec: ${security_field:-Open} | $display_ssid&quot;)
-            fi
-        done &lt; &quot;$tmp_scan_file&quot;
-
+        # nmcli output parsing: SSID can contain spaces.
+        # Using --terse --fields to get a more scriptable output
+        # Fields: SSID, SIGNAL, SECURITY (SECURITY can be empty for open networks)
+        # Use a placeholder for empty security fields to maintain structure
+        nmcli --terse --fields IN-USE,SSID,SIGNAL,SECURITY device wifi list ifname &quot;$iface&quot; --rescan no 2&gt;/dev/null | while IFS=&#39;:&#39; read -r in_use ssid signal_val security_val; do
+            # Skip if SSID is empty or a header line (though --terse should prevent headers)
+            [ -z &quot;$ssid&quot; ] &amp;&amp; continue
+            local display_ssid=&quot;${ssid:0:25}&quot;
+            [ &quot;${#ssid}&quot; -gt 25 ] &amp;&amp; display_ssid=&quot;${display_ssid}..&quot;
+            local sec_display=&quot;${security_val:-Open}&quot; # Use &quot;Open&quot; if security is empty
+            [ &quot;$in_use&quot; == &quot;*&quot; ] &amp;&amp; sec_display=&quot;*Connected* $sec_display&quot;
+            # Tag for dialog, description for dialog
+            networks_list+=(&quot;$ssid&quot; &quot;Sig: $signal_val | Sec: $sec_display | $display_ssid&quot;)
+        done
     else # Fallback to iwlist
-        pgrep -af &quot;wpa_supplicant.*${iface}&quot; | awk &#39;{print $1}&#39; | xargs kill &gt;/dev/null 2&gt;&amp;1 || true # Try graceful kill first
+        # Try to kill wpa_supplicant if it&#39;s running on the interface, as it can interfere with iwlist scan
+        pgrep -af &quot;wpa_supplicant.*${iface}&quot; | awk &#39;{print $1}&#39; | xargs kill &gt;/dev/null 2&gt;&amp;1 || true 
         sleep 0.5
-        pgrep -af &quot;wpa_supplicant.*${iface}&quot; | awk &#39;{print $1}&#39; | xargs kill -9 &gt;/dev/null 2&gt;&amp;1 || true # Force kill if still running
+        pgrep -af &quot;wpa_supplicant.*${iface}&quot; | awk &#39;{print $1}&#39; | xargs kill -9 &gt;/dev/null 2&gt;&amp;1 || true
         sleep 1
 
         local scan_output
         scan_output=$(iwlist &quot;$iface&quot; scan 2&gt;/dev/null)
-        local current_ssid=&quot;&quot; current_signal=&quot;&quot; current_security=&quot;Open&quot;
+        local current_ssid=&quot;&quot; current_signal=&quot;N/A&quot; current_security=&quot;Open&quot; # Initialize with defaults
 
-        while IFS= read -r line; do
-            if [[ &quot;$line&quot; == *&quot;ESSID:&quot;* ]]; then
-                [ -n &quot;$current_ssid&quot; ] &amp;&amp; networks_list+=(&quot;$current_ssid&quot; &quot;Sig: ${current_signal:-N/A} | Sec: $current_security | ${current_ssid:0:25}${current_ssid:25:..}&quot;)
-                current_ssid=$(echo &quot;$line&quot; | sed -e &#39;s/.*ESSID:&quot;\(.*\)&quot;/\1/&#39;)
-                current_signal=&quot;N/A&quot;; current_security=&quot;Open&quot; # Reset for new AP
-            elif [[ &quot;$line&quot; == *&quot;Quality=&quot;* ]]; then
-                current_signal=$(echo &quot;$line&quot; | sed -n -e &#39;s/.*Signal level=\(-\?[0-9]* dBm\).*/\1/p&#39; -e &#39;s/.*Quality=\([0-9]*\/[0-9]*\).*/\1/p&#39;)
-            elif [[ &quot;$line&quot; == *&quot;Encryption key:on&quot;* ]]; then
-                current_security=&quot;Protected&quot; 
-            elif [[ &quot;$line&quot; == *&quot;IE: IEEE 802.11i/WPA2 Version 1&quot;* ]]; then
-                current_security=&quot;WPA2/PSK&quot; # Assume PSK
-            elif [[ &quot;$line&quot; == *&quot;IE: WPA Version 1&quot;* ]]; then
-                current_security=&quot;WPA/PSK&quot;  # Assume PSK
-            # Add more specific IE parsing for WPA3 (SAE) if needed
-            fi
-        done &lt;&lt;&lt; &quot;$scan_output&quot;
-        [ -n &quot;$current_ssid&quot; ] &amp;&amp; networks_list+=(&quot;$current_ssid&quot; &quot;Sig: ${current_signal:-N/A} | Sec: $current_security | ${current_ssid:0:25}${current_ssid:25:..}&quot;)
+        # Process each cell block from iwlist output
+        echo &quot;$scan_output&quot; | awk -v RS=&quot;Cell &quot; &#39;NR &gt; 1 { # Skip first record before &quot;Cell &quot;
+            essid=&quot;&quot;; signal=&quot;N/A&quot;; security=&quot;Open&quot;;
+            if (match($0, /ESSID:&quot;([^&quot;]+)&quot;/, arr)) { essid=arr[1] }
+            if (match($0, /Signal level=([0-9]+)\/100/, arr)) { signal=arr[1] &quot;%&quot; } # Quality as percentage
+            else if (match($0, /Signal level=(-?[0-9]+ dBm)/, arr)) { signal=arr[1] } # dBm
+            if (match($0, /Encryption key:on/)) {
+                security=&quot;Protected&quot;; # Generic &quot;Protected&quot;
+                if (match($0, /IE: IEEE 802.11i\/WPA2 Version 1/)) { security=&quot;WPA2/PSK&quot; }
+                else if (match($0, /IE: WPA Version 1/)) { security=&quot;WPA/PSK&quot; }
+                # Could add more specific WEP detection if needed, e.g. based on lack of WPA/WPA2 IEs
+            }
+            if (essid != &quot;&quot;) {
+                display_essid = substr(essid, 1, 25);
+                if (length(essid) &gt; 25) display_essid = display_essid &quot;..&quot;;
+                # Output in a format that can be easily read by the shell loop
+                # Using a unique separator like |;|
+                print essid &quot;|;|&quot; &quot;Sig: &quot; signal &quot; | Sec: &quot; security &quot; | &quot; display_essid;
+            }
+        }&#39; | while IFS=&#39;|;|&#39; read -r ssid description; do
+            networks_list+=(&quot;$ssid&quot; &quot;$description&quot;)
+        done
     fi
     
+    # This specific temp file is processed, no need to keep it in global cleanup array after this point.
     rm -f &quot;$tmp_scan_file&quot;
-    TMP_FILES_TO_CLEAN=( &quot;${TMP_FILES_TO_CLEAN[@]/$tmp_scan_file}&quot; )
+    # To remove from array (optional, as cleanup handles rm -f anyway):
+    local new_tmp_files=()
+    for f in &quot;${TMP_FILES_TO_CLEAN[@]}&quot;; do [ &quot;$f&quot; != &quot;$tmp_scan_file&quot; ] &amp;&amp; new_tmp_files+=(&quot;$f&quot;); done
+    TMP_FILES_TO_CLEAN=(&quot;${new_tmp_files[@]}&quot;)
 
 
     if [ ${#networks_list[@]} -eq 0 ]; then
         log_warning &quot;No Wi-Fi networks found on $iface after scan.&quot;
         return 1
     fi
-
+    # Return the flat array for dialog menu
     echo &quot;${networks_list[@]}&quot;
     return 0
 }
@@ -905,13 +961,17 @@ connect_wifi() {
     networks_flat_array_str=$(scan_wifi_networks &quot;$iface&quot;)
     local scan_status=$?
     # shellcheck disable=SC2207
-    local networks_flat_array=($networks_flat_array_str)
+    local networks_flat_array=($networks_flat_array_str) # This splits by space, problematic if descriptions have spaces
+
+    # Reconstruct networks_flat_array properly if scan_wifi_networks echoes one item per line (tag then item)
+    # For now, assuming scan_wifi_networks output is correctly space-separated for this expansion.
+    # If scan_wifi_networks outputs &quot;tag1&quot; &quot;desc1&quot; &quot;tag2&quot; &quot;desc2&quot;, this is fine.
 
     if [ $scan_status -ne 0 ] || [ ${#networks_flat_array[@]} -eq 0 ]; then
         return 1
     fi
 
-    local selected_ssid_tag
+    local selected_ssid_tag # This will be the SSID itself, as scan_wifi_networks uses SSID as the tag
     selected_ssid_tag=$(dialog --title &quot;Select Wi-Fi Network&quot; \
         --menu &quot;Choose the Wi-Fi network (SSID) to connect to on $iface:&quot; \
         $((DIALOG_DEFAULT_HEIGHT + 5)) ${DIALOG_DEFAULT_WIDTH} $((${#networks_flat_array[@]} / 2)) \
@@ -923,14 +983,17 @@ connect_wifi() {
         log_info_persistent &quot;Wi-Fi network selection cancelled.&quot;
         return 1
     fi
-    local selected_ssid=&quot;$selected_ssid_tag&quot;
+    local selected_ssid=&quot;$selected_ssid_tag&quot; # selected_ssid_tag is the actual SSID
 
+    # Determine security type based on the description string from networks_flat_array
     local security_type=&quot;Unknown&quot;
+    local full_description=&quot;&quot;
     for ((i=0; i&lt;${#networks_flat_array[@]}; i+=2)); do
         if [ &quot;${networks_flat_array[i]}&quot; == &quot;$selected_ssid&quot; ]; then
-            if [[ &quot;${networks_flat_array[i+1]}&quot; == *&quot;Sec: Open&quot;* ]]; then security_type=&quot;Open&quot;
-            elif [[ &quot;${networks_flat_array[i+1]}&quot; == *&quot;Sec: WEP&quot;* ]]; then security_type=&quot;WEP&quot;
-            elif [[ &quot;${networks_flat_array[i+1]}&quot; == *&quot;Sec: WPA&quot;* || &quot;${networks_flat_array[i+1]}&quot; == *&quot;Sec: WPA2&quot;* || &quot;${networks_flat_array[i+1]}&quot; == *&quot;Sec: WPA3&quot;* || &quot;${networks_flat_array[i+1]}&quot; == *&quot;Sec: PSK&quot;* ]]; then security_type=&quot;PSK&quot;
+            full_description=&quot;${networks_flat_array[i+1]}&quot;
+            if [[ &quot;$full_description&quot; == *&quot;Sec: Open&quot;* ]]; then security_type=&quot;Open&quot;
+            elif [[ &quot;$full_description&quot; == *&quot;Sec: WEP&quot;* ]]; then security_type=&quot;WEP&quot; # Assuming WEP if description says so
+            elif [[ &quot;$full_description&quot; == *&quot;Sec: WPA&quot;* || &quot;$full_description&quot; == *&quot;Sec: WPA2&quot;* || &quot;$full_description&quot; == *&quot;Sec: WPA3&quot;* || &quot;$full_description&quot; == *&quot;Sec: PSK&quot;* ]]; then security_type=&quot;PSK&quot;
             fi
             break
         fi
@@ -940,41 +1003,60 @@ connect_wifi() {
     if [ &quot;$security_type&quot; == &quot;PSK&quot; ] || [ &quot;$security_type&quot; == &quot;WEP&quot; ]; then
         wifi_password=$(dialog --title &quot;Wi-Fi Password&quot; \
             --passwordbox &quot;Enter password for SSID &#39;$selected_ssid&#39; ($security_type):&quot; \
-            10 ${DIALOG_INPUT_WIDTH} 2&gt;&amp;1 &gt;/dev/tty)
+            10 ${DIALOG_INPUT_WIDTH} &quot;&quot; 2&gt;&amp;1 &gt;/dev/tty)
         exit_status=$?
-        if [ $exit_status -ne $DIALOG_SUCCESS_CODE ] || [ -z &quot;$wifi_password&quot; ]; then
-            log_warning &quot;Password entry cancelled or empty. Cannot connect.&quot;
+        if [ $exit_status -ne $DIALOG_SUCCESS_CODE ]; then # Allow empty password if user presses OK
+            log_warning &quot;Password entry cancelled. Cannot connect without password for $security_type.&quot;
             return 1
         fi
-    elif [ &quot;$security_type&quot; == &quot;Unknown&quot; ]; then
-         dialog --title &quot;Unknown Security&quot; --yesno &quot;Security type for &#39;$selected_ssid&#39; is unknown or complex (e.g. Enterprise/EAP). Attempt to connect as an open network or provide a password?&quot; 12 ${DIALOG_DEFAULT_WIDTH} 2&gt;/dev/tty
+        if [ -z &quot;$wifi_password&quot; ] &amp;&amp; [ &quot;$security_type&quot; != &quot;Open&quot; ]; then # WEP/PSK need password
+             log_warning &quot;Password cannot be empty for $security_type. Cannot connect.&quot;
+             return 1
+        fi
+    elif [ &quot;$security_type&quot; == &quot;Unknown&quot; ]; then # If security is unknown, prompt user
+         dialog --title &quot;Unknown Security for $selected_ssid&quot; --yesno &quot;Security type is Unknown. Attempt to provide a password (for WPA/WPA2/WEP) or connect as Open?&quot; 12 ${DIALOG_DEFAULT_WIDTH} 2&gt;/dev/tty
          local choice=$?
-         if [ $choice -eq $DIALOG_SUCCESS_CODE ]; then
+         if [ $choice -eq $DIALOG_SUCCESS_CODE ]; then # User wants to provide password
             wifi_password=$(dialog --title &quot;Wi-Fi Password&quot; \
-                --passwordbox &quot;Enter password/key for SSID &#39;$selected_ssid&#39; (if any):&quot; \
-                10 ${DIALOG_INPUT_WIDTH} 2&gt;&amp;1 &gt;/dev/tty)
-            [ $? -ne $DIALOG_SUCCESS_CODE ] &amp;&amp; return 1
-         else
+                --passwordbox &quot;Enter password/key for SSID &#39;$selected_ssid&#39;:&quot; \
+                10 ${DIALOG_INPUT_WIDTH} &quot;&quot; 2&gt;&amp;1 &gt;/dev/tty)
+            [ $? -ne $DIALOG_SUCCESS_CODE ] &amp;&amp; return 1 # Cancelled password entry
+            # Assume PSK if password provided for unknown
+            [ -n &quot;$wifi_password&quot; ] &amp;&amp; security_type=&quot;PSK&quot; || security_type=&quot;Open&quot;
+         else # User chose to try as Open
             security_type=&quot;Open&quot;
          fi
-    fi
+    fi # No password needed for Open
 
-    log_info_transient &quot;Attempting to connect to Wi-Fi: $selected_ssid on $iface&quot;
+    log_info_transient &quot;Attempting to connect to Wi-Fi: $selected_ssid on $iface (Security: $security_type)&quot;
     if $NM_IS_ACTIVE; then
+        # Disconnect first to avoid issues with existing connections
         nmcli device disconnect &quot;$iface&quot; &gt;/dev/null 2&gt;&amp;1 || true; sleep 1
-        local old_profile_uuid
-        old_profile_uuid=$(nmcli -g UUID,TYPE,NAME connection show | grep &quot;wireless&quot; | grep &quot;:$selected_ssid$&quot; | cut -d&#39;:&#39; -f1 | head -n1)
-        [ -n &quot;$old_profile_uuid&quot; ] &amp;&amp; { log_info_transient &quot;Deleting existing NetworkManager profile for $selected_ssid.&quot;; nmcli connection delete uuid &quot;$old_profile_uuid&quot; &gt;/dev/null 2&gt;&amp;1 || true; }
+        # Delete existing profiles for this SSID to ensure fresh settings
+        local old_profile_uuids
+        old_profile_uuids=$(nmcli -g UUID,TYPE,NAME connection show 2&gt;/dev/null | grep &quot;wireless&quot; | grep &quot;:$selected_ssid$&quot; | cut -d&#39;:&#39; -f1 || true)
+        if [ -n &quot;$old_profile_uuids&quot; ]; then
+            echo &quot;$old_profile_uuids&quot; | while read -r uuid; do
+                log_info_transient &quot;Deleting existing NetworkManager profile UUID $uuid for $selected_ssid.&quot;
+                nmcli connection delete uuid &quot;$uuid&quot; &gt;/dev/null 2&gt;&amp;1 || true
+            done
+        fi
 
         local connect_cmd_nmcli=(&quot;nmcli&quot; &quot;device&quot; &quot;wifi&quot; &quot;connect&quot; &quot;$selected_ssid&quot; &quot;ifname&quot; &quot;$iface&quot;)
-        if [ &quot;$security_type&quot; != &quot;Open&quot; ] || { [ &quot;$security_type&quot; == &quot;Open&quot; ] &amp;&amp; [ -n &quot;$wifi_password&quot; ]; }; then # If not open, or open but password provided
+        # Only add password if it&#39;s not an Open network OR if it&#39;s Open but a password was surprisingly provided
+        if [ &quot;$security_type&quot; != &quot;Open&quot; ] || { [ &quot;$security_type&quot; == &quot;Open&quot; ] &amp;&amp; [ -n &quot;$wifi_password&quot; ]; }; then
             connect_cmd_nmcli+=(&quot;password&quot; &quot;$wifi_password&quot;)
         fi
+        # For WEP, nmcli might need specific key type handling, but often auto-detects.
+        # If WEP fails, might need to add e.g. wifi-sec.key-mgmt none wifi-sec.wep-key0 &quot;$wifi_password&quot; wifi-sec.wep-key-type passphrase/hex
         
         if &quot;${connect_cmd_nmcli[@]}&quot;; then
             log_info_transient &quot;Successfully initiated Wi-Fi connection to $selected_ssid via NetworkManager.&quot;
+            # DHCP is usually handled by NetworkManager automatically after connect
+            sleep 5 # Give NM time to establish connection and get IP
+            return 0 # Assume success if nmcli connect returns 0
         else
-            log_error &quot;Failed to connect to Wi-Fi $selected_ssid via NetworkManager. Check password/security.&quot;
+            log_error &quot;Failed to connect to Wi-Fi $selected_ssid via NetworkManager. Check password/security settings.&quot;
             return 1
         fi
     else # Use wpa_supplicant
@@ -984,66 +1066,78 @@ connect_wifi() {
         local wpa_conf_temp=&quot;/tmp/wpa_temp_${iface}_$$$$.conf&quot;
         TMP_FILES_TO_CLEAN+=(&quot;$wpa_conf_temp&quot;)
 
+        # Basic wpa_supplicant config
         echo &quot;ctrl_interface=DIR=/run/wpa_supplicant GROUP=netdev&quot; &gt; &quot;$wpa_conf_temp&quot;
         echo &quot;update_config=1&quot; &gt;&gt; &quot;$wpa_conf_temp&quot;
         echo -e &quot;\nnetwork={&quot; &gt;&gt; &quot;$wpa_conf_temp&quot;
         echo &quot;    ssid=\&quot;$selected_ssid\&quot;&quot; &gt;&gt; &quot;$wpa_conf_temp&quot;
+        
         if [ &quot;$security_type&quot; == &quot;Open&quot; ] &amp;&amp; [ -z &quot;$wifi_password&quot; ]; then
             echo &quot;    key_mgmt=NONE&quot; &gt;&gt; &quot;$wpa_conf_temp&quot;
         elif [ &quot;$security_type&quot; == &quot;WEP&quot; ]; then
-            dialog --title &quot;WEP Key Type&quot; --yesno &quot;Is the WEP key &#39;$wifi_password&#39; in HEXADECIMAL format (e.g., 1A2B3C4D5E)?&quot; 8 ${DIALOG_DEFAULT_WIDTH} 2&gt;/dev/tty
-            local is_hex=$?
-            if [ $is_hex -eq $DIALOG_SUCCESS_CODE ]; then # Yes, it&#39;s HEX
-                if ! [[ &quot;$wifi_password&quot; =~ ^[0-9A-Fa-f]{10}$ || &quot;$wifi_password&quot; =~ ^[0-9A-Fa-f]{26}$ ]]; then
-                    log_error &quot;Invalid HEX WEP key length. Must be 10 or 26 hex digits.&quot;; rm -f &quot;$wpa_conf_temp&quot;; return 1
-                fi
-                echo &quot;    wep_key0=$wifi_password&quot; &gt;&gt; &quot;$wpa_conf_temp&quot;
-            else # No, it&#39;s ASCII
-                if ! [[ &quot;${#wifi_password}&quot; -eq 5 || &quot;${#wifi_password}&quot; -eq 13 ]]; then
-                    log_error &quot;Invalid ASCII WEP key length. Must be 5 or 13 characters.&quot;; rm -f &quot;$wpa_conf_temp&quot;; return 1
-                fi
-                echo &quot;    wep_key0=\&quot;$wifi_password\&quot;&quot; &gt;&gt; &quot;$wpa_conf_temp&quot;
-            fi
             echo &quot;    key_mgmt=NONE&quot; &gt;&gt; &quot;$wpa_conf_temp&quot;
-        else # PSK (WPA/WPA2/WPA3)
+            # wpa_supplicant needs wep_key0, wep_key1 etc.
+            # Determine if hex or ascii based on length/chars or prompt
+            if [[ &quot;$wifi_password&quot; =~ ^[0-9A-Fa-f]{10}$ || &quot;$wifi_password&quot; =~ ^[0-9A-Fa-f]{26}$ ]]; then # Hex
+                 echo &quot;    wep_key0=$wifi_password&quot; &gt;&gt; &quot;$wpa_conf_temp&quot;
+            elif [[ &quot;${#wifi_password}&quot; -eq 5 || &quot;${#wifi_password}&quot; -eq 13 ]]; then # ASCII passphrase
+                 echo &quot;    wep_key0=\&quot;$wifi_password\&quot;&quot; &gt;&gt; &quot;$wpa_conf_temp&quot;
+            else
+                log_error &quot;Invalid WEP key: &#39;$wifi_password&#39;. Must be 5/13 ASCII chars or 10/26 HEX digits.&quot;
+                rm -f &quot;$wpa_conf_temp&quot;; return 1
+            fi
+            echo &quot;    wep_tx_keyidx=0&quot; &gt;&gt; &quot;$wpa_conf_temp&quot; # Default WEP key index
+        else # PSK (WPA/WPA2/WPA3) or Open with a password (treat as PSK)
             echo &quot;    psk=\&quot;$wifi_password\&quot;&quot; &gt;&gt; &quot;$wpa_conf_temp&quot;
-            echo &quot;    key_mgmt=WPA-PSK WPA-PSK-SHA256 SAE&quot; &gt;&gt; &quot;$wpa_conf_temp&quot; # Broad compatibility
-            echo &quot;    proto=RSN WPA&quot; &gt;&gt; &quot;$wpa_conf_temp&quot;
-            echo &quot;    pairwise=CCMP TKIP&quot; &gt;&gt; &quot;$wpa_conf_temp&quot;
-            echo &quot;    group=CCMP TKIP&quot; &gt;&gt; &quot;$wpa_conf_temp&quot;
+            # Let wpa_supplicant auto-negotiate WPA/WPA2/WPA3
+            # key_mgmt=WPA-PSK is common, SAE for WPA3.
+            # protos, pairwise, group can often be omitted for auto-negotiation.
         fi
         echo &quot;}&quot; &gt;&gt; &quot;$wpa_conf_temp&quot;
         chmod 600 &quot;$wpa_conf_temp&quot;
 
+        # Start wpa_supplicant
+        # Using -Dnl80211,wext for broader driver compatibility
         if ! wpa_supplicant -B -i &quot;$iface&quot; -c &quot;$wpa_conf_temp&quot; -Dnl80211,wext; then
             log_error &quot;Failed to start wpa_supplicant for $iface.&quot;; rm -f &quot;$wpa_conf_temp&quot;; return 1
         fi
         log_info_transient &quot;wpa_supplicant started for $iface. Waiting for association...&quot;
-        local connect_tries=20 # Increased timeout
+        local connect_tries=20 
         while [ $connect_tries -gt 0 ]; do
+            # Check wpa_cli status for completion
             if wpa_cli -i &quot;$iface&quot; status 2&gt;/dev/null | grep -q &quot;wpa_state=COMPLETED&quot;; then
                 log_info_transient &quot;Successfully associated with Wi-Fi $selected_ssid via wpa_supplicant.&quot;
-                rm -f &quot;$wpa_conf_temp&quot;; TMP_FILES_TO_CLEAN=( &quot;${TMP_FILES_TO_CLEAN[@]/$wpa_conf_temp}&quot; )
+                # Temp file can be removed now, or let global cleanup handle it.
+                # rm -f &quot;$wpa_conf_temp&quot;; TMP_FILES_TO_CLEAN=( &quot;${TMP_FILES_TO_CLEAN[@]/$wpa_conf_temp}&quot; )
                 break
             fi
             sleep 1; connect_tries=$((connect_tries - 1))
         done
         if [ $connect_tries -eq 0 ]; then
-            log_error &quot;Failed to associate with Wi-Fi $selected_ssid via wpa_supplicant.&quot;
+            log_error &quot;Failed to associate with Wi-Fi $selected_ssid via wpa_supplicant (timeout).&quot;
+            # Kill the potentially lingering wpa_supplicant process
             pgrep -af &quot;wpa_supplicant -B -i $iface -c $wpa_conf_temp&quot; | awk &#39;{print $1}&#39; | xargs kill -9 &gt;/dev/null 2&gt;&amp;1 || true
-            rm -f &quot;$wpa_conf_temp&quot;; TMP_FILES_TO_CLEAN=( &quot;${TMP_FILES_TO_CLEAN[@]/$wpa_conf_temp}&quot; )
+            rm -f &quot;$wpa_conf_temp&quot;
             return 1
         fi
-    fi
+        # If associated, proceed to DHCP
+    fi # End of NM_IS_ACTIVE or wpa_supplicant block
+
+    # If not using NetworkManager, or if NM connection didn&#39;t handle DHCP (unlikely but possible)
+    # We need to run DHCP client explicitly for wpa_supplicant method.
+    # For NM, this part is usually not needed as NM handles DHCP.
+    # However, if connect_cmd_nmcli succeeded, we returned 0 already.
+    # So this DHCP part is primarily for the wpa_supplicant path.
 
     log_info_transient &quot;Wi-Fi associated. Attempting DHCP on $iface...&quot;
-    dhclient -r &quot;$iface&quot; &gt;/dev/null 2&gt;&amp;1 || true
-    if dhclient -v &quot;$iface&quot; &gt;/tmp/dhclient_wifi.log 2&gt;&amp;1; then
+    dhclient -r &quot;$iface&quot; &gt;/dev/null 2&gt;&amp;1 || true # Release old lease
+    if timeout 30 dhclient -v &quot;$iface&quot; &gt;&quot;/tmp/dhclient_wifi_${iface}.log&quot; 2&gt;&amp;1; then
         log_info_transient &quot;dhclient successfully obtained lease on $iface.&quot;
         sleep 2; return 0
     else
-        log_warning &quot;dhclient failed for &#39;$selected_ssid&#39; on $iface. Check /tmp/dhclient_wifi.log&quot;
-        dialog --title &quot;Wi-Fi IP Configuration&quot; --yesno &quot;DHCP failed for &#39;$selected_ssid&#39; on $iface.\\nDo you want to configure a static IP for this Wi-Fi connection?&quot; ${DIALOG_DEFAULT_HEIGHT} ${DIALOG_DEFAULT_WIDTH} 2&gt;/dev/tty
+        log_warning &quot;dhclient failed or timed out for &#39;$selected_ssid&#39; on $iface. Check /tmp/dhclient_wifi_${iface}.log&quot;
+        # Offer static IP configuration if DHCP fails for Wi-Fi
+        dialog --title &quot;Wi-Fi IP Configuration: $selected_ssid&quot; --yesno &quot;DHCP failed for &#39;$selected_ssid&#39; on $iface.\\nDo you want to configure a static IP for this Wi-Fi connection?&quot; ${DIALOG_DEFAULT_HEIGHT} ${DIALOG_DEFAULT_WIDTH} 2&gt;/dev/tty
         local choice=$?
         if [ $choice -eq $DIALOG_SUCCESS_CODE ]; then
             local static_config_str
@@ -1053,44 +1147,53 @@ connect_wifi() {
 
             local static_ip_cidr gw dns
             IFS=&#39;:&#39; read -r static_ip_cidr gw dns &lt;&lt;&lt; &quot;$static_config_str&quot;
-            log_info_transient &quot;Configuring static IP for Wi-Fi $iface: IP=$static_ip_cidr, GW=$gw, DNS=$dns&quot;
+            log_info_transient &quot;Configuring static IP for Wi-Fi $iface: IP=$static_ip_cidr, GW=$gw, DNS=${dns:-Not set}&quot;
 
-            if $NM_IS_ACTIVE; then
+            if $NM_IS_ACTIVE; then # This block might be less common if NM failed to connect initially
                 local active_wifi_conn
-                active_wifi_conn=$(nmcli -g UUID,DEVICE connection show --active | grep &quot;:$iface$&quot; | cut -d&#39;:&#39; -f1 | head -n1)
+                active_wifi_conn=$(nmcli -g UUID,DEVICE connection show --active 2&gt;/dev/null | grep &quot;:$iface$&quot; | cut -d&#39;:&#39; -f1 | head -n1 || true)
                 if [ -n &quot;$active_wifi_conn&quot; ]; then
                     local nm_modify_cmd=(&quot;nmcli&quot; &quot;connection&quot; &quot;modify&quot; &quot;$active_wifi_conn&quot; &quot;ipv4.method&quot; &quot;manual&quot; &quot;ipv4.addresses&quot; &quot;$static_ip_cidr&quot; &quot;ipv4.gateway&quot; &quot;$gw&quot;)
                     [ -n &quot;$dns&quot; ] &amp;&amp; nm_modify_cmd+=(&quot;ipv4.dns&quot; &quot;$dns&quot;)
-                    nm_modify_cmd+=(&quot;ipv6.method&quot; &quot;disabled&quot;)
+                    nm_modify_cmd+=(&quot;ipv6.method&quot; &quot;ignore&quot;)
                     if &quot;${nm_modify_cmd[@]}&quot; &amp;&amp; nmcli connection up &quot;$active_wifi_conn&quot;; then
                         log_info_transient &quot;NetworkManager configured static IP for Wi-Fi $iface.&quot;; return 0
                     else
                         log_error &quot;Failed to configure static IP for Wi-Fi via NetworkManager.&quot;; return 1
                     fi
                 else
-                    log_error &quot;Could not find active NetworkManager Wi-Fi connection to modify for static IP.&quot;; return 1
+                    log_error &quot;Could not find active NetworkManager Wi-Fi connection to modify for static IP. Try re-connecting first.&quot;; return 1
                 fi
-            else 
-                ip addr flush dev &quot;$iface&quot; || true; ip link set &quot;$iface&quot; up
-                if ip addr add &quot;$static_ip_cidr&quot; dev &quot;$iface&quot; &amp;&amp; ip route add default via &quot;$gw&quot; dev &quot;$iface&quot;; then
-                    log_info_transient &quot;iproute2 configured static IP for Wi-Fi $iface.&quot;
-                    if [ -n &quot;$dns&quot; ]; then
-                        local resolv_conf_content_wifi=&quot;&quot;
-                        IFS=&#39;,&#39; read -ra dns_array_wifi &lt;&lt;&lt; &quot;$dns&quot;
-                        for dns_val in &quot;${dns_array_wifi[@]}&quot;; do resolv_conf_content_wifi+=&quot;nameserver $dns_val\n&quot;; done
-                        echo -e &quot;$resolv_conf_content_wifi&quot; &gt; /etc/resolv.conf
-                        log_info_transient &quot;Configured DNS servers in /etc/resolv.conf: $dns&quot;
+            else # Manual static IP for Wi-Fi (typically after wpa_supplicant)
+                ip addr flush dev &quot;$iface&quot; || true
+                ip link set &quot;$iface&quot; up || { log_warning &quot;Failed to bring $iface up for static Wi-Fi config.&quot;; return 1; }
+                if ip addr add &quot;$static_ip_cidr&quot; dev &quot;$iface&quot;; then
+                    sleep 2 # Give interface a moment
+                    if ip route add default via &quot;$gw&quot; dev &quot;$iface&quot;; then
+                        log_info_transient &quot;iproute2 configured static IP for Wi-Fi $iface.&quot;
+                        if [ -n &quot;$dns&quot; ]; then
+                            local resolv_conf_content_wifi=&quot;&quot;
+                            IFS=&#39;,&#39; read -ra dns_array_wifi &lt;&lt;&lt; &quot;$dns&quot;
+                            for dns_val in &quot;${dns_array_wifi[@]}&quot;; do resolv_conf_content_wifi+=&quot;nameserver $dns_val\n&quot;; done
+                            if [ -L /etc/resolv.conf ]; then
+                                log_warning &quot;/etc/resolv.conf is a symlink. DNS might not be set correctly by overwriting it.&quot;
+                            fi
+                            echo -e &quot;$resolv_conf_content_wifi&quot; &gt; /etc/resolv.conf
+                            log_info_transient &quot;Configured DNS servers in /etc/resolv.conf: $dns&quot;
+                        fi
+                        return 0
+                    else
+                        log_error &quot;Failed to add default route for static Wi-Fi on $iface.&quot;; return 1
                     fi
-                    return 0
                 else
-                    log_error &quot;Failed to configure static IP for Wi-Fi $iface using iproute2.&quot;; return 1
+                    log_error &quot;Failed to add IP address for static Wi-Fi on $iface.&quot;; return 1
                 fi
             fi
-        else
+        else # User chose not to configure static IP after DHCP failure
             log_info_persistent &quot;Skipping static IP for Wi-Fi.&quot;; return 1
         fi
     fi
-    return 1 # Fallthrough, should indicate failure
+    return 1 # Fallthrough, should indicate failure if DHCP didn&#39;t succeed and static wasn&#39;t configured
 }
 
 handle_wifi_connection() {
@@ -1102,108 +1205,148 @@ handle_wifi_connection() {
     SELECTED_WIFI_IFACE=$(prompt_select_interface &quot;Wi-Fi&quot; &quot;${WIFI_IFACES[@]}&quot;)
     local select_exit_status=$?
     [ $select_exit_status -ne $DIALOG_SUCCESS_CODE ] &amp;&amp; return 1
+    [ -z &quot;$SELECTED_WIFI_IFACE&quot; ] &amp;&amp; { log_warning &quot;No Wi-Fi interface was selected.&quot;; return 1; }
+
 
     # rfkill check
     if check_command rfkill; then
-        if rfkill list wifi | grep -A1 &quot;$SELECTED_WIFI_IFACE&quot; | grep -q &quot;Soft blocked: yes&quot;; then
-            dialog --title &quot;Wi-Fi Blocked&quot; --yesno &quot;Wi-Fi interface $SELECTED_WIFI_IFACE appears to be soft-blocked by rfkill.\\nDo you want to attempt to unblock it?&quot; 10 ${DIALOG_DEFAULT_WIDTH} 2&gt;/dev/tty
+        # Check specific interface index if possible, otherwise &#39;wifi&#39; type
+        local rfkill_idx
+        rfkill_idx=$(rfkill list wifi -n -o ID,DEVICE | grep &quot;$SELECTED_WIFI_IFACE&quot; | awk &#39;{print $1}&#39; || true)
+
+        if [ -n &quot;$rfkill_idx&quot; ] &amp;&amp; rfkill list &quot;$rfkill_idx&quot; | grep -q &quot;Soft blocked: yes&quot;; then
+            dialog --title &quot;Wi-Fi Blocked&quot; --yesno &quot;Wi-Fi interface $SELECTED_WIFI_IFACE (rfkill ID $rfkill_idx) appears to be soft-blocked.\\nDo you want to attempt to unblock it?&quot; 10 ${DIALOG_DEFAULT_WIDTH} 2&gt;/dev/tty
             if [ $? -eq $DIALOG_SUCCESS_CODE ]; then
-                if rfkill unblock wifi; then log_info_persistent &quot;Wi-Fi unblocked successfully.&quot;; sleep 1
-                else log_warning &quot;Failed to unblock Wi-Fi via rfkill. Proceeding with scan anyway.&quot;; fi
+                if rfkill unblock &quot;$rfkill_idx&quot;; then log_info_persistent &quot;Wi-Fi $SELECTED_WIFI_IFACE unblocked successfully.&quot;; sleep 1
+                else log_warning &quot;Failed to unblock Wi-Fi $SELECTED_WIFI_IFACE via rfkill. Proceeding anyway.&quot;; fi
             fi
+        elif rfkill list wifi | grep -A1 &quot;$SELECTED_WIFI_IFACE&quot; | grep -q &quot;Soft blocked: yes&quot;; then # Fallback check if specific ID not found
+             dialog --title &quot;Wi-Fi Blocked&quot; --yesno &quot;Wi-Fi interface $SELECTED_WIFI_IFACE appears to be soft-blocked by rfkill.\\nDo you want to attempt to unblock it?&quot; 10 ${DIALOG_DEFAULT_WIDTH} 2&gt;/dev/tty
+            if [ $? -eq $DIALOG_SUCCESS_CODE ]; then
+                if rfkill unblock wifi; then log_info_persistent &quot;Wi-Fi unblocked successfully.&quot;; sleep 1 # Unblock all wifi
+                else log_warning &quot;Failed to unblock Wi-Fi via rfkill. Proceeding anyway.&quot;; fi
+            fi
+        fi
+         if [ -n &quot;$rfkill_idx&quot; ] &amp;&amp; rfkill list &quot;$rfkill_idx&quot; | grep -q &quot;Hard blocked: yes&quot;; then
+            log_error &quot;Wi-Fi interface $SELECTED_WIFI_IFACE (rfkill ID $rfkill_idx) is hard-blocked (hardware switch). Cannot proceed with this interface.&quot;
+            return 1
         fi
     fi
 
-    if connect_wifi &quot;$SELECTED_WIFI_IFACE&quot;; then return 0; fi # Return 0 if Wi-Fi connection steps succeeded locally
+    if connect_wifi &quot;$SELECTED_WIFI_IFACE&quot;; then return 0; fi 
     
-    log_warning &quot;Wi-Fi connection on $SELECTED_WIFI_IFACE failed locally.&quot;
+    log_warning &quot;Wi-Fi connection on $SELECTED_WIFI_IFACE failed.&quot;
     return 1
 }
 
 
 # --- Main Script Logic ---
 main() {
+    # Ensure we are root
     if [ &quot;$(id -u)&quot; -ne 0 ]; then
-      echo &quot;This script must be run as root. Please use &#39;sudo $0&#39;&quot; &gt;&amp;2
-      exit 1
+        echo &quot;This script must be run as root. Please use &#39;sudo $0&#39;&quot; &gt;&amp;2
+        # No dialog available yet, so just echo.
+        exit 1
     fi
 
-    # Ensure dialog is available before anything else
+    # Ensure dialog is available before anything else that uses dialog
     install_packages &quot;dialog,dialog&quot;
     # Then other packages
-    install_packages &quot;nmcli,network-manager&quot; \
+    # Grouped related tools for clarity
+    install_packages &quot;ip,iproute2&quot; \
+                     &quot;ping,iputils-ping&quot; \
+                     &quot;nmcli,network-manager&quot; \
                      &quot;wpa_cli,wpasupplicant&quot; \
                      &quot;wpa_supplicant,wpasupplicant&quot; \
                      &quot;dhclient,isc-dhcp-client&quot; \
-                     &quot;ip,iproute2&quot; \
                      &quot;iw,iw&quot; \
-                     &quot;ping,iputils-ping&quot; \
-                     &quot;rfkill,rfkill&quot;
+                     &quot;rfkill,rfkill&quot; \
+                     &quot;timeout,coreutils&quot; # For timeout command if not built-in
 
     detect_ethernet_interfaces
     detect_wifi_interfaces
-    check_network_manager_active
+    check_network_manager_active # Checks if NetworkManager service is running
 
+    # Initial connectivity check
     if check_internet_connectivity; then
-        exit 0 # Already connected, success message shown by check_internet_connectivity
+        # Success message already shown by check_internet_connectivity
+        exit 0 
     fi
     log_info_persistent &quot;No active internet connection detected. Starting configuration process...&quot;
 
     while true; do
         local options=()
+        # Dynamically build menu options based on detected interfaces
         [ ${#ETH_IFACES[@]} -gt 0 ] &amp;&amp; options+=(&quot;ETH&quot; &quot;Configure Ethernet Connection&quot;)
         [ ${#WIFI_IFACES[@]} -gt 0 ] &amp;&amp; options+=(&quot;WIFI&quot; &quot;Configure Wi-Fi Connection&quot;)
-        options+=(&quot;CHECK&quot; &quot;Re-check Internet Connectivity&quot;)
-        options+=(&quot;EXIT&quot; &quot;Exit Script&quot;)
-
+        
+        # If no interfaces detected at all, inform and exit.
         if [ $((${#ETH_IFACES[@]} + ${#WIFI_IFACES[@]})) -eq 0 ]; then
-             log_error &quot;No usable network interfaces (Ethernet or Wi-Fi) were detected. Cannot proceed.&quot;
+             log_error &quot;No usable network interfaces (Ethernet or Wi-Fi) were detected by the script. Cannot proceed.&quot;
              exit 1
         fi
         
+        options+=(&quot;CHECK&quot; &quot;Re-check Internet Connectivity&quot;)
+        # &quot;EXIT&quot; option is handled by --cancel-label
+
         local main_choice
         main_choice=$(dialog --title &quot;Main Menu - Universal Network Connector&quot; \
-            --cancel-label &quot;Exit&quot; \
+            --cancel-label &quot;Exit Script&quot; \
             --menu &quot;Select an action:&quot; ${DIALOG_DEFAULT_HEIGHT} ${DIALOG_DEFAULT_WIDTH} $((${#options[@]}/2)) \
             &quot;${options[@]}&quot; \
             2&gt;&amp;1 &gt;/dev/tty)
         
         local exit_status=$?
-        if [ $exit_status -ne $DIALOG_SUCCESS_CODE ] || [ &quot;$main_choice&quot; == &quot;EXIT&quot; ]; then
-            log_info_persistent &quot;Exiting script as per user request or cancellation.&quot;
+        # DIALOG_CANCEL_CODE (1) or DIALOG_ESC_CODE (255) means user chose Exit/Esc
+        if [ $exit_status -eq $DIALOG_CANCEL_CODE ] || [ $exit_status -eq $DIALOG_ESC_CODE ]; then
+            log_info_persistent &quot;Exiting script as per user request.&quot;
             break 
         fi
+        # If main_choice is empty but exit_status was 0 (e.g. help button), re-loop.
+        [ -z &quot;$main_choice&quot; ] &amp;&amp; continue
+
 
         case &quot;$main_choice&quot; in
             ETH)
-                if handle_ethernet_connection; then # Returns 0 if local config steps were successful
-                    if check_internet_connectivity; then exit 0; fi # Final check and exit if good
+                if [ ${#ETH_IFACES[@]} -eq 0 ]; then
+                    log_warning &quot;No Ethernet interfaces available to configure.&quot;
+                    continue
+                fi
+                if handle_ethernet_connection; then 
+                    if check_internet_connectivity; then exit 0; fi 
                 else
-                    log_warning &quot;Ethernet configuration attempt did not succeed locally or was cancelled.&quot;
+                    # Warning already logged by handle_ethernet_connection on failure/skip
+                    log_info_persistent &quot;Ethernet configuration did not result in a connection or was cancelled. Returning to main menu.&quot;
                 fi
                 ;;
             WIFI)
-                if handle_wifi_connection; then # Returns 0 if local config steps were successful
-                    if check_internet_connectivity; then exit 0; fi # Final check and exit if good
+                if [ ${#WIFI_IFACES[@]} -eq 0 ]; then
+                    log_warning &quot;No Wi-Fi interfaces available to configure.&quot;
+                    continue
+                fi
+                if handle_wifi_connection; then 
+                    if check_internet_connectivity; then exit 0; fi
                 else
-                    log_warning &quot;Wi-Fi configuration attempt did not succeed locally or was cancelled.&quot;
+                    log_info_persistent &quot;Wi-Fi configuration did not result in a connection or was cancelled. Returning to main menu.&quot;
                 fi
                 ;;
             CHECK)
                 if check_internet_connectivity; then exit 0; fi
                 ;;
-            *) # Should not happen with dialog menu
-                log_warning &quot;Invalid choice. Please try again.&quot;
+            *) 
+                # This case should ideally not be reached if dialog menu is used correctly
+                log_warning &quot;Invalid choice &#39;$main_choice&#39;. Please try again.&quot;
                 ;;
         esac
         # If loop continues, it means connection was not successful or user chose to try another option.
     done
-    exit 1 # Exited loop without successful connection
+    exit 1 # Exited loop without successful connection or user explicitly exited
 }
 
 # --- Run Main ---
+# Pass all script arguments to the main function, though this script doesn&#39;t use them.
 main &quot;$@&quot;" data-download-link="" data-download-label="Download Bash">
-  <code class="language-bash">#!/bin/bash
+  <code class="language-bash">#!/usr/bin/env bash
 #
 # Universal Network Connectivity Script for RK3588 VPC-3588 (Debian Bullseye)
 #
@@ -1211,8 +1354,7 @@ main &quot;$@&quot;" data-download-link="" data-download-label="Download Bash">
 # interactively prompting the user for necessary information.
 # It must be run with root privileges.
 #
-# Version 2: Incorporates fixes for dialog exit codes, WEP key handling,
-#            safer package installation, rfkill checks, and improved flow.
+# Version 2.1: Fixes premature exit in detect_ethernet_interfaces if no interfaces are found.
 
 # --- Script Setup ---
 # Exit immediately if a command exits with a non-zero status.
@@ -1250,16 +1392,21 @@ TMP_FILES_TO_CLEAN=()
 # --- Cleanup Function ---
 cleanup() {
     local exit_code=$?
+    # Attempt to remove temporary files
     for temp_file in &quot;${TMP_FILES_TO_CLEAN[@]}&quot;; do
         rm -f &quot;$temp_file&quot;
     done
-    # Restore cursor if dialog messed it up
-    stty sane
-    tput cnorm
+    # Restore cursor and terminal state if dialog might have altered them
+    if command -v stty &gt;/dev/null 2&gt;&amp;1; then
+        stty sane
+    fi
+    if command -v tput &gt;/dev/null 2&gt;&amp;1; then
+        tput cnorm
+    fi
     echo &quot;Script exited (Code: $exit_code). Cleanup performed.&quot;
     # If error, allow user to see last message from dialog if any
     if [ $exit_code -ne 0 ] &amp;&amp; [ $exit_code -ne 130 ]; then # 130 is Ctrl+C
-      read -rp &quot;Press Enter to close terminal...&quot;
+        read -rp &quot;Press Enter to close terminal...&quot;
     fi
 }
 trap cleanup EXIT # Handles normal exit and exit due to set -e
@@ -1273,6 +1420,7 @@ _show_dialog_message() {
     local message=&quot;$3&quot;
     local height=${4:-8}
     local width=${5:-60}
+    # Ensure dialog uses /dev/tty for interaction
     dialog --title &quot;$title&quot; --&quot;$type&quot; &quot;$message&quot; &quot;$height&quot; &quot;$width&quot; 2&gt;/dev/tty
     return $?
 }
@@ -1285,7 +1433,7 @@ log_info_persistent() { # Requires user to press OK
 log_info_transient() { # Auto-closes
     echo &quot;[INFO] $1&quot;
     # Infobox clears screen, so echo first, then show infobox briefly
-    dialog --title &quot;Information&quot; --infobox &quot;$1&quot; 6 60 2&gt;/dev/null
+    dialog --title &quot;Information&quot; --infobox &quot;$1&quot; 6 60 2&gt;/dev/null || true # Allow infobox to fail gracefully
     sleep 1 # Give time for user to see infobox
 }
 
@@ -1315,7 +1463,7 @@ install_packages() {
 
     for pkg_info in &quot;${package_info_array[@]}&quot;; do
         IFS=&#39;,&#39; read -r cmd pkg_name &lt;&lt;&lt; &quot;$pkg_info&quot;
-        if! check_command &quot;$cmd&quot;; then
+        if ! check_command &quot;$cmd&quot;; then
             missing_packages_to_install+=(&quot;$pkg_name&quot;)
         fi
     done
@@ -1351,7 +1499,8 @@ detect_ethernet_interfaces() {
     # Using ip -o link filters better than ifconfig -a which might not be installed
     # Filters for common Ethernet prefixes and excludes virtual/bridge interfaces
     # Also exclude interfaces that are part of a bridge (master) or bond
-    detected=$(ip -o link show type ether | awk -F&#39;: &#39; &#39;!/master|link\/ether 00:00:00:00:00:00|NO-CARRIER/{print $2}&#39; | awk &#39;{print $1}&#39; | grep -Ev &#39;^(br|bond|dummy|veth|virbr|docker|lo)&#39;)
+    # Added &#39;|| true&#39; to grep to prevent script exit if no interfaces are found/matched
+    detected=$(ip -o link show type ether 2&gt;/dev/null | awk -F&#39;: &#39; &#39;!/master|link\/ether 00:00:00:00:00:00|NO-CARRIER/{print $2}&#39; | awk &#39;{print $1}&#39; | grep -Ev &#39;^(br|bond|dummy|veth|virbr|docker|lo)&#39; || true)
     if [ -n &quot;$detected&quot; ]; then
         # shellcheck disable=SC2207 # Word splitting is intended here
         ETH_IFACES=($(echo &quot;$detected&quot;))
@@ -1361,14 +1510,15 @@ detect_ethernet_interfaces() {
 
 detect_wifi_interfaces() {
     WIFI_IFACES=()
-    local detected
+    local detected=&quot;&quot; # Initialize detected
     # Try &#39;iw dev&#39; first (more reliable for Wi-Fi)
     if check_command iw; then
-        detected=$(iw dev 2&gt;/dev/null | awk &#39;$1==&quot;Interface&quot;{print $2}&#39;)
+        # Ensure iw command does not cause exit on error if interface is down or no wifi hardware
+        detected=$(iw dev 2&gt;/dev/null | awk &#39;$1==&quot;Interface&quot;{print $2}&#39; || true)
     fi
-    # Fallback to &#39;ip link&#39; if &#39;iw dev&#39; fails or not present
+    # Fallback to &#39;ip link&#39; if &#39;iw dev&#39; fails or not present, or finds nothing
     if [ -z &quot;$detected&quot; ] &amp;&amp; check_command ip; then
-        detected=$(ip -o link show type wlan 2&gt;/dev/null | awk -F&#39;: &#39; &#39;{print $2}&#39; | awk &#39;{print $1}&#39;)
+        detected=$(ip -o link show type wlan 2&gt;/dev/null | awk -F&#39;: &#39; &#39;{print $2}&#39; | awk &#39;{print $1}&#39; || true)
     fi
 
     if [ -n &quot;$detected&quot; ]; then
@@ -1395,7 +1545,7 @@ prompt_select_interface() {
     local interfaces_array=(&quot;$@&quot;)
     local dialog_options=()
     local choice
-    local i=0
+    local i=1 # Start menu item numbering from 1 for dialog
 
     if [ ${#interfaces_array[@]} -eq 0 ]; then
         log_warning &quot;No $type interfaces found to select.&quot;
@@ -1407,12 +1557,16 @@ prompt_select_interface() {
     fi
 
     for iface_item in &quot;${interfaces_array[@]}&quot;; do
-        dialog_options+=(&quot;$iface_item&quot; &quot;Use $iface_item&quot;)
+        dialog_options+=(&quot;$i&quot; &quot;$iface_item&quot;) # Use index then name for dialog menu items
         i=$((i + 1))
     done
 
-    choice=$(dialog --title &quot;Select $type Interface&quot; \
-        --menu &quot;Choose the $type interface to configure:&quot; ${DIALOG_DEFAULT_HEIGHT} ${DIALOG_DEFAULT_WIDTH} &quot;$i&quot; \
+    # Dialog menu expects pairs of &quot;tag&quot; &quot;item&quot;. We use index as tag, then iface name as item.
+    # The choice returned by dialog will be the &quot;tag&quot; (index).
+    # We need to map this index back to the interface name.
+    # The number of choices for dialog is half the number of elements in dialog_options.
+    choice_tag=$(dialog --title &quot;Select $type Interface&quot; \
+        --menu &quot;Choose the $type interface to configure:&quot; ${DIALOG_DEFAULT_HEIGHT} ${DIALOG_DEFAULT_WIDTH} $((${#dialog_options[@]} / 2)) \
         &quot;${dialog_options[@]}&quot; \
         2&gt;&amp;1 &gt;/dev/tty)
 
@@ -1421,7 +1575,9 @@ prompt_select_interface() {
         log_info_persistent &quot;$type interface selection cancelled by user.&quot;
         return 1 # Indicates no interface was selected (cancelled)
     fi
-    echo &quot;$choice&quot;
+    # Map the chosen tag (index) back to the interface name
+    # The interfaces_array is 0-indexed. choice_tag is 1-indexed.
+    echo &quot;${interfaces_array[$((choice_tag - 1))]}&quot;
     return 0 # Indicates an interface was selected
 }
 
@@ -1431,17 +1587,17 @@ prompt_static_config() {
 
     static_ip=$(dialog --title &quot;Static IP Configuration ($interface_type)&quot; \
         --inputbox &quot;Enter Static IP Address with CIDR (e.g., 192.168.1.100/24):&quot; \
-        10 ${DIALOG_INPUT_WIDTH} 2&gt;&amp;1 &gt;/dev/tty)
+        10 ${DIALOG_INPUT_WIDTH} &quot;&quot; 2&gt;&amp;1 &gt;/dev/tty) # Added empty string for initial value
     [ $? -ne $DIALOG_SUCCESS_CODE ] &amp;&amp; return 1
 
     static_gateway=$(dialog --title &quot;Static IP Configuration ($interface_type)&quot; \
         --inputbox &quot;Enter Gateway IP Address (e.g., 192.168.1.1):&quot; \
-        10 ${DIALOG_INPUT_WIDTH} 2&gt;&amp;1 &gt;/dev/tty)
+        10 ${DIALOG_INPUT_WIDTH} &quot;&quot; 2&gt;&amp;1 &gt;/dev/tty) # Added empty string
     [ $? -ne $DIALOG_SUCCESS_CODE ] &amp;&amp; return 1
 
     static_dns=$(dialog --title &quot;Static IP Configuration ($interface_type)&quot; \
         --inputbox &quot;Enter DNS Server(s) (comma-separated, e.g., 8.8.8.8,1.1.1.1, optional):&quot; \
-        10 ${DIALOG_INPUT_WIDTH} 2&gt;&amp;1 &gt;/dev/tty)
+        10 ${DIALOG_INPUT_WIDTH} &quot;&quot; 2&gt;&amp;1 &gt;/dev/tty) # Added empty string
     [ $? -ne $DIALOG_SUCCESS_CODE ] &amp;&amp; return 1 # Even if DNS is optional, cancellation here means stop.
 
     if [[ -z &quot;$static_ip&quot; || -z &quot;$static_gateway&quot; ]]; then
@@ -1453,6 +1609,12 @@ prompt_static_config() {
         log_error &quot;Static IP must be in CIDR notation (e.g., 192.168.1.100/24).&quot;
         return 1
     fi
+    # Basic IP validation for gateway
+    if ! echo &quot;$static_gateway&quot; | grep -qE &quot;^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$&quot;; then
+        log_error &quot;Gateway IP Address format is invalid (e.g., 192.168.1.1).&quot;
+        return 1
+    fi
+
 
     echo &quot;$static_ip:$static_gateway:$static_dns&quot;
     return 0
@@ -1486,9 +1648,11 @@ attempt_ethernet_dhcp() {
 
     if $NM_IS_ACTIVE; then
         local profile_name
-        profile_name=$(nmcli -g NAME,DEVICE connection show --active | grep &quot;:$iface$&quot; | cut -d&#39;:&#39; -f1 | head -n1)
+        # Try to find an active profile for the device
+        profile_name=$(nmcli -g NAME,DEVICE connection show --active 2&gt;/dev/null | grep &quot;:$iface$&quot; | cut -d&#39;:&#39; -f1 | head -n1 || true)
         if [ -z &quot;$profile_name&quot; ]; then
-             profile_name=$(nmcli -g NAME,DEVICE connection show | grep &quot;:$iface$&quot; | cut -d&#39;:&#39; -f1 | head -n1)
+            # If not active, try to find any existing profile for the device
+             profile_name=$(nmcli -g NAME,DEVICE connection show 2&gt;/dev/null | grep &quot;:$iface$&quot; | cut -d&#39;:&#39; -f1 | head -n1 || true)
         fi
 
         if [ -n &quot;$profile_name&quot; ]; then
@@ -1502,24 +1666,30 @@ attempt_ethernet_dhcp() {
             fi
         fi
         log_info_transient &quot;Attempting to add and activate a new DHCP Ethernet connection for $iface via NetworkManager...&quot;
+        # Delete any potentially conflicting connection with the same auto-generated name first
+        nmcli connection delete &quot;Eth-DHCP-$iface&quot; &gt;/dev/null 2&gt;&amp;1 || true
         if nmcli connection add type ethernet con-name &quot;Eth-DHCP-$iface&quot; ifname &quot;$iface&quot; ipv4.method auto ipv6.method auto &amp;&amp; \
            nmcli connection up &quot;Eth-DHCP-$iface&quot;; then
             log_info_transient &quot;NetworkManager added and activated DHCP connection for $iface.&quot;
             sleep 5; return 0
         else
             log_warning &quot;Failed to configure Ethernet DHCP for $iface via NetworkManager. Will try dhclient.&quot;
+            # Cleanup failed attempt
+            nmcli connection delete &quot;Eth-DHCP-$iface&quot; &gt;/dev/null 2&gt;&amp;1 || true
         fi
     fi
 
     log_info_transient &quot;Bringing interface $iface up...&quot;
-    ip link set &quot;$iface&quot; up
+    ip link set &quot;$iface&quot; up || { log_warning &quot;Failed to bring interface $iface up.&quot;; return 1; }
+    # Release any old lease
     dhclient -r &quot;$iface&quot; &gt;/dev/null 2&gt;&amp;1 || true
     log_info_transient &quot;Attempting DHCP with dhclient on $iface...&quot;
-    if dhclient -v &quot;$iface&quot; &gt;/tmp/dhclient_eth.log 2&gt;&amp;1; then
+    # Run dhclient in foreground for a limited time to see if it works
+    if timeout 30 dhclient -v &quot;$iface&quot; &gt;&quot;/tmp/dhclient_eth_${iface}.log&quot; 2&gt;&amp;1; then
         log_info_transient &quot;dhclient successfully obtained lease on $iface.&quot;
         sleep 2; return 0
     else
-        log_error &quot;dhclient failed to obtain lease on $iface. Check /tmp/dhclient_eth.log&quot;
+        log_error &quot;dhclient failed or timed out for $iface. Check /tmp/dhclient_eth_${iface}.log&quot;
         return 1
     fi
 }
@@ -1535,22 +1705,24 @@ configure_ethernet_static() {
     local static_ip_cidr gateway dns_servers
     IFS=&#39;:&#39; read -r static_ip_cidr gateway dns_servers &lt;&lt;&lt; &quot;$config_str&quot;
 
-    log_info_transient &quot;Configuring static IP for Ethernet interface $iface: IP=$static_ip_cidr, GW=$gateway, DNS=$dns_servers&quot;
+    log_info_transient &quot;Configuring static IP for Ethernet interface $iface: IP=$static_ip_cidr, GW=$gateway, DNS=${dns_servers:-Not set}&quot;
 
     if $NM_IS_ACTIVE; then
         local profile_name=&quot;Static-Eth-$iface&quot;
+        # Delete existing profile if it exists, to ensure clean configuration
         nmcli connection delete &quot;$profile_name&quot; &gt;/dev/null 2&gt;&amp;1 || true
         
         log_info_transient &quot;Attempting to add and activate static Ethernet connection via NetworkManager...&quot;
         local nm_cmd_parts=(&quot;nmcli&quot; &quot;connection&quot; &quot;add&quot; &quot;type&quot; &quot;ethernet&quot; &quot;con-name&quot; &quot;$profile_name&quot; &quot;ifname&quot; &quot;$iface&quot; &quot;ipv4.method&quot; &quot;manual&quot; &quot;ipv4.addresses&quot; &quot;$static_ip_cidr&quot; &quot;ipv4.gateway&quot; &quot;$gateway&quot;)
         [ -n &quot;$dns_servers&quot; ] &amp;&amp; nm_cmd_parts+=(&quot;ipv4.dns&quot; &quot;$dns_servers&quot;)
-        nm_cmd_parts+=(&quot;ipv6.method&quot; &quot;disabled&quot;)
+        nm_cmd_parts+=(&quot;ipv6.method&quot; &quot;ignore&quot;) # Changed from disabled to ignore for broader compatibility
 
         if &quot;${nm_cmd_parts[@]}&quot; &amp;&amp; nmcli connection up &quot;$profile_name&quot;; then
             log_info_transient &quot;NetworkManager configured and activated static IP on $iface.&quot;
             sleep 3; return 0
         else
             log_error &quot;Failed to configure static IP on $iface via NetworkManager.&quot;
+            # Cleanup failed attempt
             nmcli connection delete &quot;$profile_name&quot; &gt;/dev/null 2&gt;&amp;1 || true
             return 1
         fi
@@ -1558,21 +1730,33 @@ configure_ethernet_static() {
 
     log_info_transient &quot;Configuring static IP on $iface using iproute2...&quot;
     ip addr flush dev &quot;$iface&quot; || true
-    ip link set &quot;$iface&quot; down
-    ip link set &quot;$iface&quot; up
-    if ip addr add &quot;$static_ip_cidr&quot; dev &quot;$iface&quot; &amp;&amp; \
-       ip route add default via &quot;$gateway&quot; dev &quot;$iface&quot;; then
-        log_info_transient &quot;iproute2 configured IP address and gateway on $iface.&quot;
-        if [ -n &quot;$dns_servers&quot; ]; then
-            local resolv_conf_content=&quot;&quot;
-            IFS=&#39;,&#39; read -ra dns_array &lt;&lt;&lt; &quot;$dns_servers&quot;
-            for dns in &quot;${dns_array[@]}&quot;; do resolv_conf_content+=&quot;nameserver $dns\n&quot;; done
-            echo -e &quot;$resolv_conf_content&quot; &gt; /etc/resolv.conf
-            log_info_transient &quot;Configured DNS servers in /etc/resolv.conf: $dns_servers&quot;
+    ip link set &quot;$iface&quot; down || true # Allow to fail if already down
+    ip link set &quot;$iface&quot; up || { log_warning &quot;Failed to bring interface $iface up for static config.&quot;; return 1; }
+    
+    if ip addr add &quot;$static_ip_cidr&quot; dev &quot;$iface&quot;; then
+        log_info_transient &quot;IP address $static_ip_cidr added to $iface.&quot;
+        # Add delay before setting route, interface might need a moment
+        sleep 2
+        if ip route add default via &quot;$gateway&quot; dev &quot;$iface&quot;; then
+            log_info_transient &quot;Default route via $gateway added for $iface.&quot;
+            if [ -n &quot;$dns_servers&quot; ]; then
+                local resolv_conf_content=&quot;&quot;
+                IFS=&#39;,&#39; read -ra dns_array &lt;&lt;&lt; &quot;$dns_servers&quot;
+                for dns in &quot;${dns_array[@]}&quot;; do resolv_conf_content+=&quot;nameserver $dns\n&quot;; done
+                # Check if /etc/resolv.conf is a symlink (e.g. to systemd-resolved)
+                if [ -L /etc/resolv.conf ]; then
+                    log_warning &quot;/etc/resolv.conf is a symlink. DNS might not be set correctly by overwriting it. Manual configuration or NetworkManager is advised for DNS.&quot;
+                fi
+                echo -e &quot;$resolv_conf_content&quot; &gt; /etc/resolv.conf
+                log_info_transient &quot;Configured DNS servers in /etc/resolv.conf: $dns_servers&quot;
+            fi
+            sleep 3; return 0
+        else
+            log_error &quot;Failed to add default route via $gateway for $iface.&quot;
+            return 1
         fi
-        sleep 3; return 0
     else
-        log_error &quot;Failed to configure static IP on $iface using iproute2.&quot;
+        log_error &quot;Failed to add IP address $static_ip_cidr to $iface.&quot;
         return 1
     fi
 }
@@ -1586,27 +1770,32 @@ handle_ethernet_connection() {
     SELECTED_ETH_IFACE=$(prompt_select_interface &quot;Ethernet&quot; &quot;${ETH_IFACES[@]}&quot;)
     local select_exit_status=$?
     [ $select_exit_status -ne $DIALOG_SUCCESS_CODE ] &amp;&amp; return 1 # User cancelled selection
+    [ -z &quot;$SELECTED_ETH_IFACE&quot; ] &amp;&amp; { log_warning &quot;No Ethernet interface was selected.&quot;; return 1; }
 
-    dialog --title &quot;Ethernet Configuration&quot; --yesno &quot;Attempt to configure Ethernet interface &#39;$SELECTED_ETH_IFACE&#39; using DHCP (automatic IP)?&quot; ${DIALOG_DEFAULT_HEIGHT} ${DIALOG_DEFAULT_WIDTH} 2&gt;/dev/tty
+
+    dialog --title &quot;Ethernet Configuration: $SELECTED_ETH_IFACE&quot; --yesno &quot;Attempt to configure Ethernet interface &#39;$SELECTED_ETH_IFACE&#39; using DHCP (automatic IP)?&quot; ${DIALOG_DEFAULT_HEIGHT} ${DIALOG_DEFAULT_WIDTH} 2&gt;/dev/tty
     local choice=$?
 
     if [ $choice -eq $DIALOG_SUCCESS_CODE ]; then # Yes (DHCP)
-        if attempt_ethernet_dhcp &quot;$SELECTED_ETH_IFACE&quot;; then return 0; fi # Return 0 if DHCP step succeeded locally
-        log_warning &quot;DHCP on $SELECTED_ETH_IFACE failed locally.&quot;
+        if attempt_ethernet_dhcp &quot;$SELECTED_ETH_IFACE&quot;; then return 0; fi 
+        log_warning &quot;DHCP on $SELECTED_ETH_IFACE failed.&quot; # Message simplified
     elif [ $choice -eq $DIALOG_CANCEL_CODE ]; then # No
-        log_info_persistent &quot;Skipping DHCP for $SELECTED_ETH_IFACE.&quot;
+        log_info_persistent &quot;DHCP for $SELECTED_ETH_IFACE skipped by user.&quot;
     else # Esc or other non-success
         log_info_persistent &quot;Ethernet DHCP choice cancelled by user.&quot;
         return 1
     fi
 
-    dialog --title &quot;Ethernet Configuration&quot; --yesno &quot;Do you want to configure a static IP for Ethernet interface &#39;$SELECTED_ETH_IFACE&#39;?&quot; ${DIALOG_DEFAULT_HEIGHT} ${DIALOG_DEFAULT_WIDTH} 2&gt;/dev/tty
+    dialog --title &quot;Ethernet Configuration: $SELECTED_ETH_IFACE&quot; --yesno &quot;Do you want to configure a static IP for Ethernet interface &#39;$SELECTED_ETH_IFACE&#39;?&quot; ${DIALOG_DEFAULT_HEIGHT} ${DIALOG_DEFAULT_WIDTH} 2&gt;/dev/tty
     choice=$?
     if [ $choice -eq $DIALOG_SUCCESS_CODE ]; then # Yes (Static IP)
-        if configure_ethernet_static &quot;$SELECTED_ETH_IFACE&quot;; then return 0; fi # Return 0 if static config step succeeded locally
-        log_warning &quot;Static IP configuration on $SELECTED_ETH_IFACE failed locally.&quot;
+        if configure_ethernet_static &quot;$SELECTED_ETH_IFACE&quot;; then return 0; fi
+        log_warning &quot;Static IP configuration on $SELECTED_ETH_IFACE failed.&quot; # Message simplified
+    elif [ $choice -eq $DIALOG_CANCEL_CODE ]; then
+        log_info_persistent &quot;Static IP configuration for $SELECTED_ETH_IFACE skipped by user.&quot;
     else
-        log_info_persistent &quot;Skipping static IP configuration for $SELECTED_ETH_IFACE.&quot;
+        log_info_persistent &quot;Ethernet Static IP choice cancelled by user.&quot;
+        return 1
     fi
     return 1 # All attempts for Ethernet failed or were skipped
 }
@@ -1616,70 +1805,80 @@ scan_wifi_networks() {
     local iface=&quot;$1&quot;
     local networks_list=()
     local line ssid signal security
-    local tmp_scan_file=&quot;/tmp/wifi_scan_$$&quot;
+    local tmp_scan_file=&quot;/tmp/wifi_scan_$$_${iface}&quot; # Make temp file name more unique per interface
     TMP_FILES_TO_CLEAN+=(&quot;$tmp_scan_file&quot;)
 
 
     log_info_transient &quot;Scanning for Wi-Fi networks on $iface (this may take a few seconds)...&quot;
-    ip link set &quot;$iface&quot; up 2&gt;/dev/null || log_warning &quot;Could not bring $iface up for scanning.&quot;
+    ip link set &quot;$iface&quot; up 2&gt;/dev/null || log_warning &quot;Could not bring $iface up for scanning, scan might fail.&quot;
 
     if $NM_IS_ACTIVE &amp;&amp; check_command nmcli; then
-        nmcli device wifi rescan ifname &quot;$iface&quot; &gt;/dev/null 2&gt;&amp;1 || true 
+        # Ensure rescan happens, even if it reports an error (e.g., device busy)
+        nmcli device wifi rescan ifname &quot;$iface&quot; &gt;/dev/null 2&gt;&amp;1 || true
         sleep 5 # Give time for rescan
         
-        # nmcli default output is column-based. Parsing needs to be careful.
-        # Using -g for specific fields is more robust if available and works as expected.
-        # Let&#39;s try a slightly more robust parsing for default output:
-        nmcli -f SSID,SIGNAL,SECURITY dev wifi list ifname &quot;$iface&quot; --rescan no | \
-            tail -n +2 | grep -v &quot;^\*&quot; | grep -v &quot;^\-\-&quot; | \
-            awk &#39;BEGIN {OFS=&quot;;&quot;} { $1=$1; ssid=&quot;&quot;; for(i=1;i&lt;=NF-2;i++) ssid=(ssid==&quot;&quot;?$i:ssid FS $i); gsub(/^[ \t]+|[ \t]+$/, &quot;&quot;, ssid); gsub(/^[ \t]+|[ \t]+$/, &quot;&quot;, $(NF-1)); gsub(/^[ \t]+|[ \t]+$/, &quot;&quot;, $NF); if (ssid!=&quot;&quot;) print ssid,$(NF-1),$NF}&#39; &gt; &quot;$tmp_scan_file&quot;
-        
-        while IFS=&#39;;&#39; read -r ssid signal security_field; do
-            if [ -n &quot;$ssid&quot; ] &amp;&amp; [ &quot;$ssid&quot; != &quot;--&quot; ]; then
-                local display_ssid=&quot;${ssid:0:25}&quot;
-                [ &quot;${#ssid}&quot; -gt 25 ] &amp;&amp; display_ssid=&quot;${display_ssid}..&quot;
-                networks_list+=(&quot;$ssid&quot; &quot;Sig: $signal | Sec: ${security_field:-Open} | $display_ssid&quot;)
-            fi
-        done &lt; &quot;$tmp_scan_file&quot;
-
+        # nmcli output parsing: SSID can contain spaces.
+        # Using --terse --fields to get a more scriptable output
+        # Fields: SSID, SIGNAL, SECURITY (SECURITY can be empty for open networks)
+        # Use a placeholder for empty security fields to maintain structure
+        nmcli --terse --fields IN-USE,SSID,SIGNAL,SECURITY device wifi list ifname &quot;$iface&quot; --rescan no 2&gt;/dev/null | while IFS=&#39;:&#39; read -r in_use ssid signal_val security_val; do
+            # Skip if SSID is empty or a header line (though --terse should prevent headers)
+            [ -z &quot;$ssid&quot; ] &amp;&amp; continue
+            local display_ssid=&quot;${ssid:0:25}&quot;
+            [ &quot;${#ssid}&quot; -gt 25 ] &amp;&amp; display_ssid=&quot;${display_ssid}..&quot;
+            local sec_display=&quot;${security_val:-Open}&quot; # Use &quot;Open&quot; if security is empty
+            [ &quot;$in_use&quot; == &quot;*&quot; ] &amp;&amp; sec_display=&quot;*Connected* $sec_display&quot;
+            # Tag for dialog, description for dialog
+            networks_list+=(&quot;$ssid&quot; &quot;Sig: $signal_val | Sec: $sec_display | $display_ssid&quot;)
+        done
     else # Fallback to iwlist
-        pgrep -af &quot;wpa_supplicant.*${iface}&quot; | awk &#39;{print $1}&#39; | xargs kill &gt;/dev/null 2&gt;&amp;1 || true # Try graceful kill first
+        # Try to kill wpa_supplicant if it&#39;s running on the interface, as it can interfere with iwlist scan
+        pgrep -af &quot;wpa_supplicant.*${iface}&quot; | awk &#39;{print $1}&#39; | xargs kill &gt;/dev/null 2&gt;&amp;1 || true 
         sleep 0.5
-        pgrep -af &quot;wpa_supplicant.*${iface}&quot; | awk &#39;{print $1}&#39; | xargs kill -9 &gt;/dev/null 2&gt;&amp;1 || true # Force kill if still running
+        pgrep -af &quot;wpa_supplicant.*${iface}&quot; | awk &#39;{print $1}&#39; | xargs kill -9 &gt;/dev/null 2&gt;&amp;1 || true
         sleep 1
 
         local scan_output
         scan_output=$(iwlist &quot;$iface&quot; scan 2&gt;/dev/null)
-        local current_ssid=&quot;&quot; current_signal=&quot;&quot; current_security=&quot;Open&quot;
+        local current_ssid=&quot;&quot; current_signal=&quot;N/A&quot; current_security=&quot;Open&quot; # Initialize with defaults
 
-        while IFS= read -r line; do
-            if [[ &quot;$line&quot; == *&quot;ESSID:&quot;* ]]; then
-                [ -n &quot;$current_ssid&quot; ] &amp;&amp; networks_list+=(&quot;$current_ssid&quot; &quot;Sig: ${current_signal:-N/A} | Sec: $current_security | ${current_ssid:0:25}${current_ssid:25:..}&quot;)
-                current_ssid=$(echo &quot;$line&quot; | sed -e &#39;s/.*ESSID:&quot;\(.*\)&quot;/\1/&#39;)
-                current_signal=&quot;N/A&quot;; current_security=&quot;Open&quot; # Reset for new AP
-            elif [[ &quot;$line&quot; == *&quot;Quality=&quot;* ]]; then
-                current_signal=$(echo &quot;$line&quot; | sed -n -e &#39;s/.*Signal level=\(-\?[0-9]* dBm\).*/\1/p&#39; -e &#39;s/.*Quality=\([0-9]*\/[0-9]*\).*/\1/p&#39;)
-            elif [[ &quot;$line&quot; == *&quot;Encryption key:on&quot;* ]]; then
-                current_security=&quot;Protected&quot; 
-            elif [[ &quot;$line&quot; == *&quot;IE: IEEE 802.11i/WPA2 Version 1&quot;* ]]; then
-                current_security=&quot;WPA2/PSK&quot; # Assume PSK
-            elif [[ &quot;$line&quot; == *&quot;IE: WPA Version 1&quot;* ]]; then
-                current_security=&quot;WPA/PSK&quot;  # Assume PSK
-            # Add more specific IE parsing for WPA3 (SAE) if needed
-            fi
-        done &lt;&lt;&lt; &quot;$scan_output&quot;
-        [ -n &quot;$current_ssid&quot; ] &amp;&amp; networks_list+=(&quot;$current_ssid&quot; &quot;Sig: ${current_signal:-N/A} | Sec: $current_security | ${current_ssid:0:25}${current_ssid:25:..}&quot;)
+        # Process each cell block from iwlist output
+        echo &quot;$scan_output&quot; | awk -v RS=&quot;Cell &quot; &#39;NR &gt; 1 { # Skip first record before &quot;Cell &quot;
+            essid=&quot;&quot;; signal=&quot;N/A&quot;; security=&quot;Open&quot;;
+            if (match($0, /ESSID:&quot;([^&quot;]+)&quot;/, arr)) { essid=arr[1] }
+            if (match($0, /Signal level=([0-9]+)\/100/, arr)) { signal=arr[1] &quot;%&quot; } # Quality as percentage
+            else if (match($0, /Signal level=(-?[0-9]+ dBm)/, arr)) { signal=arr[1] } # dBm
+            if (match($0, /Encryption key:on/)) {
+                security=&quot;Protected&quot;; # Generic &quot;Protected&quot;
+                if (match($0, /IE: IEEE 802.11i\/WPA2 Version 1/)) { security=&quot;WPA2/PSK&quot; }
+                else if (match($0, /IE: WPA Version 1/)) { security=&quot;WPA/PSK&quot; }
+                # Could add more specific WEP detection if needed, e.g. based on lack of WPA/WPA2 IEs
+            }
+            if (essid != &quot;&quot;) {
+                display_essid = substr(essid, 1, 25);
+                if (length(essid) &gt; 25) display_essid = display_essid &quot;..&quot;;
+                # Output in a format that can be easily read by the shell loop
+                # Using a unique separator like |;|
+                print essid &quot;|;|&quot; &quot;Sig: &quot; signal &quot; | Sec: &quot; security &quot; | &quot; display_essid;
+            }
+        }&#39; | while IFS=&#39;|;|&#39; read -r ssid description; do
+            networks_list+=(&quot;$ssid&quot; &quot;$description&quot;)
+        done
     fi
     
+    # This specific temp file is processed, no need to keep it in global cleanup array after this point.
     rm -f &quot;$tmp_scan_file&quot;
-    TMP_FILES_TO_CLEAN=( &quot;${TMP_FILES_TO_CLEAN[@]/$tmp_scan_file}&quot; )
+    # To remove from array (optional, as cleanup handles rm -f anyway):
+    local new_tmp_files=()
+    for f in &quot;${TMP_FILES_TO_CLEAN[@]}&quot;; do [ &quot;$f&quot; != &quot;$tmp_scan_file&quot; ] &amp;&amp; new_tmp_files+=(&quot;$f&quot;); done
+    TMP_FILES_TO_CLEAN=(&quot;${new_tmp_files[@]}&quot;)
 
 
     if [ ${#networks_list[@]} -eq 0 ]; then
         log_warning &quot;No Wi-Fi networks found on $iface after scan.&quot;
         return 1
     fi
-
+    # Return the flat array for dialog menu
     echo &quot;${networks_list[@]}&quot;
     return 0
 }
@@ -1691,13 +1890,17 @@ connect_wifi() {
     networks_flat_array_str=$(scan_wifi_networks &quot;$iface&quot;)
     local scan_status=$?
     # shellcheck disable=SC2207
-    local networks_flat_array=($networks_flat_array_str)
+    local networks_flat_array=($networks_flat_array_str) # This splits by space, problematic if descriptions have spaces
+
+    # Reconstruct networks_flat_array properly if scan_wifi_networks echoes one item per line (tag then item)
+    # For now, assuming scan_wifi_networks output is correctly space-separated for this expansion.
+    # If scan_wifi_networks outputs &quot;tag1&quot; &quot;desc1&quot; &quot;tag2&quot; &quot;desc2&quot;, this is fine.
 
     if [ $scan_status -ne 0 ] || [ ${#networks_flat_array[@]} -eq 0 ]; then
         return 1
     fi
 
-    local selected_ssid_tag
+    local selected_ssid_tag # This will be the SSID itself, as scan_wifi_networks uses SSID as the tag
     selected_ssid_tag=$(dialog --title &quot;Select Wi-Fi Network&quot; \
         --menu &quot;Choose the Wi-Fi network (SSID) to connect to on $iface:&quot; \
         $((DIALOG_DEFAULT_HEIGHT + 5)) ${DIALOG_DEFAULT_WIDTH} $((${#networks_flat_array[@]} / 2)) \
@@ -1709,14 +1912,17 @@ connect_wifi() {
         log_info_persistent &quot;Wi-Fi network selection cancelled.&quot;
         return 1
     fi
-    local selected_ssid=&quot;$selected_ssid_tag&quot;
+    local selected_ssid=&quot;$selected_ssid_tag&quot; # selected_ssid_tag is the actual SSID
 
+    # Determine security type based on the description string from networks_flat_array
     local security_type=&quot;Unknown&quot;
+    local full_description=&quot;&quot;
     for ((i=0; i&lt;${#networks_flat_array[@]}; i+=2)); do
         if [ &quot;${networks_flat_array[i]}&quot; == &quot;$selected_ssid&quot; ]; then
-            if [[ &quot;${networks_flat_array[i+1]}&quot; == *&quot;Sec: Open&quot;* ]]; then security_type=&quot;Open&quot;
-            elif [[ &quot;${networks_flat_array[i+1]}&quot; == *&quot;Sec: WEP&quot;* ]]; then security_type=&quot;WEP&quot;
-            elif [[ &quot;${networks_flat_array[i+1]}&quot; == *&quot;Sec: WPA&quot;* || &quot;${networks_flat_array[i+1]}&quot; == *&quot;Sec: WPA2&quot;* || &quot;${networks_flat_array[i+1]}&quot; == *&quot;Sec: WPA3&quot;* || &quot;${networks_flat_array[i+1]}&quot; == *&quot;Sec: PSK&quot;* ]]; then security_type=&quot;PSK&quot;
+            full_description=&quot;${networks_flat_array[i+1]}&quot;
+            if [[ &quot;$full_description&quot; == *&quot;Sec: Open&quot;* ]]; then security_type=&quot;Open&quot;
+            elif [[ &quot;$full_description&quot; == *&quot;Sec: WEP&quot;* ]]; then security_type=&quot;WEP&quot; # Assuming WEP if description says so
+            elif [[ &quot;$full_description&quot; == *&quot;Sec: WPA&quot;* || &quot;$full_description&quot; == *&quot;Sec: WPA2&quot;* || &quot;$full_description&quot; == *&quot;Sec: WPA3&quot;* || &quot;$full_description&quot; == *&quot;Sec: PSK&quot;* ]]; then security_type=&quot;PSK&quot;
             fi
             break
         fi
@@ -1726,41 +1932,60 @@ connect_wifi() {
     if [ &quot;$security_type&quot; == &quot;PSK&quot; ] || [ &quot;$security_type&quot; == &quot;WEP&quot; ]; then
         wifi_password=$(dialog --title &quot;Wi-Fi Password&quot; \
             --passwordbox &quot;Enter password for SSID &#39;$selected_ssid&#39; ($security_type):&quot; \
-            10 ${DIALOG_INPUT_WIDTH} 2&gt;&amp;1 &gt;/dev/tty)
+            10 ${DIALOG_INPUT_WIDTH} &quot;&quot; 2&gt;&amp;1 &gt;/dev/tty)
         exit_status=$?
-        if [ $exit_status -ne $DIALOG_SUCCESS_CODE ] || [ -z &quot;$wifi_password&quot; ]; then
-            log_warning &quot;Password entry cancelled or empty. Cannot connect.&quot;
+        if [ $exit_status -ne $DIALOG_SUCCESS_CODE ]; then # Allow empty password if user presses OK
+            log_warning &quot;Password entry cancelled. Cannot connect without password for $security_type.&quot;
             return 1
         fi
-    elif [ &quot;$security_type&quot; == &quot;Unknown&quot; ]; then
-         dialog --title &quot;Unknown Security&quot; --yesno &quot;Security type for &#39;$selected_ssid&#39; is unknown or complex (e.g. Enterprise/EAP). Attempt to connect as an open network or provide a password?&quot; 12 ${DIALOG_DEFAULT_WIDTH} 2&gt;/dev/tty
+        if [ -z &quot;$wifi_password&quot; ] &amp;&amp; [ &quot;$security_type&quot; != &quot;Open&quot; ]; then # WEP/PSK need password
+             log_warning &quot;Password cannot be empty for $security_type. Cannot connect.&quot;
+             return 1
+        fi
+    elif [ &quot;$security_type&quot; == &quot;Unknown&quot; ]; then # If security is unknown, prompt user
+         dialog --title &quot;Unknown Security for $selected_ssid&quot; --yesno &quot;Security type is Unknown. Attempt to provide a password (for WPA/WPA2/WEP) or connect as Open?&quot; 12 ${DIALOG_DEFAULT_WIDTH} 2&gt;/dev/tty
          local choice=$?
-         if [ $choice -eq $DIALOG_SUCCESS_CODE ]; then
+         if [ $choice -eq $DIALOG_SUCCESS_CODE ]; then # User wants to provide password
             wifi_password=$(dialog --title &quot;Wi-Fi Password&quot; \
-                --passwordbox &quot;Enter password/key for SSID &#39;$selected_ssid&#39; (if any):&quot; \
-                10 ${DIALOG_INPUT_WIDTH} 2&gt;&amp;1 &gt;/dev/tty)
-            [ $? -ne $DIALOG_SUCCESS_CODE ] &amp;&amp; return 1
-         else
+                --passwordbox &quot;Enter password/key for SSID &#39;$selected_ssid&#39;:&quot; \
+                10 ${DIALOG_INPUT_WIDTH} &quot;&quot; 2&gt;&amp;1 &gt;/dev/tty)
+            [ $? -ne $DIALOG_SUCCESS_CODE ] &amp;&amp; return 1 # Cancelled password entry
+            # Assume PSK if password provided for unknown
+            [ -n &quot;$wifi_password&quot; ] &amp;&amp; security_type=&quot;PSK&quot; || security_type=&quot;Open&quot;
+         else # User chose to try as Open
             security_type=&quot;Open&quot;
          fi
-    fi
+    fi # No password needed for Open
 
-    log_info_transient &quot;Attempting to connect to Wi-Fi: $selected_ssid on $iface&quot;
+    log_info_transient &quot;Attempting to connect to Wi-Fi: $selected_ssid on $iface (Security: $security_type)&quot;
     if $NM_IS_ACTIVE; then
+        # Disconnect first to avoid issues with existing connections
         nmcli device disconnect &quot;$iface&quot; &gt;/dev/null 2&gt;&amp;1 || true; sleep 1
-        local old_profile_uuid
-        old_profile_uuid=$(nmcli -g UUID,TYPE,NAME connection show | grep &quot;wireless&quot; | grep &quot;:$selected_ssid$&quot; | cut -d&#39;:&#39; -f1 | head -n1)
-        [ -n &quot;$old_profile_uuid&quot; ] &amp;&amp; { log_info_transient &quot;Deleting existing NetworkManager profile for $selected_ssid.&quot;; nmcli connection delete uuid &quot;$old_profile_uuid&quot; &gt;/dev/null 2&gt;&amp;1 || true; }
+        # Delete existing profiles for this SSID to ensure fresh settings
+        local old_profile_uuids
+        old_profile_uuids=$(nmcli -g UUID,TYPE,NAME connection show 2&gt;/dev/null | grep &quot;wireless&quot; | grep &quot;:$selected_ssid$&quot; | cut -d&#39;:&#39; -f1 || true)
+        if [ -n &quot;$old_profile_uuids&quot; ]; then
+            echo &quot;$old_profile_uuids&quot; | while read -r uuid; do
+                log_info_transient &quot;Deleting existing NetworkManager profile UUID $uuid for $selected_ssid.&quot;
+                nmcli connection delete uuid &quot;$uuid&quot; &gt;/dev/null 2&gt;&amp;1 || true
+            done
+        fi
 
         local connect_cmd_nmcli=(&quot;nmcli&quot; &quot;device&quot; &quot;wifi&quot; &quot;connect&quot; &quot;$selected_ssid&quot; &quot;ifname&quot; &quot;$iface&quot;)
-        if [ &quot;$security_type&quot; != &quot;Open&quot; ] || { [ &quot;$security_type&quot; == &quot;Open&quot; ] &amp;&amp; [ -n &quot;$wifi_password&quot; ]; }; then # If not open, or open but password provided
+        # Only add password if it&#39;s not an Open network OR if it&#39;s Open but a password was surprisingly provided
+        if [ &quot;$security_type&quot; != &quot;Open&quot; ] || { [ &quot;$security_type&quot; == &quot;Open&quot; ] &amp;&amp; [ -n &quot;$wifi_password&quot; ]; }; then
             connect_cmd_nmcli+=(&quot;password&quot; &quot;$wifi_password&quot;)
         fi
+        # For WEP, nmcli might need specific key type handling, but often auto-detects.
+        # If WEP fails, might need to add e.g. wifi-sec.key-mgmt none wifi-sec.wep-key0 &quot;$wifi_password&quot; wifi-sec.wep-key-type passphrase/hex
         
         if &quot;${connect_cmd_nmcli[@]}&quot;; then
             log_info_transient &quot;Successfully initiated Wi-Fi connection to $selected_ssid via NetworkManager.&quot;
+            # DHCP is usually handled by NetworkManager automatically after connect
+            sleep 5 # Give NM time to establish connection and get IP
+            return 0 # Assume success if nmcli connect returns 0
         else
-            log_error &quot;Failed to connect to Wi-Fi $selected_ssid via NetworkManager. Check password/security.&quot;
+            log_error &quot;Failed to connect to Wi-Fi $selected_ssid via NetworkManager. Check password/security settings.&quot;
             return 1
         fi
     else # Use wpa_supplicant
@@ -1770,66 +1995,78 @@ connect_wifi() {
         local wpa_conf_temp=&quot;/tmp/wpa_temp_${iface}_$$$$.conf&quot;
         TMP_FILES_TO_CLEAN+=(&quot;$wpa_conf_temp&quot;)
 
+        # Basic wpa_supplicant config
         echo &quot;ctrl_interface=DIR=/run/wpa_supplicant GROUP=netdev&quot; &gt; &quot;$wpa_conf_temp&quot;
         echo &quot;update_config=1&quot; &gt;&gt; &quot;$wpa_conf_temp&quot;
         echo -e &quot;\nnetwork={&quot; &gt;&gt; &quot;$wpa_conf_temp&quot;
         echo &quot;    ssid=\&quot;$selected_ssid\&quot;&quot; &gt;&gt; &quot;$wpa_conf_temp&quot;
+        
         if [ &quot;$security_type&quot; == &quot;Open&quot; ] &amp;&amp; [ -z &quot;$wifi_password&quot; ]; then
             echo &quot;    key_mgmt=NONE&quot; &gt;&gt; &quot;$wpa_conf_temp&quot;
         elif [ &quot;$security_type&quot; == &quot;WEP&quot; ]; then
-            dialog --title &quot;WEP Key Type&quot; --yesno &quot;Is the WEP key &#39;$wifi_password&#39; in HEXADECIMAL format (e.g., 1A2B3C4D5E)?&quot; 8 ${DIALOG_DEFAULT_WIDTH} 2&gt;/dev/tty
-            local is_hex=$?
-            if [ $is_hex -eq $DIALOG_SUCCESS_CODE ]; then # Yes, it&#39;s HEX
-                if ! [[ &quot;$wifi_password&quot; =~ ^[0-9A-Fa-f]{10}$ || &quot;$wifi_password&quot; =~ ^[0-9A-Fa-f]{26}$ ]]; then
-                    log_error &quot;Invalid HEX WEP key length. Must be 10 or 26 hex digits.&quot;; rm -f &quot;$wpa_conf_temp&quot;; return 1
-                fi
-                echo &quot;    wep_key0=$wifi_password&quot; &gt;&gt; &quot;$wpa_conf_temp&quot;
-            else # No, it&#39;s ASCII
-                if ! [[ &quot;${#wifi_password}&quot; -eq 5 || &quot;${#wifi_password}&quot; -eq 13 ]]; then
-                    log_error &quot;Invalid ASCII WEP key length. Must be 5 or 13 characters.&quot;; rm -f &quot;$wpa_conf_temp&quot;; return 1
-                fi
-                echo &quot;    wep_key0=\&quot;$wifi_password\&quot;&quot; &gt;&gt; &quot;$wpa_conf_temp&quot;
-            fi
             echo &quot;    key_mgmt=NONE&quot; &gt;&gt; &quot;$wpa_conf_temp&quot;
-        else # PSK (WPA/WPA2/WPA3)
+            # wpa_supplicant needs wep_key0, wep_key1 etc.
+            # Determine if hex or ascii based on length/chars or prompt
+            if [[ &quot;$wifi_password&quot; =~ ^[0-9A-Fa-f]{10}$ || &quot;$wifi_password&quot; =~ ^[0-9A-Fa-f]{26}$ ]]; then # Hex
+                 echo &quot;    wep_key0=$wifi_password&quot; &gt;&gt; &quot;$wpa_conf_temp&quot;
+            elif [[ &quot;${#wifi_password}&quot; -eq 5 || &quot;${#wifi_password}&quot; -eq 13 ]]; then # ASCII passphrase
+                 echo &quot;    wep_key0=\&quot;$wifi_password\&quot;&quot; &gt;&gt; &quot;$wpa_conf_temp&quot;
+            else
+                log_error &quot;Invalid WEP key: &#39;$wifi_password&#39;. Must be 5/13 ASCII chars or 10/26 HEX digits.&quot;
+                rm -f &quot;$wpa_conf_temp&quot;; return 1
+            fi
+            echo &quot;    wep_tx_keyidx=0&quot; &gt;&gt; &quot;$wpa_conf_temp&quot; # Default WEP key index
+        else # PSK (WPA/WPA2/WPA3) or Open with a password (treat as PSK)
             echo &quot;    psk=\&quot;$wifi_password\&quot;&quot; &gt;&gt; &quot;$wpa_conf_temp&quot;
-            echo &quot;    key_mgmt=WPA-PSK WPA-PSK-SHA256 SAE&quot; &gt;&gt; &quot;$wpa_conf_temp&quot; # Broad compatibility
-            echo &quot;    proto=RSN WPA&quot; &gt;&gt; &quot;$wpa_conf_temp&quot;
-            echo &quot;    pairwise=CCMP TKIP&quot; &gt;&gt; &quot;$wpa_conf_temp&quot;
-            echo &quot;    group=CCMP TKIP&quot; &gt;&gt; &quot;$wpa_conf_temp&quot;
+            # Let wpa_supplicant auto-negotiate WPA/WPA2/WPA3
+            # key_mgmt=WPA-PSK is common, SAE for WPA3.
+            # protos, pairwise, group can often be omitted for auto-negotiation.
         fi
         echo &quot;}&quot; &gt;&gt; &quot;$wpa_conf_temp&quot;
         chmod 600 &quot;$wpa_conf_temp&quot;
 
+        # Start wpa_supplicant
+        # Using -Dnl80211,wext for broader driver compatibility
         if ! wpa_supplicant -B -i &quot;$iface&quot; -c &quot;$wpa_conf_temp&quot; -Dnl80211,wext; then
             log_error &quot;Failed to start wpa_supplicant for $iface.&quot;; rm -f &quot;$wpa_conf_temp&quot;; return 1
         fi
         log_info_transient &quot;wpa_supplicant started for $iface. Waiting for association...&quot;
-        local connect_tries=20 # Increased timeout
+        local connect_tries=20 
         while [ $connect_tries -gt 0 ]; do
+            # Check wpa_cli status for completion
             if wpa_cli -i &quot;$iface&quot; status 2&gt;/dev/null | grep -q &quot;wpa_state=COMPLETED&quot;; then
                 log_info_transient &quot;Successfully associated with Wi-Fi $selected_ssid via wpa_supplicant.&quot;
-                rm -f &quot;$wpa_conf_temp&quot;; TMP_FILES_TO_CLEAN=( &quot;${TMP_FILES_TO_CLEAN[@]/$wpa_conf_temp}&quot; )
+                # Temp file can be removed now, or let global cleanup handle it.
+                # rm -f &quot;$wpa_conf_temp&quot;; TMP_FILES_TO_CLEAN=( &quot;${TMP_FILES_TO_CLEAN[@]/$wpa_conf_temp}&quot; )
                 break
             fi
             sleep 1; connect_tries=$((connect_tries - 1))
         done
         if [ $connect_tries -eq 0 ]; then
-            log_error &quot;Failed to associate with Wi-Fi $selected_ssid via wpa_supplicant.&quot;
+            log_error &quot;Failed to associate with Wi-Fi $selected_ssid via wpa_supplicant (timeout).&quot;
+            # Kill the potentially lingering wpa_supplicant process
             pgrep -af &quot;wpa_supplicant -B -i $iface -c $wpa_conf_temp&quot; | awk &#39;{print $1}&#39; | xargs kill -9 &gt;/dev/null 2&gt;&amp;1 || true
-            rm -f &quot;$wpa_conf_temp&quot;; TMP_FILES_TO_CLEAN=( &quot;${TMP_FILES_TO_CLEAN[@]/$wpa_conf_temp}&quot; )
+            rm -f &quot;$wpa_conf_temp&quot;
             return 1
         fi
-    fi
+        # If associated, proceed to DHCP
+    fi # End of NM_IS_ACTIVE or wpa_supplicant block
+
+    # If not using NetworkManager, or if NM connection didn&#39;t handle DHCP (unlikely but possible)
+    # We need to run DHCP client explicitly for wpa_supplicant method.
+    # For NM, this part is usually not needed as NM handles DHCP.
+    # However, if connect_cmd_nmcli succeeded, we returned 0 already.
+    # So this DHCP part is primarily for the wpa_supplicant path.
 
     log_info_transient &quot;Wi-Fi associated. Attempting DHCP on $iface...&quot;
-    dhclient -r &quot;$iface&quot; &gt;/dev/null 2&gt;&amp;1 || true
-    if dhclient -v &quot;$iface&quot; &gt;/tmp/dhclient_wifi.log 2&gt;&amp;1; then
+    dhclient -r &quot;$iface&quot; &gt;/dev/null 2&gt;&amp;1 || true # Release old lease
+    if timeout 30 dhclient -v &quot;$iface&quot; &gt;&quot;/tmp/dhclient_wifi_${iface}.log&quot; 2&gt;&amp;1; then
         log_info_transient &quot;dhclient successfully obtained lease on $iface.&quot;
         sleep 2; return 0
     else
-        log_warning &quot;dhclient failed for &#39;$selected_ssid&#39; on $iface. Check /tmp/dhclient_wifi.log&quot;
-        dialog --title &quot;Wi-Fi IP Configuration&quot; --yesno &quot;DHCP failed for &#39;$selected_ssid&#39; on $iface.\\nDo you want to configure a static IP for this Wi-Fi connection?&quot; ${DIALOG_DEFAULT_HEIGHT} ${DIALOG_DEFAULT_WIDTH} 2&gt;/dev/tty
+        log_warning &quot;dhclient failed or timed out for &#39;$selected_ssid&#39; on $iface. Check /tmp/dhclient_wifi_${iface}.log&quot;
+        # Offer static IP configuration if DHCP fails for Wi-Fi
+        dialog --title &quot;Wi-Fi IP Configuration: $selected_ssid&quot; --yesno &quot;DHCP failed for &#39;$selected_ssid&#39; on $iface.\\nDo you want to configure a static IP for this Wi-Fi connection?&quot; ${DIALOG_DEFAULT_HEIGHT} ${DIALOG_DEFAULT_WIDTH} 2&gt;/dev/tty
         local choice=$?
         if [ $choice -eq $DIALOG_SUCCESS_CODE ]; then
             local static_config_str
@@ -1839,44 +2076,53 @@ connect_wifi() {
 
             local static_ip_cidr gw dns
             IFS=&#39;:&#39; read -r static_ip_cidr gw dns &lt;&lt;&lt; &quot;$static_config_str&quot;
-            log_info_transient &quot;Configuring static IP for Wi-Fi $iface: IP=$static_ip_cidr, GW=$gw, DNS=$dns&quot;
+            log_info_transient &quot;Configuring static IP for Wi-Fi $iface: IP=$static_ip_cidr, GW=$gw, DNS=${dns:-Not set}&quot;
 
-            if $NM_IS_ACTIVE; then
+            if $NM_IS_ACTIVE; then # This block might be less common if NM failed to connect initially
                 local active_wifi_conn
-                active_wifi_conn=$(nmcli -g UUID,DEVICE connection show --active | grep &quot;:$iface$&quot; | cut -d&#39;:&#39; -f1 | head -n1)
+                active_wifi_conn=$(nmcli -g UUID,DEVICE connection show --active 2&gt;/dev/null | grep &quot;:$iface$&quot; | cut -d&#39;:&#39; -f1 | head -n1 || true)
                 if [ -n &quot;$active_wifi_conn&quot; ]; then
                     local nm_modify_cmd=(&quot;nmcli&quot; &quot;connection&quot; &quot;modify&quot; &quot;$active_wifi_conn&quot; &quot;ipv4.method&quot; &quot;manual&quot; &quot;ipv4.addresses&quot; &quot;$static_ip_cidr&quot; &quot;ipv4.gateway&quot; &quot;$gw&quot;)
                     [ -n &quot;$dns&quot; ] &amp;&amp; nm_modify_cmd+=(&quot;ipv4.dns&quot; &quot;$dns&quot;)
-                    nm_modify_cmd+=(&quot;ipv6.method&quot; &quot;disabled&quot;)
+                    nm_modify_cmd+=(&quot;ipv6.method&quot; &quot;ignore&quot;)
                     if &quot;${nm_modify_cmd[@]}&quot; &amp;&amp; nmcli connection up &quot;$active_wifi_conn&quot;; then
                         log_info_transient &quot;NetworkManager configured static IP for Wi-Fi $iface.&quot;; return 0
                     else
                         log_error &quot;Failed to configure static IP for Wi-Fi via NetworkManager.&quot;; return 1
                     fi
                 else
-                    log_error &quot;Could not find active NetworkManager Wi-Fi connection to modify for static IP.&quot;; return 1
+                    log_error &quot;Could not find active NetworkManager Wi-Fi connection to modify for static IP. Try re-connecting first.&quot;; return 1
                 fi
-            else 
-                ip addr flush dev &quot;$iface&quot; || true; ip link set &quot;$iface&quot; up
-                if ip addr add &quot;$static_ip_cidr&quot; dev &quot;$iface&quot; &amp;&amp; ip route add default via &quot;$gw&quot; dev &quot;$iface&quot;; then
-                    log_info_transient &quot;iproute2 configured static IP for Wi-Fi $iface.&quot;
-                    if [ -n &quot;$dns&quot; ]; then
-                        local resolv_conf_content_wifi=&quot;&quot;
-                        IFS=&#39;,&#39; read -ra dns_array_wifi &lt;&lt;&lt; &quot;$dns&quot;
-                        for dns_val in &quot;${dns_array_wifi[@]}&quot;; do resolv_conf_content_wifi+=&quot;nameserver $dns_val\n&quot;; done
-                        echo -e &quot;$resolv_conf_content_wifi&quot; &gt; /etc/resolv.conf
-                        log_info_transient &quot;Configured DNS servers in /etc/resolv.conf: $dns&quot;
+            else # Manual static IP for Wi-Fi (typically after wpa_supplicant)
+                ip addr flush dev &quot;$iface&quot; || true
+                ip link set &quot;$iface&quot; up || { log_warning &quot;Failed to bring $iface up for static Wi-Fi config.&quot;; return 1; }
+                if ip addr add &quot;$static_ip_cidr&quot; dev &quot;$iface&quot;; then
+                    sleep 2 # Give interface a moment
+                    if ip route add default via &quot;$gw&quot; dev &quot;$iface&quot;; then
+                        log_info_transient &quot;iproute2 configured static IP for Wi-Fi $iface.&quot;
+                        if [ -n &quot;$dns&quot; ]; then
+                            local resolv_conf_content_wifi=&quot;&quot;
+                            IFS=&#39;,&#39; read -ra dns_array_wifi &lt;&lt;&lt; &quot;$dns&quot;
+                            for dns_val in &quot;${dns_array_wifi[@]}&quot;; do resolv_conf_content_wifi+=&quot;nameserver $dns_val\n&quot;; done
+                            if [ -L /etc/resolv.conf ]; then
+                                log_warning &quot;/etc/resolv.conf is a symlink. DNS might not be set correctly by overwriting it.&quot;
+                            fi
+                            echo -e &quot;$resolv_conf_content_wifi&quot; &gt; /etc/resolv.conf
+                            log_info_transient &quot;Configured DNS servers in /etc/resolv.conf: $dns&quot;
+                        fi
+                        return 0
+                    else
+                        log_error &quot;Failed to add default route for static Wi-Fi on $iface.&quot;; return 1
                     fi
-                    return 0
                 else
-                    log_error &quot;Failed to configure static IP for Wi-Fi $iface using iproute2.&quot;; return 1
+                    log_error &quot;Failed to add IP address for static Wi-Fi on $iface.&quot;; return 1
                 fi
             fi
-        else
+        else # User chose not to configure static IP after DHCP failure
             log_info_persistent &quot;Skipping static IP for Wi-Fi.&quot;; return 1
         fi
     fi
-    return 1 # Fallthrough, should indicate failure
+    return 1 # Fallthrough, should indicate failure if DHCP didn&#39;t succeed and static wasn&#39;t configured
 }
 
 handle_wifi_connection() {
@@ -1888,106 +2134,146 @@ handle_wifi_connection() {
     SELECTED_WIFI_IFACE=$(prompt_select_interface &quot;Wi-Fi&quot; &quot;${WIFI_IFACES[@]}&quot;)
     local select_exit_status=$?
     [ $select_exit_status -ne $DIALOG_SUCCESS_CODE ] &amp;&amp; return 1
+    [ -z &quot;$SELECTED_WIFI_IFACE&quot; ] &amp;&amp; { log_warning &quot;No Wi-Fi interface was selected.&quot;; return 1; }
+
 
     # rfkill check
     if check_command rfkill; then
-        if rfkill list wifi | grep -A1 &quot;$SELECTED_WIFI_IFACE&quot; | grep -q &quot;Soft blocked: yes&quot;; then
-            dialog --title &quot;Wi-Fi Blocked&quot; --yesno &quot;Wi-Fi interface $SELECTED_WIFI_IFACE appears to be soft-blocked by rfkill.\\nDo you want to attempt to unblock it?&quot; 10 ${DIALOG_DEFAULT_WIDTH} 2&gt;/dev/tty
+        # Check specific interface index if possible, otherwise &#39;wifi&#39; type
+        local rfkill_idx
+        rfkill_idx=$(rfkill list wifi -n -o ID,DEVICE | grep &quot;$SELECTED_WIFI_IFACE&quot; | awk &#39;{print $1}&#39; || true)
+
+        if [ -n &quot;$rfkill_idx&quot; ] &amp;&amp; rfkill list &quot;$rfkill_idx&quot; | grep -q &quot;Soft blocked: yes&quot;; then
+            dialog --title &quot;Wi-Fi Blocked&quot; --yesno &quot;Wi-Fi interface $SELECTED_WIFI_IFACE (rfkill ID $rfkill_idx) appears to be soft-blocked.\\nDo you want to attempt to unblock it?&quot; 10 ${DIALOG_DEFAULT_WIDTH} 2&gt;/dev/tty
             if [ $? -eq $DIALOG_SUCCESS_CODE ]; then
-                if rfkill unblock wifi; then log_info_persistent &quot;Wi-Fi unblocked successfully.&quot;; sleep 1
-                else log_warning &quot;Failed to unblock Wi-Fi via rfkill. Proceeding with scan anyway.&quot;; fi
+                if rfkill unblock &quot;$rfkill_idx&quot;; then log_info_persistent &quot;Wi-Fi $SELECTED_WIFI_IFACE unblocked successfully.&quot;; sleep 1
+                else log_warning &quot;Failed to unblock Wi-Fi $SELECTED_WIFI_IFACE via rfkill. Proceeding anyway.&quot;; fi
             fi
+        elif rfkill list wifi | grep -A1 &quot;$SELECTED_WIFI_IFACE&quot; | grep -q &quot;Soft blocked: yes&quot;; then # Fallback check if specific ID not found
+             dialog --title &quot;Wi-Fi Blocked&quot; --yesno &quot;Wi-Fi interface $SELECTED_WIFI_IFACE appears to be soft-blocked by rfkill.\\nDo you want to attempt to unblock it?&quot; 10 ${DIALOG_DEFAULT_WIDTH} 2&gt;/dev/tty
+            if [ $? -eq $DIALOG_SUCCESS_CODE ]; then
+                if rfkill unblock wifi; then log_info_persistent &quot;Wi-Fi unblocked successfully.&quot;; sleep 1 # Unblock all wifi
+                else log_warning &quot;Failed to unblock Wi-Fi via rfkill. Proceeding anyway.&quot;; fi
+            fi
+        fi
+         if [ -n &quot;$rfkill_idx&quot; ] &amp;&amp; rfkill list &quot;$rfkill_idx&quot; | grep -q &quot;Hard blocked: yes&quot;; then
+            log_error &quot;Wi-Fi interface $SELECTED_WIFI_IFACE (rfkill ID $rfkill_idx) is hard-blocked (hardware switch). Cannot proceed with this interface.&quot;
+            return 1
         fi
     fi
 
-    if connect_wifi &quot;$SELECTED_WIFI_IFACE&quot;; then return 0; fi # Return 0 if Wi-Fi connection steps succeeded locally
+    if connect_wifi &quot;$SELECTED_WIFI_IFACE&quot;; then return 0; fi 
     
-    log_warning &quot;Wi-Fi connection on $SELECTED_WIFI_IFACE failed locally.&quot;
+    log_warning &quot;Wi-Fi connection on $SELECTED_WIFI_IFACE failed.&quot;
     return 1
 }
 
 
 # --- Main Script Logic ---
 main() {
+    # Ensure we are root
     if [ &quot;$(id -u)&quot; -ne 0 ]; then
-      echo &quot;This script must be run as root. Please use &#39;sudo $0&#39;&quot; &gt;&amp;2
-      exit 1
+        echo &quot;This script must be run as root. Please use &#39;sudo $0&#39;&quot; &gt;&amp;2
+        # No dialog available yet, so just echo.
+        exit 1
     fi
 
-    # Ensure dialog is available before anything else
+    # Ensure dialog is available before anything else that uses dialog
     install_packages &quot;dialog,dialog&quot;
     # Then other packages
-    install_packages &quot;nmcli,network-manager&quot; \
+    # Grouped related tools for clarity
+    install_packages &quot;ip,iproute2&quot; \
+                     &quot;ping,iputils-ping&quot; \
+                     &quot;nmcli,network-manager&quot; \
                      &quot;wpa_cli,wpasupplicant&quot; \
                      &quot;wpa_supplicant,wpasupplicant&quot; \
                      &quot;dhclient,isc-dhcp-client&quot; \
-                     &quot;ip,iproute2&quot; \
                      &quot;iw,iw&quot; \
-                     &quot;ping,iputils-ping&quot; \
-                     &quot;rfkill,rfkill&quot;
+                     &quot;rfkill,rfkill&quot; \
+                     &quot;timeout,coreutils&quot; # For timeout command if not built-in
 
     detect_ethernet_interfaces
     detect_wifi_interfaces
-    check_network_manager_active
+    check_network_manager_active # Checks if NetworkManager service is running
 
+    # Initial connectivity check
     if check_internet_connectivity; then
-        exit 0 # Already connected, success message shown by check_internet_connectivity
+        # Success message already shown by check_internet_connectivity
+        exit 0 
     fi
     log_info_persistent &quot;No active internet connection detected. Starting configuration process...&quot;
 
     while true; do
         local options=()
+        # Dynamically build menu options based on detected interfaces
         [ ${#ETH_IFACES[@]} -gt 0 ] &amp;&amp; options+=(&quot;ETH&quot; &quot;Configure Ethernet Connection&quot;)
         [ ${#WIFI_IFACES[@]} -gt 0 ] &amp;&amp; options+=(&quot;WIFI&quot; &quot;Configure Wi-Fi Connection&quot;)
-        options+=(&quot;CHECK&quot; &quot;Re-check Internet Connectivity&quot;)
-        options+=(&quot;EXIT&quot; &quot;Exit Script&quot;)
-
+        
+        # If no interfaces detected at all, inform and exit.
         if [ $((${#ETH_IFACES[@]} + ${#WIFI_IFACES[@]})) -eq 0 ]; then
-             log_error &quot;No usable network interfaces (Ethernet or Wi-Fi) were detected. Cannot proceed.&quot;
+             log_error &quot;No usable network interfaces (Ethernet or Wi-Fi) were detected by the script. Cannot proceed.&quot;
              exit 1
         fi
         
+        options+=(&quot;CHECK&quot; &quot;Re-check Internet Connectivity&quot;)
+        # &quot;EXIT&quot; option is handled by --cancel-label
+
         local main_choice
         main_choice=$(dialog --title &quot;Main Menu - Universal Network Connector&quot; \
-            --cancel-label &quot;Exit&quot; \
+            --cancel-label &quot;Exit Script&quot; \
             --menu &quot;Select an action:&quot; ${DIALOG_DEFAULT_HEIGHT} ${DIALOG_DEFAULT_WIDTH} $((${#options[@]}/2)) \
             &quot;${options[@]}&quot; \
             2&gt;&amp;1 &gt;/dev/tty)
         
         local exit_status=$?
-        if [ $exit_status -ne $DIALOG_SUCCESS_CODE ] || [ &quot;$main_choice&quot; == &quot;EXIT&quot; ]; then
-            log_info_persistent &quot;Exiting script as per user request or cancellation.&quot;
+        # DIALOG_CANCEL_CODE (1) or DIALOG_ESC_CODE (255) means user chose Exit/Esc
+        if [ $exit_status -eq $DIALOG_CANCEL_CODE ] || [ $exit_status -eq $DIALOG_ESC_CODE ]; then
+            log_info_persistent &quot;Exiting script as per user request.&quot;
             break 
         fi
+        # If main_choice is empty but exit_status was 0 (e.g. help button), re-loop.
+        [ -z &quot;$main_choice&quot; ] &amp;&amp; continue
+
 
         case &quot;$main_choice&quot; in
             ETH)
-                if handle_ethernet_connection; then # Returns 0 if local config steps were successful
-                    if check_internet_connectivity; then exit 0; fi # Final check and exit if good
+                if [ ${#ETH_IFACES[@]} -eq 0 ]; then
+                    log_warning &quot;No Ethernet interfaces available to configure.&quot;
+                    continue
+                fi
+                if handle_ethernet_connection; then 
+                    if check_internet_connectivity; then exit 0; fi 
                 else
-                    log_warning &quot;Ethernet configuration attempt did not succeed locally or was cancelled.&quot;
+                    # Warning already logged by handle_ethernet_connection on failure/skip
+                    log_info_persistent &quot;Ethernet configuration did not result in a connection or was cancelled. Returning to main menu.&quot;
                 fi
                 ;;
             WIFI)
-                if handle_wifi_connection; then # Returns 0 if local config steps were successful
-                    if check_internet_connectivity; then exit 0; fi # Final check and exit if good
+                if [ ${#WIFI_IFACES[@]} -eq 0 ]; then
+                    log_warning &quot;No Wi-Fi interfaces available to configure.&quot;
+                    continue
+                fi
+                if handle_wifi_connection; then 
+                    if check_internet_connectivity; then exit 0; fi
                 else
-                    log_warning &quot;Wi-Fi configuration attempt did not succeed locally or was cancelled.&quot;
+                    log_info_persistent &quot;Wi-Fi configuration did not result in a connection or was cancelled. Returning to main menu.&quot;
                 fi
                 ;;
             CHECK)
                 if check_internet_connectivity; then exit 0; fi
                 ;;
-            *) # Should not happen with dialog menu
-                log_warning &quot;Invalid choice. Please try again.&quot;
+            *) 
+                # This case should ideally not be reached if dialog menu is used correctly
+                log_warning &quot;Invalid choice &#39;$main_choice&#39;. Please try again.&quot;
                 ;;
         esac
         # If loop continues, it means connection was not successful or user chose to try another option.
     done
-    exit 1 # Exited loop without successful connection
+    exit 1 # Exited loop without successful connection or user explicitly exited
 }
 
 # --- Run Main ---
+# Pass all script arguments to the main function, though this script doesn&#39;t use them.
 main &quot;$@&quot;</code>
 </section>
 
@@ -2021,244 +2307,16 @@ main &quot;$@&quot;</code>
                 
               
                 
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
-              
-                
                   
                   
               
               
               
-              <!-- Navigation block for tag "scratchpad"; default display for the first tag -->
-              <div class="nav-group tags" id="tag-nav-scratchpad" style="display: block;">
+              <!-- Navigation block for tag "scripts>bash"; default display for the first tag -->
+              <div class="nav-group tags" id="tag-nav-scripts-bash" style="display: block;">
                 <div class="nav-arrow tags prev">
                   
-                    <a href="/coolice-remote-access-and-file-transfer-sshftp/" title="coolice remote access and file transfer (ssh/ftp)" rel="prev">
+                    <a href="/network-diag/" title="network diag" rel="prev">
                       <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAC0AAAAtCAYAAAA6GuKaAAAAAXNSR0IArs4c6QAAAxVJREFUaEPt18FqG1cUBuD/nLkzI42UiVInkFLTCAKhS+9KA+3Kq1L8AAHjhR7AKz+ADV55qUfoqhvThTfdmC4KzTKmYJrELshJW9PIlSeKRpqZe88pUtouihvVRknqMNoMzD1zdPXNrzMM4RJ+6BLuGeWm39RdK6VL6VcIlPEo41HG401loJQupS8mUM7pi7md/6p3UtoHUJzf4vVecZb0e0EQfB7H8b0kSeqqummt/eb1buN83SebNsZ8QkQCYHVpaenu/v7+ra2tLRwdHWF1ddWq6hfM3BCRE2b+FcBHACQAHo1E5v9c+5mIhkR0e3z0VQ8LotuqWlXVw/GRmT8QkdMK89McuAOAAfwoIu8z85yIHBPRKRGN1/IAeDx0rul53hivo6psrf2ejDGfEtFOu92u7O3tBWtra2i322g0GhgOh9je3ka325UPax7fCR0iw+lp4aLxr70aeOmgkChTRY3JGSb73EroERD73uB54WpOgdhwZkXNQNQLiVDzOU1yFymAhu+lqZVopIqISQKmPLFS+atHv3A1q8AVQ+lXP/VHRPQx+b6frKysxMvLy1hfX0ez2USv18PCwgLiOEaSJKhWq/jhwQN8dnIfVOS4dsWHqCJ5YREGjBuNEMfd0eTc9WshBqnFYGhRqxrUIoNuLwMT4eb1Cp6dZshywdW6mZzr9QsEPuPmXIhfno3gnGKuEWCUC14MLKoVb1L72+8Zvj3JOl/udZt/S7darUqn0wlarRZ2d3cxPz+PJ8dPsPP1Doq8kIbL+cawjxBIM8MRFAidpBlRpIbhFc55gM2NF5IIQtVBRlRTZgTWZQ4wzvc8spO1NPM4Gr9Wh1bSDIjU98C5E0PIC8OVSX+Rlz08hl+4/LsML6X/menFxcW7BwcHtzY2NvDw8CE21zf/NdMAHskFMs3MT/EfMg3gsTsr02f8byfTo16v3+v3+//f6fGKgXNp5vT5huZbqH4nH+NvwXH6V5bS041mU1FKz8ZxepdSerrRbCpK6dk4Tu9SSk83mk1FKT0bx+ldSunpRrOpuJTSfwBcuImxpyA7XgAAAABJRU5ErkJggg==" alt="Previous in Tag" width="45" height="45" loading="lazy">
                     </a>
                   
@@ -2313,7 +2371,7 @@ main &quot;$@&quot;</code>
         
         
         <a href="https://ib.bsb.br/404" aria-label="404">
-          2025-05-26 13:53:04
+          2025-05-26 14:08:14
         </a>
         &#x23;
     
@@ -2323,8 +2381,8 @@ main &quot;$@&quot;</code>
             
             
               <li>
-                <a href="#" class="tag-option active" data-tag="scratchpad">
-                  scratchpad
+                <a href="#" class="tag-option active" data-tag="scripts-bash">
+                  scripts>bash
                 </a>
               </li>
             
@@ -2381,7 +2439,7 @@ main &quot;$@&quot;</code>
         "headline": "Connectivity Solution for RK3588",
         "description": "",
         "datePublished": "2025-05-26T00:00:00+00:00",
-        "dateModified": "2025-05-26T14:36:01+00:00",
+        "dateModified": "2025-05-26T17:04:47+00:00",
         "author": {
           "@type": "Person",
           "name": "Author"
