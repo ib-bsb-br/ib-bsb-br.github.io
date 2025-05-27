@@ -9,6 +9,7 @@ slug: mobile-git-issues-a-shell-git-issue
 title: 'mobile git issues (a-shell + git-issue)'
 ---
 # merge
+- `https://simonwillison.net/2025/May/26/notes/`
 - `https://github.com/dspinellis/git-issue`
 - `https://github.com/holzschu/a-shell/blob/master/man/man1/curl.1`
 - `https://github.com/holzschu/a-shell/blob/master/man/man1/jq.1`
