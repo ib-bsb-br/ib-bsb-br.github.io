@@ -66,21 +66,43 @@ Here’s a comprehensive example configuration:
 {% codeblock %}
 set winname title
 set winliststyle column
-set wingravity n
-set winfmt "%n: %t (%c)"
+set wingravity c
+set winfmt %n%s%t
+set framefmt %t
+set infofmt (%H, %W) %n(%c - %a)
 set waitcursor 1
 set transgravity center
 set padding 0 0 0 24
-set inputwidth 600
+set maxsizegravity c
+set inputwidth 0
 set historysize 1000
-set gravity center
+set historyexpansion 1
+set historycompaction 1
+set gravity c
+set fwcolor #303030
 set framesels 1234567890
-set font "Intel One Mono:size=13"
+set fgcolor #d75f00
+set bwcolor #0c0c0c
 set border 0
-set bgcolor silver
-set barpadding 4 4
+set bgcolor #080808
+set barpadding 8 8
 set bargravity c
 set barborder 0
+set maxundos 20
+
+#< hack - we need to set font once per head
+nextscreen
+set font "Intel One Mono:size=12"
+nextscreen
+set font "Intel One Mono:size=12"
+#>
+
+defresizeunit 80
+definekey top Print exec xfce4-screenshooter
+definekey top M-VoidSymbol exec x-terminal-emulator -e /home/linaro/.local/bin/clipse
+definekey top C-VoidSymbol ratclick 3
+definekey top ISO_Left_VoidSymbol ratclick 1
+definekey top VoidSymbol ratclick 2
 
 exec alttab
 exec xsetroot -name "$wspl"
@@ -100,13 +122,9 @@ warp 1
 banish
 unmanage rpbar
 escape Super_L
+rudeness 12
 
-definekey top Print exec xfce4-screenshooter
-definekey top M-VoidSymbol exec x-terminal-emulator -e /home/linaro/.local/bin/clipse
-definekey top C-VoidSymbol ratclick 3
-definekey top ISO_Left_VoidSymbol ratclick 1
-definekey top VoidSymbol ratclick 2
-
+bind c redisplay
 bind M-1 exec xdotool key --repeat 6 dead_grave
 bind M-2 exec xdotool key --repeat 6 dead_tilde
 bind M-3 exec xdotool key --repeat 3 quotedbl
@@ -120,7 +138,7 @@ bind z undo
 bind x swap
 bind w exec thorium-browser
 bind VoidSymbol nextscreen
-bind v exec paste_clipboard_from_file.sh
+bind v meta S-Insert
 bind Up focusup
 bind u exec /usr/bin/rpws dump /home/linaro/Desktop/01-document/dotfiles/rpws_layouts.dmp
 bind Tab focus
@@ -244,13 +262,13 @@ bind C-4 exec rpws 4
 bind C-3 exec rpws 3
 bind C-2 exec rpws 2
 bind C-1 exec rpws 1
-bind c exec write_clipboard_to_file.sh
 bind BackSpace next
 bind b exec vorta
 
 addhook titlechanged exec rpbarsend
 addhook switchwin exec rpbarsend
 addhook switchgroup exec rpbarsend
+addhook switchgroup next
 addhook switchframe exec rpbarsend
 addhook newwindow exec rpbarsend
 addhook deletewindow exec rpbarsend
