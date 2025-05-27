@@ -1,14 +1,16 @@
 ---
-tags: [scratchpad]
+tags:
+- scratchpad
 info: aberto.
 date: 2025-05-27
 type: post
 layout: post
 published: true
 slug: mobile-git-issues-a-shell-git-issue
-title: 'mobile git issues (a-shell + git-issue)'
+title: mobile git issues (a-shell + git-issue)
+comment: http://news.ycombinator.com/item?id=44094980
 ---
-bibref http://news.ycombinator.com/item?id=44094980
+
 
 # merge
 - `https://simonwillison.net/2025/May/26/notes/`
