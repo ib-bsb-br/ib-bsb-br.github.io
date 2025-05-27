@@ -1,14 +1,16 @@
 ---
-tags: [scratchpad]
+tags:
+- scratchpad
 info: aberto.
 date: 2025-05-27
 type: post
 layout: post
 published: true
 slug: whisperfile
-title: 'Whisperfile'
+title: Whisperfile
+comment: https://github.com/Mozilla-Ocho/llamafile/blob/main/whisper.cpp/doc/index.md
 ---
-bibref https://github.com/Mozilla-Ocho/llamafile/blob/main/whisper.cpp/doc/index.md
+
 
 # Whisperfile Documentation
 
