@@ -1,14 +1,16 @@
 ---
-tags: [scratchpad]
+tags:
+- scratchpad
 info: aberto.
 date: 2025-05-27
 type: post
 layout: post
 published: true
 slug: actually-portable-executable
-title: 'Actually Portable Executable'
+title: Actually Portable Executable
+comment: https://justine.lol/ape.html
 ---
-bibref https://justine.lol/ape.html
+
 
 Markdown Content:
 24 aug 2020 @ [justine's web page](https://justine.lol/index.html)
