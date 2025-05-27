@@ -9,6 +9,213 @@ slug: ratpoisonrc
 title: "ratpoisonrc dot files"
 ---
 {% raw %}
+# trapd00r
+`https://raw.githubusercontent.com/trapd00r/configs/refs/heads/master/ratpoisonrc`
+```
+### vim:ft=ratpoison:fde:fdm=marker:fmr=#<,#>:fdc=3:fdl=0:
+#< ${HOME}/etc/ratpoisonrc
+#   ‗‗‗‗‗‗‗‗‗‗‗‗ ‗‗‗‗‗‗ ‗‗‗‗‗‗‗‗ ‗‗‗‗‗‗‗‗‗‗‗
+#         owner  Magnus Woldrich <m@japh.se>
+#       crafted  2009-04-24
+#         mtime  2021-04-12 13:47:57
+#           git  git://github.com/trapd00r/configs.git
+#           url  http://github.com/trapd00r/configs
+#           irc  japh@freenode #zsh #vim #perl
+#   ‗‗‗‗‗‗‗‗‗‗‗‗ ‗‗‗‗‗‗‗‗‗‗‗‗‗ ‗‗‗‗ ‗‗‗‗ ‗‗‗‗
+###>
+startup_message off
+         escape C-f
+  defresizeunit 80
+        addhook switchgroup next
+
+## banish the mouse with each screenchange
+#addhook switchwin banish
+
+#setenv ratpoison_version `exec ratpoison -c "echo $(pgrep -l catpoison || 'ratpoison')"`
+#< aliases
+alias reload         exec catpoison -c "source $XDG_CONFIG_HOME/ratpoisonrc"
+
+alias toggle-borders exec if [ "$(catpoison -c 'set border')" -ge 1 ]; then catpoison -c 'set border 0'; else catpoison -c 'set border 1'; fi
+ bind BackSpace  toggle-borders
+
+# move commands (moves window to other frame w/o exchanging)
+# TODO: works badly when moving causes an empty frame ('other' fails)
+alias moveleft  exec ratpoison -c 'exchangeleft'  -c 'focuslast' -c 'other' -c 'focuslast'
+alias movedown  exec ratpoison -c 'exchangedown'  -c 'focuslast' -c 'other' -c 'focuslast'
+alias moveup    exec ratpoison -c 'exchangeup'    -c 'focuslast' -c 'other' -c 'focuslast'
+alias moveright exec ratpoison -c 'exchangeright' -c 'focuslast' -c 'other' -c 'focuslast'
+
+alias showroot   exec catpoison -c fdump > ~/tmp/rp-frames; catpoison -c 'select -' -c only
+alias unshowroot exec catpoison -c "frestore `cat ~/tmp/rp-frames`"
+bind odiaeresis   showroot
+bind C-odiaeresis unshowroot
+
+
+#>
+#< catpoison only!
+set virtuals 4
+vinit
+definekey top   C-1  vselect 1
+definekey top   C-2  vselect 2
+definekey top   C-3  vselect 3
+definekey top   C-4  vselect 4
+
+set barsticky off
+
+# https://www.japh.se/2021/03/21/ratpoison-urxvt-and-borders.html
+set gap 1
+#>
+
+#< options
+set           gravity c
+set        bargravity c
+set        wingravity c
+set           winname title
+set    maxsizegravity c
+set        inputwidth 0
+set  historyexpansion 1
+set historycompaction 1
+set       historysize 1000
+set      winliststyle column
+set        barpadding 8 8
+set            winfmt %n%s%t
+set          framefmt %t
+set           infofmt (%H, %W) %n(%c - %a) -- PID: %p, XWID: %i
+## for dzen2
+#set           padding 0 13 0 0
+set           padding 0 0 0 0
+set            border 0
+set           bgcolor #080808
+set           bwcolor #0c0c0c
+set           fgcolor #d75f00
+set           fwcolor #303030
+set              font 'xft:Terminus:style=Regular:pixelsize=24'
+set          maxundos 20
+#>
+#< window management
+unmanage mullvad-gui
+unmanage mullvad-vpn
+unmanage mullvad
+unmanage tint2
+unmanage dzen2
+unmanage xmobar
+unmanage sdlmame
+unmanage mame
+unmanage neverball
+#unmanage gcolor2
+unmanage steam
+unmanage tallowmere
+unmanage deluge
+#>
+#< binds: applications
+#bind c exec urxvt -name uxterm +sb -fg white -bg black
+bind c exec urxvt -name sid -fg white -bg black
+bind C exec kitty
+bind v exec urxvt -name sid -bg '#121212' -fg '#bbaaaa'
+bind x exec urxvt -name sid -fn 'xft:Terminus:pixelsize=14'
+bind X exec xterm -name XTerm
+bind e exec rp-runorraise firefox
+
+
+bind Tab focuslast
+
+unbind n
+bind n exec ratpoison -c "echo `mpc prev | head -1`"
+bind p exec ratpoison -c "echo `mpc next | head -1`"
+bind o exec mpc toggle
+
+#bind o exec np
+bind 0 exec ratpoison -c "echo ´~/bin/knnp´"
+bind 9 exec sconsify -command play_pause
+
+#< top level XF86 binds
+definekey top XF86AudioRaiseVolume  exec amixer -c 0 set Master 2dB+
+definekey top XF86AudioLowerVolume  exec amixer -c 0 set Master 2dB-
+definekey top XF86AudioMute         exec amixer -c 0 set Master mute
+definekey top XF86Calculator        exec amixer -c 0 set Master unmute
+definekey top XF86Mail              exec nestopia -dpu ~/emu/nes/castlevania.nes
+definekey top XF86HomePage          exec nestopia -dpu ~/emu/nes/castlevania3.nes
+#definekey top Menu
+#>
+
+unbind space
+bind   space exec ratpoison -c "echo `mpc | head -1`"
+
+unbind w
+unbind g
+bind w exec sh ~/dev/ratpoison_scripts/window-menu/window-menu
+bind g exec ~/dev/utils/rp-groups-menu
+#>
+#< binds: window management
+bind H exchangeleft
+bind J exchangedown
+bind K exchangeup
+bind L exchangeright
+
+bind h focusleft
+bind j focusdown
+bind k focusup
+bind l focusright
+
+bind C-K kill
+
+bind C-s split 2/3
+bind C-S hsplit 2/3
+
+bind u undo
+bind G vmove
+
+bind Tab focuslast
+bind ISO_Left_Tab focus
+
+bind Delete exec catpoison -c 'gmove crap' -c 'next'
+
+#bind s-n gnext
+#bind s-p gprev
+#bind s-c gnew
+#bind s-g gnew
+#>
+#< binds: workspaces
+#exec rpws init 5 -k
+#gnewbg one
+#gnewbg two
+#gnewbg three
+#gnewbg four
+#
+#definekey top F1 exec rpws 1
+#definekey top F2 exec rpws 2
+#definekey top F3 exec rpws 3
+#definekey top F4 exec rpws 4
+#definekey top F5 exec rpws 5
+
+
+
+#>
+#< binds: top level
+definekey top Pause       exec ~/dev/utils/monitor-toggle && echo 'screensaver disabled'
+definekey top Scroll_Lock exec xscreensaver-command -lock
+definekey top M-Return    nextscreen
+definekey top s-Return    prevscreen
+#>
+
+# act normal, but prevent firefox from raising itself
+# when links are opened from other applications
+rudeness 12
+
+#< init
+## start spotify unless it's already started
+#exec pgrep -l spotify || spotify
+#exec pgrep -l cantata || cantata
+exec pgrep -l nicotine || nicotine
+#prevscreen
+#exec urxvt -name sid -fg white -bg black
+#>
+
+gnewbg crap
+
+#echo ratpoisonrc loaded.
+```
+
 # rwstauner
 `https://github.com/rwstauner/run_control/blob/master/archive/.ratpoisonrc`
 ```
