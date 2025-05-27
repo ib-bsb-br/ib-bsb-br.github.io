@@ -1,5 +1,6 @@
 ---
-tags: [aid>software>linux]
+tags:
+- aid>software>linux
 info: aberto.
 date: 2025-02-28
 type: post
@@ -7,8 +8,9 @@ layout: post
 published: true
 slug: fileserver
 title: '`simple-fileserver` on RK3588'
+comment: https://github.com/heathcliff26/simple-fileserver
 ---
-bibref https://github.com/heathcliff26/simple-fileserver
+
 
 ## 1. Introduction
 
