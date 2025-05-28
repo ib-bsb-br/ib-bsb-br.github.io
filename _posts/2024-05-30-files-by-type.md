@@ -118,7 +118,7 @@ The `--organize-by` option accepts the following values:
 * `category`: Organizes files into subfolders named by category, based on file extension mapping (default).
 * `extension`: Organizes files into subfolders named directly by their file extension (e.g., `.txt`, `.jpg`).
 
-## Usage Examples
+## Usage Examples `rust_file_organizer -s /home/linaro/Downloads/2rust/ -t /home/linaro/Downloads/ --organize-by extension --move-files --include-hidden --follow-links --timestamp-duplicates --remove-empty-source-dirs`
 
 *(Remember to replace `YourUser`, `C:\Path\To\Source`, etc., with your actual paths. Examples use the debug build path.)*
 
