@@ -7,6 +7,175 @@ type: post
 layout: post
 ---
 
+# python script to rename files without extensions by mime-type
+
+```python
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+import os
+import argparse
+import filetype # Assumes the h2non/filetype.py library is installed or in PYTHONPATH
+
+def rename_files_in_directory(directory_path, dry_run=False, verbose=False, recursive=False, lowercase_ext=False):
+    """
+    Scans a directory (and optionally subdirectories) for files without extensions
+    and renames them based on their detected file type using the 'filetype' library.
+
+    Args:
+        directory_path (str): The path to the directory to scan.
+        dry_run (bool): If True, simulate renaming without actual changes.
+        verbose (bool): If True, print more detailed output.
+        recursive (bool): If True, process files in subdirectories as well.
+        lowercase_ext (bool): If True, convert detected extensions to lowercase.
+    """
+    if not os.path.isdir(directory_path):
+        print(f"Error: Directory not found at '{directory_path}'")
+        return
+
+    if verbose:
+        print(f"Scanning {'recursively ' if recursive else ''}in directory: '{directory_path}'")
+        if dry_run:
+            print("DRY RUN MODE: No files will actually be renamed.")
+        if lowercase_ext:
+            print("Extensions will be converted to lowercase.")
+
+    renamed_count = 0
+    type_unknown_skipped_count = 0
+    target_exists_skipped_count = 0
+    error_count = 0
+    processed_files_count = 0
+    already_has_ext_skipped_count = 0
+
+    # Prepare file iteration
+    files_to_process = []
+    if recursive:
+        for root, _, files_in_current_dir in os.walk(directory_path):
+            for filename in files_in_current_dir:
+                files_to_process.append(os.path.join(root, filename))
+    else:
+        for filename in os.listdir(directory_path):
+            # Construct full path for files in the immediate directory
+            full_path = os.path.join(directory_path, filename)
+            files_to_process.append(full_path)
+
+    for original_filepath in files_to_process:
+        processed_files_count += 1
+        # Extract directory and filename for constructing new path later
+        current_dir = os.path.dirname(original_filepath)
+        filename = os.path.basename(original_filepath)
+
+        if not os.path.isfile(original_filepath):
+            if verbose:
+                print(f"Skipping '{original_filepath}': Not a regular file.")
+            continue
+
+        name_part, ext_part = os.path.splitext(filename)
+
+        if not ext_part:  # Process only if the file has no apparent extension
+            if verbose:
+                print(f"\nProcessing '{original_filepath}': Appears to have no extension.")
+            
+            try:
+                kind = filetype.guess(original_filepath)
+
+                if kind is not None and kind.extension:
+                    new_extension = kind.extension
+                    # Ensure the new extension doesn't start with a dot
+                    if new_extension.startswith('.'):
+                        new_extension = new_extension[1:]
+                    
+                    if lowercase_ext:
+                        new_extension = new_extension.lower()
+                    
+                    # name_part from splitext already contains the full name if no extension
+                    # e.g. "myfile" -> name_part="myfile"; ".bashrc" -> name_part=".bashrc"
+                    new_filename = f"{name_part}.{new_extension}"
+                    new_filepath = os.path.join(current_dir, new_filename)
+
+                    if verbose:
+                        print(f"  Detected type: {kind.mime}, Suggested extension: '{new_extension}'")
+                        print(f"  Proposed new name: '{new_filename}'")
+
+                    if os.path.exists(new_filepath):
+                        print(f"  Warning: Target file '{new_filepath}' already exists. Skipping rename of '{filename}'.")
+                        target_exists_skipped_count += 1
+                        continue
+
+                    if not dry_run:
+                        os.rename(original_filepath, new_filepath)
+                        print(f"  Renamed '{filename}' in '{current_dir}' to '{new_filename}'")
+                        renamed_count += 1
+                    else:
+                        print(f"  DRY RUN: Would rename '{filename}' in '{current_dir}' to '{new_filename}'")
+                        renamed_count += 1 # Count as if it were renamed for dry run summary
+                else:
+                    if verbose:
+                        print(f"  Could not determine type or extension for '{filename}'. Skipping.")
+                    type_unknown_skipped_count += 1
+            except Exception as e:
+                print(f"  Error processing '{filename}': {e}")
+                error_count += 1
+        else:
+            if verbose:
+                print(f"Skipping '{original_filepath}': Already has an extension ('{ext_part}').")
+            already_has_ext_skipped_count +=1
+
+    print("\n--- Summary ---")
+    print(f"Total files/items scanned or encountered: {processed_files_count}")
+    if dry_run:
+        print(f"Files that would be renamed: {renamed_count}")
+    else:
+        print(f"Files successfully renamed: {renamed_count}")
+    print(f"Files skipped (already had extension): {already_has_ext_skipped_count}")
+    print(f"Files skipped (type unknown/no suggested extension): {type_unknown_skipped_count}")
+    print(f"Files skipped (target filename already exists): {target_exists_skipped_count}")
+    print(f"Errors encountered during processing: {error_count}")
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Rename files without extensions in a directory based on their detected type. Uses h2non/filetype.py.",
+        formatter_class=argparse.RawTextHelpFormatter
+    )
+    parser.add_argument(
+        "directory",
+        help="The path to the directory containing files to rename."
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Simulate renaming and show what changes would be made without actually modifying any files."
+    )
+    parser.add_argument(
+        "-v", "--verbose",
+        action="store_true",
+        help="Enable verbose output, showing more details about the process."
+    )
+    parser.add_argument(
+        "-r", "--recursive",
+        action="store_true",
+        help="Process files in subdirectories recursively."
+    )
+    parser.add_argument(
+        "--lowercase-ext",
+        action="store_true",
+        help="Convert detected extensions to lowercase."
+    )
+
+    args = parser.parse_args()
+
+    rename_files_in_directory(
+        args.directory, 
+        args.dry_run, 
+        args.verbose, 
+        args.recursive, 
+        args.lowercase_ext
+    )
+
+if __name__ == "__main__":
+    main()
+```
+
 # Rust approach
 
 ## Prerequisites
