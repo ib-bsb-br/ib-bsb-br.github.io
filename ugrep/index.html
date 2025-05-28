@@ -67,7 +67,7 @@
         
           <span class="post-updated">
             ↣
-            <time datetime="2025-05-28T11:18:59+00:00">
+            <time datetime="2025-05-28T12:56:27+00:00">
               28 May 2025
             </time>
           </span>
@@ -90,11 +90,11 @@
         <div class="page-stats mt-3" role="status" aria-label="Page statistics">
       
       <span class="badge bg-primary">
-        122664 characters
+        140548 characters
       </span>
         <span class="separator mx-2" aria-hidden="true">•</span>
         <span class="badge bg-primary">
-        15911 words
+        17192 words
       </span>
       </div>
         <div class="action-buttons d-flex flex-wrap gap-2">
@@ -1088,508 +1088,1118 @@ For the most current documentation, examples, and news, refer to the official ug
 # --- Script Configuration ---
 # Base directory for all outputs of this batch search run.
 # A timestamp is included to ensure uniqueness for multiple runs.
-MASTER_OUTPUT_ROOT=&quot;./batch_search_run_$(date +%Y%m%d_%H%M%S)&quot;
+MASTER_OUTPUT_ROOT_DEFAULT=&quot;./batch_search_run_$(date +%Y%m%d_%H%M%S)&quot;
+MASTER_OUTPUT_ROOT=&quot;$MASTER_OUTPUT_ROOT_DEFAULT&quot; # Can be overridden by --config-file or -o
 ALL_RESULTS_PARENT_DIR=&quot;${MASTER_OUTPUT_ROOT}/search_results&quot;
 ALL_LOGS_PARENT_DIR=&quot;${MASTER_OUTPUT_ROOT}/search_logs&quot;
 MASTER_LOG_FILE=&quot;${MASTER_OUTPUT_ROOT}/master_orchestrator_log.txt&quot;
+SUMMARY_REPORT_FILE=&quot;${MASTER_OUTPUT_ROOT}/summary_report.txt&quot;
 
 # OCR Configuration (if uncommented and used)
 # OCR_BASE_TEMP_DIR=&quot;/tmp/ocr_temp_area&quot; # Base for unique OCR temporary directories
 
 # Concurrency Configuration
-MAX_CONCURRENT_JOBS=${MAX_CONCURRENT_JOBS:-$(nproc --all || echo 7)} # Default to number of processors or 4
-active_jobs=0
+MAX_CONCURRENT_JOBS_DEFAULT=$(nproc --all 2&gt;/dev/null || echo 7) # Default to number of processors or 7
+MAX_CONCURRENT_JOBS=&quot;$MAX_CONCURRENT_JOBS_DEFAULT&quot; # Can be overridden
+
+# Retry Configuration
+MAX_RETRIES_DEFAULT=1 # Default to 1 attempt (0 actual retries). Set to &gt;1 for retries.
+MAX_RETRIES=&quot;$MAX_RETRIES_DEFAULT&quot;
+RETRY_DELAY_SECONDS_DEFAULT=5
+RETRY_DELAY_SECONDS=&quot;$RETRY_DELAY_SECONDS_DEFAULT&quot;
 
 # --- ugrep Configuration ---
-UGREP_CMD=&quot;ug+&quot; # or &quot;ug&quot; if ugrep filters are globally configured (e.g. in ~/.ugrep)
-UGREP_OPTS_BASE=&quot;-r -i -l&quot; # Recursive, case-insensitive, list filenames
-UGREP_OPTS_ARCHIVES=&quot;-z&quot;   # Search archives
-# UGREP_OPTS_INDEX=&quot;--index&quot; # Add this if you have pre-built ugrep indexes for search directories
+UGREP_CMD_DEFAULT=&quot;ug+&quot;
+UGREP_CMD=&quot;$UGREP_CMD_DEFAULT&quot;
+UGREP_OPTS_BASE_DEFAULT=&quot;-r -i -l&quot; # Recursive, case-insensitive, list filenames
+UGREP_OPTS_BASE=() # Initialize as array for robust option handling
+UGREP_OPTS_ARCHIVES_DEFAULT=&quot;-z&quot;   # Search archives
+UGREP_OPTS_ARCHIVES=()
+UGREP_OPTS_INDEX_DEFAULT=&quot;&quot; # Example: &quot;--index&quot;
+UGREP_OPTS_INDEX=()
 
-# --- Search Targets ---
-declare -a SEARCH_LOCATIONS=(
+# --- Search Targets (Defaults, can be overridden by external files) ---
+declare -a SEARCH_LOCATIONS_DEFAULT=(
     &quot;/mnt/external_hdd/pdf/&quot;
     &quot;/mnt/external_hdd/0000000000000000001/&quot;
-    &quot;/mnt/external_hdd/7z/&quot;
-    &quot;/mnt/external_hdd/apk/&quot;
-    &quot;/mnt/external_hdd/aux/&quot;
-    &quot;/mnt/external_hdd/bak/&quot;
-    &quot;/mnt/external_hdd/bcf/&quot;
-    &quot;/mnt/external_hdd/bib/&quot;
-    &quot;/mnt/external_hdd/cab/&quot;
-    &quot;/mnt/external_hdd/crate/&quot;
-    &quot;/mnt/external_hdd/cs/&quot;
-    &quot;/mnt/external_hdd/csv/&quot;
-    &quot;/mnt/external_hdd/dat/&quot;
-    &quot;/mnt/external_hdd/db/&quot;
-    &quot;/mnt/external_hdd/db3/&quot;
-    &quot;/mnt/external_hdd/dic/&quot;
-    &quot;/mnt/external_hdd/dll/&quot;
-    &quot;/mnt/external_hdd/dmp/&quot;
-    &quot;/mnt/external_hdd/docx/&quot;
-    &quot;/mnt/external_hdd/gz/&quot;
-    &quot;/mnt/external_hdd/h/&quot;
-    &quot;/mnt/external_hdd/iso/&quot;
-    &quot;/mnt/external_hdd/jar/&quot;
-    &quot;/mnt/external_hdd/json/&quot;
-    &quot;/mnt/external_hdd/jsonl/&quot;
-    &quot;/mnt/external_hdd/log/&quot;
-    &quot;/mnt/external_hdd/md/&quot;
-    &quot;/mnt/external_hdd/mobi/&quot;
-    &quot;/mnt/external_hdd/model/&quot;
-    &quot;/mnt/external_hdd/mov/&quot;
-    &quot;/mnt/external_hdd/mp4/&quot;
-    &quot;/mnt/external_hdd/no_extension/&quot;
-    &quot;/mnt/external_hdd/ods/&quot;
+    # Add more default locations as needed
 )
-
-declare -a SEARCH_QUERIES=(
+declare -a SEARCH_QUERIES_DEFAULT=(
     &quot;jurime&quot;
     &quot;sociolo&quot;
-    &quot;quantifica&quot;
-    &quot;tcc&quot;
-    &quot;gingko&quot;
+    # Add more default queries as needed
 )
 
-# --- Utility Functions ---
+declare -a SEARCH_LOCATIONS=()
+declare -a SEARCH_QUERIES=()
 
-# Master log function
+# External Configuration File Paths
+LOCATIONS_FILE_ARG=&quot;&quot;
+QUERIES_FILE_ARG=&quot;&quot;
+CONFIG_FILE_ARG=&quot;&quot;
+
+
+# --- Utility Functions ---
 master_log() {
     echo &quot;$(date &#39;+%Y-%m-%d %H:%M:%S&#39;) [MASTER] - $1&quot; | tee -a &quot;$MASTER_LOG_FILE&quot;
 }
 
-# Function to sanitize path components for use in filenames/directory names
 sanitize_for_path() {
     echo &quot;$1&quot; | sed &#39;s#^/*##;s#/*$##;s#/#_#g&#39; | tr &#39; &#39; &#39;_&#39; | sed &#39;s/[^a-zA-Z0-9_-]/_/g&#39;
 }
 
-# --- Search Task Function ---
-# This function performs a single search task for a given location and query.
-# It&#39;s designed to be run in the background.
-perform_search_task() {
-    local search_dir_param=&quot;$1&quot;
-    local query_param=&quot;$2&quot;
-    local task_id_suffix=&quot;$3&quot; # Unique suffix for this task (e.g., from PID or counter)
+# Initialize ugrep option arrays from default strings
+# This allows defaults to be simple strings but used as arrays internally
+# Users can override these arrays directly in a config file if they prefer array syntax
+read -r -a UGREP_OPTS_BASE &lt;&lt;&lt; &quot;$UGREP_OPTS_BASE_DEFAULT&quot;
+read -r -a UGREP_OPTS_ARCHIVES &lt;&lt;&lt; &quot;$UGREP_OPTS_ARCHIVES_DEFAULT&quot;
+if [ -n &quot;$UGREP_OPTS_INDEX_DEFAULT&quot; ]; then
+    read -r -a UGREP_OPTS_INDEX &lt;&lt;&lt; &quot;$UGREP_OPTS_INDEX_DEFAULT&quot;
+fi
 
-    # Sanitize parameters for path creation
-    local sane_loc_part=$(sanitize_for_path &quot;$(basename &quot;$search_dir_param&quot;)&quot;)
-    if [ -z &quot;$sane_loc_part&quot; ]; then # Handle cases like &quot;/&quot; if ever passed
-        sane_loc_part=&quot;root&quot;
+
+validate_commands() {
+    local all_found=true
+    # Use $UGREP_CMD which might have been updated by config
+    local first_word_ugrep_cmd=&quot;${UGREP_CMD%% *}&quot;
+    for cmd_name in &quot;$first_word_ugrep_cmd&quot; &quot;nproc&quot; &quot;date&quot; &quot;tee&quot; &quot;sed&quot; &quot;tr&quot; &quot;wc&quot; &quot;grep&quot; &quot;cut&quot; &quot;basename&quot; &quot;mkdir&quot; &quot;rm&quot; &quot;sleep&quot; &quot;kill&quot;; do
+        if ! command -v &quot;$cmd_name&quot; &gt;/dev/null 2&gt;&amp;1; then
+            master_log &quot;ERROR: Required command &#39;$cmd_name&#39; not found in PATH.&quot;
+            all_found=false
+        fi
+    done
+    if [ &quot;$all_found&quot; = false ]; then
+        master_log &quot;FATAL: One or more required commands are missing. Please install them and ensure they are in your PATH. Exiting.&quot;
+        exit 1
     fi
+    master_log &quot;All required commands are available.&quot;
+}
+
+validate_search_locations() {
+    local valid_locations=()
+    local invalid_locations_count=0
+    if [ ${#SEARCH_LOCATIONS[@]} -eq 0 ]; then
+        master_log &quot;ERROR: No search locations defined. Please provide locations. Exiting.&quot;
+        exit 1
+    fi
+    master_log &quot;Validating ${#SEARCH_LOCATIONS[@]} search locations...&quot;
+    for loc_with_opts in &quot;${SEARCH_LOCATIONS[@]}&quot;; do
+        local loc=&quot;${loc_with_opts%%:::*}&quot; # Extract path part for validation
+        if [ -z &quot;$loc&quot; ]; then # Skip empty lines if they somehow get here
+            master_log &quot;WARNING: Encountered empty location string. Skipping.&quot;
+            invalid_locations_count=$((invalid_locations_count + 1))
+            continue
+        fi
+        if [ ! -e &quot;$loc&quot; ]; then
+            master_log &quot;WARNING: Search location &#39;$loc&#39; does not exist. Skipping.&quot;
+            invalid_locations_count=$((invalid_locations_count + 1))
+        elif [ ! -r &quot;$loc&quot; ]; then
+            master_log &quot;WARNING: Search location &#39;$loc&#39; is not readable. Skipping.&quot;
+            invalid_locations_count=$((invalid_locations_count + 1))
+        elif [ ! -d &quot;$loc&quot; ]; then # Check if it&#39;s a directory
+             master_log &quot;WARNING: Search location &#39;$loc&#39; is not a directory. Skipping.&quot;
+            invalid_locations_count=$((invalid_locations_count + 1))
+        else
+            valid_locations+=(&quot;$loc_with_opts&quot;)
+        fi
+    done
+    SEARCH_LOCATIONS=(&quot;${valid_locations[@]}&quot;)
+    if [ ${#SEARCH_LOCATIONS[@]} -eq 0 ]; then
+        master_log &quot;FATAL: No valid and readable search locations remaining after validation. Exiting.&quot;
+        exit 1
+    fi
+    if [ &quot;$invalid_locations_count&quot; -gt 0 ]; then
+         master_log &quot;INFO: Skipped $invalid_locations_count invalid or unreadable locations.&quot;
+    fi
+    master_log &quot;Proceeding with ${#SEARCH_LOCATIONS[@]} valid search locations.&quot;
+}
+
+# Summary Reporting Variables
+tasks_succeeded=0
+tasks_failed=0
+tasks_no_match=0
+total_matching_files=0
+declare -a failed_tasks_details=()
+
+# Advanced Concurrency - PID tracking map
+declare -A pid_task_info_map # PID to &quot;Query: X, Location: Y, Log: Z, Results: R, TaskIdentifier: TID&quot;
+
+process_job_completion() {
+    local pid=&quot;$1&quot;
+    local job_actual_exit_status=&quot;$2&quot; # This is the exit status of perform_search_task
+    local task_info_str=&quot;${pid_task_info_map[&quot;$pid&quot;]}&quot;
+
+    if [ -z &quot;$task_info_str&quot; ]; then
+        master_log &quot;WARN: No task info found for completed PID $pid. Cannot process its completion for summary.&quot;
+        return
+    fi
+
+    local task_log_file=$(echo &quot;$task_info_str&quot; | grep -o &#39;Log: [^,]*&#39; | cut -d&#39; &#39; -f2)
+    local results_file=$(echo &quot;$task_info_str&quot; | grep -o &#39;Results: [^,]*&#39; | cut -d&#39; &#39; -f2)
+    # local task_identifier_from_map=$(echo &quot;$task_info_str&quot; | grep -o &#39;TaskIdentifier: [^,]*&#39; | cut -d&#39; &#39; -f2)
+
+    if [ &quot;$job_actual_exit_status&quot; -eq 0 ]; then # perform_search_task succeeded (meaning ugrep eventually succeeded)
+        if [ -f &quot;$results_file&quot; ] &amp;&amp; [ -s &quot;$results_file&quot; ]; then
+            tasks_succeeded=$((tasks_succeeded + 1))
+            local matches_in_task
+            matches_in_task=$(wc -l &lt; &quot;$results_file&quot;)
+            total_matching_files=$((total_matching_files + matches_in_task))
+        else # ugrep succeeded but found no matches (or results file was removed)
+            tasks_no_match=$((tasks_no_match + 1))
+        fi
+    else # perform_search_task failed (meaning ugrep ultimately failed after retries)
+        tasks_failed=$((tasks_failed + 1))
+        failed_tasks_details+=(&quot;Task for ${task_info_str} FAILED (script exit: $job_actual_exit_status). Check log: $task_log_file&quot;)
+    fi
+    unset pid_task_info_map[&quot;$pid&quot;]
+}
+
+perform_search_task() {
+    local search_param_full=&quot;$1&quot;
+    local query_param_full=&quot;$2&quot;
+    local task_unique_id=&quot;$3&quot; # A unique ID for this specific task instance, e.g. &quot;task_N&quot;
+
+    local search_dir_param=&quot;${search_param_full%%:::*}&quot;
+    local task_specific_loc_opts_str=&quot;${search_param_full#*:::}&quot;
+    if [ &quot;$task_specific_loc_opts_str&quot; = &quot;$search_dir_param&quot; ]; then # No ::: found or empty opts
+        task_specific_loc_opts_str=&quot;&quot;
+    fi
+
+    local query_param=&quot;${query_param_full%%:::*}&quot;
+    local task_specific_query_opts_str=&quot;${query_param_full#*:::}&quot;
+    if [ &quot;$task_specific_query_opts_str&quot; = &quot;$query_param&quot; ]; then # No ::: found or empty opts
+        task_specific_query_opts_str=&quot;&quot;
+    fi
+
+    local sane_loc_part=$(sanitize_for_path &quot;$(basename &quot;$search_dir_param&quot;)&quot;)
+    if [ -z &quot;$sane_loc_part&quot; ]; then sane_loc_part=&quot;root&quot;; fi
     local sane_query_part=$(sanitize_for_path &quot;$query_param&quot;)
+    local task_identifier_fs=&quot;loc_${sane_loc_part}_query_${sane_query_part}_${task_unique_id}&quot; # Filesystem-safe identifier
 
-    local task_identifier=&quot;loc_${sane_loc_part}_query_${sane_query_part}&quot;
+    local task_results_dir=&quot;${ALL_RESULTS_PARENT_DIR}/${task_identifier_fs}&quot;
+    local task_log_file=&quot;${ALL_LOGS_PARENT_DIR}/log_${task_identifier_fs}.txt&quot;
 
-    # Define task-specific paths
-    local task_results_dir=&quot;${ALL_RESULTS_PARENT_DIR}/${task_identifier}&quot;
-    local task_log_file=&quot;${ALL_LOGS_PARENT_DIR}/log_${task_identifier}.txt&quot;
-    # local task_ocr_temp_dir=&quot;${OCR_BASE_TEMP_DIR}/${task_identifier}_${task_id_suffix}&quot; # If using OCR
-
-    # Ensure task-specific directories exist
     mkdir -p &quot;$task_results_dir&quot;
-    # mkdir -p &quot;$task_ocr_temp_dir&quot; # Uncomment if using OCR
 
-    # Task-specific log function
-    task_log() {
-        echo &quot;$(date &#39;+%Y-%m-%d %H:%M:%S&#39;) [TASK: ${task_identifier}] - $1&quot; &gt;&gt; &quot;$task_log_file&quot;
+    # Local task_log function to avoid issues with export -f and global state
+    _task_log_internal() {
+        echo &quot;$(date &#39;+%Y-%m-%d %H:%M:%S&#39;) [TASK: ${task_identifier_fs}] - $1&quot; &gt;&gt; &quot;$task_log_file&quot;
     }
 
-    # Start task logging
-    echo &quot;--- Log for Query: &#39;$query_param&#39; in Location: &#39;$search_dir_param&#39; (Task ID Suffix: $task_id_suffix) ---&quot; &gt; &quot;$task_log_file&quot;
-    task_log &quot;Starting search task.&quot;
-    task_log &quot;Results will be in: $task_results_dir&quot;
-    task_log &quot;Full log at: $task_log_file&quot;
+    echo &quot;--- Log for Query: &#39;$query_param&#39; in Location: &#39;$search_dir_param&#39; (ID: ${task_identifier_fs}) ---&quot; &gt; &quot;$task_log_file&quot;
+    _task_log_internal &quot;Raw location spec: &#39;$search_param_full&#39;&quot;
+    _task_log_internal &quot;Raw query spec: &#39;$query_param_full&#39;&quot;
+    _task_log_internal &quot;Parsed location-specific ugrep opts: &#39;$task_specific_loc_opts_str&#39;&quot;
+    _task_log_internal &quot;Parsed query-specific ugrep opts: &#39;$task_specific_query_opts_str&#39;&quot;
+    _task_log_internal &quot;Results will be in: $task_results_dir&quot;
+    _task_log_internal &quot;Full log at: $task_log_file&quot;
 
-    # Define search paths for this task. Default is just the search directory.
     local current_search_paths=&quot;$search_dir_param&quot;
-
-    # --- Optional: OCR Pre-processing Step (Commented Out) ---
-    # If uncommented, ensure &#39;pdftotext&#39; and &#39;tesseract&#39; are installed.
-    # The OCR logic here is a basic placeholder and may need significant enhancement
-    # for robust error handling, efficiency, and accuracy in a real-world scenario.
-    # Consider that OCR is CPU-intensive and will impact overall performance.
-    #
-    # task_log &quot;OCR pre-processing (if applicable)...&quot;
-    # find &quot;$search_dir_param&quot; -type f -iname &quot;*.pdf&quot; -print0 | while IFS= read -r -d $&#39;\0&#39; pdf_file; do
-    #   # Basic heuristic: if pdftotext extracts very little, assume it might need OCR
-    #   # This heuristic is very basic and might misclassify PDFs.
-    #   text_content_check=$(pdftotext &quot;$pdf_file&quot; -enc UTF-8 - | tr -d &#39;[:space:]&#39;)
-    #   if [ ${#text_content_check} -lt 100 ]; then # Arbitrary threshold
-    #     task_log &quot;Potential scanned PDF (or PDF with minimal text): $pdf_file. Attempting OCR.&quot;
-    #     ocr_output_basename=$(basename &quot;$pdf_file&quot; .pdf)
-    #     # Ensure unique output name for OCRed text file, placed in task-specific OCR temp dir
-    #     # tesseract &quot;$pdf_file&quot; &quot;${task_ocr_temp_dir}/${ocr_output_basename}&quot; -l eng &gt;&gt; &quot;$task_log_file&quot; 2&gt;&amp;1
-    #     # if [ $? -eq 0 ]; then
-    #     #   task_log &quot;OCR successful for $pdf_file&quot;
-    #     # else
-    #     #   task_log &quot;OCR failed for $pdf_file&quot;
-    #     # fi
-    #   fi
-    # done
-    # task_log &quot;OCR pre-processing finished.&quot;
-    # # If OCR was performed, add the directory with OCRed text files to the search paths:
-    # # current_search_paths=&quot;$search_dir_param $task_ocr_temp_dir&quot;
-    # --- End of Optional OCR Section ---
-
     local output_file_matches=&quot;$task_results_dir/matches.txt&quot;
     
-    task_log &quot;Executing ugrep: $UGREP_CMD $UGREP_OPTS_BASE $UGREP_OPTS_ARCHIVES \&quot;$query_param\&quot; $current_search_paths&quot;
+    local ugrep_cmd_to_run=()
+    read -r -a ugrep_cmd_base_array &lt;&lt;&lt; &quot;$UGREP_CMD&quot; # Handle if UGREP_CMD itself has args
+    ugrep_cmd_to_run+=(&quot;${ugrep_cmd_base_array[@]}&quot;)
+    ugrep_cmd_to_run+=(&quot;${UGREP_OPTS_BASE[@]}&quot;)
+    ugrep_cmd_to_run+=(&quot;${UGREP_OPTS_ARCHIVES[@]}&quot;)
+    ugrep_cmd_to_run+=(&quot;${UGREP_OPTS_INDEX[@]}&quot;)
 
-    # Execute ugrep. Redirect stderr to task log.
-    # Add $UGREP_OPTS_INDEX to the command below if you are using indexed search.
-    if $UGREP_CMD $UGREP_OPTS_BASE $UGREP_OPTS_ARCHIVES &quot;$query_param&quot; $current_search_paths &gt; &quot;$output_file_matches&quot; 2&gt;&gt; &quot;$task_log_file&quot;; then
-        if [ -s &quot;$output_file_matches&quot; ]; then
-            task_log &quot;SUCCESS: Matches found. Results are in $output_file_matches&quot;
-        else
-            task_log &quot;INFO: No matches found.&quot;
-            rm &quot;$output_file_matches&quot; # Optional: remove empty result files
-        fi
-    else
-        local ugrep_exit_code=$?
-        task_log &quot;ERROR: ugrep command failed with exit code $ugrep_exit_code.&quot;
-        # Optionally remove the output file if ugrep failed, as it might be empty or incomplete
-        # rm -f &quot;$output_file_matches&quot;
+    # Add task-specific options, parsed from strings
+    local temp_opts_array=()
+    if [ -n &quot;$task_specific_loc_opts_str&quot; ]; then
+        read -r -a temp_opts_array &lt;&lt;&lt; &quot;$task_specific_loc_opts_str&quot;
+        ugrep_cmd_to_run+=(&quot;${temp_opts_array[@]}&quot;)
     fi
+    if [ -n &quot;$task_specific_query_opts_str&quot; ]; then
+        read -r -a temp_opts_array &lt;&lt;&lt; &quot;$task_specific_query_opts_str&quot;
+        ugrep_cmd_to_run+=(&quot;${temp_opts_array[@]}&quot;)
+    fi
+
+    ugrep_cmd_to_run+=(&quot;$query_param&quot; &quot;$current_search_paths&quot;)
     
-    task_log &quot;Search task finished.&quot;
-    # rm -rf &quot;$task_ocr_temp_dir&quot; # Uncomment if using OCR and want to clean up temp OCR files
+    local retries_done=0
+    local ugrep_final_exit_code=1 # Assume failure initially
+    
+    while [ &quot;$retries_done&quot; -le &quot;$MAX_RETRIES&quot; ]; do
+        if [ &quot;$retries_done&quot; -gt 0 ]; then # This means it&#39;s a retry attempt
+             _task_log_internal &quot;Retrying ugrep (attempt $((retries_done +1 ))/$((MAX_RETRIES + 1)))...&quot;
+             sleep &quot;$RETRY_DELAY_SECONDS&quot;
+        else # First attempt
+            _task_log_internal &quot;Executing ugrep (attempt 1/$((MAX_RETRIES + 1))): ${ugrep_cmd_to_run[*]}&quot;
+        fi
+
+        # Execute ugrep
+        if &quot;${ugrep_cmd_to_run[@]}&quot; &gt; &quot;$output_file_matches&quot; 2&gt;&gt; &quot;$task_log_file&quot;; then
+            ugrep_final_exit_code=0 # Success
+            if [ -s &quot;$output_file_matches&quot; ]; then
+                _task_log_internal &quot;SUCCESS (attempt $((retries_done + 1))): Matches found. Results are in $output_file_matches&quot;
+            else
+                _task_log_internal &quot;INFO (attempt $((retries_done + 1))): No matches found.&quot;
+                rm -f &quot;$output_file_matches&quot;
+            fi
+            break # Successful attempt, exit retry loop
+        else
+            ugrep_final_exit_code=$?
+            _task_log_internal &quot;ERROR (attempt $((retries_done + 1))): ugrep command failed with exit code $ugrep_final_exit_code.&quot;
+            # Placeholder for specific retryable error logic:
+            # if [[ &quot;$ugrep_final_exit_code&quot; -eq KNOWN_TRANSIENT_ERROR_CODE ]]; then
+            #   _task_log_internal &quot;Transient error detected, will retry if attempts remain.&quot;
+            # else
+            #   _task_log_internal &quot;Non-retryable error or unknown error, will not retry if this was the only attempt.&quot;
+            #   if [ &quot;$MAX_RETRIES&quot; -eq 0 ]; then break; fi # No retries configured for this error type
+            # fi
+            if [ &quot;$retries_done&quot; -ge &quot;$MAX_RETRIES&quot; ]; then
+                _task_log_internal &quot;ERROR: All $((MAX_RETRIES + 1)) attempts failed for ugrep command.&quot;
+                break # Max attempts reached
+            fi
+        fi
+        retries_done=$((retries_done + 1))
+    done
+    
+    _task_log_internal &quot;Search task finished with final ugrep exit code: $ugrep_final_exit_code.&quot;
+    return &quot;$ugrep_final_exit_code&quot;
 }
-export -f perform_search_task sanitize_for_path # Export functions for subshells if needed by `bash -c` or similar
+export -f perform_search_task sanitize_for_path # Export functions needed by subshells
+
+usage() {
+    echo &quot;Usage: $0 [options]&quot;
+    echo &quot;Options:&quot;
+    echo &quot;  --locations-file &lt;file&gt;  File containing search locations, one per line.&quot;
+    echo &quot;                           Format per line: /path/to/location[:::optional_ugrep_options_for_location]&quot;
+    echo &quot;  --queries-file &lt;file&gt;    File containing search queries, one per line.&quot;
+    echo &quot;                           Format per line: search_query_text[:::optional_ugrep_options_for_query]&quot;
+    echo &quot;  --config-file &lt;file&gt;     Bash script file to source for overriding default configurations.&quot;
+    echo &quot;                           (e.g., MAX_CONCURRENT_JOBS, UGREP_CMD, UGREP_OPTS_BASE array, etc.)&quot;
+    echo &quot;  -o &lt;dir&gt;                 Master output root directory (default: $MASTER_OUTPUT_ROOT_DEFAULT).&quot;
+    echo &quot;  -h, --help               Display this help message.&quot;
+    exit 0
+}
+
+# Simple argument parsing loop
+while [[ $# -gt 0 ]]; do
+    key=&quot;$1&quot;
+    case $key in
+        --locations-file) LOCATIONS_FILE_ARG=&quot;$2&quot;; shift; shift ;;
+        --queries-file) QUERIES_FILE_ARG=&quot;$2&quot;; shift; shift ;;
+        --config-file) CONFIG_FILE_ARG=&quot;$2&quot;; shift; shift ;;
+        -o|--output-dir) MASTER_OUTPUT_ROOT=&quot;$2&quot;; shift; shift ;;
+        -h|--help) usage ;;
+        *) echo &quot;Unknown option: $1&quot;; usage ;;
+    esac
+done
+
+# Re-derive paths if MASTER_OUTPUT_ROOT was changed by -o
+ALL_RESULTS_PARENT_DIR=&quot;${MASTER_OUTPUT_ROOT}/search_results&quot;
+ALL_LOGS_PARENT_DIR=&quot;${MASTER_OUTPUT_ROOT}/search_logs&quot;
+MASTER_LOG_FILE=&quot;${MASTER_OUTPUT_ROOT}/master_orchestrator_log.txt&quot;
+SUMMARY_REPORT_FILE=&quot;${MASTER_OUTPUT_ROOT}/summary_report.txt&quot;
 
 # --- Main Orchestration ---
+mkdir -p &quot;$ALL_RESULTS_PARENT_DIR&quot; || { echo &quot;FATAL: Could not create results parent dir &#39;$ALL_RESULTS_PARENT_DIR&#39;. Exiting.&quot; &gt;&amp;2; exit 1; }
+mkdir -p &quot;$ALL_LOGS_PARENT_DIR&quot;    || { echo &quot;FATAL: Could not create logs parent dir &#39;$ALL_LOGS_PARENT_DIR&#39;. Exiting.&quot; &gt;&amp;2; exit 1; }
 
-# Create base directories
-mkdir -p &quot;$ALL_RESULTS_PARENT_DIR&quot;
-if [ $? -ne 0 ]; then echo &quot;FATAL: Could not create results parent directory &#39;$ALL_RESULTS_PARENT_DIR&#39;. Exiting.&quot; &gt;&amp;2; exit 1; fi
-mkdir -p &quot;$ALL_LOGS_PARENT_DIR&quot;
-if [ $? -ne 0 ]; then echo &quot;FATAL: Could not create logs parent directory &#39;$ALL_LOGS_PARENT_DIR&#39;. Exiting.&quot; &gt;&amp;2; exit 1; fi
-# mkdir -p &quot;$OCR_BASE_TEMP_DIR&quot; # Uncomment if using OCR
-
-# Initialize master log
 echo &quot;--- Master Orchestrator Log ---&quot; &gt; &quot;$MASTER_LOG_FILE&quot;
 echo &quot;Run ID: $(basename &quot;$MASTER_OUTPUT_ROOT&quot;)&quot; &gt;&gt; &quot;$MASTER_LOG_FILE&quot;
 master_log &quot;Script started.&quot;
+
+if [ -n &quot;$CONFIG_FILE_ARG&quot; ]; then
+    if [ -f &quot;$CONFIG_FILE_ARG&quot; ]; then
+        master_log &quot;Sourcing external configuration from: $CONFIG_FILE_ARG&quot;
+        # shellcheck source=/dev/null
+        source &quot;$CONFIG_FILE_ARG&quot;
+        # Re-initialize option arrays if string versions were overridden by config
+        # Config file can directly set UGREP_OPTS_BASE as an array.
+        # If it sets UGREP_OPTS_BASE_DEFAULT (string), then re-parse:
+        if declare -p UGREP_OPTS_BASE_DEFAULT &amp;&gt;/dev/null &amp;&amp; ! declare -p UGREP_OPTS_BASE &amp;&gt;/dev/null; then
+             read -r -a UGREP_OPTS_BASE &lt;&lt;&lt; &quot;$UGREP_OPTS_BASE_DEFAULT&quot;
+        fi
+        if declare -p UGREP_OPTS_ARCHIVES_DEFAULT &amp;&gt;/dev/null &amp;&amp; ! declare -p UGREP_OPTS_ARCHIVES &amp;&gt;/dev/null; then
+             read -r -a UGREP_OPTS_ARCHIVES &lt;&lt;&lt; &quot;$UGREP_OPTS_ARCHIVES_DEFAULT&quot;
+        fi
+        if declare -p UGREP_OPTS_INDEX_DEFAULT &amp;&gt;/dev/null &amp;&amp; ! declare -p UGREP_OPTS_INDEX &amp;&gt;/dev/null; then
+            if [ -n &quot;$UGREP_OPTS_INDEX_DEFAULT&quot; ]; then read -r -a UGREP_OPTS_INDEX &lt;&lt;&lt; &quot;$UGREP_OPTS_INDEX_DEFAULT&quot;; else UGREP_OPTS_INDEX=(); fi
+        fi
+    else
+        master_log &quot;WARNING: Config file &#39;$CONFIG_FILE_ARG&#39; not found. Using default/script internal settings.&quot;
+    fi
+fi
+
 master_log &quot;Outputs will be stored under: $MASTER_OUTPUT_ROOT&quot;
 master_log &quot;Maximum concurrent jobs: $MAX_CONCURRENT_JOBS&quot;
-master_log &quot;Assumptions: ugrep (&#39;$UGREP_CMD&#39;) is installed. Read access to search locations. Write access to output directory.&quot;
-master_log &quot;For OCR (currently commented out): pdftotext and tesseract would be required.&quot;
+master_log &quot;Max retries per task: $MAX_RETRIES (actual attempts: $((MAX_RETRIES + 1))), Retry delay: $RETRY_DELAY_SECONDS seconds&quot;
+master_log &quot;ugrep command: &#39;$UGREP_CMD&#39;&quot;
+master_log &quot;Base ugrep options: &#39;${UGREP_OPTS_BASE[*]}&#39;&quot;
+master_log &quot;Archive ugrep options: &#39;${UGREP_OPTS_ARCHIVES[*]}&#39;&quot;
+master_log &quot;Index ugrep options: &#39;${UGREP_OPTS_INDEX[*]}&#39;&quot;
 
-total_tasks=0
-declare -a pids_list=() # To store PIDs of backgrounded tasks
+if [ -n &quot;$LOCATIONS_FILE_ARG&quot; ]; then
+    master_log &quot;Loading search locations from: $LOCATIONS_FILE_ARG&quot;
+    if [ -f &quot;$LOCATIONS_FILE_ARG&quot; ]; then
+        mapfile -t SEARCH_LOCATIONS &lt; &lt;(grep -v -e &#39;^\s*#&#39; -e &#39;^\s*$&#39; &quot;$LOCATIONS_FILE_ARG&quot;)
+    else
+        master_log &quot;ERROR: Locations file &#39;$LOCATIONS_FILE_ARG&#39; not found. Exiting.&quot;
+        exit 1
+    fi
+else
+    master_log &quot;Using default search locations defined in script.&quot;
+    SEARCH_LOCATIONS=(&quot;${SEARCH_LOCATIONS_DEFAULT[@]}&quot;)
+fi
+
+if [ -n &quot;$QUERIES_FILE_ARG&quot; ]; then
+    master_log &quot;Loading search queries from: $QUERIES_FILE_ARG&quot;
+    if [ -f &quot;$QUERIES_FILE_ARG&quot; ]; then
+        mapfile -t SEARCH_QUERIES &lt; &lt;(grep -v -e &#39;^\s*#&#39; -e &#39;^\s*$&#39; &quot;$QUERIES_FILE_ARG&quot;)
+    else
+        master_log &quot;ERROR: Queries file &#39;$QUERIES_FILE_ARG&#39; not found. Exiting.&quot;
+        exit 1
+    fi
+else
+    master_log &quot;Using default search queries defined in script.&quot;
+    SEARCH_QUERIES=(&quot;${SEARCH_QUERIES_DEFAULT[@]}&quot;)
+fi
+
+validate_commands
+validate_search_locations
+
+master_log &quot;Assumptions: Read access to search locations. Write access to output directory.&quot;
+
+total_tasks_launched=0
+current_active_jobs=0
 
 master_log &quot;Starting to launch search tasks...&quot;
 
-for location in &quot;${SEARCH_LOCATIONS[@]}&quot;; do
-    for query in &quot;${SEARCH_QUERIES[@]}&quot;; do
-        total_tasks=$((total_tasks + 1))
+for location_spec in &quot;${SEARCH_LOCATIONS[@]}&quot;; do
+    for query_spec in &quot;${SEARCH_QUERIES[@]}&quot;; do
+        total_tasks_launched=$((total_tasks_launched + 1))
+        task_unique_id_for_run=&quot;task${total_tasks_launched}&quot; # Simple unique ID for this run
 
-        # Manage concurrency: if max jobs are running, wait for one to finish
-        if [ &quot;$active_jobs&quot; -ge &quot;$MAX_CONCURRENT_JOBS&quot; ]; then
-            master_log &quot;Reached max concurrent jobs ($MAX_CONCURRENT_JOBS). Waiting for a slot...&quot;
-            wait -n # Waits for any background job to complete
-            if [ $? -eq 0 ]; then # Check if wait was successful (a job finished)
-                 active_jobs=$((active_jobs - 1))
-            else # wait -n can return &gt;128 if no children or interrupted by signal
-                 # This part might need more robust handling for different OS `wait -n` behaviors
-                 # For now, assume a job slot freed up or try to find finished jobs
-                 # A more robust way is to check specific PIDs, but `wait -n` is simpler for general load.
-                 # Let&#39;s just decrement optimistically or re-evaluate active PIDs.
-                 # For simplicity, we&#39;ll just decrement. A more complex solution would track PIDs carefully.
-                 active_jobs=$((active_jobs -1)) 
-                 if [ &quot;$active_jobs&quot; -lt 0 ]; then active_jobs=0; fi # Prevent negative
+        # Manage concurrency
+        while [ &quot;$current_active_jobs&quot; -ge &quot;$MAX_CONCURRENT_JOBS&quot; ]; do
+            master_log &quot;Reached max concurrent jobs ($current_active_jobs/$MAX_CONCURRENT_JOBS). Waiting for a slot...&quot;
+            
+            # Try to get PID of finished job using `wait -n -p` (Bash 4.3+)
+            # The `finished_pid_var_holder` is a dummy var for -p
+            local finished_pid=&quot;&quot;
+            if finished_pid=$(wait -n -p finished_pid_var_holder 2&gt;/dev/null &amp;&amp; echo &quot;$finished_pid_var_holder&quot;); then
+                local wait_n_p_exit_status=$? # Status of `wait -n -p ...` command itself
+                if [ -n &quot;$finished_pid&quot; ] &amp;&amp; [ &quot;$wait_n_p_exit_status&quot; -eq 0 ]; then
+                    wait &quot;$finished_pid&quot; # Ensure it&#39;s fully reaped
+                    local job_actual_exit_status=$?
+                    process_job_completion &quot;$finished_pid&quot; &quot;$job_actual_exit_status&quot;
+                    current_active_jobs=$((current_active_jobs - 1))
+                else
+                    # `wait -n -p` might have failed or returned no PID (e.g. interrupted)
+                    # Fallback: Check all known PIDs
+                    master_log &quot;WARN: &#39;wait -n -p&#39; did not yield a PID cleanly (status $wait_n_p_exit_status). Checking all active PIDs.&quot;
+                    local found_finished_job=0
+                    for pid_to_check in &quot;${!pid_task_info_map[@]}&quot;; do
+                        if ! kill -0 &quot;$pid_to_check&quot; 2&gt;/dev/null; then # If PID no longer exists
+                            wait &quot;$pid_to_check&quot; # Reap
+                            local fallback_job_status=$?
+                            process_job_completion &quot;$pid_to_check&quot; &quot;$fallback_job_status&quot;
+                            current_active_jobs=$((current_active_jobs - 1))
+                            found_finished_job=1
+                            break # Processed one, re-evaluate
+                        fi
+                    done
+                    if [ &quot;$found_finished_job&quot; -eq 0 ]; then
+                        master_log &quot;WARN: Fallback check found no finished jobs. `wait -n` might have been interrupted. Retrying wait.&quot;
+                        sleep 0.1 # Small delay before retrying wait
+                    fi
+                fi
+            else # `wait -n` (without -p) or `wait -n -p` failed more fundamentally
+                master_log &quot;WARN: &#39;wait -n&#39; command failed. Checking all active PIDs.&quot;
+                # Similar fallback as above
+                local found_finished_job_alt=0
+                for pid_to_check in &quot;${!pid_task_info_map[@]}&quot;; do
+                    if ! kill -0 &quot;$pid_to_check&quot; 2&gt;/dev/null; then
+                        wait &quot;$pid_to_check&quot;
+                        local fallback_job_status_alt=$?
+                        process_job_completion &quot;$pid_to_check&quot; &quot;$fallback_job_status_alt&quot;
+                        current_active_jobs=$((current_active_jobs - 1))
+                        found_finished_job_alt=1
+                        break 
+                    fi
+                done
+                if [ &quot;$found_finished_job_alt&quot; -eq 0 ]; then
+                     master_log &quot;WARN: Fallback (alt) check found no finished jobs. `wait -n` might have been interrupted. Retrying wait.&quot;
+                     sleep 0.5
+                fi
             fi
-        fi
+            if [ &quot;$current_active_jobs&quot; -lt 0 ]; then current_active_jobs=0; fi
+        done
         
-        master_log &quot;Launching task $total_tasks: Query [&#39;$query&#39;] in Location [&#39;$location&#39;]&quot;
-        
-        # Launch the task in the background
-        # The task_id_suffix could be $total_tasks or $$ for the subshell PID
-        perform_search_task &quot;$location&quot; &quot;$query&quot; &quot;$total_tasks&quot; &amp;
-        pids_list+=($!) # Store PID of the last backgrounded process
-        active_jobs=$((active_jobs + 1))
-        
-    done # End query loop
-done # End location loop
+        # Prepare info for pid_task_info_map
+        loc_path_part=&quot;${location_spec%%:::*}&quot;
+        q_path_part=&quot;${query_spec%%:::*}&quot;
+        sane_loc_part_map=$(sanitize_for_path &quot;$(basename &quot;$loc_path_part&quot;)&quot;); if [ -z &quot;$sane_loc_part_map&quot; ]; then sane_loc_part_map=&quot;root&quot;; fi
+        sane_query_part_map=$(sanitize_for_path &quot;$q_path_part&quot;)
+        task_identifier_fs_map=&quot;loc_${sane_loc_part_map}_query_${sane_query_part_map}_${task_unique_id_for_run}&quot;
+        task_log_file_map=&quot;${ALL_LOGS_PARENT_DIR}/log_${task_identifier_fs_map}.txt&quot;
+        task_results_file_map=&quot;${ALL_RESULTS_PARENT_DIR}/${task_identifier_fs_map}/matches.txt&quot;
 
-master_log &quot;All $total_tasks tasks have been launched.&quot;
-master_log &quot;Waiting for remaining $active_jobs active jobs to complete...&quot;
-
-# Wait for all remaining background jobs to finish
-while [ &quot;$active_jobs&quot; -gt 0 ]; do
-    wait -n
-    exit_status=$?
-    if [ $exit_status -eq 0 ] || [ $exit_status -eq 127 ]; then # 127 can mean no more children
-        active_jobs=$((active_jobs - 1))
-    else
-        # Handle other exit statuses if necessary, or just decrement
-        active_jobs=$((active_jobs - 1)) # Decrement anyway to avoid infinite loop on weird `wait -n` behavior
-    fi
-    if [ &quot;$active_jobs&quot; -lt 0 ]; then active_jobs=0; fi # Safety
-    master_log &quot;A job finished. Remaining active jobs: $active_jobs&quot;
+        master_log &quot;Launching task $total_tasks_launched (ID: $task_unique_id_for_run -&gt; FS: $task_identifier_fs_map): Query [&#39;$query_spec&#39;] in Location [&#39;$location_spec&#39;]&quot;
+        
+        perform_search_task &quot;$location_spec&quot; &quot;$query_spec&quot; &quot;$task_unique_id_for_run&quot; &amp;
+        local current_pid=$!
+        pid_task_info_map[&quot;$current_pid&quot;]=&quot;Query: $q_path_part, Location: $loc_path_part, Log: $task_log_file_map, Results: $task_results_file_map, TaskIdentifierFS: $task_identifier_fs_map&quot;
+        current_active_jobs=$((current_active_jobs + 1))
+    done
 done
 
-# Final wait, just in case (some systems/shells might behave differently with wait -n)
-wait
+master_log &quot;All $total_tasks_launched tasks have been launched.&quot;
+master_log &quot;Waiting for remaining $current_active_jobs active jobs to complete...&quot;
+
+while [ &quot;$current_active_jobs&quot; -gt 0 ]; do
+    local finished_pid_final=&quot;&quot;
+    # Using similar logic as above for waiting
+    if finished_pid_final=$(wait -n -p finished_pid_var_holder_final 2&gt;/dev/null &amp;&amp; echo &quot;$finished_pid_var_holder_final&quot;); then
+        local wait_n_p_exit_status_final=$?
+        if [ -n &quot;$finished_pid_final&quot; ] &amp;&amp; [ &quot;$wait_n_p_exit_status_final&quot; -eq 0 ]; then
+            wait &quot;$finished_pid_final&quot;
+            local job_actual_exit_status_final=$?
+            process_job_completion &quot;$finished_pid_final&quot; &quot;$job_actual_exit_status_final&quot;
+            current_active_jobs=$((current_active_jobs - 1))
+            master_log &quot;A job (PID $finished_pid_final) finished. Remaining: $current_active_jobs&quot;
+        else
+            master_log &quot;WARN (final loop): &#39;wait -n -p&#39; did not yield PID. Checking all.&quot;
+            # Fallback logic as in the main launch loop
+            local found_finished_job_f=0
+            for pid_to_check_f in &quot;${!pid_task_info_map[@]}&quot;; do
+                if ! kill -0 &quot;$pid_to_check_f&quot; 2&gt;/dev/null; then
+                    wait &quot;$pid_to_check_f&quot;; local f_stat=$?
+                    process_job_completion &quot;$pid_to_check_f&quot; &quot;$f_stat&quot;
+                    current_active_jobs=$((current_active_jobs - 1)); found_finished_job_f=1; break
+                fi
+            done
+            if [ &quot;$found_finished_job_f&quot; -eq 0 ]; then sleep 0.1; fi
+        fi
+    else
+        master_log &quot;WARN (final loop): &#39;wait -n&#39; command failed. Checking all.&quot;
+        # Fallback logic as in the main launch loop
+        local found_finished_job_f_alt=0
+        for pid_to_check_f_alt in &quot;${!pid_task_info_map[@]}&quot;; do
+            if ! kill -0 &quot;$pid_to_check_f_alt&quot; 2&gt;/dev/null; then
+                wait &quot;$pid_to_check_f_alt&quot;; local f_stat_alt=$?
+                process_job_completion &quot;$pid_to_check_f_alt&quot; &quot;$f_stat_alt&quot;
+                current_active_jobs=$((current_active_jobs - 1)); found_finished_job_f_alt=1; break
+            fi
+        done
+        if [ &quot;$found_finished_job_f_alt&quot; -eq 0 ]; then sleep 0.5; fi
+    fi
+    if [ &quot;$current_active_jobs&quot; -lt 0 ]; then current_active_jobs=0; fi
+done
+
+# Final sanity check for any PIDs that might still be in the map (should be empty)
+if [ ${#pid_task_info_map[@]} -gt 0 ]; then
+    master_log &quot;Performing final PID reaping for any stragglers (${!pid_task_info_map[*]})...&quot;
+    for pid_to_reap in &quot;${!pid_task_info_map[@]}&quot;; do
+        master_log &quot;Waiting for potentially missed PID: $pid_to_reap&quot;
+        if wait &quot;$pid_to_reap&quot;; then # if it already exited, wait returns immediately with its status
+            actual_job_exit_status=$?
+        else 
+            actual_job_exit_status=$? # Capture status if it errors (e.g. no such PID)
+        fi
+        # Check if PID still in map (might have been processed by a successful wait -n -p)
+        if [[ -v pid_task_info_map[&quot;$pid_to_reap&quot;] ]]; then # Check if key exists
+          process_job_completion &quot;$pid_to_reap&quot; &quot;$actual_job_exit_status&quot;
+          master_log &quot;Processed straggler PID $pid_to_reap, exit status $actual_job_exit_status&quot;
+        fi
+    done
+fi
 
 master_log &quot;All search tasks have completed.&quot;
-master_log &quot;Please check individual logs in: $ALL_LOGS_PARENT_DIR&quot;
-master_log &quot;And results in: $ALL_RESULTS_PARENT_DIR&quot;
-master_log &quot;Master script finished.&quot;
 
+master_log &quot;Generating summary report to: $SUMMARY_REPORT_FILE&quot;
+{
+    echo &quot;--- Batch Search Run Summary ---&quot;
+    echo &quot;Run ID: $(basename &quot;$MASTER_OUTPUT_ROOT&quot;)&quot;
+    echo &quot;Completion Time: $(date &#39;+%Y-%m-%d %H:%M:%S&#39;)&quot;
+    echo &quot;&quot;
+    echo &quot;Total Tasks Launched: $total_tasks_launched&quot;
+    echo &quot;  Tasks Succeeded (found matches): $tasks_succeeded&quot;
+    echo &quot;  Tasks Succeeded (no matches found): $tasks_no_match&quot;
+    echo &quot;  Tasks Failed: $tasks_failed&quot;
+    echo &quot;&quot;
+    echo &quot;Total Matching Files Found (across all successful tasks with matches): $total_matching_files&quot;
+    echo &quot;&quot;
+    if [ ${#failed_tasks_details[@]} -gt 0 ]; then
+        echo &quot;Details of Failed Tasks (${#failed_tasks_details[@]}):&quot;
+        for detail in &quot;${failed_tasks_details[@]}&quot;; do
+            echo &quot;  - $detail&quot;
+        done
+    else
+        echo &quot;No tasks failed.&quot;
+    fi
+    echo &quot;&quot;
+    echo &quot;Master Log: $MASTER_LOG_FILE&quot;
+    echo &quot;All Results In: $ALL_RESULTS_PARENT_DIR&quot;
+    echo &quot;All Logs In: $ALL_LOGS_PARENT_DIR&quot;
+} &gt; &quot;$SUMMARY_REPORT_FILE&quot;
+
+master_log &quot;Summary report generated.&quot;
+cat &quot;$SUMMARY_REPORT_FILE&quot; # Also print to stdout for convenience
+
+master_log &quot;Master script finished.&quot;
 exit 0" data-download-link="" data-download-label="Download Bash">
   <code class="language-bash">#!/bin/bash
 
 # --- Script Configuration ---
 # Base directory for all outputs of this batch search run.
 # A timestamp is included to ensure uniqueness for multiple runs.
-MASTER_OUTPUT_ROOT=&quot;./batch_search_run_$(date +%Y%m%d_%H%M%S)&quot;
+MASTER_OUTPUT_ROOT_DEFAULT=&quot;./batch_search_run_$(date +%Y%m%d_%H%M%S)&quot;
+MASTER_OUTPUT_ROOT=&quot;$MASTER_OUTPUT_ROOT_DEFAULT&quot; # Can be overridden by --config-file or -o
 ALL_RESULTS_PARENT_DIR=&quot;${MASTER_OUTPUT_ROOT}/search_results&quot;
 ALL_LOGS_PARENT_DIR=&quot;${MASTER_OUTPUT_ROOT}/search_logs&quot;
 MASTER_LOG_FILE=&quot;${MASTER_OUTPUT_ROOT}/master_orchestrator_log.txt&quot;
+SUMMARY_REPORT_FILE=&quot;${MASTER_OUTPUT_ROOT}/summary_report.txt&quot;
 
 # OCR Configuration (if uncommented and used)
 # OCR_BASE_TEMP_DIR=&quot;/tmp/ocr_temp_area&quot; # Base for unique OCR temporary directories
 
 # Concurrency Configuration
-MAX_CONCURRENT_JOBS=${MAX_CONCURRENT_JOBS:-$(nproc --all || echo 7)} # Default to number of processors or 4
-active_jobs=0
+MAX_CONCURRENT_JOBS_DEFAULT=$(nproc --all 2&gt;/dev/null || echo 7) # Default to number of processors or 7
+MAX_CONCURRENT_JOBS=&quot;$MAX_CONCURRENT_JOBS_DEFAULT&quot; # Can be overridden
+
+# Retry Configuration
+MAX_RETRIES_DEFAULT=1 # Default to 1 attempt (0 actual retries). Set to &gt;1 for retries.
+MAX_RETRIES=&quot;$MAX_RETRIES_DEFAULT&quot;
+RETRY_DELAY_SECONDS_DEFAULT=5
+RETRY_DELAY_SECONDS=&quot;$RETRY_DELAY_SECONDS_DEFAULT&quot;
 
 # --- ugrep Configuration ---
-UGREP_CMD=&quot;ug+&quot; # or &quot;ug&quot; if ugrep filters are globally configured (e.g. in ~/.ugrep)
-UGREP_OPTS_BASE=&quot;-r -i -l&quot; # Recursive, case-insensitive, list filenames
-UGREP_OPTS_ARCHIVES=&quot;-z&quot;   # Search archives
-# UGREP_OPTS_INDEX=&quot;--index&quot; # Add this if you have pre-built ugrep indexes for search directories
+UGREP_CMD_DEFAULT=&quot;ug+&quot;
+UGREP_CMD=&quot;$UGREP_CMD_DEFAULT&quot;
+UGREP_OPTS_BASE_DEFAULT=&quot;-r -i -l&quot; # Recursive, case-insensitive, list filenames
+UGREP_OPTS_BASE=() # Initialize as array for robust option handling
+UGREP_OPTS_ARCHIVES_DEFAULT=&quot;-z&quot;   # Search archives
+UGREP_OPTS_ARCHIVES=()
+UGREP_OPTS_INDEX_DEFAULT=&quot;&quot; # Example: &quot;--index&quot;
+UGREP_OPTS_INDEX=()
 
-# --- Search Targets ---
-declare -a SEARCH_LOCATIONS=(
+# --- Search Targets (Defaults, can be overridden by external files) ---
+declare -a SEARCH_LOCATIONS_DEFAULT=(
     &quot;/mnt/external_hdd/pdf/&quot;
     &quot;/mnt/external_hdd/0000000000000000001/&quot;
-    &quot;/mnt/external_hdd/7z/&quot;
-    &quot;/mnt/external_hdd/apk/&quot;
-    &quot;/mnt/external_hdd/aux/&quot;
-    &quot;/mnt/external_hdd/bak/&quot;
-    &quot;/mnt/external_hdd/bcf/&quot;
-    &quot;/mnt/external_hdd/bib/&quot;
-    &quot;/mnt/external_hdd/cab/&quot;
-    &quot;/mnt/external_hdd/crate/&quot;
-    &quot;/mnt/external_hdd/cs/&quot;
-    &quot;/mnt/external_hdd/csv/&quot;
-    &quot;/mnt/external_hdd/dat/&quot;
-    &quot;/mnt/external_hdd/db/&quot;
-    &quot;/mnt/external_hdd/db3/&quot;
-    &quot;/mnt/external_hdd/dic/&quot;
-    &quot;/mnt/external_hdd/dll/&quot;
-    &quot;/mnt/external_hdd/dmp/&quot;
-    &quot;/mnt/external_hdd/docx/&quot;
-    &quot;/mnt/external_hdd/gz/&quot;
-    &quot;/mnt/external_hdd/h/&quot;
-    &quot;/mnt/external_hdd/iso/&quot;
-    &quot;/mnt/external_hdd/jar/&quot;
-    &quot;/mnt/external_hdd/json/&quot;
-    &quot;/mnt/external_hdd/jsonl/&quot;
-    &quot;/mnt/external_hdd/log/&quot;
-    &quot;/mnt/external_hdd/md/&quot;
-    &quot;/mnt/external_hdd/mobi/&quot;
-    &quot;/mnt/external_hdd/model/&quot;
-    &quot;/mnt/external_hdd/mov/&quot;
-    &quot;/mnt/external_hdd/mp4/&quot;
-    &quot;/mnt/external_hdd/no_extension/&quot;
-    &quot;/mnt/external_hdd/ods/&quot;
+    # Add more default locations as needed
 )
-
-declare -a SEARCH_QUERIES=(
+declare -a SEARCH_QUERIES_DEFAULT=(
     &quot;jurime&quot;
     &quot;sociolo&quot;
-    &quot;quantifica&quot;
-    &quot;tcc&quot;
-    &quot;gingko&quot;
+    # Add more default queries as needed
 )
 
-# --- Utility Functions ---
+declare -a SEARCH_LOCATIONS=()
+declare -a SEARCH_QUERIES=()
 
-# Master log function
+# External Configuration File Paths
+LOCATIONS_FILE_ARG=&quot;&quot;
+QUERIES_FILE_ARG=&quot;&quot;
+CONFIG_FILE_ARG=&quot;&quot;
+
+
+# --- Utility Functions ---
 master_log() {
     echo &quot;$(date &#39;+%Y-%m-%d %H:%M:%S&#39;) [MASTER] - $1&quot; | tee -a &quot;$MASTER_LOG_FILE&quot;
 }
 
-# Function to sanitize path components for use in filenames/directory names
 sanitize_for_path() {
     echo &quot;$1&quot; | sed &#39;s#^/*##;s#/*$##;s#/#_#g&#39; | tr &#39; &#39; &#39;_&#39; | sed &#39;s/[^a-zA-Z0-9_-]/_/g&#39;
 }
 
-# --- Search Task Function ---
-# This function performs a single search task for a given location and query.
-# It&#39;s designed to be run in the background.
-perform_search_task() {
-    local search_dir_param=&quot;$1&quot;
-    local query_param=&quot;$2&quot;
-    local task_id_suffix=&quot;$3&quot; # Unique suffix for this task (e.g., from PID or counter)
+# Initialize ugrep option arrays from default strings
+# This allows defaults to be simple strings but used as arrays internally
+# Users can override these arrays directly in a config file if they prefer array syntax
+read -r -a UGREP_OPTS_BASE &lt;&lt;&lt; &quot;$UGREP_OPTS_BASE_DEFAULT&quot;
+read -r -a UGREP_OPTS_ARCHIVES &lt;&lt;&lt; &quot;$UGREP_OPTS_ARCHIVES_DEFAULT&quot;
+if [ -n &quot;$UGREP_OPTS_INDEX_DEFAULT&quot; ]; then
+    read -r -a UGREP_OPTS_INDEX &lt;&lt;&lt; &quot;$UGREP_OPTS_INDEX_DEFAULT&quot;
+fi
 
-    # Sanitize parameters for path creation
-    local sane_loc_part=$(sanitize_for_path &quot;$(basename &quot;$search_dir_param&quot;)&quot;)
-    if [ -z &quot;$sane_loc_part&quot; ]; then # Handle cases like &quot;/&quot; if ever passed
-        sane_loc_part=&quot;root&quot;
+
+validate_commands() {
+    local all_found=true
+    # Use $UGREP_CMD which might have been updated by config
+    local first_word_ugrep_cmd=&quot;${UGREP_CMD%% *}&quot;
+    for cmd_name in &quot;$first_word_ugrep_cmd&quot; &quot;nproc&quot; &quot;date&quot; &quot;tee&quot; &quot;sed&quot; &quot;tr&quot; &quot;wc&quot; &quot;grep&quot; &quot;cut&quot; &quot;basename&quot; &quot;mkdir&quot; &quot;rm&quot; &quot;sleep&quot; &quot;kill&quot;; do
+        if ! command -v &quot;$cmd_name&quot; &gt;/dev/null 2&gt;&amp;1; then
+            master_log &quot;ERROR: Required command &#39;$cmd_name&#39; not found in PATH.&quot;
+            all_found=false
+        fi
+    done
+    if [ &quot;$all_found&quot; = false ]; then
+        master_log &quot;FATAL: One or more required commands are missing. Please install them and ensure they are in your PATH. Exiting.&quot;
+        exit 1
     fi
+    master_log &quot;All required commands are available.&quot;
+}
+
+validate_search_locations() {
+    local valid_locations=()
+    local invalid_locations_count=0
+    if [ ${#SEARCH_LOCATIONS[@]} -eq 0 ]; then
+        master_log &quot;ERROR: No search locations defined. Please provide locations. Exiting.&quot;
+        exit 1
+    fi
+    master_log &quot;Validating ${#SEARCH_LOCATIONS[@]} search locations...&quot;
+    for loc_with_opts in &quot;${SEARCH_LOCATIONS[@]}&quot;; do
+        local loc=&quot;${loc_with_opts%%:::*}&quot; # Extract path part for validation
+        if [ -z &quot;$loc&quot; ]; then # Skip empty lines if they somehow get here
+            master_log &quot;WARNING: Encountered empty location string. Skipping.&quot;
+            invalid_locations_count=$((invalid_locations_count + 1))
+            continue
+        fi
+        if [ ! -e &quot;$loc&quot; ]; then
+            master_log &quot;WARNING: Search location &#39;$loc&#39; does not exist. Skipping.&quot;
+            invalid_locations_count=$((invalid_locations_count + 1))
+        elif [ ! -r &quot;$loc&quot; ]; then
+            master_log &quot;WARNING: Search location &#39;$loc&#39; is not readable. Skipping.&quot;
+            invalid_locations_count=$((invalid_locations_count + 1))
+        elif [ ! -d &quot;$loc&quot; ]; then # Check if it&#39;s a directory
+             master_log &quot;WARNING: Search location &#39;$loc&#39; is not a directory. Skipping.&quot;
+            invalid_locations_count=$((invalid_locations_count + 1))
+        else
+            valid_locations+=(&quot;$loc_with_opts&quot;)
+        fi
+    done
+    SEARCH_LOCATIONS=(&quot;${valid_locations[@]}&quot;)
+    if [ ${#SEARCH_LOCATIONS[@]} -eq 0 ]; then
+        master_log &quot;FATAL: No valid and readable search locations remaining after validation. Exiting.&quot;
+        exit 1
+    fi
+    if [ &quot;$invalid_locations_count&quot; -gt 0 ]; then
+         master_log &quot;INFO: Skipped $invalid_locations_count invalid or unreadable locations.&quot;
+    fi
+    master_log &quot;Proceeding with ${#SEARCH_LOCATIONS[@]} valid search locations.&quot;
+}
+
+# Summary Reporting Variables
+tasks_succeeded=0
+tasks_failed=0
+tasks_no_match=0
+total_matching_files=0
+declare -a failed_tasks_details=()
+
+# Advanced Concurrency - PID tracking map
+declare -A pid_task_info_map # PID to &quot;Query: X, Location: Y, Log: Z, Results: R, TaskIdentifier: TID&quot;
+
+process_job_completion() {
+    local pid=&quot;$1&quot;
+    local job_actual_exit_status=&quot;$2&quot; # This is the exit status of perform_search_task
+    local task_info_str=&quot;${pid_task_info_map[&quot;$pid&quot;]}&quot;
+
+    if [ -z &quot;$task_info_str&quot; ]; then
+        master_log &quot;WARN: No task info found for completed PID $pid. Cannot process its completion for summary.&quot;
+        return
+    fi
+
+    local task_log_file=$(echo &quot;$task_info_str&quot; | grep -o &#39;Log: [^,]*&#39; | cut -d&#39; &#39; -f2)
+    local results_file=$(echo &quot;$task_info_str&quot; | grep -o &#39;Results: [^,]*&#39; | cut -d&#39; &#39; -f2)
+    # local task_identifier_from_map=$(echo &quot;$task_info_str&quot; | grep -o &#39;TaskIdentifier: [^,]*&#39; | cut -d&#39; &#39; -f2)
+
+    if [ &quot;$job_actual_exit_status&quot; -eq 0 ]; then # perform_search_task succeeded (meaning ugrep eventually succeeded)
+        if [ -f &quot;$results_file&quot; ] &amp;&amp; [ -s &quot;$results_file&quot; ]; then
+            tasks_succeeded=$((tasks_succeeded + 1))
+            local matches_in_task
+            matches_in_task=$(wc -l &lt; &quot;$results_file&quot;)
+            total_matching_files=$((total_matching_files + matches_in_task))
+        else # ugrep succeeded but found no matches (or results file was removed)
+            tasks_no_match=$((tasks_no_match + 1))
+        fi
+    else # perform_search_task failed (meaning ugrep ultimately failed after retries)
+        tasks_failed=$((tasks_failed + 1))
+        failed_tasks_details+=(&quot;Task for ${task_info_str} FAILED (script exit: $job_actual_exit_status). Check log: $task_log_file&quot;)
+    fi
+    unset pid_task_info_map[&quot;$pid&quot;]
+}
+
+perform_search_task() {
+    local search_param_full=&quot;$1&quot;
+    local query_param_full=&quot;$2&quot;
+    local task_unique_id=&quot;$3&quot; # A unique ID for this specific task instance, e.g. &quot;task_N&quot;
+
+    local search_dir_param=&quot;${search_param_full%%:::*}&quot;
+    local task_specific_loc_opts_str=&quot;${search_param_full#*:::}&quot;
+    if [ &quot;$task_specific_loc_opts_str&quot; = &quot;$search_dir_param&quot; ]; then # No ::: found or empty opts
+        task_specific_loc_opts_str=&quot;&quot;
+    fi
+
+    local query_param=&quot;${query_param_full%%:::*}&quot;
+    local task_specific_query_opts_str=&quot;${query_param_full#*:::}&quot;
+    if [ &quot;$task_specific_query_opts_str&quot; = &quot;$query_param&quot; ]; then # No ::: found or empty opts
+        task_specific_query_opts_str=&quot;&quot;
+    fi
+
+    local sane_loc_part=$(sanitize_for_path &quot;$(basename &quot;$search_dir_param&quot;)&quot;)
+    if [ -z &quot;$sane_loc_part&quot; ]; then sane_loc_part=&quot;root&quot;; fi
     local sane_query_part=$(sanitize_for_path &quot;$query_param&quot;)
+    local task_identifier_fs=&quot;loc_${sane_loc_part}_query_${sane_query_part}_${task_unique_id}&quot; # Filesystem-safe identifier
 
-    local task_identifier=&quot;loc_${sane_loc_part}_query_${sane_query_part}&quot;
+    local task_results_dir=&quot;${ALL_RESULTS_PARENT_DIR}/${task_identifier_fs}&quot;
+    local task_log_file=&quot;${ALL_LOGS_PARENT_DIR}/log_${task_identifier_fs}.txt&quot;
 
-    # Define task-specific paths
-    local task_results_dir=&quot;${ALL_RESULTS_PARENT_DIR}/${task_identifier}&quot;
-    local task_log_file=&quot;${ALL_LOGS_PARENT_DIR}/log_${task_identifier}.txt&quot;
-    # local task_ocr_temp_dir=&quot;${OCR_BASE_TEMP_DIR}/${task_identifier}_${task_id_suffix}&quot; # If using OCR
-
-    # Ensure task-specific directories exist
     mkdir -p &quot;$task_results_dir&quot;
-    # mkdir -p &quot;$task_ocr_temp_dir&quot; # Uncomment if using OCR
 
-    # Task-specific log function
-    task_log() {
-        echo &quot;$(date &#39;+%Y-%m-%d %H:%M:%S&#39;) [TASK: ${task_identifier}] - $1&quot; &gt;&gt; &quot;$task_log_file&quot;
+    # Local task_log function to avoid issues with export -f and global state
+    _task_log_internal() {
+        echo &quot;$(date &#39;+%Y-%m-%d %H:%M:%S&#39;) [TASK: ${task_identifier_fs}] - $1&quot; &gt;&gt; &quot;$task_log_file&quot;
     }
 
-    # Start task logging
-    echo &quot;--- Log for Query: &#39;$query_param&#39; in Location: &#39;$search_dir_param&#39; (Task ID Suffix: $task_id_suffix) ---&quot; &gt; &quot;$task_log_file&quot;
-    task_log &quot;Starting search task.&quot;
-    task_log &quot;Results will be in: $task_results_dir&quot;
-    task_log &quot;Full log at: $task_log_file&quot;
+    echo &quot;--- Log for Query: &#39;$query_param&#39; in Location: &#39;$search_dir_param&#39; (ID: ${task_identifier_fs}) ---&quot; &gt; &quot;$task_log_file&quot;
+    _task_log_internal &quot;Raw location spec: &#39;$search_param_full&#39;&quot;
+    _task_log_internal &quot;Raw query spec: &#39;$query_param_full&#39;&quot;
+    _task_log_internal &quot;Parsed location-specific ugrep opts: &#39;$task_specific_loc_opts_str&#39;&quot;
+    _task_log_internal &quot;Parsed query-specific ugrep opts: &#39;$task_specific_query_opts_str&#39;&quot;
+    _task_log_internal &quot;Results will be in: $task_results_dir&quot;
+    _task_log_internal &quot;Full log at: $task_log_file&quot;
 
-    # Define search paths for this task. Default is just the search directory.
     local current_search_paths=&quot;$search_dir_param&quot;
-
-    # --- Optional: OCR Pre-processing Step (Commented Out) ---
-    # If uncommented, ensure &#39;pdftotext&#39; and &#39;tesseract&#39; are installed.
-    # The OCR logic here is a basic placeholder and may need significant enhancement
-    # for robust error handling, efficiency, and accuracy in a real-world scenario.
-    # Consider that OCR is CPU-intensive and will impact overall performance.
-    #
-    # task_log &quot;OCR pre-processing (if applicable)...&quot;
-    # find &quot;$search_dir_param&quot; -type f -iname &quot;*.pdf&quot; -print0 | while IFS= read -r -d $&#39;\0&#39; pdf_file; do
-    #   # Basic heuristic: if pdftotext extracts very little, assume it might need OCR
-    #   # This heuristic is very basic and might misclassify PDFs.
-    #   text_content_check=$(pdftotext &quot;$pdf_file&quot; -enc UTF-8 - | tr -d &#39;[:space:]&#39;)
-    #   if [ ${#text_content_check} -lt 100 ]; then # Arbitrary threshold
-    #     task_log &quot;Potential scanned PDF (or PDF with minimal text): $pdf_file. Attempting OCR.&quot;
-    #     ocr_output_basename=$(basename &quot;$pdf_file&quot; .pdf)
-    #     # Ensure unique output name for OCRed text file, placed in task-specific OCR temp dir
-    #     # tesseract &quot;$pdf_file&quot; &quot;${task_ocr_temp_dir}/${ocr_output_basename}&quot; -l eng &gt;&gt; &quot;$task_log_file&quot; 2&gt;&amp;1
-    #     # if [ $? -eq 0 ]; then
-    #     #   task_log &quot;OCR successful for $pdf_file&quot;
-    #     # else
-    #     #   task_log &quot;OCR failed for $pdf_file&quot;
-    #     # fi
-    #   fi
-    # done
-    # task_log &quot;OCR pre-processing finished.&quot;
-    # # If OCR was performed, add the directory with OCRed text files to the search paths:
-    # # current_search_paths=&quot;$search_dir_param $task_ocr_temp_dir&quot;
-    # --- End of Optional OCR Section ---
-
     local output_file_matches=&quot;$task_results_dir/matches.txt&quot;
     
-    task_log &quot;Executing ugrep: $UGREP_CMD $UGREP_OPTS_BASE $UGREP_OPTS_ARCHIVES \&quot;$query_param\&quot; $current_search_paths&quot;
+    local ugrep_cmd_to_run=()
+    read -r -a ugrep_cmd_base_array &lt;&lt;&lt; &quot;$UGREP_CMD&quot; # Handle if UGREP_CMD itself has args
+    ugrep_cmd_to_run+=(&quot;${ugrep_cmd_base_array[@]}&quot;)
+    ugrep_cmd_to_run+=(&quot;${UGREP_OPTS_BASE[@]}&quot;)
+    ugrep_cmd_to_run+=(&quot;${UGREP_OPTS_ARCHIVES[@]}&quot;)
+    ugrep_cmd_to_run+=(&quot;${UGREP_OPTS_INDEX[@]}&quot;)
 
-    # Execute ugrep. Redirect stderr to task log.
-    # Add $UGREP_OPTS_INDEX to the command below if you are using indexed search.
-    if $UGREP_CMD $UGREP_OPTS_BASE $UGREP_OPTS_ARCHIVES &quot;$query_param&quot; $current_search_paths &gt; &quot;$output_file_matches&quot; 2&gt;&gt; &quot;$task_log_file&quot;; then
-        if [ -s &quot;$output_file_matches&quot; ]; then
-            task_log &quot;SUCCESS: Matches found. Results are in $output_file_matches&quot;
-        else
-            task_log &quot;INFO: No matches found.&quot;
-            rm &quot;$output_file_matches&quot; # Optional: remove empty result files
-        fi
-    else
-        local ugrep_exit_code=$?
-        task_log &quot;ERROR: ugrep command failed with exit code $ugrep_exit_code.&quot;
-        # Optionally remove the output file if ugrep failed, as it might be empty or incomplete
-        # rm -f &quot;$output_file_matches&quot;
+    # Add task-specific options, parsed from strings
+    local temp_opts_array=()
+    if [ -n &quot;$task_specific_loc_opts_str&quot; ]; then
+        read -r -a temp_opts_array &lt;&lt;&lt; &quot;$task_specific_loc_opts_str&quot;
+        ugrep_cmd_to_run+=(&quot;${temp_opts_array[@]}&quot;)
     fi
+    if [ -n &quot;$task_specific_query_opts_str&quot; ]; then
+        read -r -a temp_opts_array &lt;&lt;&lt; &quot;$task_specific_query_opts_str&quot;
+        ugrep_cmd_to_run+=(&quot;${temp_opts_array[@]}&quot;)
+    fi
+
+    ugrep_cmd_to_run+=(&quot;$query_param&quot; &quot;$current_search_paths&quot;)
     
-    task_log &quot;Search task finished.&quot;
-    # rm -rf &quot;$task_ocr_temp_dir&quot; # Uncomment if using OCR and want to clean up temp OCR files
+    local retries_done=0
+    local ugrep_final_exit_code=1 # Assume failure initially
+    
+    while [ &quot;$retries_done&quot; -le &quot;$MAX_RETRIES&quot; ]; do
+        if [ &quot;$retries_done&quot; -gt 0 ]; then # This means it&#39;s a retry attempt
+             _task_log_internal &quot;Retrying ugrep (attempt $((retries_done +1 ))/$((MAX_RETRIES + 1)))...&quot;
+             sleep &quot;$RETRY_DELAY_SECONDS&quot;
+        else # First attempt
+            _task_log_internal &quot;Executing ugrep (attempt 1/$((MAX_RETRIES + 1))): ${ugrep_cmd_to_run[*]}&quot;
+        fi
+
+        # Execute ugrep
+        if &quot;${ugrep_cmd_to_run[@]}&quot; &gt; &quot;$output_file_matches&quot; 2&gt;&gt; &quot;$task_log_file&quot;; then
+            ugrep_final_exit_code=0 # Success
+            if [ -s &quot;$output_file_matches&quot; ]; then
+                _task_log_internal &quot;SUCCESS (attempt $((retries_done + 1))): Matches found. Results are in $output_file_matches&quot;
+            else
+                _task_log_internal &quot;INFO (attempt $((retries_done + 1))): No matches found.&quot;
+                rm -f &quot;$output_file_matches&quot;
+            fi
+            break # Successful attempt, exit retry loop
+        else
+            ugrep_final_exit_code=$?
+            _task_log_internal &quot;ERROR (attempt $((retries_done + 1))): ugrep command failed with exit code $ugrep_final_exit_code.&quot;
+            # Placeholder for specific retryable error logic:
+            # if [[ &quot;$ugrep_final_exit_code&quot; -eq KNOWN_TRANSIENT_ERROR_CODE ]]; then
+            #   _task_log_internal &quot;Transient error detected, will retry if attempts remain.&quot;
+            # else
+            #   _task_log_internal &quot;Non-retryable error or unknown error, will not retry if this was the only attempt.&quot;
+            #   if [ &quot;$MAX_RETRIES&quot; -eq 0 ]; then break; fi # No retries configured for this error type
+            # fi
+            if [ &quot;$retries_done&quot; -ge &quot;$MAX_RETRIES&quot; ]; then
+                _task_log_internal &quot;ERROR: All $((MAX_RETRIES + 1)) attempts failed for ugrep command.&quot;
+                break # Max attempts reached
+            fi
+        fi
+        retries_done=$((retries_done + 1))
+    done
+    
+    _task_log_internal &quot;Search task finished with final ugrep exit code: $ugrep_final_exit_code.&quot;
+    return &quot;$ugrep_final_exit_code&quot;
 }
-export -f perform_search_task sanitize_for_path # Export functions for subshells if needed by `bash -c` or similar
+export -f perform_search_task sanitize_for_path # Export functions needed by subshells
+
+usage() {
+    echo &quot;Usage: $0 [options]&quot;
+    echo &quot;Options:&quot;
+    echo &quot;  --locations-file &lt;file&gt;  File containing search locations, one per line.&quot;
+    echo &quot;                           Format per line: /path/to/location[:::optional_ugrep_options_for_location]&quot;
+    echo &quot;  --queries-file &lt;file&gt;    File containing search queries, one per line.&quot;
+    echo &quot;                           Format per line: search_query_text[:::optional_ugrep_options_for_query]&quot;
+    echo &quot;  --config-file &lt;file&gt;     Bash script file to source for overriding default configurations.&quot;
+    echo &quot;                           (e.g., MAX_CONCURRENT_JOBS, UGREP_CMD, UGREP_OPTS_BASE array, etc.)&quot;
+    echo &quot;  -o &lt;dir&gt;                 Master output root directory (default: $MASTER_OUTPUT_ROOT_DEFAULT).&quot;
+    echo &quot;  -h, --help               Display this help message.&quot;
+    exit 0
+}
+
+# Simple argument parsing loop
+while [[ $# -gt 0 ]]; do
+    key=&quot;$1&quot;
+    case $key in
+        --locations-file) LOCATIONS_FILE_ARG=&quot;$2&quot;; shift; shift ;;
+        --queries-file) QUERIES_FILE_ARG=&quot;$2&quot;; shift; shift ;;
+        --config-file) CONFIG_FILE_ARG=&quot;$2&quot;; shift; shift ;;
+        -o|--output-dir) MASTER_OUTPUT_ROOT=&quot;$2&quot;; shift; shift ;;
+        -h|--help) usage ;;
+        *) echo &quot;Unknown option: $1&quot;; usage ;;
+    esac
+done
+
+# Re-derive paths if MASTER_OUTPUT_ROOT was changed by -o
+ALL_RESULTS_PARENT_DIR=&quot;${MASTER_OUTPUT_ROOT}/search_results&quot;
+ALL_LOGS_PARENT_DIR=&quot;${MASTER_OUTPUT_ROOT}/search_logs&quot;
+MASTER_LOG_FILE=&quot;${MASTER_OUTPUT_ROOT}/master_orchestrator_log.txt&quot;
+SUMMARY_REPORT_FILE=&quot;${MASTER_OUTPUT_ROOT}/summary_report.txt&quot;
 
 # --- Main Orchestration ---
+mkdir -p &quot;$ALL_RESULTS_PARENT_DIR&quot; || { echo &quot;FATAL: Could not create results parent dir &#39;$ALL_RESULTS_PARENT_DIR&#39;. Exiting.&quot; &gt;&amp;2; exit 1; }
+mkdir -p &quot;$ALL_LOGS_PARENT_DIR&quot;    || { echo &quot;FATAL: Could not create logs parent dir &#39;$ALL_LOGS_PARENT_DIR&#39;. Exiting.&quot; &gt;&amp;2; exit 1; }
 
-# Create base directories
-mkdir -p &quot;$ALL_RESULTS_PARENT_DIR&quot;
-if [ $? -ne 0 ]; then echo &quot;FATAL: Could not create results parent directory &#39;$ALL_RESULTS_PARENT_DIR&#39;. Exiting.&quot; &gt;&amp;2; exit 1; fi
-mkdir -p &quot;$ALL_LOGS_PARENT_DIR&quot;
-if [ $? -ne 0 ]; then echo &quot;FATAL: Could not create logs parent directory &#39;$ALL_LOGS_PARENT_DIR&#39;. Exiting.&quot; &gt;&amp;2; exit 1; fi
-# mkdir -p &quot;$OCR_BASE_TEMP_DIR&quot; # Uncomment if using OCR
-
-# Initialize master log
 echo &quot;--- Master Orchestrator Log ---&quot; &gt; &quot;$MASTER_LOG_FILE&quot;
 echo &quot;Run ID: $(basename &quot;$MASTER_OUTPUT_ROOT&quot;)&quot; &gt;&gt; &quot;$MASTER_LOG_FILE&quot;
 master_log &quot;Script started.&quot;
+
+if [ -n &quot;$CONFIG_FILE_ARG&quot; ]; then
+    if [ -f &quot;$CONFIG_FILE_ARG&quot; ]; then
+        master_log &quot;Sourcing external configuration from: $CONFIG_FILE_ARG&quot;
+        # shellcheck source=/dev/null
+        source &quot;$CONFIG_FILE_ARG&quot;
+        # Re-initialize option arrays if string versions were overridden by config
+        # Config file can directly set UGREP_OPTS_BASE as an array.
+        # If it sets UGREP_OPTS_BASE_DEFAULT (string), then re-parse:
+        if declare -p UGREP_OPTS_BASE_DEFAULT &amp;&gt;/dev/null &amp;&amp; ! declare -p UGREP_OPTS_BASE &amp;&gt;/dev/null; then
+             read -r -a UGREP_OPTS_BASE &lt;&lt;&lt; &quot;$UGREP_OPTS_BASE_DEFAULT&quot;
+        fi
+        if declare -p UGREP_OPTS_ARCHIVES_DEFAULT &amp;&gt;/dev/null &amp;&amp; ! declare -p UGREP_OPTS_ARCHIVES &amp;&gt;/dev/null; then
+             read -r -a UGREP_OPTS_ARCHIVES &lt;&lt;&lt; &quot;$UGREP_OPTS_ARCHIVES_DEFAULT&quot;
+        fi
+        if declare -p UGREP_OPTS_INDEX_DEFAULT &amp;&gt;/dev/null &amp;&amp; ! declare -p UGREP_OPTS_INDEX &amp;&gt;/dev/null; then
+            if [ -n &quot;$UGREP_OPTS_INDEX_DEFAULT&quot; ]; then read -r -a UGREP_OPTS_INDEX &lt;&lt;&lt; &quot;$UGREP_OPTS_INDEX_DEFAULT&quot;; else UGREP_OPTS_INDEX=(); fi
+        fi
+    else
+        master_log &quot;WARNING: Config file &#39;$CONFIG_FILE_ARG&#39; not found. Using default/script internal settings.&quot;
+    fi
+fi
+
 master_log &quot;Outputs will be stored under: $MASTER_OUTPUT_ROOT&quot;
 master_log &quot;Maximum concurrent jobs: $MAX_CONCURRENT_JOBS&quot;
-master_log &quot;Assumptions: ugrep (&#39;$UGREP_CMD&#39;) is installed. Read access to search locations. Write access to output directory.&quot;
-master_log &quot;For OCR (currently commented out): pdftotext and tesseract would be required.&quot;
+master_log &quot;Max retries per task: $MAX_RETRIES (actual attempts: $((MAX_RETRIES + 1))), Retry delay: $RETRY_DELAY_SECONDS seconds&quot;
+master_log &quot;ugrep command: &#39;$UGREP_CMD&#39;&quot;
+master_log &quot;Base ugrep options: &#39;${UGREP_OPTS_BASE[*]}&#39;&quot;
+master_log &quot;Archive ugrep options: &#39;${UGREP_OPTS_ARCHIVES[*]}&#39;&quot;
+master_log &quot;Index ugrep options: &#39;${UGREP_OPTS_INDEX[*]}&#39;&quot;
 
-total_tasks=0
-declare -a pids_list=() # To store PIDs of backgrounded tasks
+if [ -n &quot;$LOCATIONS_FILE_ARG&quot; ]; then
+    master_log &quot;Loading search locations from: $LOCATIONS_FILE_ARG&quot;
+    if [ -f &quot;$LOCATIONS_FILE_ARG&quot; ]; then
+        mapfile -t SEARCH_LOCATIONS &lt; &lt;(grep -v -e &#39;^\s*#&#39; -e &#39;^\s*$&#39; &quot;$LOCATIONS_FILE_ARG&quot;)
+    else
+        master_log &quot;ERROR: Locations file &#39;$LOCATIONS_FILE_ARG&#39; not found. Exiting.&quot;
+        exit 1
+    fi
+else
+    master_log &quot;Using default search locations defined in script.&quot;
+    SEARCH_LOCATIONS=(&quot;${SEARCH_LOCATIONS_DEFAULT[@]}&quot;)
+fi
+
+if [ -n &quot;$QUERIES_FILE_ARG&quot; ]; then
+    master_log &quot;Loading search queries from: $QUERIES_FILE_ARG&quot;
+    if [ -f &quot;$QUERIES_FILE_ARG&quot; ]; then
+        mapfile -t SEARCH_QUERIES &lt; &lt;(grep -v -e &#39;^\s*#&#39; -e &#39;^\s*$&#39; &quot;$QUERIES_FILE_ARG&quot;)
+    else
+        master_log &quot;ERROR: Queries file &#39;$QUERIES_FILE_ARG&#39; not found. Exiting.&quot;
+        exit 1
+    fi
+else
+    master_log &quot;Using default search queries defined in script.&quot;
+    SEARCH_QUERIES=(&quot;${SEARCH_QUERIES_DEFAULT[@]}&quot;)
+fi
+
+validate_commands
+validate_search_locations
+
+master_log &quot;Assumptions: Read access to search locations. Write access to output directory.&quot;
+
+total_tasks_launched=0
+current_active_jobs=0
 
 master_log &quot;Starting to launch search tasks...&quot;
 
-for location in &quot;${SEARCH_LOCATIONS[@]}&quot;; do
-    for query in &quot;${SEARCH_QUERIES[@]}&quot;; do
-        total_tasks=$((total_tasks + 1))
+for location_spec in &quot;${SEARCH_LOCATIONS[@]}&quot;; do
+    for query_spec in &quot;${SEARCH_QUERIES[@]}&quot;; do
+        total_tasks_launched=$((total_tasks_launched + 1))
+        task_unique_id_for_run=&quot;task${total_tasks_launched}&quot; # Simple unique ID for this run
 
-        # Manage concurrency: if max jobs are running, wait for one to finish
-        if [ &quot;$active_jobs&quot; -ge &quot;$MAX_CONCURRENT_JOBS&quot; ]; then
-            master_log &quot;Reached max concurrent jobs ($MAX_CONCURRENT_JOBS). Waiting for a slot...&quot;
-            wait -n # Waits for any background job to complete
-            if [ $? -eq 0 ]; then # Check if wait was successful (a job finished)
-                 active_jobs=$((active_jobs - 1))
-            else # wait -n can return &gt;128 if no children or interrupted by signal
-                 # This part might need more robust handling for different OS `wait -n` behaviors
-                 # For now, assume a job slot freed up or try to find finished jobs
-                 # A more robust way is to check specific PIDs, but `wait -n` is simpler for general load.
-                 # Let&#39;s just decrement optimistically or re-evaluate active PIDs.
-                 # For simplicity, we&#39;ll just decrement. A more complex solution would track PIDs carefully.
-                 active_jobs=$((active_jobs -1)) 
-                 if [ &quot;$active_jobs&quot; -lt 0 ]; then active_jobs=0; fi # Prevent negative
+        # Manage concurrency
+        while [ &quot;$current_active_jobs&quot; -ge &quot;$MAX_CONCURRENT_JOBS&quot; ]; do
+            master_log &quot;Reached max concurrent jobs ($current_active_jobs/$MAX_CONCURRENT_JOBS). Waiting for a slot...&quot;
+            
+            # Try to get PID of finished job using `wait -n -p` (Bash 4.3+)
+            # The `finished_pid_var_holder` is a dummy var for -p
+            local finished_pid=&quot;&quot;
+            if finished_pid=$(wait -n -p finished_pid_var_holder 2&gt;/dev/null &amp;&amp; echo &quot;$finished_pid_var_holder&quot;); then
+                local wait_n_p_exit_status=$? # Status of `wait -n -p ...` command itself
+                if [ -n &quot;$finished_pid&quot; ] &amp;&amp; [ &quot;$wait_n_p_exit_status&quot; -eq 0 ]; then
+                    wait &quot;$finished_pid&quot; # Ensure it&#39;s fully reaped
+                    local job_actual_exit_status=$?
+                    process_job_completion &quot;$finished_pid&quot; &quot;$job_actual_exit_status&quot;
+                    current_active_jobs=$((current_active_jobs - 1))
+                else
+                    # `wait -n -p` might have failed or returned no PID (e.g. interrupted)
+                    # Fallback: Check all known PIDs
+                    master_log &quot;WARN: &#39;wait -n -p&#39; did not yield a PID cleanly (status $wait_n_p_exit_status). Checking all active PIDs.&quot;
+                    local found_finished_job=0
+                    for pid_to_check in &quot;${!pid_task_info_map[@]}&quot;; do
+                        if ! kill -0 &quot;$pid_to_check&quot; 2&gt;/dev/null; then # If PID no longer exists
+                            wait &quot;$pid_to_check&quot; # Reap
+                            local fallback_job_status=$?
+                            process_job_completion &quot;$pid_to_check&quot; &quot;$fallback_job_status&quot;
+                            current_active_jobs=$((current_active_jobs - 1))
+                            found_finished_job=1
+                            break # Processed one, re-evaluate
+                        fi
+                    done
+                    if [ &quot;$found_finished_job&quot; -eq 0 ]; then
+                        master_log &quot;WARN: Fallback check found no finished jobs. `wait -n` might have been interrupted. Retrying wait.&quot;
+                        sleep 0.1 # Small delay before retrying wait
+                    fi
+                fi
+            else # `wait -n` (without -p) or `wait -n -p` failed more fundamentally
+                master_log &quot;WARN: &#39;wait -n&#39; command failed. Checking all active PIDs.&quot;
+                # Similar fallback as above
+                local found_finished_job_alt=0
+                for pid_to_check in &quot;${!pid_task_info_map[@]}&quot;; do
+                    if ! kill -0 &quot;$pid_to_check&quot; 2&gt;/dev/null; then
+                        wait &quot;$pid_to_check&quot;
+                        local fallback_job_status_alt=$?
+                        process_job_completion &quot;$pid_to_check&quot; &quot;$fallback_job_status_alt&quot;
+                        current_active_jobs=$((current_active_jobs - 1))
+                        found_finished_job_alt=1
+                        break 
+                    fi
+                done
+                if [ &quot;$found_finished_job_alt&quot; -eq 0 ]; then
+                     master_log &quot;WARN: Fallback (alt) check found no finished jobs. `wait -n` might have been interrupted. Retrying wait.&quot;
+                     sleep 0.5
+                fi
             fi
-        fi
+            if [ &quot;$current_active_jobs&quot; -lt 0 ]; then current_active_jobs=0; fi
+        done
         
-        master_log &quot;Launching task $total_tasks: Query [&#39;$query&#39;] in Location [&#39;$location&#39;]&quot;
-        
-        # Launch the task in the background
-        # The task_id_suffix could be $total_tasks or $$ for the subshell PID
-        perform_search_task &quot;$location&quot; &quot;$query&quot; &quot;$total_tasks&quot; &amp;
-        pids_list+=($!) # Store PID of the last backgrounded process
-        active_jobs=$((active_jobs + 1))
-        
-    done # End query loop
-done # End location loop
+        # Prepare info for pid_task_info_map
+        loc_path_part=&quot;${location_spec%%:::*}&quot;
+        q_path_part=&quot;${query_spec%%:::*}&quot;
+        sane_loc_part_map=$(sanitize_for_path &quot;$(basename &quot;$loc_path_part&quot;)&quot;); if [ -z &quot;$sane_loc_part_map&quot; ]; then sane_loc_part_map=&quot;root&quot;; fi
+        sane_query_part_map=$(sanitize_for_path &quot;$q_path_part&quot;)
+        task_identifier_fs_map=&quot;loc_${sane_loc_part_map}_query_${sane_query_part_map}_${task_unique_id_for_run}&quot;
+        task_log_file_map=&quot;${ALL_LOGS_PARENT_DIR}/log_${task_identifier_fs_map}.txt&quot;
+        task_results_file_map=&quot;${ALL_RESULTS_PARENT_DIR}/${task_identifier_fs_map}/matches.txt&quot;
 
-master_log &quot;All $total_tasks tasks have been launched.&quot;
-master_log &quot;Waiting for remaining $active_jobs active jobs to complete...&quot;
-
-# Wait for all remaining background jobs to finish
-while [ &quot;$active_jobs&quot; -gt 0 ]; do
-    wait -n
-    exit_status=$?
-    if [ $exit_status -eq 0 ] || [ $exit_status -eq 127 ]; then # 127 can mean no more children
-        active_jobs=$((active_jobs - 1))
-    else
-        # Handle other exit statuses if necessary, or just decrement
-        active_jobs=$((active_jobs - 1)) # Decrement anyway to avoid infinite loop on weird `wait -n` behavior
-    fi
-    if [ &quot;$active_jobs&quot; -lt 0 ]; then active_jobs=0; fi # Safety
-    master_log &quot;A job finished. Remaining active jobs: $active_jobs&quot;
+        master_log &quot;Launching task $total_tasks_launched (ID: $task_unique_id_for_run -&gt; FS: $task_identifier_fs_map): Query [&#39;$query_spec&#39;] in Location [&#39;$location_spec&#39;]&quot;
+        
+        perform_search_task &quot;$location_spec&quot; &quot;$query_spec&quot; &quot;$task_unique_id_for_run&quot; &amp;
+        local current_pid=$!
+        pid_task_info_map[&quot;$current_pid&quot;]=&quot;Query: $q_path_part, Location: $loc_path_part, Log: $task_log_file_map, Results: $task_results_file_map, TaskIdentifierFS: $task_identifier_fs_map&quot;
+        current_active_jobs=$((current_active_jobs + 1))
+    done
 done
 
-# Final wait, just in case (some systems/shells might behave differently with wait -n)
-wait
+master_log &quot;All $total_tasks_launched tasks have been launched.&quot;
+master_log &quot;Waiting for remaining $current_active_jobs active jobs to complete...&quot;
+
+while [ &quot;$current_active_jobs&quot; -gt 0 ]; do
+    local finished_pid_final=&quot;&quot;
+    # Using similar logic as above for waiting
+    if finished_pid_final=$(wait -n -p finished_pid_var_holder_final 2&gt;/dev/null &amp;&amp; echo &quot;$finished_pid_var_holder_final&quot;); then
+        local wait_n_p_exit_status_final=$?
+        if [ -n &quot;$finished_pid_final&quot; ] &amp;&amp; [ &quot;$wait_n_p_exit_status_final&quot; -eq 0 ]; then
+            wait &quot;$finished_pid_final&quot;
+            local job_actual_exit_status_final=$?
+            process_job_completion &quot;$finished_pid_final&quot; &quot;$job_actual_exit_status_final&quot;
+            current_active_jobs=$((current_active_jobs - 1))
+            master_log &quot;A job (PID $finished_pid_final) finished. Remaining: $current_active_jobs&quot;
+        else
+            master_log &quot;WARN (final loop): &#39;wait -n -p&#39; did not yield PID. Checking all.&quot;
+            # Fallback logic as in the main launch loop
+            local found_finished_job_f=0
+            for pid_to_check_f in &quot;${!pid_task_info_map[@]}&quot;; do
+                if ! kill -0 &quot;$pid_to_check_f&quot; 2&gt;/dev/null; then
+                    wait &quot;$pid_to_check_f&quot;; local f_stat=$?
+                    process_job_completion &quot;$pid_to_check_f&quot; &quot;$f_stat&quot;
+                    current_active_jobs=$((current_active_jobs - 1)); found_finished_job_f=1; break
+                fi
+            done
+            if [ &quot;$found_finished_job_f&quot; -eq 0 ]; then sleep 0.1; fi
+        fi
+    else
+        master_log &quot;WARN (final loop): &#39;wait -n&#39; command failed. Checking all.&quot;
+        # Fallback logic as in the main launch loop
+        local found_finished_job_f_alt=0
+        for pid_to_check_f_alt in &quot;${!pid_task_info_map[@]}&quot;; do
+            if ! kill -0 &quot;$pid_to_check_f_alt&quot; 2&gt;/dev/null; then
+                wait &quot;$pid_to_check_f_alt&quot;; local f_stat_alt=$?
+                process_job_completion &quot;$pid_to_check_f_alt&quot; &quot;$f_stat_alt&quot;
+                current_active_jobs=$((current_active_jobs - 1)); found_finished_job_f_alt=1; break
+            fi
+        done
+        if [ &quot;$found_finished_job_f_alt&quot; -eq 0 ]; then sleep 0.5; fi
+    fi
+    if [ &quot;$current_active_jobs&quot; -lt 0 ]; then current_active_jobs=0; fi
+done
+
+# Final sanity check for any PIDs that might still be in the map (should be empty)
+if [ ${#pid_task_info_map[@]} -gt 0 ]; then
+    master_log &quot;Performing final PID reaping for any stragglers (${!pid_task_info_map[*]})...&quot;
+    for pid_to_reap in &quot;${!pid_task_info_map[@]}&quot;; do
+        master_log &quot;Waiting for potentially missed PID: $pid_to_reap&quot;
+        if wait &quot;$pid_to_reap&quot;; then # if it already exited, wait returns immediately with its status
+            actual_job_exit_status=$?
+        else 
+            actual_job_exit_status=$? # Capture status if it errors (e.g. no such PID)
+        fi
+        # Check if PID still in map (might have been processed by a successful wait -n -p)
+        if [[ -v pid_task_info_map[&quot;$pid_to_reap&quot;] ]]; then # Check if key exists
+          process_job_completion &quot;$pid_to_reap&quot; &quot;$actual_job_exit_status&quot;
+          master_log &quot;Processed straggler PID $pid_to_reap, exit status $actual_job_exit_status&quot;
+        fi
+    done
+fi
 
 master_log &quot;All search tasks have completed.&quot;
-master_log &quot;Please check individual logs in: $ALL_LOGS_PARENT_DIR&quot;
-master_log &quot;And results in: $ALL_RESULTS_PARENT_DIR&quot;
-master_log &quot;Master script finished.&quot;
 
+master_log &quot;Generating summary report to: $SUMMARY_REPORT_FILE&quot;
+{
+    echo &quot;--- Batch Search Run Summary ---&quot;
+    echo &quot;Run ID: $(basename &quot;$MASTER_OUTPUT_ROOT&quot;)&quot;
+    echo &quot;Completion Time: $(date &#39;+%Y-%m-%d %H:%M:%S&#39;)&quot;
+    echo &quot;&quot;
+    echo &quot;Total Tasks Launched: $total_tasks_launched&quot;
+    echo &quot;  Tasks Succeeded (found matches): $tasks_succeeded&quot;
+    echo &quot;  Tasks Succeeded (no matches found): $tasks_no_match&quot;
+    echo &quot;  Tasks Failed: $tasks_failed&quot;
+    echo &quot;&quot;
+    echo &quot;Total Matching Files Found (across all successful tasks with matches): $total_matching_files&quot;
+    echo &quot;&quot;
+    if [ ${#failed_tasks_details[@]} -gt 0 ]; then
+        echo &quot;Details of Failed Tasks (${#failed_tasks_details[@]}):&quot;
+        for detail in &quot;${failed_tasks_details[@]}&quot;; do
+            echo &quot;  - $detail&quot;
+        done
+    else
+        echo &quot;No tasks failed.&quot;
+    fi
+    echo &quot;&quot;
+    echo &quot;Master Log: $MASTER_LOG_FILE&quot;
+    echo &quot;All Results In: $ALL_RESULTS_PARENT_DIR&quot;
+    echo &quot;All Logs In: $ALL_LOGS_PARENT_DIR&quot;
+} &gt; &quot;$SUMMARY_REPORT_FILE&quot;
+
+master_log &quot;Summary report generated.&quot;
+cat &quot;$SUMMARY_REPORT_FILE&quot; # Also print to stdout for convenience
+
+master_log &quot;Master script finished.&quot;
 exit 0</code>
 </section>
   <h1 id="bash-script-documentation">
@@ -2851,7 +3461,7 @@ This logic correctly differentiates “successful run with matches,” “succes
         
         
         <a href="https://ib.bsb.br/404" aria-label="404">
-          2025-05-28 09:58:30
+          2025-05-28 10:05:49
         </a>
         &#x23;
     
@@ -2919,7 +3529,7 @@ This logic correctly differentiates “successful run with matches,” “succes
         "headline": "Extract information from disorganized data with `ugrep` bash script",
         "description": "",
         "datePublished": "2025-05-23T00:00:00+00:00",
-        "dateModified": "2025-05-28T11:18:59+00:00",
+        "dateModified": "2025-05-28T12:56:27+00:00",
         "author": {
           "@type": "Person",
           "name": "Author"
