@@ -5,8 +5,8 @@ date: 2025-05-28
 type: post
 layout: post
 published: true
-slug: changing-machines-ip-address
-title: 'changing machine's IP address '
+slug: ip-changing
+title: 'changing IP address '
 ---
 This tutorial will guide you through changing your Debian Bullseye machine's IP address from one automatically assigned by DHCP to a static IP address. We'll use your network interface \`enP2p33s0\` (currently \`192.168.15.3/24\`) and your router's gateway (\`192.168.15.1\`) as the basis for examples.
 
