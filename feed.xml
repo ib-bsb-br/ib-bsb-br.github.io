@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2025-05-29T12:10:14+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">bash script to leverage the `fclones` rust tool for dedup directories</title><link href="https://ib.bsb.br/bash-script-to-leverage-the-fclones-rust-tool-for-dedup-directories/" rel="alternate" type="text/html" title="bash script to leverage the `fclones` rust tool for dedup directories" /><published>2025-05-29T00:00:00+00:00</published><updated>2025-05-29T08:31:30+00:00</updated><id>https://ib.bsb.br/bash-script-to-leverage-the-fclones-rust-tool-for-dedup-directories</id><content type="html" xml:base="https://ib.bsb.br/bash-script-to-leverage-the-fclones-rust-tool-for-dedup-directories/"><![CDATA[<section class="code-block-container" role="group" aria-label="Bash Code Block" data-filename="bash_code_block.sh" data-code="#!/bin/bash
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2025-05-29T13:01:43+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">bash script to leverage the `fclones` rust tool for dedup directories</title><link href="https://ib.bsb.br/bash-script-to-leverage-the-fclones-rust-tool-for-dedup-directories/" rel="alternate" type="text/html" title="bash script to leverage the `fclones` rust tool for dedup directories" /><published>2025-05-29T00:00:00+00:00</published><updated>2025-05-29T08:31:30+00:00</updated><id>https://ib.bsb.br/bash-script-to-leverage-the-fclones-rust-tool-for-dedup-directories</id><content type="html" xml:base="https://ib.bsb.br/bash-script-to-leverage-the-fclones-rust-tool-for-dedup-directories/"><![CDATA[<section class="code-block-container" role="group" aria-label="Bash Code Block" data-filename="bash_code_block.sh" data-code="#!/bin/bash
 set -euo pipefail
 
 # Script to install fclones and use it to remove duplicate files from a specified directory.
@@ -502,6 +502,854 @@ echo &quot;---&quot;
 echo &quot;Script finished.&quot;
 # Trap will handle cleanup of TEMP_DOWNLOAD_DIR
 exit 0</code>
+</section>]]></content><author><name></name></author><category term="scratchpad" /></entry><entry><title type="html">`.eml` mail converter</title><link href="https://ib.bsb.br/eml-mail-converter/" rel="alternate" type="text/html" title="`.eml` mail converter" /><published>2025-05-29T00:00:00+00:00</published><updated>2025-05-29T12:57:27+00:00</updated><id>https://ib.bsb.br/eml-mail-converter</id><content type="html" xml:base="https://ib.bsb.br/eml-mail-converter/"><![CDATA[<section class="code-block-container" role="group" aria-label="Python Code Block" data-filename="python_code_block.py" data-code="import os
+import email
+from email.parser import BytesParser
+from email.policy import default as default_email_policy # Modern email policy
+from email.header import decode_header, make_header
+import mimetypes # For guessing file extensions
+import re
+import traceback # For detailed error logging
+
+def sanitize_filename(filename_str):
+    &quot;&quot;&quot;
+    Sanitizes a string to be used as a filename.
+    Removes or replaces characters that are not allowed or problematic in filenames
+    across common operating systems. Handles email header objects.
+    &quot;&quot;&quot;
+    if filename_str is None:
+        return &quot;_unnamed_file_&quot;
+
+    # If it&#39;s an email.header.Header object, decode it first
+    if hasattr(filename_str, &#39;encode&#39;) and not isinstance(filename_str, str):
+        try:
+            decoded_parts = decode_header(str(filename_str))
+            temp_filename_parts = []
+            for part, charset in decoded_parts:
+                if isinstance(part, bytes):
+                    try:
+                        temp_filename_parts.append(part.decode(charset or &#39;utf-8&#39;, &#39;replace&#39;))
+                    except LookupError: # Fallback for unknown charset
+                        temp_filename_parts.append(part.decode(&#39;utf-8&#39;, &#39;replace&#39;))
+                else:
+                    temp_filename_parts.append(part)
+            filename_str = &quot;&quot;.join(temp_filename_parts)
+        except Exception as e:
+            # If decoding complex header fails, fall back to simple string conversion
+            print(f&quot;    Warning: Could not fully decode filename header, using str(): {e}&quot;)
+            filename_str = str(filename_str)
+    elif not isinstance(filename_str, str):
+        filename_str = str(filename_str) # Ensure it&#39;s a string
+
+    # Remove or replace forbidden characters: &lt; &gt; : &quot; / \ | ? * and control characters (0-31)
+    filename_str = re.sub(r&#39;[&lt;&gt;:&quot;/\\|?*\x00-\x1f]&#39;, &#39;_&#39;, filename_str)
+
+    # Replace multiple consecutive underscores or dots that might have resulted
+    filename_str = re.sub(r&#39;_+&#39;, &#39;_&#39;, filename_str)
+    filename_str = re.sub(r&#39;\.+&#39;, &#39;.&#39;, filename_str) # Allow single dots for extensions
+
+    # Remove leading/trailing problematic characters (dots, underscores, spaces)
+    filename_str = filename_str.strip(&#39;._ &#39;)
+
+    # Handle cases where the filename might become empty or just dots after sanitization
+    if not filename_str or all(c == &#39;.&#39; for c in filename_str):
+        return &quot;_renamed_file_&quot;
+
+    # Prevent names that could be problematic (e.g., &quot;..&quot; relative paths)
+    # The regex above should handle slashes, but this is an extra safety check.
+    if &quot;..&quot; in filename_str:
+        filename_str = filename_str.replace(&quot;..&quot;, &quot;_&quot;) # Replace &quot;..&quot; with a single underscore
+
+    # Limit length (e.g., 200 characters, leaving room for extensions/counters)
+    max_len = 200
+    if len(filename_str) &gt; max_len:
+        name_part, ext_part = os.path.splitext(filename_str)
+        
+        # Ensure ext_part is not excessively long itself
+        if len(ext_part) &gt; max_len / 2 : # Heuristic for very long extensions
+            ext_part = ext_part[:10] # Truncate very long extension
+        
+        available_len_for_name = max_len - len(ext_part)
+        if ext_part: # if there is an extension, account for the dot
+            available_len_for_name -=1
+            if available_len_for_name &lt; 1: # Name part would be empty
+                 name_part = &quot;_trunc_&quot; # Provide a minimal name part
+                 available_len_for_name = len(name_part) # Recalculate for safety
+            else:
+                 name_part = name_part[:available_len_for_name]
+
+        else: # No extension
+            name_part = name_part[:max_len]
+            
+        filename_str = name_part + (&#39;.&#39; + ext_part.lstrip(&#39;.&#39;) if ext_part else &quot;&quot;)
+
+    return filename_str if filename_str else &quot;_renamed_file_&quot; # Final check for empty string
+
+
+def process_eml_file(eml_file_path, base_output_dir):
+    &quot;&quot;&quot;
+    Processes a single .eml file to extract its headers, body, and attachments.
+
+    Args:
+        eml_file_path (str): The path to the .eml file.
+        base_output_dir (str): The directory where extracted content will be saved.
+                               A subdirectory will be created here for each EML file.
+    &quot;&quot;&quot;
+    print(f&quot;\nProcessing EML file: {eml_file_path}&quot;)
+    try:
+        with open(eml_file_path, &#39;rb&#39;) as fp: # Read in binary mode
+            msg = BytesParser(policy=default_email_policy).parse(fp)
+
+        # --- Create a unique output directory for this email ---
+        eml_filename_stem = os.path.splitext(os.path.basename(eml_file_path))[0]
+        sanitized_eml_stem = sanitize_filename(eml_filename_stem)
+
+        if not sanitized_eml_stem or sanitized_eml_stem == &quot;_renamed_file_&quot;:
+            unique_id = str(abs(hash(os.path.abspath(eml_file_path))) % 1000000) # Larger range for hash
+            sanitized_eml_stem = f&quot;email_extract_{unique_id}&quot;
+            print(f&quot;    Warning: Original EML filename sanitized to an unusable name. Using fallback: {sanitized_eml_stem}&quot;)
+
+        email_specific_output_dir = os.path.join(base_output_dir, sanitized_eml_stem)
+
+        dir_counter = 1
+        temp_output_dir = email_specific_output_dir
+        while os.path.exists(temp_output_dir):
+            temp_output_dir = f&quot;{email_specific_output_dir}_{dir_counter}&quot;
+            dir_counter += 1
+        email_specific_output_dir = temp_output_dir
+        
+        try:
+            os.makedirs(email_specific_output_dir, exist_ok=True)
+        except OSError as e:
+            print(f&quot;    Error creating output directory {email_specific_output_dir}: {e}&quot;)
+            return # Cannot proceed without output directory
+        print(f&quot;  Outputting to: {email_specific_output_dir}&quot;)
+
+        # --- Extract and save headers ---
+        headers_to_extract = [&quot;Subject&quot;, &quot;From&quot;, &quot;To&quot;, &quot;Date&quot;, &quot;Message-ID&quot;, 
+                              &quot;Cc&quot;, &quot;Bcc&quot;, &quot;Return-Path&quot;, &quot;Reply-To&quot;]
+        header_info = []
+        extracted_subject_for_log = &quot;No_Subject&quot; # Fallback
+
+        for header_name in headers_to_extract:
+            header_value = msg.get(header_name)
+            if header_value:
+                try:
+                    # make_header handles folding and converting to a string.
+                    # decode_header handles the actual charset decoding.
+                    decoded_header_val = str(make_header(decode_header(str(header_value))))
+                    header_info.append(f&quot;{header_name}: {decoded_header_val}&quot;)
+                    if header_name.lower() == &quot;subject&quot;:
+                        extracted_subject_for_log = decoded_header_val
+                except Exception as e:
+                    header_info.append(f&quot;{header_name}: Error decoding header - {e}&quot;)
+                    print(f&quot;    Warning: Error decoding header &#39;{header_name}&#39;: {e}&quot;)
+        
+        if header_info:
+            try:
+                with open(os.path.join(email_specific_output_dir, &quot;_headers.txt&quot;), &quot;w&quot;, encoding=&quot;utf-8&quot;) as hf:
+                    hf.write(&quot;\n&quot;.join(header_info))
+                print(&quot;    Saved _headers.txt&quot;)
+            except IOError as e:
+                print(f&quot;    Error saving _headers.txt: {e}&quot;)
+        else:
+            print(&quot;    No standard headers found or extracted.&quot;)
+
+
+        # --- Extract Body and Attachments ---
+        body_text_parts = []
+        body_html_parts = []
+        attachment_idx = 0 
+
+        for part_num, part in enumerate(msg.walk()):
+            content_disposition = part.get(&quot;Content-Disposition&quot;)
+            content_type = part.get_content_type()
+            
+            is_attachment = False
+            # Rule 1: Explicit &quot;attachment&quot; in Content-Disposition
+            if content_disposition and &quot;attachment&quot; in content_disposition.lower():
+                is_attachment = True
+            # Rule 2: Has a filename (even if disposition is &quot;inline&quot; or missing)
+            # This helps catch inline images that are also distinct files.
+            elif part.get_filename(): 
+                 is_attachment = True
+            # Rule 3: Non-text, non-multipart part without a disposition (e.g., a directly embedded image)
+            # This is a heuristic and might sometimes misclassify, but often useful.
+            elif not part.is_multipart() and \
+                 not content_type.startswith(&quot;text/&quot;) and \
+                 not content_type.startswith(&quot;multipart/&quot;) and \
+                 not content_disposition:
+                 is_attachment = True
+
+            if is_attachment:
+                attachment_idx += 1
+                original_filename = part.get_filename() # This method handles decoding of filenames
+
+                if original_filename:
+                    filename = sanitize_filename(original_filename)
+                else:
+                    ext = mimetypes.guess_extension(content_type, strict=False) or &#39;.dat&#39;
+                    filename = sanitize_filename(f&quot;attachment_{attachment_idx}{ext}&quot;)
+                
+                if not filename or filename == &quot;_renamed_file_&quot;: # Final fallback if sanitization fails badly
+                    filename = f&quot;attachment_{attachment_idx}_fallback.dat&quot;
+
+                filepath = os.path.join(email_specific_output_dir, filename)
+                
+                file_counter = 1
+                base_name, ext_name = os.path.splitext(filepath)
+                # Ensure base_name is not empty if original filename was just an extension (e.g. &quot;.pdf&quot;)
+                if not base_name and ext_name: # e.g. if original was &quot;.txt&quot;
+                    base_name = f&quot;attachment_{attachment_idx}_base&quot;
+
+                while os.path.exists(filepath):
+                    filepath = f&quot;{base_name}_{file_counter}{ext_name}&quot;
+                    file_counter += 1
+                    
+                try:
+                    payload = part.get_payload(decode=True) 
+                    if payload is not None: 
+                        with open(filepath, &#39;wb&#39;) as f_attach:
+                            f_attach.write(payload)
+                        print(f&quot;    Saved attachment: {os.path.basename(filepath)}&quot;)
+                    else:
+                        print(f&quot;    Skipped attachment {os.path.basename(filepath)} (empty payload after decoding).&quot;)
+                except IOError as e:
+                    print(f&quot;    IOError saving attachment {os.path.basename(filepath)}: {e}&quot;)
+                except Exception as e:
+                    print(f&quot;    Error saving attachment {os.path.basename(filepath)}: {e}&quot;)
+            
+            # Body parts (not explicitly attachments based on above rules)
+            elif content_type == &quot;text/plain&quot; and (not content_disposition or &quot;inline&quot; in content_disposition.lower()):
+                try:
+                    payload = part.get_payload(decode=True)
+                    if payload is not None:
+                        charset = part.get_content_charset() or &#39;utf-8&#39; 
+                        body_text_parts.append(payload.decode(charset, errors=&#39;replace&#39;))
+                except Exception as e:
+                    print(f&quot;    Error decoding text/plain part: {e}&quot;)
+            
+            elif content_type == &quot;text/html&quot; and (not content_disposition or &quot;inline&quot; in content_disposition.lower()):
+                try:
+                    payload = part.get_payload(decode=True)
+                    if payload is not None:
+                        charset = part.get_content_charset() or &#39;utf-8&#39;
+                        body_html_parts.append(payload.decode(charset, errors=&#39;replace&#39;))
+                except Exception as e:
+                    print(f&quot;    Error decoding text/html part: {e}&quot;)
+
+        # Save body parts
+        if body_text_parts:
+            body_text_content = &quot;\n\n--- (Next Text Part) ---\n\n&quot;.join(body_text_parts)
+            body_text_filepath = os.path.join(email_specific_output_dir, &quot;body.txt&quot;)
+            try:
+                with open(body_text_filepath, &#39;w&#39;, encoding=&#39;utf-8&#39;) as f_body_txt:
+                    f_body_txt.write(body_text_content)
+                print(f&quot;    Saved text body to body.txt&quot;)
+            except IOError as e:
+                print(f&quot;    Error saving body.txt: {e}&quot;)
+        
+        if body_html_parts:
+            body_html_content = &quot;\n\n&lt;hr&gt;&lt;p&gt;--- (Next HTML Part) ---&lt;/p&gt;&lt;hr&gt;\n\n&quot;.join(body_html_parts)
+            body_html_filepath = os.path.join(email_specific_output_dir, &quot;body.html&quot;)
+            try:
+                with open(body_html_filepath, &#39;w&#39;, encoding=&#39;utf-8&#39;) as f_body_html:
+                    f_body_html.write(body_html_content)
+                print(f&quot;    Saved HTML body to body.html&quot;)
+            except IOError as e:
+                print(f&quot;    Error saving body.html: {e}&quot;)
+                
+        # Fallback for non-multipart messages that are purely text and weren&#39;t caught as body
+        if not msg.is_multipart() and not body_text_parts and not body_html_parts and msg.get_content_type().startswith(&quot;text/&quot;):
+            try:
+                payload = msg.get_payload(decode=True)
+                if payload is not None:
+                    charset = msg.get_content_charset() or &#39;utf-8&#39;
+                    body_content = payload.decode(charset, errors=&#39;replace&#39;)
+                    subtype = sanitize_filename(msg.get_content_subtype() or &quot;txt&quot;)
+                    if not subtype or subtype == &quot;_renamed_file_&quot;: subtype = &quot;txt&quot; # Ensure valid extension
+                    body_filepath = os.path.join(email_specific_output_dir, f&quot;body_main.{subtype}&quot;)
+                    with open(body_filepath, &#39;w&#39;, encoding=&#39;utf-8&#39;) as f_body_main:
+                        f_body_main.write(body_content)
+                    print(f&quot;    Saved main text payload to {os.path.basename(body_filepath)}&quot;)
+            except Exception as e:
+                print(f&quot;    Could not decode/save main text payload for non-multipart email: {e}&quot;)
+
+        if not body_text_parts and not body_html_parts and attachment_idx == 0 and \
+           (msg.is_multipart() or not msg.get_content_type().startswith(&quot;text/&quot;)):
+            print(f&quot;    Note: No distinct text/html body or attachments were extracted for &#39;{os.path.basename(eml_file_path)}&#39;. The content might be in an unusual format or the EML might be empty/corrupt.&quot;)
+
+        print(f&quot;  Finished processing {os.path.basename(eml_file_path)}&quot;)
+
+    except FileNotFoundError:
+        print(f&quot;Error: EML file not found at {eml_file_path}&quot;)
+    except Exception as e:
+        print(f&quot;An critical error occurred while processing {eml_file_path}: {e}&quot;)
+        traceback.print_exc()
+
+
+if __name__ == &quot;__main__&quot;:
+    # --- HOW TO USE THIS SCRIPT ---
+    # 1. Save this script as a Python file (e.g., eml_parser_revised.py).
+    #
+    # 2. CHOOSE ONE of the options below by UNCOMMENTING the relevant block.
+    #    To uncomment a block, remove the triple quote characters (&#39;&#39;&#39; or &quot;&quot;&quot;)
+    #    from the beginning and end of that block.
+    #
+    # 3. MODIFY THE PATHS within your chosen uncommented block to point to your
+    #    actual EML files and desired output location. Use ABSOLUTE paths if unsure.
+    #    e.g., on Linux: &#39;/home/youruser/my_emails/email.eml&#39;
+    #    e.g., on Windows: &#39;C:\\Users\\YourUser\\Documents\\MyEMLs&#39; (note the double backslashes)
+    #
+    # 4. Run the script from your terminal:
+    #    python3 eml_parser_revised.py
+    #    (Or `python eml_parser_revised.py` if python3 is your default python)
+    #
+    # The script will create a main output directory, and inside it,
+    # a subdirectory for each processed EML file. These subdirectories will
+    # contain the extracted headers (_headers.txt), body (body.txt/body.html),
+    # and any attachments.
+
+    user_has_configured_an_option = True # This flag will be set if an option is chosen by uncommenting
+
+    # --- OPTION 1: Process a SINGLE .eml file ---
+    &quot;&quot;&quot;
+    eml_file_to_process = &quot;YOUR_SINGLE_EML_FILE_PATH_HERE.eml&quot;  # &lt;-- *** SET THIS ABSOLUTE OR RELATIVE PATH ***
+    main_output_folder = &quot;eml_extracted_single_output&quot;          # &lt;-- SET YOUR DESIRED OUTPUT FOLDER NAME (will be created if not exists)
+
+    # --- Do not edit below this line for Option 1 ---
+    if eml_file_to_process == &quot;YOUR_SINGLE_EML_FILE_PATH_HERE.eml&quot;:
+        print(&quot;OPTION 1 IS UNCOMMENTED, BUT THE PATH IS STILL THE DEFAULT PLACEHOLDER.&quot;)
+        print(&quot;Please edit &#39;eml_file_to_process&#39; to your EML file&#39;s actual path.&quot;)
+    elif os.path.isfile(eml_file_to_process):
+        try:
+            os.makedirs(main_output_folder, exist_ok=True)
+            process_eml_file(eml_file_to_process, main_output_folder)
+            print(f&quot;\nSingle file processing complete. Output in: {os.path.abspath(main_output_folder)}&quot;)
+        except Exception as e_main:
+            print(f&quot;Error during Option 1 execution: {e_main}&quot;)
+        user_has_configured_an_option = True
+    else:
+        print(f&quot;OPTION 1 ERROR: EML file not found at &#39;{eml_file_to_process}&#39;&quot;)
+    &quot;&quot;&quot;
+
+    # --- OPTION 2: Process ALL .eml files in a DIRECTORY ---
+    # &quot;&quot;&quot;
+    source_directory_with_emls = &quot;/mnt/mSATA/linaro/Desktop/00-TEMP/EML mails/&quot;  # &lt;-- *** SET THIS ABSOLUTE OR RELATIVE PATH ***
+    main_output_folder = &quot;/mnt/mSATA/linaro/Desktop/00-TEMP/EMLout/&quot;                        # &lt;-- SET YOUR DESIRED OUTPUT FOLDER NAME (will be created if not exists)
+
+    # --- Do not edit below this line for Option 2 ---
+    if source_directory_with_emls == &quot;YOUR_DIRECTORY_CONTAINING_EML_FILES_HERE&quot;:
+        print(&quot;OPTION 2 IS UNCOMMENTED, BUT THE PATH IS STILL THE DEFAULT PLACEHOLDER.&quot;)
+        print(&quot;Please edit &#39;source_directory_with_emls&#39; to your EML directory&#39;s actual path.&quot;)
+    elif os.path.isdir(source_directory_with_emls):
+        try:
+            os.makedirs(main_output_folder, exist_ok=True)
+            eml_found_in_dir = False
+            for item in os.listdir(source_directory_with_emls):
+                if item.lower().endswith(&quot;.eml&quot;):
+                    eml_found_in_dir = True
+                    full_eml_path = os.path.join(source_directory_with_emls, item)
+                    process_eml_file(full_eml_path, main_output_folder)
+            if not eml_found_in_dir:
+                print(f&quot;OPTION 2: No .eml files found in &#39;{source_directory_with_emls}&#39;&quot;)
+            else:
+                print(f&quot;\nBatch processing complete. Output in: {os.path.abspath(main_output_folder)}&quot;)
+        except Exception as e_main:
+            print(f&quot;Error during Option 2 execution: {e_main}&quot;)
+        user_has_configured_an_option = True
+    else:
+        print(f&quot;OPTION 2 ERROR: Directory not found at &#39;{source_directory_with_emls}&#39;&quot;)
+    # &quot;&quot;&quot;
+
+
+    # --- OPTION 3: Test with the EML content provided in your prompt ---
+    # To use this:
+    # 1. Create a file named &quot;my_test_email.eml&quot; in the SAME directory as this script.
+    # 2. Paste the FULL EML content (from your original prompt) into that &quot;my_test_email.eml&quot; file and save it.
+    # 3. Then, uncomment this block and run the script.
+    &quot;&quot;&quot;
+    test_eml_filename = &quot;my_test_email.eml&quot; 
+    main_output_folder = &quot;eml_extracted_test_sample_output&quot;
+
+    # --- Do not edit below this line for Option 3 ---
+    if os.path.isfile(test_eml_filename):
+        try:
+            os.makedirs(main_output_folder, exist_ok=True)
+            process_eml_file(test_eml_filename, main_output_folder)
+            print(f&quot;\nTest file processing complete. Output in: {os.path.abspath(main_output_folder)}&quot;)
+        except Exception as e_main:
+            print(f&quot;Error during Option 3 execution: {e_main}&quot;)
+        user_has_configured_an_option = True
+    else:
+        print(f&quot;OPTION 3: Test file &#39;{test_eml_filename}&#39; not found in the script&#39;s directory.&quot;)
+        print(&quot;          Please create it and paste your EML content into it to use this option.&quot;)
+    &quot;&quot;&quot;
+
+    # --- If no option was uncommented and configured by the user, print detailed help ---
+    if not user_has_configured_an_option:
+        print(&quot;\n--- EML EXTRACTION SCRIPT HELP ---&quot;)
+        print(&quot;This script extracts content and attachments from .eml (email) files.&quot;)
+        print(&quot;\nTO USE THIS SCRIPT:&quot;)
+        print(&quot;1. Open this Python script file (the .py file you saved) in a text editor.&quot;)
+        print(&quot;2. Scroll down to the end of the file, to the section that starts with:&quot;)
+        print(&quot;   &#39;if __name__ == \&quot;__main__\&quot;:&#39;&quot;)
+        print(&quot;3. You will see three &#39;OPTION&#39; blocks (OPTION 1, OPTION 2, OPTION 3).&quot;)
+        print(&quot;   These blocks are currently &#39;commented out&#39; with triple quote characters&quot;)
+        print(&quot;   (&#39;&#39;&#39;) at their beginning and end.&quot;)
+        print(&quot;\n4. CHOOSE ONLY ONE OPTION that fits your needs:&quot;)
+        print(&quot;   - OPTION 1: If you want to process a single .eml file.&quot;)
+        print(&quot;   - OPTION 2: If you want to process all .eml files within a specific folder.&quot;)
+        print(&quot;   - OPTION 3: If you want to test the script with a sample &#39;my_test_email.eml&#39; file&quot;)
+        print(&quot;               (which you need to create first, as described in the comments for Option 3).&quot;)
+        print(&quot;\n5. UNCOMMENT your chosen option&#39;s block. To do this, delete the three quote&quot;)
+        print(&quot;   characters (&#39;&#39;&#39;) from the very beginning of that block, AND delete the&quot;)
+        print(&quot;   three quote characters (&#39;&#39;&#39;) from the very end of that SAME block.&quot;)
+        print(&quot;   Make sure only ONE option block is uncommented.&quot;)
+        print(&quot;\n6. IMPORTANT: Inside the option block you just uncommented, you MUST update&quot;)
+        print(&quot;   the placeholder paths. For example, change:&quot;)
+        print(&quot;     &#39;YOUR_SINGLE_EML_FILE_PATH_HERE.eml&#39;&quot;)
+        print(&quot;   to the actual, full path of your EML file, like:&quot;)
+        print(&quot;     &#39;/home/yourusername/emails/important_email.eml&#39; (for Linux/macOS)&quot;)
+        print(&quot;     &#39;C:\\Users\\YourUserName\\Documents\\Emails\\archive.eml&#39; (for Windows - note double backslashes)&quot;)
+        print(&quot;   Similarly, update &#39;YOUR_DIRECTORY_CONTAINING_EML_FILES_HERE&#39; if using Option 2,&quot;)
+        print(&quot;   and you can customize &#39;main_output_folder&#39; if desired.&quot;)
+        print(&quot;\n7. Save the changes you made to this script file.&quot;)
+        print(&quot;\n8. Open a terminal or command prompt.&quot;)
+        print(&quot;9. Navigate to the directory where you saved this script file using the &#39;cd&#39; command.&quot;)
+        print(&quot;   (e.g., &#39;cd /path/to/where/you/saved/the_script&#39;)&quot;)
+        print(&quot;10. Run the script by typing the following command and pressing Enter:&quot;)
+        print(&quot;    python3 name_of_this_script.py&quot;)
+        print(&quot;    (Replace &#39;name_of_this_script.py&#39; with the actual filename you used, e.g., &#39;eml_parser_revised.py&#39;)&quot;)
+        print(&quot;    If &#39;python3&#39; doesn&#39;t work, try &#39;python name_of_this_script.py&#39;.&quot;)
+        print(&quot;\n   The script will then run, process your EML files, and save the extracted&quot;)
+        print(&quot;   content (headers, body text/html, attachments) into subdirectories within&quot;)
+        print(&quot;   the &#39;main_output_folder&#39; you specified (or the default one for that option).&quot;)
+        print(&quot;-----------------------------------\n&quot;)" data-download-link="" data-download-label="Download Python">
+  <code class="language-python">import os
+import email
+from email.parser import BytesParser
+from email.policy import default as default_email_policy # Modern email policy
+from email.header import decode_header, make_header
+import mimetypes # For guessing file extensions
+import re
+import traceback # For detailed error logging
+
+def sanitize_filename(filename_str):
+    &quot;&quot;&quot;
+    Sanitizes a string to be used as a filename.
+    Removes or replaces characters that are not allowed or problematic in filenames
+    across common operating systems. Handles email header objects.
+    &quot;&quot;&quot;
+    if filename_str is None:
+        return &quot;_unnamed_file_&quot;
+
+    # If it&#39;s an email.header.Header object, decode it first
+    if hasattr(filename_str, &#39;encode&#39;) and not isinstance(filename_str, str):
+        try:
+            decoded_parts = decode_header(str(filename_str))
+            temp_filename_parts = []
+            for part, charset in decoded_parts:
+                if isinstance(part, bytes):
+                    try:
+                        temp_filename_parts.append(part.decode(charset or &#39;utf-8&#39;, &#39;replace&#39;))
+                    except LookupError: # Fallback for unknown charset
+                        temp_filename_parts.append(part.decode(&#39;utf-8&#39;, &#39;replace&#39;))
+                else:
+                    temp_filename_parts.append(part)
+            filename_str = &quot;&quot;.join(temp_filename_parts)
+        except Exception as e:
+            # If decoding complex header fails, fall back to simple string conversion
+            print(f&quot;    Warning: Could not fully decode filename header, using str(): {e}&quot;)
+            filename_str = str(filename_str)
+    elif not isinstance(filename_str, str):
+        filename_str = str(filename_str) # Ensure it&#39;s a string
+
+    # Remove or replace forbidden characters: &lt; &gt; : &quot; / \ | ? * and control characters (0-31)
+    filename_str = re.sub(r&#39;[&lt;&gt;:&quot;/\\|?*\x00-\x1f]&#39;, &#39;_&#39;, filename_str)
+
+    # Replace multiple consecutive underscores or dots that might have resulted
+    filename_str = re.sub(r&#39;_+&#39;, &#39;_&#39;, filename_str)
+    filename_str = re.sub(r&#39;\.+&#39;, &#39;.&#39;, filename_str) # Allow single dots for extensions
+
+    # Remove leading/trailing problematic characters (dots, underscores, spaces)
+    filename_str = filename_str.strip(&#39;._ &#39;)
+
+    # Handle cases where the filename might become empty or just dots after sanitization
+    if not filename_str or all(c == &#39;.&#39; for c in filename_str):
+        return &quot;_renamed_file_&quot;
+
+    # Prevent names that could be problematic (e.g., &quot;..&quot; relative paths)
+    # The regex above should handle slashes, but this is an extra safety check.
+    if &quot;..&quot; in filename_str:
+        filename_str = filename_str.replace(&quot;..&quot;, &quot;_&quot;) # Replace &quot;..&quot; with a single underscore
+
+    # Limit length (e.g., 200 characters, leaving room for extensions/counters)
+    max_len = 200
+    if len(filename_str) &gt; max_len:
+        name_part, ext_part = os.path.splitext(filename_str)
+        
+        # Ensure ext_part is not excessively long itself
+        if len(ext_part) &gt; max_len / 2 : # Heuristic for very long extensions
+            ext_part = ext_part[:10] # Truncate very long extension
+        
+        available_len_for_name = max_len - len(ext_part)
+        if ext_part: # if there is an extension, account for the dot
+            available_len_for_name -=1
+            if available_len_for_name &lt; 1: # Name part would be empty
+                 name_part = &quot;_trunc_&quot; # Provide a minimal name part
+                 available_len_for_name = len(name_part) # Recalculate for safety
+            else:
+                 name_part = name_part[:available_len_for_name]
+
+        else: # No extension
+            name_part = name_part[:max_len]
+            
+        filename_str = name_part + (&#39;.&#39; + ext_part.lstrip(&#39;.&#39;) if ext_part else &quot;&quot;)
+
+    return filename_str if filename_str else &quot;_renamed_file_&quot; # Final check for empty string
+
+
+def process_eml_file(eml_file_path, base_output_dir):
+    &quot;&quot;&quot;
+    Processes a single .eml file to extract its headers, body, and attachments.
+
+    Args:
+        eml_file_path (str): The path to the .eml file.
+        base_output_dir (str): The directory where extracted content will be saved.
+                               A subdirectory will be created here for each EML file.
+    &quot;&quot;&quot;
+    print(f&quot;\nProcessing EML file: {eml_file_path}&quot;)
+    try:
+        with open(eml_file_path, &#39;rb&#39;) as fp: # Read in binary mode
+            msg = BytesParser(policy=default_email_policy).parse(fp)
+
+        # --- Create a unique output directory for this email ---
+        eml_filename_stem = os.path.splitext(os.path.basename(eml_file_path))[0]
+        sanitized_eml_stem = sanitize_filename(eml_filename_stem)
+
+        if not sanitized_eml_stem or sanitized_eml_stem == &quot;_renamed_file_&quot;:
+            unique_id = str(abs(hash(os.path.abspath(eml_file_path))) % 1000000) # Larger range for hash
+            sanitized_eml_stem = f&quot;email_extract_{unique_id}&quot;
+            print(f&quot;    Warning: Original EML filename sanitized to an unusable name. Using fallback: {sanitized_eml_stem}&quot;)
+
+        email_specific_output_dir = os.path.join(base_output_dir, sanitized_eml_stem)
+
+        dir_counter = 1
+        temp_output_dir = email_specific_output_dir
+        while os.path.exists(temp_output_dir):
+            temp_output_dir = f&quot;{email_specific_output_dir}_{dir_counter}&quot;
+            dir_counter += 1
+        email_specific_output_dir = temp_output_dir
+        
+        try:
+            os.makedirs(email_specific_output_dir, exist_ok=True)
+        except OSError as e:
+            print(f&quot;    Error creating output directory {email_specific_output_dir}: {e}&quot;)
+            return # Cannot proceed without output directory
+        print(f&quot;  Outputting to: {email_specific_output_dir}&quot;)
+
+        # --- Extract and save headers ---
+        headers_to_extract = [&quot;Subject&quot;, &quot;From&quot;, &quot;To&quot;, &quot;Date&quot;, &quot;Message-ID&quot;, 
+                              &quot;Cc&quot;, &quot;Bcc&quot;, &quot;Return-Path&quot;, &quot;Reply-To&quot;]
+        header_info = []
+        extracted_subject_for_log = &quot;No_Subject&quot; # Fallback
+
+        for header_name in headers_to_extract:
+            header_value = msg.get(header_name)
+            if header_value:
+                try:
+                    # make_header handles folding and converting to a string.
+                    # decode_header handles the actual charset decoding.
+                    decoded_header_val = str(make_header(decode_header(str(header_value))))
+                    header_info.append(f&quot;{header_name}: {decoded_header_val}&quot;)
+                    if header_name.lower() == &quot;subject&quot;:
+                        extracted_subject_for_log = decoded_header_val
+                except Exception as e:
+                    header_info.append(f&quot;{header_name}: Error decoding header - {e}&quot;)
+                    print(f&quot;    Warning: Error decoding header &#39;{header_name}&#39;: {e}&quot;)
+        
+        if header_info:
+            try:
+                with open(os.path.join(email_specific_output_dir, &quot;_headers.txt&quot;), &quot;w&quot;, encoding=&quot;utf-8&quot;) as hf:
+                    hf.write(&quot;\n&quot;.join(header_info))
+                print(&quot;    Saved _headers.txt&quot;)
+            except IOError as e:
+                print(f&quot;    Error saving _headers.txt: {e}&quot;)
+        else:
+            print(&quot;    No standard headers found or extracted.&quot;)
+
+
+        # --- Extract Body and Attachments ---
+        body_text_parts = []
+        body_html_parts = []
+        attachment_idx = 0 
+
+        for part_num, part in enumerate(msg.walk()):
+            content_disposition = part.get(&quot;Content-Disposition&quot;)
+            content_type = part.get_content_type()
+            
+            is_attachment = False
+            # Rule 1: Explicit &quot;attachment&quot; in Content-Disposition
+            if content_disposition and &quot;attachment&quot; in content_disposition.lower():
+                is_attachment = True
+            # Rule 2: Has a filename (even if disposition is &quot;inline&quot; or missing)
+            # This helps catch inline images that are also distinct files.
+            elif part.get_filename(): 
+                 is_attachment = True
+            # Rule 3: Non-text, non-multipart part without a disposition (e.g., a directly embedded image)
+            # This is a heuristic and might sometimes misclassify, but often useful.
+            elif not part.is_multipart() and \
+                 not content_type.startswith(&quot;text/&quot;) and \
+                 not content_type.startswith(&quot;multipart/&quot;) and \
+                 not content_disposition:
+                 is_attachment = True
+
+            if is_attachment:
+                attachment_idx += 1
+                original_filename = part.get_filename() # This method handles decoding of filenames
+
+                if original_filename:
+                    filename = sanitize_filename(original_filename)
+                else:
+                    ext = mimetypes.guess_extension(content_type, strict=False) or &#39;.dat&#39;
+                    filename = sanitize_filename(f&quot;attachment_{attachment_idx}{ext}&quot;)
+                
+                if not filename or filename == &quot;_renamed_file_&quot;: # Final fallback if sanitization fails badly
+                    filename = f&quot;attachment_{attachment_idx}_fallback.dat&quot;
+
+                filepath = os.path.join(email_specific_output_dir, filename)
+                
+                file_counter = 1
+                base_name, ext_name = os.path.splitext(filepath)
+                # Ensure base_name is not empty if original filename was just an extension (e.g. &quot;.pdf&quot;)
+                if not base_name and ext_name: # e.g. if original was &quot;.txt&quot;
+                    base_name = f&quot;attachment_{attachment_idx}_base&quot;
+
+                while os.path.exists(filepath):
+                    filepath = f&quot;{base_name}_{file_counter}{ext_name}&quot;
+                    file_counter += 1
+                    
+                try:
+                    payload = part.get_payload(decode=True) 
+                    if payload is not None: 
+                        with open(filepath, &#39;wb&#39;) as f_attach:
+                            f_attach.write(payload)
+                        print(f&quot;    Saved attachment: {os.path.basename(filepath)}&quot;)
+                    else:
+                        print(f&quot;    Skipped attachment {os.path.basename(filepath)} (empty payload after decoding).&quot;)
+                except IOError as e:
+                    print(f&quot;    IOError saving attachment {os.path.basename(filepath)}: {e}&quot;)
+                except Exception as e:
+                    print(f&quot;    Error saving attachment {os.path.basename(filepath)}: {e}&quot;)
+            
+            # Body parts (not explicitly attachments based on above rules)
+            elif content_type == &quot;text/plain&quot; and (not content_disposition or &quot;inline&quot; in content_disposition.lower()):
+                try:
+                    payload = part.get_payload(decode=True)
+                    if payload is not None:
+                        charset = part.get_content_charset() or &#39;utf-8&#39; 
+                        body_text_parts.append(payload.decode(charset, errors=&#39;replace&#39;))
+                except Exception as e:
+                    print(f&quot;    Error decoding text/plain part: {e}&quot;)
+            
+            elif content_type == &quot;text/html&quot; and (not content_disposition or &quot;inline&quot; in content_disposition.lower()):
+                try:
+                    payload = part.get_payload(decode=True)
+                    if payload is not None:
+                        charset = part.get_content_charset() or &#39;utf-8&#39;
+                        body_html_parts.append(payload.decode(charset, errors=&#39;replace&#39;))
+                except Exception as e:
+                    print(f&quot;    Error decoding text/html part: {e}&quot;)
+
+        # Save body parts
+        if body_text_parts:
+            body_text_content = &quot;\n\n--- (Next Text Part) ---\n\n&quot;.join(body_text_parts)
+            body_text_filepath = os.path.join(email_specific_output_dir, &quot;body.txt&quot;)
+            try:
+                with open(body_text_filepath, &#39;w&#39;, encoding=&#39;utf-8&#39;) as f_body_txt:
+                    f_body_txt.write(body_text_content)
+                print(f&quot;    Saved text body to body.txt&quot;)
+            except IOError as e:
+                print(f&quot;    Error saving body.txt: {e}&quot;)
+        
+        if body_html_parts:
+            body_html_content = &quot;\n\n&lt;hr&gt;&lt;p&gt;--- (Next HTML Part) ---&lt;/p&gt;&lt;hr&gt;\n\n&quot;.join(body_html_parts)
+            body_html_filepath = os.path.join(email_specific_output_dir, &quot;body.html&quot;)
+            try:
+                with open(body_html_filepath, &#39;w&#39;, encoding=&#39;utf-8&#39;) as f_body_html:
+                    f_body_html.write(body_html_content)
+                print(f&quot;    Saved HTML body to body.html&quot;)
+            except IOError as e:
+                print(f&quot;    Error saving body.html: {e}&quot;)
+                
+        # Fallback for non-multipart messages that are purely text and weren&#39;t caught as body
+        if not msg.is_multipart() and not body_text_parts and not body_html_parts and msg.get_content_type().startswith(&quot;text/&quot;):
+            try:
+                payload = msg.get_payload(decode=True)
+                if payload is not None:
+                    charset = msg.get_content_charset() or &#39;utf-8&#39;
+                    body_content = payload.decode(charset, errors=&#39;replace&#39;)
+                    subtype = sanitize_filename(msg.get_content_subtype() or &quot;txt&quot;)
+                    if not subtype or subtype == &quot;_renamed_file_&quot;: subtype = &quot;txt&quot; # Ensure valid extension
+                    body_filepath = os.path.join(email_specific_output_dir, f&quot;body_main.{subtype}&quot;)
+                    with open(body_filepath, &#39;w&#39;, encoding=&#39;utf-8&#39;) as f_body_main:
+                        f_body_main.write(body_content)
+                    print(f&quot;    Saved main text payload to {os.path.basename(body_filepath)}&quot;)
+            except Exception as e:
+                print(f&quot;    Could not decode/save main text payload for non-multipart email: {e}&quot;)
+
+        if not body_text_parts and not body_html_parts and attachment_idx == 0 and \
+           (msg.is_multipart() or not msg.get_content_type().startswith(&quot;text/&quot;)):
+            print(f&quot;    Note: No distinct text/html body or attachments were extracted for &#39;{os.path.basename(eml_file_path)}&#39;. The content might be in an unusual format or the EML might be empty/corrupt.&quot;)
+
+        print(f&quot;  Finished processing {os.path.basename(eml_file_path)}&quot;)
+
+    except FileNotFoundError:
+        print(f&quot;Error: EML file not found at {eml_file_path}&quot;)
+    except Exception as e:
+        print(f&quot;An critical error occurred while processing {eml_file_path}: {e}&quot;)
+        traceback.print_exc()
+
+
+if __name__ == &quot;__main__&quot;:
+    # --- HOW TO USE THIS SCRIPT ---
+    # 1. Save this script as a Python file (e.g., eml_parser_revised.py).
+    #
+    # 2. CHOOSE ONE of the options below by UNCOMMENTING the relevant block.
+    #    To uncomment a block, remove the triple quote characters (&#39;&#39;&#39; or &quot;&quot;&quot;)
+    #    from the beginning and end of that block.
+    #
+    # 3. MODIFY THE PATHS within your chosen uncommented block to point to your
+    #    actual EML files and desired output location. Use ABSOLUTE paths if unsure.
+    #    e.g., on Linux: &#39;/home/youruser/my_emails/email.eml&#39;
+    #    e.g., on Windows: &#39;C:\\Users\\YourUser\\Documents\\MyEMLs&#39; (note the double backslashes)
+    #
+    # 4. Run the script from your terminal:
+    #    python3 eml_parser_revised.py
+    #    (Or `python eml_parser_revised.py` if python3 is your default python)
+    #
+    # The script will create a main output directory, and inside it,
+    # a subdirectory for each processed EML file. These subdirectories will
+    # contain the extracted headers (_headers.txt), body (body.txt/body.html),
+    # and any attachments.
+
+    user_has_configured_an_option = True # This flag will be set if an option is chosen by uncommenting
+
+    # --- OPTION 1: Process a SINGLE .eml file ---
+    &quot;&quot;&quot;
+    eml_file_to_process = &quot;YOUR_SINGLE_EML_FILE_PATH_HERE.eml&quot;  # &lt;-- *** SET THIS ABSOLUTE OR RELATIVE PATH ***
+    main_output_folder = &quot;eml_extracted_single_output&quot;          # &lt;-- SET YOUR DESIRED OUTPUT FOLDER NAME (will be created if not exists)
+
+    # --- Do not edit below this line for Option 1 ---
+    if eml_file_to_process == &quot;YOUR_SINGLE_EML_FILE_PATH_HERE.eml&quot;:
+        print(&quot;OPTION 1 IS UNCOMMENTED, BUT THE PATH IS STILL THE DEFAULT PLACEHOLDER.&quot;)
+        print(&quot;Please edit &#39;eml_file_to_process&#39; to your EML file&#39;s actual path.&quot;)
+    elif os.path.isfile(eml_file_to_process):
+        try:
+            os.makedirs(main_output_folder, exist_ok=True)
+            process_eml_file(eml_file_to_process, main_output_folder)
+            print(f&quot;\nSingle file processing complete. Output in: {os.path.abspath(main_output_folder)}&quot;)
+        except Exception as e_main:
+            print(f&quot;Error during Option 1 execution: {e_main}&quot;)
+        user_has_configured_an_option = True
+    else:
+        print(f&quot;OPTION 1 ERROR: EML file not found at &#39;{eml_file_to_process}&#39;&quot;)
+    &quot;&quot;&quot;
+
+    # --- OPTION 2: Process ALL .eml files in a DIRECTORY ---
+    # &quot;&quot;&quot;
+    source_directory_with_emls = &quot;/mnt/mSATA/linaro/Desktop/00-TEMP/EML mails/&quot;  # &lt;-- *** SET THIS ABSOLUTE OR RELATIVE PATH ***
+    main_output_folder = &quot;/mnt/mSATA/linaro/Desktop/00-TEMP/EMLout/&quot;                        # &lt;-- SET YOUR DESIRED OUTPUT FOLDER NAME (will be created if not exists)
+
+    # --- Do not edit below this line for Option 2 ---
+    if source_directory_with_emls == &quot;YOUR_DIRECTORY_CONTAINING_EML_FILES_HERE&quot;:
+        print(&quot;OPTION 2 IS UNCOMMENTED, BUT THE PATH IS STILL THE DEFAULT PLACEHOLDER.&quot;)
+        print(&quot;Please edit &#39;source_directory_with_emls&#39; to your EML directory&#39;s actual path.&quot;)
+    elif os.path.isdir(source_directory_with_emls):
+        try:
+            os.makedirs(main_output_folder, exist_ok=True)
+            eml_found_in_dir = False
+            for item in os.listdir(source_directory_with_emls):
+                if item.lower().endswith(&quot;.eml&quot;):
+                    eml_found_in_dir = True
+                    full_eml_path = os.path.join(source_directory_with_emls, item)
+                    process_eml_file(full_eml_path, main_output_folder)
+            if not eml_found_in_dir:
+                print(f&quot;OPTION 2: No .eml files found in &#39;{source_directory_with_emls}&#39;&quot;)
+            else:
+                print(f&quot;\nBatch processing complete. Output in: {os.path.abspath(main_output_folder)}&quot;)
+        except Exception as e_main:
+            print(f&quot;Error during Option 2 execution: {e_main}&quot;)
+        user_has_configured_an_option = True
+    else:
+        print(f&quot;OPTION 2 ERROR: Directory not found at &#39;{source_directory_with_emls}&#39;&quot;)
+    # &quot;&quot;&quot;
+
+
+    # --- OPTION 3: Test with the EML content provided in your prompt ---
+    # To use this:
+    # 1. Create a file named &quot;my_test_email.eml&quot; in the SAME directory as this script.
+    # 2. Paste the FULL EML content (from your original prompt) into that &quot;my_test_email.eml&quot; file and save it.
+    # 3. Then, uncomment this block and run the script.
+    &quot;&quot;&quot;
+    test_eml_filename = &quot;my_test_email.eml&quot; 
+    main_output_folder = &quot;eml_extracted_test_sample_output&quot;
+
+    # --- Do not edit below this line for Option 3 ---
+    if os.path.isfile(test_eml_filename):
+        try:
+            os.makedirs(main_output_folder, exist_ok=True)
+            process_eml_file(test_eml_filename, main_output_folder)
+            print(f&quot;\nTest file processing complete. Output in: {os.path.abspath(main_output_folder)}&quot;)
+        except Exception as e_main:
+            print(f&quot;Error during Option 3 execution: {e_main}&quot;)
+        user_has_configured_an_option = True
+    else:
+        print(f&quot;OPTION 3: Test file &#39;{test_eml_filename}&#39; not found in the script&#39;s directory.&quot;)
+        print(&quot;          Please create it and paste your EML content into it to use this option.&quot;)
+    &quot;&quot;&quot;
+
+    # --- If no option was uncommented and configured by the user, print detailed help ---
+    if not user_has_configured_an_option:
+        print(&quot;\n--- EML EXTRACTION SCRIPT HELP ---&quot;)
+        print(&quot;This script extracts content and attachments from .eml (email) files.&quot;)
+        print(&quot;\nTO USE THIS SCRIPT:&quot;)
+        print(&quot;1. Open this Python script file (the .py file you saved) in a text editor.&quot;)
+        print(&quot;2. Scroll down to the end of the file, to the section that starts with:&quot;)
+        print(&quot;   &#39;if __name__ == \&quot;__main__\&quot;:&#39;&quot;)
+        print(&quot;3. You will see three &#39;OPTION&#39; blocks (OPTION 1, OPTION 2, OPTION 3).&quot;)
+        print(&quot;   These blocks are currently &#39;commented out&#39; with triple quote characters&quot;)
+        print(&quot;   (&#39;&#39;&#39;) at their beginning and end.&quot;)
+        print(&quot;\n4. CHOOSE ONLY ONE OPTION that fits your needs:&quot;)
+        print(&quot;   - OPTION 1: If you want to process a single .eml file.&quot;)
+        print(&quot;   - OPTION 2: If you want to process all .eml files within a specific folder.&quot;)
+        print(&quot;   - OPTION 3: If you want to test the script with a sample &#39;my_test_email.eml&#39; file&quot;)
+        print(&quot;               (which you need to create first, as described in the comments for Option 3).&quot;)
+        print(&quot;\n5. UNCOMMENT your chosen option&#39;s block. To do this, delete the three quote&quot;)
+        print(&quot;   characters (&#39;&#39;&#39;) from the very beginning of that block, AND delete the&quot;)
+        print(&quot;   three quote characters (&#39;&#39;&#39;) from the very end of that SAME block.&quot;)
+        print(&quot;   Make sure only ONE option block is uncommented.&quot;)
+        print(&quot;\n6. IMPORTANT: Inside the option block you just uncommented, you MUST update&quot;)
+        print(&quot;   the placeholder paths. For example, change:&quot;)
+        print(&quot;     &#39;YOUR_SINGLE_EML_FILE_PATH_HERE.eml&#39;&quot;)
+        print(&quot;   to the actual, full path of your EML file, like:&quot;)
+        print(&quot;     &#39;/home/yourusername/emails/important_email.eml&#39; (for Linux/macOS)&quot;)
+        print(&quot;     &#39;C:\\Users\\YourUserName\\Documents\\Emails\\archive.eml&#39; (for Windows - note double backslashes)&quot;)
+        print(&quot;   Similarly, update &#39;YOUR_DIRECTORY_CONTAINING_EML_FILES_HERE&#39; if using Option 2,&quot;)
+        print(&quot;   and you can customize &#39;main_output_folder&#39; if desired.&quot;)
+        print(&quot;\n7. Save the changes you made to this script file.&quot;)
+        print(&quot;\n8. Open a terminal or command prompt.&quot;)
+        print(&quot;9. Navigate to the directory where you saved this script file using the &#39;cd&#39; command.&quot;)
+        print(&quot;   (e.g., &#39;cd /path/to/where/you/saved/the_script&#39;)&quot;)
+        print(&quot;10. Run the script by typing the following command and pressing Enter:&quot;)
+        print(&quot;    python3 name_of_this_script.py&quot;)
+        print(&quot;    (Replace &#39;name_of_this_script.py&#39; with the actual filename you used, e.g., &#39;eml_parser_revised.py&#39;)&quot;)
+        print(&quot;    If &#39;python3&#39; doesn&#39;t work, try &#39;python name_of_this_script.py&#39;.&quot;)
+        print(&quot;\n   The script will then run, process your EML files, and save the extracted&quot;)
+        print(&quot;   content (headers, body text/html, attachments) into subdirectories within&quot;)
+        print(&quot;   the &#39;main_output_folder&#39; you specified (or the default one for that option).&quot;)
+        print(&quot;-----------------------------------\n&quot;)</code>
 </section>]]></content><author><name></name></author><category term="scratchpad" /></entry><entry><title type="html">Recursively move all files from nested subdirectories to the top</title><link href="https://ib.bsb.br/recursively-move-all-files-from-nested-subdirectories-to-the-top/" rel="alternate" type="text/html" title="Recursively move all files from nested subdirectories to the top" /><published>2025-05-29T00:00:00+00:00</published><updated>2025-05-29T11:26:17+00:00</updated><id>https://ib.bsb.br/recursively-move-all-files-from-nested-subdirectories-to-the-top</id><content type="html" xml:base="https://ib.bsb.br/recursively-move-all-files-from-nested-subdirectories-to-the-top/"><![CDATA[<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c">#!/bin/bash</span>
 <span class="c">#</span>
 <span class="c"># flatten.sh: Recursively move all files from nested subdirectories to the root of the specified directory.</span>
@@ -11207,202 +12055,4 @@ echo hello | ./emulator.com sha256.elf</p>
 
 <p><code class="language-plaintext highlighter-rouge">curl -F "fileToUpload=@/path/to/your/local/file.zip" https://arcreformas.com.br/upload.php</code></p>
 
-<p><code class="language-plaintext highlighter-rouge">cat /path/to/local/file.txt | curl -F "fileToUpload=@-;filename=file.txt" https://arcreformas.com.br/upload.php</code></p>]]></content><author><name></name></author><category term="aid&gt;cloud&gt;server&gt;dotfile" /></entry><entry><title type="html">leveraging Blink with rk3588 to run x86-64 Linux command-line software</title><link href="https://ib.bsb.br/leveraging-blink-with-rk3588-to-run-x86-64-linux-command-line-software/" rel="alternate" type="text/html" title="leveraging Blink with rk3588 to run x86-64 Linux command-line software" /><published>2025-05-27T00:00:00+00:00</published><updated>2025-05-27T03:21:04+00:00</updated><id>https://ib.bsb.br/leveraging-blink-with-rk3588-to-run-x86-64-linux-command-line-software</id><content type="html" xml:base="https://ib.bsb.br/leveraging-blink-with-rk3588-to-run-x86-64-linux-command-line-software/"><![CDATA[<p>It is definitely possible to build and run the Blink project on your arm64 rk3588 machine running Debian Bullseye (Linux 5.10, glibc 2.31). Blink is designed for portability and includes Just-In-Time (JIT) compilation support for the aarch64 architecture, which your rk3588 utilizes. The absence of the KVM kernel module is not a concern, as Blink operates as a user-mode virtual machine and does not rely on hardware-assisted virtualization like KVM for its x86-64 emulation.</p>
-
-<p><strong>I. Core Purpose of the Blink Project</strong></p>
-
-<p>The Blink project consists of two main components:</p>
-
-<ol>
-  <li><strong><code class="language-plaintext highlighter-rouge">blink</code> (Headless Virtual Machine):</strong>
-    <ul>
-      <li>This program executes x86-64 Linux applications on diverse operating systems and hardware architectures, including your ARM64-based rk3588.</li>
-      <li>It serves as a lightweight alternative to <code class="language-plaintext highlighter-rouge">qemu-x86_64</code> (user-mode QEMU), often with a smaller binary footprint and potentially better performance for certain workloads, especially ephemeral tasks like compilation.</li>
-    </ul>
-  </li>
-  <li><strong><code class="language-plaintext highlighter-rouge">blinkenlights</code> (Terminal User Interface Debugger):</strong>
-    <ul>
-      <li>This is a TUI-based visual debugger for x86-64 Linux programs (and also supports i8086 real-mode programs).</li>
-      <li>It offers unique debugging capabilities, such as visualizing memory changes in real-time using CP437 characters and supporting reverse debugging through scroll wheel interaction.</li>
-    </ul>
-  </li>
-</ol>
-
-<p><strong>II. Requirements for Building and Running Blink on Your RK3588</strong></p>
-
-<p><strong>A. Build-Time Dependencies (for compiling Blink from source):</strong></p>
-
-<p>To build Blink on your Debian Bullseye system, you will need the following:</p>
-
-<ul>
-  <li><strong>C11 Compiler:</strong> GCC (GNU Compiler Collection) version 10.x or newer, typically provided by the <code class="language-plaintext highlighter-rouge">build-essential</code> package, is recommended. Blink requires C11 features and atomics support.</li>
-  <li><strong>GNU Make:</strong> Version 4.0 or newer.</li>
-  <li><strong>Standard Build Utilities:</strong> Tools like <code class="language-plaintext highlighter-rouge">sh</code>, <code class="language-plaintext highlighter-rouge">uname</code>, <code class="language-plaintext highlighter-rouge">mkdir</code>, <code class="language-plaintext highlighter-rouge">cp</code>, <code class="language-plaintext highlighter-rouge">rm</code>, <code class="language-plaintext highlighter-rouge">tar</code>, <code class="language-plaintext highlighter-rouge">gzip</code>, <code class="language-plaintext highlighter-rouge">xz-utils</code>.</li>
-  <li><strong>Development Libraries:</strong>
-    <ul>
-      <li><strong>libc6-dev:</strong> For glibc 2.31 development headers.</li>
-      <li><strong>zlib1g-dev (Recommended):</strong> For gzip stream processing. Blink can use a vendored copy if this is not found.</li>
-      <li><strong>pkg-config (Recommended):</strong> Helps the build system locate libraries.</li>
-      <li><strong>libunwind-dev (Optional):</strong> For enhanced backtrace functionality within Blink itself (primarily for Blink developers).</li>
-      <li><strong>liblzma-dev (Optional):</strong> May be a dependency of <code class="language-plaintext highlighter-rouge">libunwind-dev</code>.</li>
-    </ul>
-
-    <p>You can install most of these with:</p>
-    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>apt update
-<span class="nb">sudo </span>apt <span class="nb">install </span>build-essential pkg-config curl <span class="nb">tar gzip </span>xz-utils zlib1g-dev libunwind-dev liblzma-dev
-</code></pre></div>    </div>
-  </li>
-</ul>
-
-<p><strong>B. Runtime Requirements (for the Blink programs themselves):</strong></p>
-
-<ul>
-  <li><strong>ARM64 (aarch64) Architecture:</strong> Your rk3588 meets this.</li>
-  <li><strong>POSIX-compliant OS:</strong> Debian Bullseye with Linux kernel 5.10.</li>
-  <li><strong>glibc 2.31:</strong> As specified.</li>
-  <li><strong>Sufficient RAM:</strong> Your 32 GiB is more than adequate.</li>
-  <li><strong>Sufficient CPU:</strong> Your 8 CPU cores are well-suited, especially for multi-threaded guest applications.</li>
-  <li><strong>No KVM Required:</strong> Blink operates entirely in userspace.</li>
-</ul>
-
-<p><strong>C. Requirements for Guest x86-64 Programs to Run Effectively under Blink:</strong></p>
-
-<ul>
-  <li><strong>Executable Format:</strong> Standard x86-64 Linux ELF (static or dynamic), Actually Portable Executables (APE), or flat binary files (ending in <code class="language-plaintext highlighter-rouge">.bin</code>, <code class="language-plaintext highlighter-rouge">.img</code>, <code class="language-plaintext highlighter-rouge">.raw</code>).</li>
-  <li><strong>C Library (Guest):</strong>
-    <ul>
-      <li><strong>Optimal:</strong> Programs built with Cosmopolitan Libc or Musl Libc (e.g., from Alpine Linux) tend to work best due to their reliance on a more standardized syscall subset.</li>
-      <li><strong>Generally Good:</strong> Statically linked Glibc programs or dynamically linked ones can also work, though Glibc sometimes uses newer or more obscure Linux-specific syscalls that Blink might not emulate.</li>
-    </ul>
-  </li>
-  <li><strong>Syscall Usage:</strong> Guest programs should primarily use POSIX-standard syscalls and common Linux extensions.</li>
-  <li><strong>Memory Management by Guest:</strong> For best compatibility across different host page sizes (though your Linux setup likely uses 4KB pages), guest programs performing direct memory mapping should ideally query the page size via <code class="language-plaintext highlighter-rouge">sysconf(_SC_PAGESIZE)</code> or <code class="language-plaintext highlighter-rouge">getauxval(AT_PAGESZ)</code>.</li>
-  <li><strong>Compilation Flags for Guest (for <code class="language-plaintext highlighter-rouge">blinkenlights</code> debugging):</strong>
-    <ul>
-      <li><code class="language-plaintext highlighter-rouge">-fno-omit-frame-pointer</code></li>
-      <li><code class="language-plaintext highlighter-rouge">-mno-omit-leaf-frame-pointer</code> (Helps <code class="language-plaintext highlighter-rouge">blinkenlights</code> generate better stack backtraces)</li>
-    </ul>
-  </li>
-</ul>
-
-<p><strong>III. Implementation Steps: Building Blink from Source</strong></p>
-
-<ol>
-  <li><strong>Ensure Dependencies are Met:</strong> Install the packages listed in section II.A.</li>
-  <li><strong>Clone/Obtain Source Code:</strong> (You have provided this as context).</li>
-  <li><strong>Configure the Build:</strong> Navigate to the project’s root directory and run:
-    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>./configure
-</code></pre></div>    </div>
-    <ul>
-      <li>Review <code class="language-plaintext highlighter-rouge">./configure --help</code> for options. For example:
-        <ul>
-          <li><code class="language-plaintext highlighter-rouge">--enable-vfs</code>: If you need more robust chroot-like behavior than the default overlay system.</li>
-          <li><code class="language-plaintext highlighter-rouge">--disable-jit</code>, <code class="language-plaintext highlighter-rouge">--disable-x87</code>, etc.: To create smaller binaries by removing features (see <code class="language-plaintext highlighter-rouge">configure --help</code> and the README for details on size savings).</li>
-        </ul>
-      </li>
-    </ul>
-  </li>
-  <li><strong>Compile:</strong>
-    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>make <span class="nt">-j</span><span class="si">$(</span><span class="nb">nproc</span><span class="si">)</span>  <span class="c"># Uses all available CPU cores</span>
-</code></pre></div>    </div>
-    <p>This will produce executables like <code class="language-plaintext highlighter-rouge">o/blink/blink</code> and <code class="language-plaintext highlighter-rouge">o/blink/blinkenlights</code> (assuming the default <code class="language-plaintext highlighter-rouge">MODE</code>).</p>
-  </li>
-  <li><strong>Run (Optional Install):</strong>
-    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># To run directly from the build directory:</span>
-o/blink/blink /path/to/x86-64-linux-program <span class="o">[</span>args...]
-o/blink/blinkenlights /path/to/x86-64-linux-program <span class="o">[</span>args...]
-
-<span class="c"># To install system-wide (optional):</span>
-<span class="nb">sudo </span>make <span class="nb">install
-</span>blink /path/to/x86-64-linux-program <span class="o">[</span>args...]
-</code></pre></div>    </div>
-  </li>
-</ol>
-
-<p><strong>IV. Leveraging Your RK3588 Hardware</strong></p>
-
-<p>Your rk3588’s specifications are well-suited for Blink:</p>
-
-<ul>
-  <li><strong>ARM64 JIT (Just-In-Time Compilation):</strong> Blink’s JIT for aarch64 is a key feature. It translates x86-64 instruction blocks into native ARM64 machine code at runtime. This significantly boosts performance over pure interpretation, making many x86-64 applications run efficiently on your ARM64 CPU.</li>
-  <li><strong>32 GiB RAM:</strong> This generous amount of RAM is highly beneficial for:
-    <ul>
-      <li>Running larger and more memory-intensive x86-64 guest programs.</li>
-      <li>Allowing Blink’s JIT to maintain a larger cache of translated code, reducing recompilation overhead.</li>
-      <li>Supporting Blink’s linear memory optimization effectively, which aims to map guest memory directly.</li>
-      <li>Running multiple Blink instances or other demanding applications alongside Blink without memory contention.</li>
-    </ul>
-  </li>
-  <li><strong>8 CPU Cores:</strong>
-    <ul>
-      <li>While the core emulation loop for a single guest thread within Blink is single-threaded, if the x86-64 guest application itself is multi-threaded (using <code class="language-plaintext highlighter-rouge">clone()</code>, <code class="language-plaintext highlighter-rouge">fork()</code>, pthreads, etc.), Blink will emulate these threads. This allows the guest application to potentially leverage multiple cores on your RK3588, distributing its workload.</li>
-      <li>The JIT compilation process itself can also benefit from available CPU resources during its analysis and code generation phases.</li>
-    </ul>
-  </li>
-</ul>
-
-<p><strong>V. Best Use Cases on Your RK3588 System</strong></p>
-
-<p>Considering your hardware, Blink is ideal for:</p>
-
-<ol>
-  <li><strong>Running x86-64 Linux Command-Line Interface (CLI) Tools:</strong>
-    <ul>
-      <li><strong>Development &amp; Build Tools:</strong> Execute specific versions of x86-64 compilers (GCC, Clang), build systems (Make, CMake variants), or other development utilities not readily available or suitable in a native ARM64 version. Your 8 cores and 32GB RAM can handle substantial compilation tasks.</li>
-      <li><strong>Scripting &amp; Interpreters:</strong> Run x86-64 versions of Python, Perl, Node.js, Ruby, etc., for compatibility or specific library needs.</li>
-      <li><strong>Utilities:</strong> Use various x86-64 Linux system administration or data processing tools.</li>
-    </ul>
-  </li>
-  <li><strong>Cross-Architecture Development and Debugging:</strong>
-    <ul>
-      <li>Compile and test the x86-64 Linux versions of your software directly on your ARM64 machine.</li>
-      <li>Utilize <code class="language-plaintext highlighter-rouge">blinkenlights</code> for in-depth visual debugging of these x86-64 binaries, leveraging its unique features to understand program behavior without needing a separate x86-64 machine.</li>
-    </ul>
-  </li>
-  <li><strong>Running Lightweight to Moderately Demanding x86-64 Server Applications:</strong>
-    <ul>
-      <li>If you have specific server software (e.g., custom daemons, specialized web services, older database versions) that are only available as x86-64 Linux binaries, Blink can host them. The performance will be less than native ARM64, but for I/O-bound or less CPU-intensive services, it can be a viable solution. Your 32GB RAM allows for more substantial server instances.</li>
-    </ul>
-  </li>
-  <li><strong>Executing Actually Portable Executables (APEs):</strong>
-    <ul>
-      <li>Blink is a natural fit for running APEs, which bundle an x86-64 emulator to run on various platforms, including your ARM64 system.</li>
-    </ul>
-  </li>
-  <li><strong>Educational and Reverse Engineering Purposes:</strong>
-    <ul>
-      <li><code class="language-plaintext highlighter-rouge">blinkenlights</code> is an excellent tool for learning x86-64 assembly, understanding low-level program execution, memory layouts, and CPU states.</li>
-    </ul>
-  </li>
-  <li><strong>Isolated x86-64 Environments:</strong>
-    <ul>
-      <li>Using Blink’s filesystem overlay features (or VFS if enabled during configure), you can run x86-64 programs within a chroot-like environment based on a directory from your host system, providing a degree of isolation.</li>
-    </ul>
-  </li>
-</ol>
-
-<p><strong>VI. Performance Considerations and Limitations</strong></p>
-
-<ul>
-  <li><strong>Emulation Overhead:</strong> While JIT significantly improves speed, emulating x86-64 on ARM64 will inherently be slower than native execution for CPU-bound tasks. The main emulation loop for a single guest thread is itself single-threaded within Blink.</li>
-  <li><strong>No GUI Application Support:</strong> Blink is designed for CLI and TUI applications. It does not emulate X11, Wayland, or other graphical environments.</li>
-  <li><strong>Syscall Coverage:</strong> Blink supports a broad set of POSIX and common Linux syscalls. However, applications relying heavily on very new, obscure, or highly specialized Linux-specific syscalls might encounter compatibility issues.</li>
-  <li><strong>I/O Performance:</strong> Filesystem and network operations pass through Blink’s emulation layer, which can add some latency compared to native I/O.</li>
-  <li><strong>Real Mode (<code class="language-plaintext highlighter-rouge">-r</code> flag with <code class="language-plaintext highlighter-rouge">blinkenlights</code>):</strong> While supported for i8086 programs, the primary strength of Blink on your system is its x86-64 long mode emulation.</li>
-</ul>
-
-<p><strong>VII. <code class="language-plaintext highlighter-rouge">blinkenlights</code> TUI Specifics</strong></p>
-
-<ul>
-  <li><strong>Terminal Emulator:</strong> A modern UTF-8 terminal emulator that properly supports ANSI escape codes is essential. Recommendations include:
-    <ul>
-      <li>Linux: KiTTY, Gnome Terminal, Konsole, Xterm.</li>
-      <li>Windows (if accessing remotely): PuTTY, Windows Terminal.</li>
-      <li>macOS (if accessing remotely): Terminal.app, iTerm2.</li>
-    </ul>
-  </li>
-  <li><strong>Font:</strong> A good monospaced font that includes CP437 block characters is recommended for the best visual experience (e.g., PragmataPro, DejaVu Sans Mono/Bitstream Vera Sans Mono, Consolas, Menlo).</li>
-  <li><strong>Mouse Support:</strong> While not strictly required, a terminal emulator that forwards mouse events (especially scroll wheel) will enhance the <code class="language-plaintext highlighter-rouge">blinkenlights</code> experience, enabling features like reverse debugging via scrolling and zooming memory panels.</li>
-</ul>
-
-<p>In conclusion, your rk3588 system is a powerful platform for leveraging Blink. You can effectively build it, run a wide array of x86-64 Linux command-line software, and utilize the <code class="language-plaintext highlighter-rouge">blinkenlights</code> TUI for debugging and educational purposes, all benefiting from Blink’s ARM64 JIT.</p>]]></content><author><name></name></author><category term="scratchpad" /></entry></feed>
+<p><code class="language-plaintext highlighter-rouge">cat /path/to/local/file.txt | curl -F "fileToUpload=@-;filename=file.txt" https://arcreformas.com.br/upload.php</code></p>]]></content><author><name></name></author><category term="aid&gt;cloud&gt;server&gt;dotfile" /></entry></feed>
