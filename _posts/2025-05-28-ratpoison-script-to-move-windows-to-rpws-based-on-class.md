@@ -10,24 +10,10 @@ title: 'ratpoison script to move windows to rpws based on class'
 ---
 {% raw %}
 consider this documentation of the 'ratpoison' window manager running within debian bullseye on a arm64 rk3588 rockchip machine to answer the USER's queries:
-
-
 ```
 """
 ~~~
 '''
----
-tags:
-- linux>software>dotfile
-info: aberto.
-date: 2025-05-09
-type: post
-layout: post
-published: true
-slug: ratpoison-documentation
-title: ratpoison documentation
-comment: https://raw.githubusercontent.com/dimatura/ratpoison/refs/heads/master/doc/ratpoison.texi
----
 **NAME**
 **ratpoison** — window manager without mouse dependency
 **SYNOPSIS**
@@ -524,7 +510,7 @@ This manual page was written by Bernhard R. Link 〈 _brlink AT debian DOT org_�
 **BUGS**
 Please report any bug you find to the ratpoison mailing-list, 〈 _ratpoison-devel AT nongnu DOT org_〉 .
 BSD September 29, 2019 BSD
-{% raw %}
+
 {% codeblock %}
 \input texinfo   @c -*-texinfo-*-
 @c %**start of header
@@ -1733,7 +1719,7 @@ Turn on or off the startup_message. This is most useful in your
 @printindex fn
 @bye
 {% endcodeblock %}
-{% endraw %}
+
 
 ###
 
@@ -3835,5 +3821,4 @@ Start typing a prompt
 
 Run
 Ctrl
-
 {% endraw %}
