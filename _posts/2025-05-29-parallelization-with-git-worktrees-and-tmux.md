@@ -1,16 +1,16 @@
 ---
-tags: [scratchpad]
+tags:
+- scratchpad
 info: aberto.
 date: 2025-05-29
 type: post
 layout: post
 published: true
 slug: parallelization-with-git-worktrees-and-tmux
-title: 'Parallelization with Git Worktrees and Tmux'
+title: Parallelization with Git Worktrees and Tmux
+comment: https://www.skeptrune.com/posts/git-worktrees-agents-and-tmux/
 ---
 
-
-bibref https://www.skeptrune.com/posts/git-worktrees-agents-and-tmux/
 
 Published Time: 2025-05-26T18:52:00.000Z
 
