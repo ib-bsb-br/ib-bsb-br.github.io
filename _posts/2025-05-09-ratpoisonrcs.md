@@ -9,6 +9,536 @@ slug: ratpoisonrc
 title: "ratpoisonrc dot files"
 ---
 {% raw %}
+
+# Maldus512
+`https://github.com/Maldus512/dotfiles/tree/main/ratpoison`
+
+```
+<root>
+<## data-filename="xml_code-block xml" data-code="">
+    /mnt/mSATA/linaro/dotfiles-main/ratpoison/brightnessrc</source>
+    
+        exec [ -z "${rp_brightness_step}" ] && ratpoison -c 'setenv rp_brightness_step 5%' || true
+        definekey top XF86MonBrightnessUp     exec brightnessctl s "${rp_brightness_step}"+; ratpoison -c "echo `brightnessctl | sed -nr 's/^.*\(([0-9]+%)\).*$/\1/p'`"
+        definekey top XF86MonBrightnessDown     exec brightnessctl s "${rp_brightness_step}"-; ratpoison -c "echo `brightnessctl | sed -nr 's/^.*\(([0-9]+%)\).*$/\1/p'`"
+    
+</section>
+<## data-filename="xml_code-block xml" data-code="">
+    /mnt/mSATA/linaro/dotfiles-main/ratpoison/ratpoison_rofi.py</source>
+    
+        #!/usr/bin/env python
+        
+        import re
+        import sys
+        import subprocess
+        import argparse
+        import ratpoison_workspaces
+        
+        
+        def rprun(*args):
+            strargs = "".join([f"{x} " for x in args]).rstrip(" ")
+            return subprocess.run(["ratpoison", "-c", strargs], stdout=subprocess.PIPE).stdout.decode("utf-8")
+        
+        
+        def get_current_group():
+            groups = [x.strip("\"") for x in rprun("groups").split("\n") if x]
+            for group in groups:
+                if found := re.compile(r"^([0-9]+)\*").search(group):
+                    selected = int(found.group(1))
+                    return selected
+            return 0
+        
+        
+        def get_groups():
+            current_group = get_current_group()
+            rawgroups = rprun("groups")
+            groups = []
+            for group in rawgroups.split("\n"):
+                group = group.strip("\"")
+                if found := re.compile("^([0-9]+)").search(group):
+                    selected = int(found.group(1))
+                    rprun("gselect", selected)
+                    windows = [x.strip("\"") for x in rprun("windows").split("\n") if x]
+                    wnames = []
+                    for window in windows:
+                        if found := re.compile(r"^[0-9]+#([\*|\+|-])#(.+)").search(window):
+                            status = found.group(1)
+                            if status == "*":
+                                priority = 1
+                            elif status == "+":
+                                priority = 2
+                            else:
+                                priority = 3
+        
+                            wnames.append((priority, found.group(2)))
+        
+                    groups.append(f"{selected} - " + ", ".join([x[1] for x in sorted(wnames, key=lambda y: y[0])]))
+        
+                else:
+                    groups.append(group)
+        
+            rprun("gselect", current_group)
+            return groups
+        
+        
+        def get_window_name(window):
+            if name := re.compile(r"^[0-9]+#[\*\+\-]#(.+)$").search(window):
+                return name.group(1)
+            else:
+                return window
+        
+        
+        def main():
+            parser = argparse.ArgumentParser(description="Navigate through workspaces and windows")
+            parser.add_argument("-w", "--windows", action="store_true", help="switch through windows")
+            parser.add_argument("-d", "--desktops", action="store_true", help="switch through workspaces")
+            parser.add_argument("-s", "--send-to-desktop", dest="send_to_desktop", action="store_true", help="send current window to selected workspace")
+            parser.add_argument("choice", nargs="?", help="Chosen option", default=None)
+            args = parser.parse_args()
+        
+            if args.choice == None:
+                if args.windows:
+                    windows = rprun("windows")
+                    for window in [x.strip("\"") for x in windows.split("\n") if len(x)]:
+                        print(get_window_name(window))
+                elif args.desktops or args.send_to_desktop:
+                    for group in get_groups():
+                        print(group)
+        
+            else:
+                if args.windows:
+                    windows = rprun("windows")
+                    for window in [x.strip("\"") for x in windows.split("\n") if len(x)]:
+                        if get_window_name(window) == args.choice:
+                            if found := re.compile("^[0-9]+").search(window):
+                                selected = int(found.group(0))
+                                rprun("select", selected)
+                elif args.send_to_desktop:
+                    if found := re.compile("^[0-9]+").search(args.choice):
+                        selected = int(found.group(0))
+                        ratpoison_workspaces.move_to_workspace(selected)
+                elif args.desktops:
+                    if found := re.compile("^[0-9]+").search(args.choice):
+                        selected = int(found.group(0))
+                        ratpoison_workspaces.select_workspace(selected)
+        
+        
+        
+        if __name__ == "__main__":
+            main()
+    
+</section>
+<## data-filename="xml_code-block xml" data-code="">
+    /mnt/mSATA/linaro/dotfiles-main/ratpoison/ratpoison_toggle_conky.py</source>
+    
+        #!/usr/bin/env python
+        
+        import re
+        import sys
+        import subprocess
+        import argparse
+        import ratpoison_workspaces
+        
+        
+        def rprun(*args):
+            strargs = "".join([f"{x} " for x in args]).rstrip(" ")
+            return subprocess.run(["ratpoison", "-c", strargs], stdout=subprocess.PIPE).stdout.decode("utf-8")
+        
+        
+        def setenv(variable, value):
+            rprun("setenv", variable, value)
+        
+        
+        def getenv(variable):
+            return rprun("getenv", variable)
+        
+        
+        def main():
+            active = getenv("conky_visible").strip("\n")
+            padding = [int(x) for x in rprun("set", "padding").split(" ") if x]
+        
+            if not active or active == "false":
+                setenv("conky_visible", "true")
+                padding[2] = 256 + 16
+            else:
+                setenv("conky_visible", "false")
+                padding[2] = padding[0]
+            
+            rprun("set", "padding", padding[0], padding[1], padding[2], padding[3])
+        
+        
+        
+        if __name__ == "__main__":
+            main()
+    
+</section>
+<## data-filename="xml_code-block xml" data-code="">
+    /mnt/mSATA/linaro/dotfiles-main/ratpoison/ratpoison_windows_list.py</source>
+    
+        #!/usr/bin/env python -u
+        
+        import re
+        import sys
+        import subprocess
+        import argparse
+        import signal
+        import threading
+        import os
+        
+        
+        event = threading.Event()
+        
+        
+        def rprun(*args):
+            strargs = "".join([f"{x} " for x in args]).rstrip(" ")
+            return subprocess.run(["ratpoison", "-c", strargs], stdout=subprocess.PIPE).stdout.decode("utf-8")
+        
+        
+        def setenv(variable, value):
+            rprun("setenv", variable, value)
+        
+        
+        def getenv(variable):
+            return rprun("getenv", variable)
+        
+        
+        def received_usr1(signal, frame):
+            event.set()
+        
+        
+        def main():
+            signal.signal(signal.SIGUSR1, received_usr1)
+            setenv("windows_list_pid", os.getpid())
+            event.set()
+            counter = 0
+        
+            while True:
+                counter += 1
+                if event.wait(timeout=4):
+                    event.clear()
+        
+                output = rprun("windows")
+        
+                if output.replace("\n", "") == "No managed windows":
+                    print(" ")
+                    continue
+                
+                windows = [x.strip("\"").replace("\n", "") for x in output.split("\n") if x]
+                cleanwindows = []
+        
+                for window in windows:
+                    if found := re.compile(r"^[0-9]+#([\*|\-|\+])#(.*)").search(window):
+                        if found.group(1) == "*":
+                            selected = True
+                        else:
+                            selected = False
+                        if len(found.group(2)) > 0:
+                            cleanwindows.append((selected, found.group(2)))
+                        else:
+                            cleanwindows.append((selected, " "))
+                    else:
+                        cleanwindows.append((False, window))
+        
+                print("%{-u} | ", end="")
+                for (active, name) in cleanwindows:
+                    if len(name) > 16:
+                        name = name[:16]
+                    if active:
+                        print(f"%{{+u}}{name}%{{-u}}", end=" | ")
+                    else:
+                        print(f"{name}", end=" | ")
+                print(counter, end="")
+                print()
+        
+            print("ERROR")
+        
+        if __name__ == "__main__":
+            main()
+    
+</section>
+<## data-filename="xml_code-block xml" data-code="">
+    /mnt/mSATA/linaro/dotfiles-main/ratpoison/ratpoison_workspaces.py</source>
+    
+        #!/usr/bin/env python
+        
+        import subprocess
+        import argparse
+        
+        
+        def rprun(*args):
+            strargs = "".join([f"{x} " for x in args]).rstrip(" ")
+            return subprocess.run(["ratpoison", "-c", strargs], stdout=subprocess.PIPE).stdout.decode("utf-8")
+        
+        
+        def message(msg):
+            rprun("echo", msg)
+        
+        
+        def setenv(variable, value):
+            rprun("setenv", variable, value)
+        
+        
+        def unsetenv(variable):
+            rprun("unsetenv", variable)
+        
+        
+        def getenv(variable):
+            return rprun("getenv", variable)
+        
+        def workspace_name(num):
+            if int(num) == 0:
+                return "default"
+            else:
+                return f"workspace_{num}"
+        
+        def workspace_dump_name(num):
+            return f"{workspace_name(num)}_dump"
+        
+        def workspace_data():
+            try:
+                workspaces = int(getenv("workspaces"))
+                current_workspace = int(getenv("current_workspace"))
+            except ValueError:
+                workspaces = 1
+                current_workspace = 0
+        
+            return (current_workspace, workspaces)
+        
+        def dump_variables():
+            print("workspaces", getenv("workspaces"))
+            print("current_workspace", getenv("current_workspace"))
+        
+        def new_workspace():
+            current_workspace, workspaces = workspace_data()
+        
+            frame_dump = rprun("fdump") 
+            setenv(workspace_dump_name(current_workspace), frame_dump)
+        
+            rprun("select", "-")
+            rprun("only")
+        
+            rprun("gnew", workspace_name(workspaces)) 
+            frame_dump = rprun("fdump") 
+        
+            current_workspace = workspaces
+            workspaces += 1
+        
+            setenv("current_workspace", str(current_workspace))
+            setenv("workspaces", str(workspaces))
+            setenv(workspace_dump_name(current_workspace), frame_dump)
+        
+            message(f"Created new workspace: {current_workspace}")
+        
+        def prepare_switch():
+            current_workspace, workspaces = workspace_data()
+            frame_dump = rprun("fdump") 
+            setenv(workspace_dump_name(current_workspace), frame_dump)
+            return (current_workspace, workspaces)
+        
+        
+        def close_switch(current_workspace):
+            setenv("current_workspace", current_workspace)
+            rprun("gselect", current_workspace)
+            frame_dump = getenv(workspace_dump_name(current_workspace))
+            rprun("frestore", frame_dump)
+        
+            message(f"Switched to workspace {current_workspace}")
+        
+        
+        def delete_workspace(workspace):
+            (current_workspace, workspaces) = prepare_switch()
+        
+            if workspaces < 2:
+                message("Not enough workspaces!")
+                return
+        
+            windows = rprun("windows")
+            if windows != "No managed windows\n":
+                message("Workspace is not empty!")
+                return
+            
+        
+            if not workspace or workspace == "current":
+                workspace = current_workspace
+                next_workspace()
+        
+            name = workspace_dump_name(workspace)
+            if not getenv(name):
+                print(f"No workspace with name {name} found!")
+                return
+        
+            unsetenv(name)
+        
+            rprun("gdelete", workspace)
+            setenv("workspaces", str(workspaces-1))
+        
+        
+        def next_workspace():
+            (current_workspace, workspaces) = prepare_switch()
+            if workspaces == 1:
+                return
+        
+            current_workspace = (current_workspace + 1) % workspaces
+            close_switch(current_workspace)
+        
+        
+        def prev_workspace():
+            (current_workspace, workspaces) = prepare_switch()
+            if workspaces == 1:
+                return
+        
+            if current_workspace == 0:
+                current_workspace = workspaces-1
+            else:
+                current_workspace -= 1
+            close_switch(current_workspace)
+        
+        
+        def select_workspace(workspace):
+            current_workspace, workspaces = prepare_switch()
+            close_switch(workspace)
+        
+        
+        def move_to_workspace(workspace):
+            rprun("gmove", workspace) 
+            rprun("select", "-")
+            select_workspace(workspace)
+        
+        
+        def main():
+            parser = argparse.ArgumentParser()
+            parser.add_argument("-c", "--create-workspace", action="store_true", help="Create a new workspace")
+            parser.add_argument("-n", "--next", action="store_true", help="Move to next workspace")
+            parser.add_argument("-p", "--prev", action="store_true", help="Move to previous workspace")
+            parser.add_argument("-s", "--select", help="Select workspace")
+            parser.add_argument("-d", "--delete", nargs="?", const="current", help="Delete workspace")
+            args = parser.parse_args()
+        
+            if args.create_workspace:
+                new_workspace()
+        
+            if args.next:
+                next_workspace()
+        
+            if args.prev:
+                prev_workspace()
+        
+            if args.select:
+                select_workspace(args.select)
+        
+            print(args.delete)
+            if args.delete:
+                delete_workspace(args.delete)
+        
+        
+        if __name__ == "__main__":
+            main()
+    
+</section>
+<## data-filename="xml_code-block xml" data-code="">
+    /mnt/mSATA/linaro/dotfiles-main/ratpoison/ratpoisonrc</source>
+    
+        addhook switchwin exec kill -s USR1 `ratpoison -c "getenv windows_list_pid"`
+        addhook switchframe exec kill -s USR1 `ratpoison -c "getenv windows_list_pid"`
+        addhook switchgroup exec kill -s USR1 `ratpoison -c "getenv windows_list_pid"`
+        addhook switchscreen exec kill -s USR1 `ratpoison -c "getenv windows_list_pid"`
+        addhook deletewindow exec kill -s USR1 `ratpoison -c "getenv windows_list_pid"`
+        addhook newwindow exec kill -s USR1 `ratpoison -c "getenv windows_list_pid"`
+        addhook titlechanged exec kill -s USR1 `ratpoison -c "getenv windows_list_pid"`
+        
+        set fgcolor white
+        set bgcolor black
+        set font Mono-12
+        set barpadding 8 8
+        set barborder 4
+        
+        set padding 4 32 4 4
+        set border 1
+        set onlyborder 0
+        set fwcolor purple
+        set bwcolor gray
+        set winfmt "%n#%s#%c"
+        
+        escape Super_L
+        unbind k
+        startup_message off
+        bind i exec ratpoison_toggle_conky.py
+        bind Return exec rofi -show run -theme purple
+        bind M-Return exec rofi -show drun -theme purple
+        bind S-Return exec rofi -show file-browser -theme purple
+        bind t exec ${rp_terminal_emulator}
+        bind q delete
+        bind Q kill
+        bind M-Tab exec rofi -modi dswitch:"ratpoison_rofi.py --desktops" -show dswitch -theme purple
+        bind Tab exec rofi -modi wswitch:"ratpoison_rofi.py --windows" -show wswitch -theme purple
+        bind S exec rofi -modi wswitch:"ratpoison_rofi.py --send-to-desktop" -show wswitch -theme purple
+        bind minus vsplit
+        bind backslash hsplit
+        
+        bind C exec ratpoison_workspaces.py -c
+        bind N exec ratpoison_workspaces.py -n
+        bind P exec ratpoison_workspaces.py -p
+        bind M-BackSpace exec ratpoison_workspaces.py -l
+        bind D exec ratpoison_workspaces.py -d
+        
+        bind BackSpace other
+        bind n next
+        bind p prev
+        
+        bind h focusleft
+        bind j focusdown
+        bind k focusup
+        bind l focusright
+        
+        bind H exchangeleft
+        bind J exchangedown
+        bind K exchangeup
+        bind L exchangeright
+        
+        bind o only
+        
+        definekey resize h resizeleft
+        definekey resize j resizedown
+        definekey resize k resizeup
+        definekey resize l resizeright
+        
+        
+        newkmap mouse
+        bind m set topkmap mouse
+        definekey mouse h ratrelwarp -5 0
+        definekey mouse k ratrelwarp 0 -5
+        definekey mouse j ratrelwarp 0 5
+        definekey mouse l ratrelwarp 5 0
+        definekey mouse H ratrelwarp -25 0
+        definekey mouse K ratrelwarp 0 -25
+        definekey mouse J ratrelwarp 0 25
+        definekey mouse L ratrelwarp 25 0
+        definekey mouse c ratclick 1
+        definekey mouse v ratclick 2
+        definekey mouse Escape set topkmap top
+        
+    
+</section>
+<## data-filename="xml_code-block xml" data-code="">
+    /mnt/mSATA/linaro/dotfiles-main/ratpoison/volumerc</source>
+    
+        alias volume-unmute exec ${rp_volume_unmute}; ratpoison -c "echo `${rp_volume_mute_status}`"
+        alias volume-toggle exec ${rp_volume_mute_toggle}; ratpoison -c "echo `${rp_volume_mute_status}`"
+        alias volume-up     exec ${rp_volume_up}; ratpoison -c "echo `${rp_volume_status}`"
+        alias volume-down   exec ${rp_volume_down}; ratpoison -c "echo `${rp_volume_status}`"
+        
+        definekey top XF86AudioMute volume-toggle
+        definekey top XF86AudioLowerVolume volume-down
+        definekey top XF86AudioRaiseVolume volume-up
+        definekey top XF86AudioNext exec dbus-send --print-reply --dest=org.mpris.MediaPlayer2.spotify /org/mpris/MediaPlayer2 org.mpris.MediaPlayer2.Player.Next
+        definekey top XF86AudioPrev exec dbus-send --print-reply --dest=org.mpris.MediaPlayer2.spotify /org/mpris/MediaPlayer2 org.mpris.MediaPlayer2.Player.Previous
+        definekey top XF86AudioStop exec dbus-send --print-reply --dest=org.mpris.MediaPlayer2.spotify /org/mpris/MediaPlayer2 org.mpris.MediaPlayer2.Player.Pause
+        definekey top XF86AudioPlay exec dbus-send --print-reply --dest=org.mpris.MediaPlayer2.spotify /org/mpris/MediaPlayer2 org.mpris.MediaPlayer2.Player.Play
+    
+</section>
+</root>
+```
+
 # trapd00r
 `https://raw.githubusercontent.com/trapd00r/configs/refs/heads/master/ratpoisonrc`
 ```
