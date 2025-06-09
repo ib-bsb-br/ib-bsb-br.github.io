@@ -8,9 +8,10 @@ published: true
 slug: windows-11-ratpoison
 title: 'Windows 11 ratpoison'
 ---
+{% raw %}
 # PowerShell Script to Create Final Ratpoison-like AHK Config
 
-{% codeblock powershell %}
+```
 # #####################################################################
 # # PowerShell Script to Configure a Ratpoison-like Environment on Windows
 # # Version 2.1 - AutoHotkey Centric (AHK v1 Syntax Fix)
@@ -514,7 +515,7 @@ if ($Host.Name -eq "ConsoleHost") {
     Write-Host "Press any key to exit..."
     $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown") | Out-Null
 }
-{% endcodeblock %}
+```
 
 ## **1\. Introduction: Understanding the ratpoison Philosophy and Windows 11 Constraints**
 
@@ -980,3 +981,5 @@ Catch { MsgBox "Failed to run nonexistent.exe" } 31
 By combining a Windows TWM, AutoHotkey, a suitable launcher, and CLI tools, you can build a Windows 11 environment that strongly emulates your ratpoison setup's functionality and keyboard-centric nature. This involves translating your .ratpoisonrc logic into AHK scripts and TWM configurations.
 
 Perfect replication is impossible due to OS differences, but a high degree of functional similarity is achievable. This guide provides the foundational blocks and strategies. The process will be iterative as you fine-tune your AHK scripts and TWM settings to match your workflow as closely as possible. Your detailed .ratpoisonrc provides an excellent blueprint for this customization.
+
+{% endraw %}
