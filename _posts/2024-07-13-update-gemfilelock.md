@@ -1,5 +1,4 @@
 ---
-
 date: 2024-07-13
 tags: [github>jekyll]
 comment: 
@@ -11,7 +10,9 @@ layout: post
 Github Actions workflow to ensure the new gems are installed and locked in Gemfile.lock
 
 `.github/workflows/update_gemfile_lock.yml`:
-```
+
+{% raw %}
+{% codeblock yaml %}
 name: Update Gemfile.lock
 
 on:
@@ -50,4 +51,5 @@ jobs:
           git push
         env:
           token: ${{ secrets.GITHUB_TOKEN }}
-```
+{% endcodeblock %}
+{% endraw %}
