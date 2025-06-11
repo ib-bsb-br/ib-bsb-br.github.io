@@ -1,4 +1,137 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2025-06-11T16:39:13+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">Reinforcement fine-tuning use cases - OpenAI API</title><link href="https://ib.bsb.br/reinforcement-fine-tuning-use-cases-openai-api/" rel="alternate" type="text/html" title="Reinforcement fine-tuning use cases - OpenAI API" /><published>2025-06-11T00:00:00+00:00</published><updated>2025-06-11T16:35:48+00:00</updated><id>https://ib.bsb.br/reinforcement-fine-tuning-use-cases-openai-api</id><content type="html" xml:base="https://ib.bsb.br/reinforcement-fine-tuning-use-cases-openai-api/"><![CDATA[<p>Title: Reinforcement fine-tuning use cases - OpenAI API</p>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2025-06-11T16:50:57+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">Prompt caching - OpenAI API</title><link href="https://ib.bsb.br/prompt-caching-openai-api/" rel="alternate" type="text/html" title="Prompt caching - OpenAI API" /><published>2025-06-11T00:00:00+00:00</published><updated>2025-06-11T16:47:29+00:00</updated><id>https://ib.bsb.br/prompt-caching-openai-api</id><content type="html" xml:base="https://ib.bsb.br/prompt-caching-openai-api/"><![CDATA[<p>Title: Prompt caching - OpenAI API</p>
+
+<p>URL Source: https://platform.openai.com/docs/guides/prompt-caching</p>
+
+<p>Markdown Content:
+Reduce latency and cost with prompt caching.</p>
+
+<p>Model prompts often contain repetitive content, like system prompts and common instructions. OpenAI routes API requests to servers that recently processed the same prompt, making it cheaper and faster than processing a prompt from scratch. This can reduce latency by up to 80% and cost by up to 75%. Prompt Caching works automatically on all your API requests (no code changes required) and has no additional fees associated with it. Prompt Caching is enabled for all recent <a href="https://platform.openai.com/docs/models">models</a>, gpt-4o and newer.</p>
+
+<p>This guide describes how prompt caching works in detail, so that you can optimize your prompts for lower latency and cost.</p>
+
+<h2 id="structuring-prompts">Structuring prompts</h2>
+
+<p>Cache hits are only possible for exact prefix matches within a prompt. To realize caching benefits, place static content like instructions and examples at the beginning of your prompt, and put variable content, such as user-specific information, at the end. This also applies to images and tools, which must be identical between requests.</p>
+
+<p><img src="https://openaidevs.retool.com/api/file/8593d9bb-4edb-4eb6-bed9-62bfb98db5ee" alt="Image 1: Prompt Caching visualization" /></p>
+
+<h2 id="how-it-works">How it works</h2>
+
+<p>Caching is enabled automatically for prompts that are 1024 tokens or longer. When you make an API request, the following steps occur:</p>
+
+<ol>
+  <li><strong>Cache Routing</strong>:</li>
+</ol>
+
+<ul>
+  <li>Requests are routed to a machine based on a hash of the initial prefix of the prompt. The hash typically uses the first 256 tokens, though the exact length varies depending on the model.</li>
+  <li>If you provide the <a href="https://platform.openai.com/docs/api-reference/responses/create#responses-create-user"><code class="language-plaintext highlighter-rouge">user</code></a> parameter, it is combined with the prefix hash, allowing you to influence routing and improve cache hit rates. This is especially beneficial when many requests share long, common prefixes.</li>
+  <li>If requests for the same prefix and user combination exceed a certain rate (approximately 15 requests per minute), some may overflow and get routed to additional machines, reducing cache effectiveness.</li>
+</ul>
+
+<ol>
+  <li><strong>Cache Lookup</strong>: The system checks if the initial portion (prefix) of your prompt exists in the cache on the selected machine.</li>
+  <li><strong>Cache Hit</strong>: If a matching prefix is found, the system uses the cached result. This significantly decreases latency and reduces costs.</li>
+  <li><strong>Cache Miss</strong>: If no matching prefix is found, the system processes your full prompt, caching the prefix afterward on that machine for future requests.</li>
+</ol>
+
+<p>Cached prefixes generally remain active for 5 to 10 minutes of inactivity. However, during off-peak periods, caches may persist for up to one hour.</p>
+
+<h2 id="requirements">Requirements</h2>
+
+<p>Caching is available for prompts containing 1024 tokens or more, with cache hits occurring in increments of 128 tokens. Therefore, the number of cached tokens in a request will always fall within the following sequence: 1024, 1152, 1280, 1408, and so on, depending on the prompt’s length.</p>
+
+<p>All requests, including those with fewer than 1024 tokens, will display a <code class="language-plaintext highlighter-rouge">cached_tokens</code> field of the <code class="language-plaintext highlighter-rouge">usage.prompt_tokens_details</code><a href="https://platform.openai.com/docs/api-reference/chat/object">Chat Completions object</a> indicating how many of the prompt tokens were a cache hit. For requests under 1024 tokens, <code class="language-plaintext highlighter-rouge">cached_tokens</code> will be zero.</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+"usage": {
+  "prompt_tokens": 2006,
+  "completion_tokens": 300,
+  "total_tokens": 2306,
+  "prompt_tokens_details": {
+    "cached_tokens": 1920
+  },
+  "completion_tokens_details": {
+    "reasoning_tokens": 0,
+    "accepted_prediction_tokens": 0,
+    "rejected_prediction_tokens": 0
+  }
+}
+</code></pre></div></div>
+
+<h3 id="what-can-be-cached">What can be cached</h3>
+
+<ul>
+  <li><strong>Messages:</strong> The complete messages array, encompassing system, user, and assistant interactions.</li>
+  <li><strong>Images:</strong> Images included in user messages, either as links or as base64-encoded data, as well as multiple images can be sent. Ensure the detail parameter is set identically, as it impacts image tokenization.</li>
+  <li><strong>Tool use:</strong> Both the messages array and the list of available <code class="language-plaintext highlighter-rouge">tools</code> can be cached, contributing to the minimum 1024 token requirement.</li>
+  <li><strong>Structured outputs:</strong> The structured output schema serves as a prefix to the system message and can be cached.</li>
+</ul>
+
+<h2 id="best-practices">Best practices</h2>
+
+<ul>
+  <li>Structure prompts with <strong>static or repeated content at the beginning</strong> and dynamic, user-specific content at the end.</li>
+  <li>Use the <strong><a href="https://platform.openai.com/docs/api-reference/responses/create#responses-create-user"><code class="language-plaintext highlighter-rouge">user</code></a> parameter</strong> consistently across requests that share common prefixes. Select a <code class="language-plaintext highlighter-rouge">user</code> granularity that keeps each unique prefix-user combination below 15 requests per minute to avoid cache overflow.</li>
+  <li><strong>Monitor your cache performance metrics</strong>, including cache hit rates, latency, and the proportion of tokens cached, to refine your strategy.</li>
+  <li><strong>Maintain a steady stream of requests</strong> with identical prompt prefixes to minimize cache evictions and maximize caching benefits.</li>
+</ul>
+
+<h2 id="frequently-asked-questions">Frequently asked questions</h2>
+
+<ol>
+  <li><strong>How is data privacy maintained for caches?</strong></li>
+</ol>
+
+<p>Prompt caches are not shared between organizations. Only members of the same organization can access caches of identical prompts.</p>
+
+<ol>
+  <li><strong>Does Prompt Caching affect output token generation or the final response of the API?</strong></li>
+</ol>
+
+<p>Prompt Caching does not influence the generation of output tokens or the final response provided by the API. Regardless of whether caching is used, the output generated will be identical. This is because only the prompt itself is cached, while the actual response is computed anew each time based on the cached prompt.</p>
+
+<ol>
+  <li><strong>Is there a way to manually clear the cache?</strong></li>
+</ol>
+
+<p>Manual cache clearing is not currently available. Prompts that have not been encountered recently are automatically cleared from the cache. Typical cache evictions occur after 5-10 minutes of inactivity, though sometimes lasting up to a maximum of one hour during off-peak periods.</p>
+
+<ol>
+  <li><strong>Will I be expected to pay extra for writing to Prompt Caching?</strong></li>
+</ol>
+
+<p>No. Caching happens automatically, with no explicit action needed or extra cost paid to use the caching feature.</p>
+
+<ol>
+  <li><strong>Do cached prompts contribute to TPM rate limits?</strong></li>
+</ol>
+
+<p>Yes, as caching does not affect rate limits.</p>
+
+<ol>
+  <li><strong>Is discounting for Prompt Caching available on Scale Tier and the Batch API?</strong></li>
+</ol>
+
+<p>Discounting for Prompt Caching is not available on the Batch API but is available on Scale Tier. With Scale Tier, any tokens that are spilled over to the shared API will also be eligible for caching.</p>
+
+<ol>
+  <li><strong>Does Prompt Caching work on Zero Data Retention requests?</strong></li>
+</ol>
+
+<p>Yes, Prompt Caching is compliant with existing Zero Data Retention policies.</p>]]></content><author><name></name></author><category term="scratchpad" /></entry><entry><title type="html">Reinforcement fine-tuning use cases - OpenAI API</title><link href="https://ib.bsb.br/reinforcement-fine-tuning-use-cases-openai-api/" rel="alternate" type="text/html" title="Reinforcement fine-tuning use cases - OpenAI API" /><published>2025-06-11T00:00:00+00:00</published><updated>2025-06-11T16:35:48+00:00</updated><id>https://ib.bsb.br/reinforcement-fine-tuning-use-cases-openai-api</id><content type="html" xml:base="https://ib.bsb.br/reinforcement-fine-tuning-use-cases-openai-api/"><![CDATA[<p>Title: Reinforcement fine-tuning use cases - OpenAI API</p>
 
 <p>URL Source: https://platform.openai.com/docs/guides/rft-use-cases</p>
 
@@ -6007,249 +6140,4 @@ done</span>
 find <span class="s2">"</span><span class="nv">$TARGET_DIR</span><span class="s2">"</span> <span class="nt">-type</span> d <span class="nt">-empty</span> <span class="nt">-delete</span>
 
 <span class="nb">echo</span> <span class="s2">"All eligible files have been moved to '</span><span class="nv">$TARGET_DIR</span><span class="s2">'."</span>
-</code></pre></div></div>]]></content><author><name></name></author><category term="scratchpad" /></entry><entry><title type="html">changing IP address</title><link href="https://ib.bsb.br/ip-changing/" rel="alternate" type="text/html" title="changing IP address" /><published>2025-05-28T00:00:00+00:00</published><updated>2025-05-28T08:58:04+00:00</updated><id>https://ib.bsb.br/ip-changing</id><content type="html" xml:base="https://ib.bsb.br/ip-changing/"><![CDATA[<p>This tutorial will guide you through changing your Debian Bullseye machine’s IP address from one automatically assigned by DHCP to a static IP address. We’ll use your network interface `enP2p33s0` (currently `192.168.15.3/24`) and your router’s gateway (`192.168.15.1`) as the basis for examples.</p>
-
-<p>Below is a step-by-step tutorial to change your Debian Bullseye machine’s IP address.</p>
-
-<h2 id="1-confirm-current-settings--choose-your-static-ip"><strong>1. Confirm Current Settings &amp; Choose Your Static IP</strong></h2>
-
-<ul>
-  <li><strong>Current Interface and IP:</strong> Your primary network interface is enP2p33s0, currently using 192.168.15.3/24.</li>
-  <li><strong>Gateway:</strong> Your router’s IP address is 192.168.15.1.</li>
-  <li><strong>DNS Servers (Current):</strong> Your system logs show you’re using 8.8.8.8 and 127.0.0.53. The 127.0.0.53 address means systemd-resolved is active and acting as a local DNS stub resolver. /etc/resolv.conf will point to it, but systemd-resolved forwards queries to upstream DNS servers configured elsewhere (or via DHCP). For a static configuration, you’ll explicitly set these upstream servers.</li>
-</ul>
-
-<p><strong>Choose Your Static IP:</strong></p>
-
-<ul>
-  <li>It must be in the 192.168.15.x range.</li>
-  <li>It must <strong>not</strong> be 192.168.15.1 (your router).</li>
-  <li>It must <strong>not</strong> be used by another device on your network.</li>
-  <li><strong>Crucially:</strong> It should be <strong>outside your router’s DHCP assignment range</strong>. Log into your ASKEY RTF8115VW router to check its DHCP settings (usually under LAN or DHCP Server sections) and find the range of IPs it assigns automatically (e.g., 192.168.15.100 to 192.168.15.200). Choose an IP outside this range, for example, 192.168.15.50.</li>
-</ul>
-
-<p><strong>Static IP Details for this Tutorial (Example):</strong></p>
-
-<ul>
-  <li><strong>IP Address:</strong> 192.168.15.50</li>
-  <li><strong>Netmask:</strong> 255.255.255.0 (which is /24 in CIDR notation)</li>
-  <li><strong>Gateway:</strong> 192.168.15.1</li>
-  <li><strong>DNS Servers (Example Choices):</strong> 8.8.8.8 (Google) and 1.1.1.1 (Cloudflare). Alternatively, you could use your router’s IP as a DNS forwarder, e.g., 192.168.15.1 and 8.8.8.8. <em>Use the DNS servers you prefer.</em></li>
-</ul>
-
-<h2 id="2-back-up-the-current-network-configuration"><strong>2. Back Up the Current Network Configuration</strong></h2>
-
-<p>Before making any changes, always back up your configuration. If your system uses ifupdown (common on Debian server installations), the main file is /etc/network/interfaces.</p>
-
-<p>sudo cp /etc/network/interfaces /etc/network/interfaces.backup_$(date +%F)</p>
-
-<p>If you plan to edit systemd-networkd files or NetworkManager configurations, back up relevant files from /etc/systemd/network/ or /etc/NetworkManager/system-connections/ respectively, if they exist and are being modified.</p>
-
-<h2 id="3-determine-your-network-management-system"><strong>3. Determine Your Network Management System</strong></h2>
-
-<p>Debian can use different systems to manage network configurations. You need to identify which one is actively managing enP2p33s0:</p>
-
-<ul>
-  <li>ifupdown (via /etc/network/interfaces):<br />
-Check the contents: cat /etc/network/interfaces.<br />
-If you see a stanza for enP2p33s0 like auto enP2p33s0 and iface enP2p33s0 inet dhcp, ifupdown is likely managing this interface. This is a traditional method, often default on servers.</li>
-  <li>systemd-networkd:<br />
-Check its status: sudo systemctl is-active systemd-networkd.<br />
-If active, check for configuration files in /etc/systemd/network/ (e.g., ls /etc/systemd/network/). A .network file matching your interface might exist.</li>
-  <li>NetworkManager:<br />
-Check its status: sudo systemctl is-active NetworkManager.<br />
-If active (common on desktop environments), confirm it’s managing the interface: nmcli dev status. Look for enP2p33s0.</li>
-</ul>
-
-<p>This tutorial will primarily cover <strong>Method A (ifupdown)</strong> and <strong>Method B (systemd-networkd)</strong>, with an overview of Method C (NetworkManager). Choose the method appropriate for your system.</p>
-
-<h2 id="4-method-a--using-etcnetworkinterfaces-ifupdown"><strong>4. Method A – Using /etc/network/interfaces (ifupdown)</strong></h2>
-
-<p>This is the traditional Debian method.</p>
-
-<p><strong>a. Edit the configuration file:</strong></p>
-
-<p>sudo nano /etc/network/interfaces</p>
-
-<p>b. Modify the stanza for enP2p33s0:<br />
-Find the lines for enP2p33s0. If it’s set for DHCP, it might look like:<br />
-auto enP2p33s0<br />
-iface enP2p33s0 inet dhcp</p>
-
-<p>Comment out or delete these lines and add/modify the stanza for a static configuration. If no entry exists, add the following:</p>
-
-<p># The primary network interface<br />
-auto enP2p33s0<br />
-iface enP2p33s0 inet static<br />
-    address 192.168.15.50        # Your chosen static IP<br />
-    netmask 255.255.255.0        # Your netmask<br />
-    gateway 192.168.15.1         # Your gateway IP<br />
-    dns-nameservers 8.8.8.8 1.1.1.1 # Your chosen DNS servers (space separated)<br />
-    # dns-search yourlocaldomain.example # Optional: for local domain search</p>
-
-<p>c. Save and Exit:<br />
-In nano, press Ctrl+O (Write Out), then Enter, then Ctrl+X (Exit).<br />
-d. Apply the Changes:<br />
-Restart the networking service:<br />
-sudo systemctl restart networking.service</p>
-
-<p>Or, bring the interface down and then up (may cause a brief disconnection):</p>
-
-<p>sudo ifdown enP2p33s0 &amp;&amp; sudo ifup enP2p33s0</p>
-
-<p><em>(If ifdown complains or the settings don’t apply, another service like NetworkManager might be interfering. If NetworkManager is active and you intend to use ifupdown for this interface, you may need to stop/disable NetworkManager (sudo systemctl stop NetworkManager; sudo systemctl disable NetworkManager) or configure NetworkManager to ignore enP2p33s0 e.g., by adding unmanaged-devices=interface-name:enP2p33s0 to /etc/NetworkManager/NetworkManager.conf and restarting NetworkManager).</em></p>
-
-<h2 id="5-method-b--using-systemd-networkd"><strong>5. Method B – Using systemd-networkd</strong></h2>
-
-<p>If systemd-networkd is managing your network:</p>
-
-<p>a. Create a configuration file:<br />
-File names in /etc/systemd/network/ are typically prefixed with a number (e.g., 10- or 20- for ordering) and end in .network.<br />
-sudo nano /etc/systemd/network/20-wired-static-enP2p33s0.network</p>
-
-<p><strong>b. Add the following configuration:</strong></p>
-
-<p>[Match]<br />
-Name=enP2p33s0</p>
-
-<p>[Network]<br />
-Address=192.168.15.50/24   # Your static IP with CIDR netmask<br />
-Gateway=192.168.15.1      # Your gateway<br />
-DNS=8.8.8.8               # Primary DNS (use your chosen server)<br />
-DNS=1.1.1.1               # Secondary DNS (use your chosen server)<br />
-# You can add more DNS= lines if needed<br />
-# Or use your router as a DNS: DNS=192.168.15.1</p>
-
-<p><strong>c. Save and Exit.</strong></p>
-
-<p><strong>d. Set permissions and restart the service:</strong></p>
-
-<p>sudo chmod 644 /etc/systemd/network/20-wired-static-enP2p33s0.network<br />
-sudo systemctl enable systemd-networkd # Ensure it’s enabled to start on boot<br />
-sudo systemctl restart systemd-networkd</p>
-
-<p>systemd-resolved (which is active on your system) should pick up these DNS settings from systemd-networkd.</p>
-
-<h2 id="6-method-c--using-networkmanager-brief-overview"><strong>6. Method C – Using NetworkManager (Brief Overview)</strong></h2>
-
-<p>If your system (especially a desktop) uses NetworkManager:</p>
-
-<ul>
-  <li><strong>Graphical Tool:</strong> Use your desktop environment’s network settings GUI. Find your wired connection (enP2p33s0), change its IPv4 settings from “Automatic (DHCP)” to “Manual,” and enter your desired IP address, netmask, gateway, and DNS servers. Save and apply.</li>
-  <li>
-    <p><strong>Text User Interface (</strong>nmtui<strong>):</strong><br />
-sudo nmtui</p>
-
-    <p>Navigate to “Edit a connection,” select enP2p33s0 (or its connection name), choose “Edit…”, change “IPv4 CONFIGURATION” to “Manual,” and fill in the Addresses, Gateway, and DNS servers fields. Select “OK” and quit.</p>
-  </li>
-  <li>
-    <p><strong>Command Line (</strong>nmcli<strong>):</strong> This is more advanced. First, find your connection name: nmcli con show. Let’s assume it’s “Wired connection 1”.<br />
-sudo nmcli con mod “Wired connection 1” ipv4.method manual ipv4.addresses 192.168.15.50/24 ipv4.gateway 192.168.15.1 ipv4.dns “8.8.8.8 1.1.1.1”<br />
-sudo nmcli con down “Wired connection 1” &amp;&amp; sudo nmcli con up “Wired connection 1”</p>
-
-    <p><em>(Note: For ipv4.dns, provide a space-separated list of DNS servers within the quotes).</em></p>
-  </li>
-</ul>
-
-<h2 id="7-test-connectivity"><strong>7. Test Connectivity</strong></h2>
-
-<p>After applying changes using your chosen method, verify the configuration:</p>
-
-<p><strong>a. Check IP Address:</strong></p>
-
-<p>ip -br addr show enP2p33s0</p>
-
-<p>or</p>
-
-<p>ip addr show enP2p33s0</p>
-
-<p>You should see inet 192.168.15.50/24 (or your chosen static IP) associated with enP2p33s0.</p>
-
-<p><strong>b. Check Routing Table:</strong></p>
-
-<p>ip route show</p>
-
-<p>Ensure the default route is via your gateway (e.g., default via 192.168.15.1 dev enP2p33s0).</p>
-
-<p>c. Check DNS Resolution:<br />
-Your /etc/resolv.conf file will likely show nameserver 127.0.0.53. This is expected when systemd-resolved is active. systemd-resolved listens on this local address and forwards DNS queries to the upstream servers you configured. To see the actual upstream DNS servers being used by systemd-resolved:<br />
-resolvectl status</p>
-
-<p>or</p>
-
-<table>
-  <tbody>
-    <tr>
-      <td>systemd-resolve --status</td>
-      <td>grep -A3 ‘Current DNS Server’</td>
-    </tr>
-  </tbody>
-</table>
-
-<p>This should show the DNS servers you configured (e.g., 8.8.8.8, 1.1.1.1).</p>
-
-<p><strong>d. Ping Tests:</strong></p>
-
-<ul>
-  <li>
-    <p>Ping your gateway:<br />
-ping -c 3 192.168.15.1</p>
-  </li>
-  <li>
-    <p>Ping an external IP address (tests IP connectivity beyond your LAN):<br />
-ping -c 3 8.8.8.8</p>
-  </li>
-  <li>
-    <p>Ping a domain name (tests DNS resolution and full internet connectivity):<br />
-ping -c 3 google.com</p>
-  </li>
-</ul>
-
-<p>If all these tests pass, your static IP configuration is working correctly.</p>
-
-<h2 id="8-important-considerations--reverting"><strong>8. Important Considerations &amp; Reverting</strong></h2>
-
-<ul>
-  <li><strong>SSH Disconnection:</strong> If you are connected to your Debian machine via SSH, changing its IP address will disconnect your session. Ensure you have physical console access or an alternative way to access the machine if issues arise.</li>
-  <li><strong>IP Conflicts:</strong> Double-check that the static IP you chose is unique on your network and is <strong>not</strong> within your router’s DHCP assignment range to prevent IP address conflicts.</li>
-  <li><strong>Router’s DHCP Reservation (Alternative):</strong> Instead of setting a static IP directly on the Debian machine, you can configure your ASKEY RTF8115VW router to always assign the same IP address to your Debian machine’s MAC address. This is often called “DHCP Reservation” or “Static DHCP Lease.”
-    <ul>
-      <li>To use this method: Find your enP2p33s0 MAC address (ip link show enP2p33s0). Log into your router, find the DHCP reservation settings, and map the MAC address to your desired IP (e.g., 192.168.15.50).</li>
-      <li><strong>Crucially:</strong> If you use DHCP reservation on your router, ensure your Debian machine’s network interface (enP2p33s0) is configured to obtain an IP address <strong>automatically via DHCP</strong> (i.e., revert any static IP settings on the Debian machine itself).</li>
-    </ul>
-  </li>
-  <li><strong>Reverting to DHCP:</strong>
-    <ul>
-      <li>
-        <p>Method A (/etc/network/interfaces):<br />
-Restore your backup:<br />
-sudo cp /etc/network/interfaces.backup_YYYY-MM-DD /etc/network/interfaces # Use your actual backup filename</p>
-
-        <p>Then, change the enP2p33s0 stanza back to:<br />
-auto enP2p33s0<br />
-iface enP2p33s0 inet dhcp</p>
-
-        <p>Save, and restart networking: sudo systemctl restart networking.service.</p>
-      </li>
-      <li>
-        <p>Method B (systemd-networkd):<br />
-Remove or rename your static .network file (e.g., sudo mv /etc/systemd/network/20-wired-static-enP2p33s0.network /etc/systemd/network/20-wired-static-enP2p33s0.network.disabled).<br />
-If no other .network file configures enP2p33s0 for DHCP, create one, e.g., /etc/systemd/network/10-dhcp-enP2p33s0.network:<br />
-[Match]<br />
-Name=enP2p33s0</p>
-
-        <p>[Network]<br />
-DHCP=yes</p>
-
-        <p>Save, and restart: sudo systemctl restart systemd-networkd.</p>
-      </li>
-      <li>
-        <p>Method C (NetworkManager):<br />
-Using nmtui or your GUI, change the IPv4 method for the connection back to “Automatic (DHCP)”.<br />
-Using nmcli (replace “Wired connection 1” with your actual connection name):<br />
-sudo nmcli con mod “Wired connection 1” ipv4.method auto ipv4.addresses “” ipv4.gateway “” ipv4.dns “”<br />
-sudo nmcli con up “Wired connection 1”</p>
-      </li>
-    </ul>
-  </li>
-</ul>]]></content><author><name></name></author><category term="scratchpad" /></entry></feed>
+</code></pre></div></div>]]></content><author><name></name></author><category term="scratchpad" /></entry></feed>
