@@ -1,4 +1,1069 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2025-06-10T00:05:25+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">Windows 11 ratpoison</title><link href="https://ib.bsb.br/windows-11-ratpoison/" rel="alternate" type="text/html" title="Windows 11 ratpoison" /><published>2025-06-09T00:00:00+00:00</published><updated>2025-06-09T23:33:56+00:00</updated><id>https://ib.bsb.br/windows-11-ratpoison</id><content type="html" xml:base="https://ib.bsb.br/windows-11-ratpoison/"><![CDATA[<h1 id="powershell-script-to-create-final-ratpoison-like-ahk-config">PowerShell Script to Create Final Ratpoison-like AHK Config</h1>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2025-06-11T16:39:13+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">Reinforcement fine-tuning use cases - OpenAI API</title><link href="https://ib.bsb.br/reinforcement-fine-tuning-use-cases-openai-api/" rel="alternate" type="text/html" title="Reinforcement fine-tuning use cases - OpenAI API" /><published>2025-06-11T00:00:00+00:00</published><updated>2025-06-11T16:35:48+00:00</updated><id>https://ib.bsb.br/reinforcement-fine-tuning-use-cases-openai-api</id><content type="html" xml:base="https://ib.bsb.br/reinforcement-fine-tuning-use-cases-openai-api/"><![CDATA[<p>Title: Reinforcement fine-tuning use cases - OpenAI API</p>
+
+<p>URL Source: https://platform.openai.com/docs/guides/rft-use-cases</p>
+
+<p>Markdown Content:
+Learn use cases and best practices for reinforcement fine-tuning.</p>
+
+<p><a href="https://platform.openai.com/docs/guides/reinforcement-fine-tuning">Reinforcement fine-tuning</a> (RFT) provides a way to improve your model’s performance at specific tasks. The task must be clear and have verifiable answers.</p>
+
+<h2 id="when-to-use-reinforcement-fine-tuning">When to use reinforcement fine-tuning</h2>
+
+<p>Agentic workflows are designed to make decisions that are both correct and verifiable. RFT can help by providing explicit rubrics and using code‑based or LLM‑based graders to measure functional success, factual accuracy, or policy compliance.</p>
+
+<p>Across early users, three clear use cases have emerged:</p>
+
+<ol>
+  <li><strong>Turn instructions into working code</strong>: Convert open-ended prompts into structured code, configs, or templates that must pass deterministic tests.</li>
+  <li><strong>Pull facts into a clean format</strong>: Extract verifiable facts and summaries from messy, unstructured text and return JSON-structured or other schema-based outputs.</li>
+  <li><strong>Apply complex rules correctly</strong>: Make fine-grained label or policy decisions when the information provided is nuanced, large in quantity, hierarchical, or high-stakes.</li>
+</ol>
+
+<p><a href="https://platform.openai.com/docs/guides/reinforcement-fine-tuning">Ready to use reinforcement fine-tuning? Skip to the guide →</a></p>
+
+<h3 id="1-turn-instructions-into-working-code">1. Turn instructions into working code</h3>
+
+<p>In this use case, models reason over hidden domain constraints to produce structured outputs like code, queries, or infrastructure templates. Outputs must satisfy multiple correctness conditions, and success is usually deterministically graded: the artifact either compiles, passes tests, or meets an explicit schema.</p>
+
+<h4 id="wiring-verification-ips-for-semiconductor-design">Wiring verification IPs for semiconductor design</h4>
+
+<p>Use case</p>
+
+<blockquote>
+  <p><strong>Company</strong>: <a href="https://www.chipstack.ai/">ChipStack</a> is building the next-generation of AI-powered tools for chip design and verification, aimed at significantly reducing the time and cost of developing and validating complex semiconductor chips.</p>
+
+  <p><strong>Problem to solve</strong>: One task that’s challenging and time-consuming for humans is binding design interfaces to verification IPs (pre-created verification components that, when properly applied, can signifcantly enhance quality and coverage of verification). There are many verification IPs, and each can contain dozens to hundreds of signals that may be mapped. Someone must understand this domain well in order to apply the verification IP correctly.</p>
+
+  <p><strong>Objective</strong>: To train OpenAI reasoning models to do this instead, ChipStack prepared a dataset consisting of less than 50 samples, then performed several RFT variations. For the final evaluation report, they ran this evaluation set three times against each model and variation—o1-mini base and fine-tuned, o3-mini base and fine-tuned—and averaged the results per-sample then overall.</p>
+</blockquote>
+
+<p>Prompt</p>
+
+<blockquote>
+  <p>Below is a piece of example data provided.</p>
+</blockquote>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>1
+2
+3
+4
+[
+    {“name”: “BLOCK_SIZE”, “value”: “8”},
+    {“name”: “ADDR_WIDTH”, “value”: “4”}
+]
+</code></pre></div></div>
+
+<p>Grader code</p>
+
+<blockquote>
+  <p>Below is a grader definition in Python of a string map, represented as a list of objects with <code class="language-plaintext highlighter-rouge">name</code> and <code class="language-plaintext highlighter-rouge">value</code> properties.</p>
+
+  <p>Conceptually, this is meant to model a type like <code class="language-plaintext highlighter-rouge">Dict[str, str]</code>.</p>
+</blockquote>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+{
+  "type": "python",
+  "name": "donors_caas",
+  "image_tag": "alpha",
+  "source": "from collections import Counter
+
+def grade(sample: dict[str, str], item: dict[str, str]) -&gt; float:
+    # multisets of (name, value) pairs
+    predicted = sample[\"output_json\"][\"predicted\"]
+    expected  = item[\"reference_answer\"]
+    pred_counts = Counter((d[\"name\"], d[\"value\"]) for d in predicted)
+    exp_counts  = Counter((d[\"name\"], d[\"value\"]) for d in expected)
+
+    true_pos = sum(min(pred_counts[p], exp_counts[p]) for p in pred_counts)
+    pred_total = sum(pred_counts.values())
+    exp_total  = sum(exp_counts.values())
+
+    precision = true_pos / pred_total if pred_total else 0.0
+    recall    = true_pos / exp_total  if exp_total  else 0.0
+
+    if precision + recall == 0.0:
+        return 0.0
+    return 2 * precision * recall / (precision + recall)"
+}
+</code></pre></div></div>
+
+<p>Results</p>
+
+<blockquote>
+  <p>For both o1-mini and o3-mini, performance improved by ~12 percentage points. The fine-tuned variants got much better about recognizing when not to apply wiring. Many commercial verification IPs can contain hundreds of optional signals, most of which are not meant to be applied.</p>
+
+  <p>“Thanks to powerful base models and easy-to-use Reinforced Fine-Tuning APIs, we were able to significantly boost performance on our task with a small set of high-quality samples.”</p>
+
+  <p>—<a href="https://www.chipstack.ai/">ChipStack</a>, next-generation of AI-powered tools for chip design and verification</p>
+</blockquote>
+
+<h4 id="production-ready-api-snippets-that-compile-and-pass-ast-checks">Production-ready API snippets that compile and pass AST checks</h4>
+
+<p>Use case</p>
+
+<blockquote>
+  <p><strong>Company</strong>: <a href="https://www.runloop.ai/">Runloop</a> is a platform for AI-powered coding agents to be deployed into production and built with public and custom benchmarking capabilities to refine performance.</p>
+
+  <p><strong>Problem to solve</strong>: Runloop wanted to improve model performance at using third-party APIs, such as the Stripe API, which can be large and complex without a human in the loop. If they could train a model to use the Stripe API, Runloop could turn economically impactful business cases into working code.</p>
+
+  <p><strong>Objective</strong>: Their goal was teaching the model to master usage of the Stripe API, including writing complete code snippets for arbitrary user requests by either adapting information from existing integration guides, merging information from multiple guides, or inferring information not explicitly stated in the guides. They used RFT with two primary rewards:</p>
+
+  <ol>
+    <li>Reward the model for outputting the answer in a Markdown format that aligns with expectation of how a “dynamic” integration guide should look.</li>
+    <li>Reward the model for producing “correct” code snippets by validating the outputted code via AST Grep. This allows them to confirm the model is making the correct Stripe SDK calls with the correct parameters and in some cases even in the correct order.</li>
+  </ol>
+</blockquote>
+
+<p>Grader code</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+# Note this file gets uploaded to the OpenAI API as a grader
+from ast_grep_py import SgRoot
+from pydantic import BaseModel, Field  # type: ignore
+from typing import Any, List, Optional
+import re
+
+SUPPORTED_LANGUAGES = ['typescript', 'javascript', 'ts', 'js']
+
+class CodeBlock(BaseModel):    
+    language: str = Field(
+        description="Programming language of the code block (e.g., 'python', 'javascript')",
+        examples=["python", "javascript", "typescript"]
+    )
+    path: str = Field(
+        description="Target file path where the code should be written",
+        examples=["main.py", "src/app.js", "index.html"]
+    )
+    code: str = Field(
+        description="Actual code content extracted from the code block"
+    )
+
+class ASTGrepPattern(BaseModel):
+    file_path_mask: str = Field(..., description="The file path pattern to match against")
+    pattern: str = Field(..., description="The main AST grep pattern to search for")
+    additional_greps: Optional[List[str]] = Field(
+        default=None,
+        description="Additional patterns that must also be present in the matched code"
+    )
+
+def extract_code_blocks(llm_output: str) -&gt; List[CodeBlock]:
+    # Regular expression to match code blocks with optional language and path
+    try:
+        pattern = r"```(\w+\s+)?([\w./-]+)?\n([\s\S]*?)\n```"
+        matches = list(re.finditer(pattern, llm_output, re.DOTALL))
+
+        print(f"Found {len(matches)} code blocks in the LLM output")
+
+        # Check if any code blocks were found
+        if not matches:
+            raise Exception("No code blocks found in the LLM response")
+
+        code_blocks: list[CodeBlock] = []
+        for match in matches:
+            language = match.group(1) or ""
+            path = match.group(2) or ""
+            code = match.group(3)
+
+            # Clean the path and language
+            path = path.strip()
+            language = language.strip()
+
+            # If path is relative (doesn't start with /), prefix with /home/user/testbed/
+            if path and not path.startswith("/"):
+                original_path = path
+                path = f"/home/user/testbed/{path}"
+                print(
+                    f"Converting relative path '{original_path}' to absolute path '{path}'"
+                )
+
+            code_blocks.append(
+                CodeBlock(language=language, path=path, code=code.strip())
+            )
+
+        # Check for missing language or path in code blocks
+        missing_language = [
+            i for i, block in enumerate(code_blocks) if not block.language
+        ]
+        missing_path = [i for i, block in enumerate(code_blocks) if not block.path]
+
+        if missing_language:
+            print(
+                f"WARNING: Code blocks at positions {missing_language} are missing language identifiers"
+            )
+            raise Exception(
+                f"Code blocks at positions {missing_language} are missing language identifiers"
+            )
+
+        if missing_path:
+            print(
+                f"WARNING: Code blocks at positions {missing_path} are missing file paths"
+            )
+            raise Exception(
+                f"Code blocks at positions {missing_path} are missing file paths"
+            )
+
+        paths = [block.path for block in code_blocks if block.path]
+        print(
+            f"Successfully extracted {len(code_blocks)} code blocks with paths: {', '.join(paths)}"
+        )
+
+    except Exception as e:
+        print(f"Error extracting code blocks: {str(e)}")
+        raise
+
+    return code_blocks
+
+def calculate_ast_grep_score(code_blocks: List[CodeBlock], ast_greps: Any) -&gt; float: 
+    # Convert ast_greps to list if it's a dict
+    if isinstance(ast_greps, dict):
+        ast_greps = [ast_greps]
+    
+    # Parse each grep pattern into the Pydantic model
+    parsed_patterns: List[ASTGrepPattern] = []
+    for grep in ast_greps:
+        try:
+            pattern = ASTGrepPattern(**grep)
+            parsed_patterns.append(pattern)
+        except Exception as e:
+            print(f"Error parsing AST grep pattern: {e}")
+            return 0.0
+    
+    if not parsed_patterns:
+        return 0.0
+
+    total_score = 0.0    
+    pattern_count = len(parsed_patterns)
+    
+    # Filter code blocks to only include TypeScript and JavaScript files
+    supported_blocks = [
+        block for block in code_blocks 
+        if block.language.lower() in SUPPORTED_LANGUAGES
+    ]
+
+    if not supported_blocks:
+        print("No TypeScript or JavaScript code blocks found to analyze")
+        return 0.0
+
+    for pattern in parsed_patterns:
+        # Find matching code blocks based on path prefix
+        matching_blocks = [
+            block for block in supported_blocks 
+            if block.path.startswith(pattern.file_path_mask)
+        ]
+
+        if not matching_blocks:
+            print(f"No matching code blocks found for path prefix: {pattern.file_path_mask}")
+            continue
+
+        pattern_found = False
+        for block in matching_blocks:
+            try:
+                # Create AST root for the code block
+                root = SgRoot(block.code, block.language)
+                node = root.root()
+                
+                # Check main pattern
+                matches = node.find(pattern=pattern.pattern)
+                if not matches:
+                    continue
+
+                # If we have additional greps, check them too
+                if pattern.additional_greps:
+                    all_additional_found = True
+                    for additional_grep in pattern.additional_greps:
+                        if additional_grep not in block.code:
+                            all_additional_found = False
+                            break
+                    
+                    if not all_additional_found:
+                        continue
+
+                # If we get here, we found a match with all required patterns
+                pattern_found = True
+                break
+
+            except Exception as e:
+                print(f"Error processing code block {block.path}: {e}")
+                continue
+
+        if pattern_found:
+            total_score += 1.0
+
+    # Return average score across all patterns
+    return total_score / pattern_count if pattern_count &gt; 0 else 0.0
+
+def grade_format(output_text: str) -&gt; float:
+        # Find &lt;plan&gt; and &lt;/plan&gt; tags
+    plan_start = output_text.find('&lt;plan&gt;')
+    plan_end = output_text.find('&lt;/plan&gt;')
+    
+    # Find &lt;code&gt; and &lt;/code&gt; tags
+    code_start = output_text.find('&lt;code&gt;')
+    code_end = output_text.find('&lt;/code&gt;')
+
+    reward = 0.0
+    
+    if plan_start == -1 or plan_end == -1 or code_start == -1 or code_end == -1:
+        print(f'missing plan or code tags. format reward: {reward}')
+        return reward
+    reward += 0.1 # total: 0.1
+    
+    if not (plan_start &lt; plan_end &lt; code_start &lt; code_end):
+        print(f'tags present but not in the correct order. format reward: {reward}')
+        return reward
+    reward += 0.1 # total: 0.2
+
+    # Check if there are any stray tags
+    plan_tags = re.findall(r'&lt;/?plan&gt;', output_text)
+    code_tags = re.findall(r'&lt;/?code&gt;', output_text)
+    
+    if len(plan_tags) != 2 or len(code_tags) != 2:
+        print(f'found stray plan or code tags. format reward: {reward}')
+        return reward
+    reward += 0.2 # total: 0.4
+    
+    # Extract content after &lt;/code&gt; tag
+    after_tags = output_text[code_end + len('&lt;/code&gt;'):].strip()
+    if after_tags:
+        print(f'found text after code tags. format reward: {reward}')
+        return reward
+    reward += 0.2 # total: 0.6
+    
+    # Extract content inside &lt;plan&gt; tags
+    plan_content = output_text[plan_start + len('&lt;plan&gt;'):plan_end].strip()
+    if not plan_content:
+        print(f'no plan content found. format reward: {reward}')
+        return reward
+    reward += 0.1 # total: 0.7
+    
+    # Extract content inside &lt;code&gt; tags
+    code_content = output_text[code_start + len('&lt;code&gt;'):code_end].strip()
+    if not code_content:
+        print(f'no code content found. format reward: {reward}')
+        return reward
+    reward += 0.1 # total: 0.8
+
+    # Extract content between &lt;/plan&gt; and &lt;code&gt; tags
+    between_tags = output_text[plan_end + len('&lt;/plan&gt;'):code_start].strip()
+    if between_tags:
+        print(f'found text between plan and code tags. format reward: {reward}')
+        return reward
+    reward += 0.2 # total: 1.0
+    
+    if reward == 1.0:
+        print(f'global format reward: {reward}')
+
+    return reward
+
+def grade(sample: Any, item: Any) -&gt; float:
+    try:
+        output_text = sample["output_text"]    
+
+        format_reward = grade_format(output_text)
+        if format_reward &lt; 1.0:
+            return format_reward
+        
+        # Extract code content for grading
+        code_start = output_text.find('&lt;code&gt;')
+        code_end = output_text.find('&lt;/code&gt;')
+        code_to_grade: str = output_text[code_start + len('&lt;code&gt;'):code_end].strip()
+        code_blocks: List[CodeBlock] = []
+        try:
+            code_blocks = extract_code_blocks(code_to_grade)
+        except Exception as e:
+            print(f'error extracting code blocks: {e}')
+            return 0.5
+        
+        ast_greps = item["reference_answer"]["ast_greps"]
+        ast_grep_score = calculate_ast_grep_score(code_blocks, ast_greps)
+        
+        return (format_reward + ast_grep_score) / 2.0
+    except Exception as e:
+        print(f"Error during grading: {str(e)}")
+        return 0.0
+</code></pre></div></div>
+
+<p>Results</p>
+
+<blockquote>
+  <p>Looking at the total reward (format and AST Grep) together, Runloop has seen improvements of on average <strong>12%</strong> of the RFT model compared to the base o3-mini model on the benchmark.</p>
+
+  <p>They implement two types of tests, one providing explicit content from the integration guides (assessing reasoning and instruction following) and one without (assessing knowledge recall). Both variants saw improvement of over <strong>8%</strong>.</p>
+
+  <p>“OpenAIs RFT platform gives us access to the best generalized reasoning models in the world, with the toolset to supercharge that reasoning on problem domains important to our business.”</p>
+
+  <p>—<a href="https://www.runloop.ai/">Runloop</a></p>
+</blockquote>
+
+<h4 id="correct-handling-of-conflicts-and-dupes-in-a-schedule-manager">Correct handling of conflicts and dupes in a schedule manager</h4>
+
+<p>Use case</p>
+
+<blockquote>
+  <p><strong>Company</strong>: <a href="https://www.joinmilo.com/">Milo</a> helps busy parents manage chaotic family schedules by converting messy inputs—like text convos with to-dos, school newsletter PDFs, weekly reminders, sports schedule emails—into reliable calendar and list actions.</p>
+
+  <p><strong>Problem to solve</strong>: Base GPT-4o prompting and SFT fell short of trust thresholds.</p>
+
+  <p><strong>Objective</strong>: Milo used RFT to properly create coding tasks like event vs. list classification, recurrence rule generation, accurate updates and deletes, conflict detection, and strict output formatting. They defined a grader that checked whether generated item objects were complete, categorized correctly, and were a duplicate or had a calendar conflict.</p>
+</blockquote>
+
+<p>Results</p>
+
+<blockquote>
+  <p>Results showed performance improvements across the board, with average correctness scores <strong>increasing from 0.86 to 0.91</strong>, while the most challenging scenarios improved from <strong>0.46 to 0.71</strong> (where a perfect score=1).</p>
+
+  <p>“Accuracy isn’t just a metric—it’s peace of mind for busy parents. These are still early days but with such important improvements in base performance, we’re able to push more aggressively into complex reasoning needs.”</p>
+
+  <p>“Navigating and supporting family dynamics involves understanding nuanced implications of the data. Take conflicts—knowing soccer for Ethan conflicts with Ella’s recital because Dad has to drive both kids goes deeper than simple overlapping times.”</p>
+
+  <p>—<a href="https://www.joinmilo.com/">Milo</a>, AI scheduling tool for families</p>
+</blockquote>
+
+<h3 id="2-pull-facts-into-a-clean-format">2. Pull facts into a clean format</h3>
+
+<p>These tasks typically involve subtle distinctions that demand clear classification guidelines. Successful framing requires explicit and hierarchical labeling schemes defined through consensus by domain experts. Without consistent agreement, grading signals become noisy, weakening RFT effectiveness.</p>
+
+<h4 id="assigning-icd-10-medical-codes">Assigning ICD-10 medical codes</h4>
+
+<p>Use case</p>
+
+<blockquote>
+  <p><strong>Company</strong>: <a href="https://www.ambiencehealthcare.com/">Ambience</a> is an AI platform that eliminates administrative burden for clinicians and ensures accurate, compliant documentation across 100+ specialties, helping physicians focus on patient care while increasing documentation quality and reducing compliance risk for health systems.</p>
+
+  <p><strong>Problem to solve</strong>: ICD-10 coding is one of the most intricate administrative tasks in medicine. After every patient encounter, clinicians must map each diagnosis to one of ~70,000 codes—navigating payor-specific rules on specificity, site-of-care, and mutually exclusive pairings. Errors can trigger audits and fines that stretch into nine figures.</p>
+
+  <p><strong>Objective</strong>: Using reinforcement fine-tuning on OpenAI frontier models, Ambience wanted to train a reasoning system that listens to the visit audio, pulls in relevant EHR context, and recommends ICD-10 codes with accuracy exceeding expert clinicians.</p>
+</blockquote>
+
+<p>Results</p>
+
+<blockquote>
+  <p>Ambience achieved model improvements that can lead human experts.</p>
+
+  <p>On a gold-panel test set spanning hundreds of encounters, reinforcement fine-tuning moved the model from trailing humans to leading them by <strong>12 points—eliminating roughly one quarter of the coding errors trained physicians make</strong>:</p>
+
+  <ul>
+    <li>o3-mini (base): 0.39 (-6 pts)</li>
+    <li>Physician baseline: 0.45</li>
+    <li>RFT-tuned o3-mini: 0.57 (+12 pts)</li>
+  </ul>
+
+  <p>The result is a real-time, point-of-care coding support that can raise reimbursement integrity while reducing compliance risk.</p>
+
+  <p>“Accurate ICD-10 selection is mission-critical for compliant documentation. RFT unlocked a new level of coding precision we hadn’t seen from any foundation model and set a new bar for automated coding.”</p>
+
+  <p>—<a href="https://www.ambiencehealthcare.com/">Ambience Healthcare</a></p>
+</blockquote>
+
+<h4 id="extracting-excerpts-to-support-legal-claims">Extracting excerpts to support legal claims</h4>
+
+<p>Use case</p>
+
+<blockquote>
+  <p><strong>Company</strong>: <a href="https://www.harvey.ai/">Harvey</a> is building AI that legal teams trust—and that trust hinges on retrieving precisely the right evidence from a sprawling corpora of contracts, statutes, and case law. Legal professionals aren’t satisfied with models that merely generate plausible-sounding summaries or paraphrased answers. They demand verifiable citations—passages that can be traced directly back to source documents.</p>
+
+  <p><strong>Problem to solve</strong>: Harvey’s clients use its models to triage litigation risk, construct legal arguments, and support due diligence for legal professionals—all tasks where a single missed or misquoted sentence can flip an outcome. Models must be able to parse long, dense legal documents and extract only the portions that matter. In practice, these inputs are often messy and inconsistent: some claims are vague, while others hinge on rare legal doctrines buried deep in boilerplate.</p>
+
+  <p><strong>Objective</strong>: The task’s requirements are to interpret nuanced legal claims, navigate long-form documents, and select on-point support with verbatim excerpts.</p>
+</blockquote>
+
+<p>Prompt</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>1
+2
+3
+4
+5
+6
+## Instructions
+You will be provided with a question and a text excerpt. Identify any passages in the text that are directly relevant to answering the question.
+- If there are no relevant passages, return an empty list.
+- Passages must be copied **exactly** from the text. Do not paraphrase or summarize.
+## Excerpt
+"""{text_excerpt}"""
+</code></pre></div></div>
+
+<p>Grader</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+from rapidfuzz import fuzz
+
+# Similarity ratio helper
+def fuzz_ratio(a: str, b: str) -&gt; float:
+    """Return a normalized similarity ratio using RapidFuzz.
+    """
+    if len(a) == 0 and len(b) == 0:
+        return 1.0
+    return fuzz.ratio(a, b) / 100.0
+
+# Main grading entrypoint (must be named `grade`)
+def grade(sample: dict, item: dict) -&gt; float:
+    """Compute an F1‑style score for citation extraction answers using RapidFuzz.
+    """
+    model_passages = (sample.get('output_json') or {}).get('passages', [])
+    ref_passages = (item.get('reference_answer') or {}).get('passages', [])
+
+    # If there are no reference passages, return 0.
+    if not ref_passages:
+        return 0.0
+
+    # Recall: average best match for each reference passage.
+    recall_scores = []
+    for ref in ref_passages:
+        best = 0.0
+        for out in model_passages:
+            score = fuzz_ratio(ref, out)
+            if score &gt; best:
+                best = score
+        recall_scores.append(best)
+    recall = sum(recall_scores) / len(recall_scores)
+
+    # Precision: average best match for each model passage.
+    if not model_passages:
+        precision = 0.0
+    else:
+        precision_scores = []
+        for out in model_passages:
+            best = 0.0
+            for ref in ref_passages:
+                score = fuzz_ratio(ref, out)
+                if score &gt; best:
+                    best = score
+            precision_scores.append(best)
+        precision = sum(precision_scores) / len(precision_scores)
+
+    if precision + recall == 0:
+        return 0.0
+
+    return 2 * precision * recall / (precision + recall)
+</code></pre></div></div>
+
+<p>Results</p>
+
+<blockquote>
+  <p>After reinforcement fine-tuning, Harvey saw a <strong>20% increase</strong> in the F1 score:</p>
+
+  <ul>
+    <li>Baseline F1: 0.563</li>
+    <li>Post-RFT F1 - 0.6765</li>
+  </ul>
+
+  <p>Using RFT, Harvey significantly improved legal fact-extraction performance, surpassing GPT-4o efficiency and accuracy. Early trials showed RFT <strong>winning or tying in 93% of comparisons</strong> against GPT-4o.</p>
+
+  <p>“The RFT model demonstrated comparable or superior performance to GPT-4o, but with significantly faster inference, proving particularly beneficial for real-world legal use cases.</p>
+
+  <p>—<a href="https://www.harvey.ai/">Harvey</a>, AI for legal teams</p>
+</blockquote>
+
+<h3 id="3-apply-complex-rules-correctly">3. Apply complex rules correctly</h3>
+
+<p>This use case involves pulling verifiable facts or entities from unstructured inputs into clearly defined schemas (e.g., JSON objects, condition codes, medical codes, legal citations, or financial metrics).</p>
+
+<p>Successful extraction tasks typically benefit from precise, continuous grading methodologies—like span-level F1 scores, fuzzy text-matching metrics, or numeric accuracy checks—to evaluate how accurately the extracted information aligns with ground truth. Define explicit success criteria and detailed rubrics. Then, the model can achieve reliable, repeatable improvements.</p>
+
+<h4 id="expert-level-reasoning-in-tax-analysis">Expert-level reasoning in tax analysis</h4>
+
+<p>Use case</p>
+
+<blockquote>
+  <p><strong>Company</strong>: <a href="https://www.accordance.com/">Accordance</a> is building a platform for tax, audit, and CPA teams.</p>
+
+  <p><strong>Problem to solve</strong>: Taxation is a highly complex domain, requiring deep reasoning across nuanced fact patterns and intricate regulations. It’s also a field that continues changing.</p>
+
+  <p><strong>Objective</strong>: Accordance wanted a high-trust system for sophisticated tax scenarios while maintaining accuracy. Unlike traditional hardcoded software, it’s important that their data extraction tool adapts as the tax landscape evolves.</p>
+</blockquote>
+
+<p>Grader code</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+[+0.05] For correctly identifying Alex (33.33%), Barbara (33.33% → 20%), Chris (33.33%), and Dana (13.33%) ownership percentages
+[+0.1] For correctly calculating Barbara's annual allocation as 26.67% and Dana's as 6.67% without closing of books
+[+0.15] For properly allocating Alex ($300,000), Barbara ($240,030), Chris ($300,000), and Dana ($60,030) ordinary income
+[+0.1] For calculating Alex's ending stock basis as $248,333 and debt basis as $75,000
+[+0.05] For calculating Barbara's remaining basis after sale as $264,421
+[+0.1] For calculating AAA before distributions as $1,215,000 and ending AAA as $315,000
+[+0.1] For identifying all distributions as tax-free return of capital under AAA
+[+0.1] For calculating Barbara's capital gain on stock sale as $223,720 ($400,000 - $176,280)
+[+0.1] For explaining that closing of books would allocate based on actual half-year results
+[+0.05] For identifying the ordering rules: AAA first, then E&amp;P ($120,000), then remaining basis
+[+0.05] For noting distributions exceeding $1,215,000 would be dividends up to $120,000 E&amp;P
+[+0.05] For correctly accounting for separately stated items in basis calculations (e.g., $50,000 Section 1231 gain)
+</code></pre></div></div>
+
+<p>Results</p>
+
+<blockquote>
+  <p>By collaborating with OpenAI and their in-house tax experts, Accordance achieved:</p>
+
+  <ul>
+    <li>Almost <strong>40% improvement</strong> in tax analysis tasks over base models</li>
+    <li>Superior performance compared to all other leading models on benchmarks like TaxBench</li>
+    <li>The RFT-trained models demonstrated an ability to handle advanced tax scenarios with high accuracy—when evaluated by tax professionals, Accordance’s fine-tuned models showed expert-level reasoning, with the potential to save thousands of hours of manual work</li>
+  </ul>
+
+  <p>“We’ve achieved a 38.89% improvement in our tax analysis tasks over base models and significantly outperformed all other leading models on key tax benchmarks (including TaxBench). The RFT-trained models’ abilities to handle sophisticated tax scenarios while maintaining accuracy demonstrates the readiness of reinforcement fine-tuning—and AI more broadly—for professional applications. Most importantly, RFT provides a foundation for continuous adaptation as the tax landscape evolves, ensuring sustained value and relevance. When evaluated by tax experts, our fine-tuned models demonstrated expert-level reasoning capabilities that will save thousands of professional hours—this isn’t just an incremental improvement, it’s a paradigm shift in how tax work can be done.”</p>
+
+  <p>—<a href="https://www.accordance.com/">Accordance</a>, AI tax accounting company</p>
+</blockquote>
+
+<h4 id="enforcement-of-nuanced-content-moderation-policies">Enforcement of nuanced content moderation policies</h4>
+
+<p>Use case</p>
+
+<blockquote>
+  <p><strong>Company</strong>: <a href="https://www.safetykit.com/">SafetyKit</a> is a risk and compliance platform that helps organizations make decisions across complex content moderation workflows.</p>
+
+  <p><strong>Porblem to solve</strong>: These systems must handle large volumes of content and apply intricate policy logic that requires multistep reasoning. Because of the volume of data and subtle distinctions in labelling, these types of tasks can be difficult for general purpose models.</p>
+
+  <p><strong>Objective</strong>: SafetyKit aimed to replace multiple nodes in their most complex workflows with a single reasoning agent using a reinforcement fine-tuned model. The goal is to reduce SafetyKit’s time-to-market for novel policy enforcements even in challenging, nuanced domains.</p>
+</blockquote>
+
+<p>Results</p>
+
+<blockquote>
+  <p>SafetyKit is using their o3-mini RFT model to support advanced content moderation capabilities, ensuring user safety for one of the largest AI chatbot companies in the world. They have successfully improved F1-score <strong>from 86% to 90%</strong>, soon to replace dozens of 4o calls within their production pipeline.</p>
+
+  <p>“SafetyKit’s RFT-enabled moderation achieved substantial improvements in nuanced content moderation tasks, crucial for safeguarding users in dynamic, real-world scenarios.”</p>
+
+  <p>—<a href="https://www.safetykit.com/">SafetyKit</a></p>
+</blockquote>
+
+<h4 id="legal-document-reviews-comparisons-and-summaries">Legal document reviews, comparisons, and summaries</h4>
+
+<p>Use case</p>
+
+<blockquote>
+  <p><strong>Company</strong>: <a href="https://www.thomsonreuters.com/">Thomson Reuters</a> is an AI and technology company empowering professionals with trusted content and workflow automation.</p>
+
+  <p><strong>Problem to solve</strong>: Legal professionals must read through large amounts of content before making any decisions. Thomson Reuter’s CoCounsel product is designed to help these experts move faster by providing an AI assistant with content and industry knowledge. The models that power this tool must understand complex legal rules.</p>
+
+  <p><strong>Objective</strong>: Thomson Reuters aimed to create a reinforcement fine-tuned model excelling in legal AI skills. They conducted preliminary evaluations of RFT to see if they could achieve model performance improvements, using specialized datasets from three highly-used CoCounsel Legal AI skills for legal professionals:</p>
+
+  <ol>
+    <li>Review documents: Generates detailed answers to questions asked against contracts, transcripts, and other legal documents</li>
+    <li>Compare documents: Highlights substantive differences between two or more different contracts or documents</li>
+    <li>Summarize: Summarizes the most important information within one or more documents to enable rapid legal review</li>
+  </ol>
+</blockquote>
+
+<p>Results</p>
+
+<blockquote>
+  <p><img src="https://cdn.openai.com/API/docs/images/thomsonreuters-results.png" alt="Image 1: Provide example data and create a fine-tuning job to optimize model performance for your use case" /></p>
+
+  <p>“LLM as a judge has been helpful in demonstrating the possibility of improving upon the reasoning models - in preliminary evaluations, the RFT model consistently performed better than the baseline o3-mini and o1 model”</p>
+
+  <p>—<a href="https://www.thomsonreuters.com/">Thomson Reuters</a>, AI and technology company</p>
+</blockquote>
+
+<h2 id="evals-are-the-foundation">Evals are the foundation</h2>
+
+<p><strong>Before implementing RFT, we strongly recommended creating and running an eval for the task you intend to fine-tune on</strong>. If the model you intend to fine-tune scores at either the absolute minimum or absolute maximum possible score, then RFT won’t be useful to you.</p>
+
+<p>RFT works by reinforcing better answers to provided prompts. If we can’t distinguish the quality of different answers (i.e., if they all receive the minimum or maximum possible score), then there’s no training signal to learn from. However, if your eval scores somewhere in the range between the minimum and maximum possible scores, there’s enough data to work with.</p>
+
+<p>An effective eval reveals opportunities where human experts consistently agree but current frontier models struggle, presenting a valuable gap for RFT to close. <a href="https://platform.openai.com/docs/guides/evals">Get started with evals</a>.</p>
+
+<h2 id="how-to-get-better-results-from-rft">How to get better results from RFT</h2>
+
+<p>To see improvements in your fine-tuned model, there are two main places to revisit and refine: making sure your task is well defined, and making your grading scheme more robust.</p>
+
+<h3 id="reframe-or-clarify-your-task">Reframe or clarify your task</h3>
+
+<p>Good tasks give the model a fair chance to learn and let you quantify improvements.</p>
+
+<ul>
+  <li><strong>Start with a task the model can already solve occasionally</strong>. RFT works by sampling many answers, keeping what looks best, and nudging the model toward those answers. If the model never gets the answer correct today, it cannot improve.</li>
+  <li><strong>Make sure each answer can be graded</strong>. A grader must read an answer and produce a score without a person in the loop. We support multiple <a href="https://platform.openai.com/docs/guides/graders">grader types</a>, including custom Python graders and LLM judges. If you can’t write code to judge the answer with an available grader, RFT is not the right tool.</li>
+  <li><strong>Remove doubt about the “right” answer</strong>. If two careful people often disagree on the solution, the task is too fuzzy. Rewrite the prompt, add context, or split the task into clearer parts until domain experts agree.</li>
+  <li><strong>Limit lucky guesses</strong>. If the task is multiple choice with one obvious best pick, the model can win by chance. Add more classes, ask for short open‑ended text, or tweak the format so guessing is costly.</li>
+</ul>
+
+<h3 id="strengthen-your-grader">Strengthen your grader</h3>
+
+<p>Clear, robust grading schemes are essential for RFT.</p>
+
+<ul>
+  <li><strong>Produce a smooth score, not a pass/fail stamp</strong>. A score that shifts gradually as answers improve provides a better training signal.</li>
+  <li><strong>Guard against reward hacking</strong>. This happens when the model finds a shortcut that earns high scores without real skill.</li>
+  <li><strong>Avoid skewed data</strong>. Datasets in which one label shows up most of the time invite the model to guess that label. Balance the set or up‑weight rare cases so the model must think.</li>
+  <li><strong>Use an LLM judge when code falls short</strong>. For rich, open‑ended answers, have a <a href="https://platform.openai.com/docs/guides/graders#model-graders">separate OpenAI model grade</a> your fine-tuned model’s answers. Make sure you:
+    <ul>
+      <li><strong>Evaluate the judge</strong>: Run multiple candidate responses and correct answers through your LLM judge to ensure the grade returned is stable and aligned with preference.</li>
+      <li><strong>Provide few-shot examples</strong>. Include great, fair, and poor answers in the prompt to improve the grader’s effectiveness.</li>
+    </ul>
+  </li>
+</ul>
+
+<p>Learn more about <a href="https://platform.openai.com/docs/guides/graders">grader types</a>.</p>
+
+<h2 id="other-resources">Other resources</h2>
+
+<p>For more inspiration, visit the <a href="https://cookbook.openai.com/">OpenAI Cookbook</a>, which contains example code and links to third-party resources, or learn more about our models and reasoning capabilities:</p>
+
+<ul>
+  <li><a href="https://platform.openai.com/docs/models">Meet the models</a></li>
+  <li><a href="https://platform.openai.com/docs/guides/reinforcement-fine-tuning">Reinforcement fine-tuning guide</a></li>
+  <li><a href="https://platform.openai.com/docs/guides/graders">Graders</a></li>
+  <li>
+    <p><a href="https://platform.openai.com/docs/guides/model-optimization">Model optimization overview</a></p>
+  </li>
+  <li><a href="https://platform.openai.com/docs/guides/rft-use-cases#top">Overview</a></li>
+  <li><a href="https://platform.openai.com/docs/guides/rft-use-cases#when-to-use-reinforcement-fine-tuning">When to use reinforcement fine-tuning</a></li>
+  <li><a href="https://platform.openai.com/docs/guides/rft-use-cases#evals-are-the-foundation">Evals are the foundation</a></li>
+  <li><a href="https://platform.openai.com/docs/guides/rft-use-cases#how-to-get-better-results-from-rft">How to get better results from RFT</a></li>
+  <li><a href="https://platform.openai.com/docs/guides/rft-use-cases#other-resources">Other resources</a></li>
+</ul>]]></content><author><name></name></author><category term="scratchpad" /></entry><entry><title type="html">Windows 11 ratpoison</title><link href="https://ib.bsb.br/windows-11-ratpoison/" rel="alternate" type="text/html" title="Windows 11 ratpoison" /><published>2025-06-09T00:00:00+00:00</published><updated>2025-06-09T23:33:56+00:00</updated><id>https://ib.bsb.br/windows-11-ratpoison</id><content type="html" xml:base="https://ib.bsb.br/windows-11-ratpoison/"><![CDATA[<h1 id="powershell-script-to-create-final-ratpoison-like-ahk-config">PowerShell Script to Create Final Ratpoison-like AHK Config</h1>
 
 <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code># #####################################################################
 # # PowerShell Script to Configure a Ratpoison-like Environment on Windows
@@ -5187,735 +6252,4 @@ sudo nmcli con up “Wired connection 1”</p>
       </li>
     </ul>
   </li>
-</ul>]]></content><author><name></name></author><category term="scratchpad" /></entry><entry><title type="html">Low Root Partition Space on rk3588</title><link href="https://ib.bsb.br/low-root-partition-space-on-rk3588/" rel="alternate" type="text/html" title="Low Root Partition Space on rk3588" /><published>2025-05-28T00:00:00+00:00</published><updated>2025-05-28T21:53:09+00:00</updated><id>https://ib.bsb.br/low-root-partition-space-on-rk3588</id><content type="html" xml:base="https://ib.bsb.br/low-root-partition-space-on-rk3588/"><![CDATA[<h2 id="1-introduction-addressing-root-partition-space-on-rk3588"><strong>1. Introduction: Addressing Root Partition Space on rk3588</strong></h2>
-
-<h3 id="overview-of-the-low-space-issue"><strong>Overview of the Low Space Issue</strong></h3>
-
-<p>This guide addresses the common and critical issue of low disk space on the root partition (/dev/root) of rk3588-based arm64 machines running Debian Bullseye. A reported usage of 81% on /dev/root signifies an impending problem that can lead to various system malfunctions. These include, but are not limited to, system instability, an inability to install essential updates or new software packages, significant performance degradation, and the potential failure of critical system services. Prompt and methodical action is required to mitigate these risks.</p>
-
-<h3 id="importance-of-a-methodical-approach-for-rk3588-systems"><strong>Importance of a Methodical Approach for rk3588 Systems</strong></h3>
-
-<p>The rk3588, an advanced ARM System-on-Chip (SoC), is frequently utilized in embedded devices and single-board computers. These systems typically employ eMMC (embedded MultiMediaCard) for primary storage and utilize boot mechanisms such as U-Boot, along with MASKROM or Loader mode for OS flashing via USB OTG. These characteristics differentiate them significantly from standard x86-based personal computers. Direct manipulation of eMMC partitions, particularly the root partition, is inherently more complex and carries substantial risks if not executed with precision and an understanding of the platform’s specifics. Such operations often necessitate specialized tools and procedures unique to Rockchip SoCs.1 Attempting to apply standard desktop partitioning tools directly to a live eMMC root partition can lead to an unbootable system.</p>
-
-<h3 id="guide-structure"><strong>Guide Structure</strong></h3>
-
-<p>This document outlines a phased strategy to reclaim disk space on the /dev/root partition. The approach begins with low-risk, software-based cleanup methods that often yield significant results. It then progresses to more involved techniques, such as identifying and relocating large directories. Finally, it details the high-risk, last-resort option of resizing the root partition through a complete firmware re-flashing process. Each phase will build upon the previous, emphasizing data safety and system integrity throughout.</p>
-
-<h2 id="2-phase-1-initial-system-assessment-and-essential-precautions"><strong>2. Phase 1: Initial System Assessment and Essential Precautions</strong></h2>
-
-<p>Before attempting any modifications, a thorough assessment of the current system state and implementation of robust backup strategies are paramount. These preliminary steps are crucial for ensuring data integrity and providing a recovery path should any subsequent procedures encounter issues.</p>
-
-<h3 id="verifying-current-disk-usage"><strong>Verifying Current Disk Usage</strong></h3>
-
-<p>To accurately diagnose the low space condition, it is essential to verify the current disk usage. The following commands provide detailed information about the storage layout and utilization:</p>
-
-<ul>
-  <li><strong>df -Th</strong>: This command lists all mounted filesystems, their types (e.g., ext4, btrfs), total size, used space, available space, usage percentage, and mount points. Particular attention should be paid to the entry corresponding to /dev/root or the specific eMMC partition mounted as the root filesystem.</li>
-  <li><strong>lsblk</strong>: This utility displays block devices (such as eMMC, SD cards, USB drives) in a hierarchical tree format. It helps in identifying the eMMC device, typically named /dev/mmcblkX (where X is a number, e.g., /dev/mmcblk0 or /dev/mmcblk2 2), and its partition structure.</li>
-</ul>
-
-<p>Interpreting the output from these commands will confirm which partition is serving as /dev/root and its current level of capacity utilization.</p>
-
-<h3 id="critical-data-backup-strategies-for-rk3588"><strong>Critical: Data Backup Strategies for rk3588</strong></h3>
-
-<p><strong>A full and verified backup is an absolute prerequisite before proceeding with any operations beyond basic package cleaning (Phase 3), especially when considering directory relocation (Phase 4) or partition resizing (Phase 5).</strong></p>
-
-<p>Backing up eMMC storage on an rk3588 system can present challenges compared to traditional desktop systems. Full, image-level backups often require booting into a separate recovery environment or using platform-specific tools.</p>
-
-<p><strong>Recommended Backup Methods:</strong></p>
-
-<ul>
-  <li><strong>User Data Backup:</strong> At a minimum, all critical user data, typically located in /home, and any custom application data stored in other directories, must be backed up to external storage. This could be a USB drive, a network-attached storage (NAS) device, or a cloud storage solution.</li>
-  <li><strong>System Configuration:</strong> Key system configuration files, primarily located under /etc, should also be backed up. This includes configurations for networking, installed services, and user accounts.</li>
-  <li><strong>eMMC Image Backup (Advanced):</strong>
-    <ul>
-      <li><strong>Using dd from a Live Environment:</strong> If the rk3588 board supports booting from an alternative medium (e.g., an SD card) and that live environment can access the eMMC with appropriate drivers, the dd utility can be used to create a raw image of the eMMC partitions. This method is complex and requires a compatible live system.</li>
-      <li><strong>Using rkdeveloptool:</strong> The Rockchip development tool, rkdeveloptool, provides functionality to read individual partitions from the eMMC when the device is in MASKROM or Loader mode.3 The command rkdeveloptool read-partition &lt;partition_name&gt; &lt;output_filename.img&gt; can be used to back up partitions such as uboot, trust, boot, rootfs, and userdata.4 This requires connecting the device to a host PC via USB OTG and booting it into the appropriate low-level mode. Having these raw partition images is invaluable for recovery, especially if partition table modifications are planned.</li>
-    </ul>
-  </li>
-</ul>
-
-<h3 id="understanding-maskromotg-flashing-implications"><strong>Understanding MASKROM/OTG Flashing Implications</strong></h3>
-
-<p>MASKROM mode is a built-in, low-level recovery mechanism in Rockchip SoCs, including the rk3588. It allows the device to communicate with a host PC via a USB OTG connection for firmware flashing, even if the primary bootloader or operating system is corrupted.1 This mode is the ultimate recovery pathway if the system becomes unbootable due_to_errors during advanced space reclamation procedures.</p>
-
-<p>Familiarity with the procedure to enter MASKROM or Loader mode on the specific rk3588 device (often involving pressing and holding a ‘RECOVERY’ or ‘MASKROM’ button during power-on or reset while connected via USB OTG 1) is a critical safety net. If operations in Phases 4 or 5 lead to a non-booting system, MASKROM mode provides the means to re-flash the original firmware or a known-good backup, thereby recovering the device. This understanding is directly relevant to the system’s design, which includes OS flashing via OTG/MASKROM. This precaution ensures that even if severe issues arise, a path to restoration is available, aligning with best practices for embedded system administration.</p>
-
-<h2 id="3-phase-2-standard-system-cleanup-low-risk-high-impact"><strong>3. Phase 2: Standard System Cleanup (Low-Risk, High-Impact)</strong></h2>
-
-<p>This phase focuses on standard Debian system maintenance tasks that are generally safe and can often free up a considerable amount of disk space. These should be the first actions taken to alleviate pressure on the root partition.</p>
-
-<h3 id="leveraging-apt-for-package-management"><strong>Leveraging apt for Package Management</strong></h3>
-
-<p>The Advanced Package Tool (APT) is Debian’s primary package management system. Over time, its cache and automatically installed dependencies can consume significant disk space.</p>
-
-<ul>
-  <li><strong>sudo apt update</strong>: Before any cleaning operations, it is essential to update the local package index to ensure APT has the latest information about available packages and their dependencies.</li>
-  <li><strong>sudo apt clean</strong>: This command removes downloaded Debian package files (.deb) from the APT cache, typically located in /var/cache/apt/archives/.6 These files are retained after package installation and can accumulate, occupying valuable space. This operation is very safe and does not remove any installed packages or their configurations.</li>
-  <li><strong>sudo apt autoremove --purge</strong>: This command is crucial for removing packages that were automatically installed to satisfy dependencies for other packages but are no longer required by any installed software.6 The --purge option ensures that not only are these orphaned packages removed, but their system-wide configuration files are also deleted, further freeing up space.8 This is a standard maintenance task that helps keep the system lean.</li>
-</ul>
-
-<h3 id="managing-linux-kernels"><strong>Managing Linux Kernels</strong></h3>
-
-<p>Debian systems, by default, retain multiple Linux kernel versions. This allows users to boot into an older, known-good kernel if a newer version introduces instability or hardware compatibility issues. However, each kernel image, its corresponding headers, and associated modules consume substantial space, primarily in /boot (which is part of the root partition in many embedded setups) and /lib/modules/.6</p>
-
-<ul>
-  <li><strong>Identifying Current and Installed Kernels:</strong>
-    <ul>
-      <li>uname -r: Displays the version of the currently running kernel.8 <strong>It is imperative that this kernel is NOT removed.</strong></li>
-      <li>
-        <table>
-          <tbody>
-            <tr>
-              <td>dpkg -l “linux-image*” “linux-headers*” or dpkg --list</td>
-              <td>grep linux-image: These commands list all installed kernel image and header packages, showing their status and version.6</td>
-            </tr>
-          </tbody>
-        </table>
-      </li>
-      <li>ls /boot/: Lists the contents of the /boot directory, which includes kernel image files (typically named vmlinuz-&lt;version&gt;) and initial RAM filesystem images (initrd.img-&lt;version&gt;).8</li>
-    </ul>
-  </li>
-  <li><strong>Safely Purging Old Kernels:</strong>
-    <ul>
-      <li>While sudo apt autoremove is designed to remove old, unneeded kernels, its behavior can sometimes be inconsistent, occasionally leaving more kernels than necessary or failing to remove any.6 Therefore, manual verification and potential purging are recommended.</li>
-      <li><strong>Manual Purge Command:</strong> To remove a specific old kernel and its headers, use: sudo apt purge &lt;kernel_image_package_name&gt; &lt;kernel_headers_package_name&gt; For example: sudo apt purge linux-image-5.10.0-X-arm64 linux-headers-5.10.0-X-arm64.</li>
-      <li><strong>Caution:</strong> It is strongly advised to retain the currently running kernel and at least one other known-good previous kernel version as a fallback.6 Removing all but the current kernel can leave the system unbootable if the active kernel encounters an issue.</li>
-      <li>The directories under /usr/lib/modules/ corresponding to old and unused kernel versions can also be manually removed if apt purge does not handle them, but this should be done with extreme caution and only after the corresponding kernel packages are purged.7</li>
-    </ul>
-  </li>
-</ul>
-
-<p>The variability in apt autoremove’s effectiveness for kernel cleanup underscores the need for manual checks. Relying solely on autoremove might not reclaim all possible space from old kernels. A manual review of installed kernels, followed by a careful purge of unneeded older versions (while preserving the running and a backup kernel), is a more reliable strategy for maximizing space recovery from this source.</p>
-
-<h3 id="controlling-systemd-journal-logs"><strong>Controlling Systemd Journal Logs</strong></h3>
-
-<p>The systemd-journald service collects and manages system logs. These logs, stored by default in /var/log/journal/ (if persistent storage is enabled) or /run/log/journal/ (for volatile storage), can grow significantly over time, especially on active systems or those with verbose logging configurations.10</p>
-
-<ul>
-  <li><strong>Assessing Journal Disk Usage:</strong>
-    <ul>
-      <li>sudo journalctl --disk-usage: This command reports the total disk space currently occupied by archived and active journal files.10</li>
-    </ul>
-  </li>
-  <li><strong>Vacuuming Journal Files (Immediate Cleanup):</strong> journalctl provides options to manually reduce the size of the journal by removing older entries. These operations are non-destructive to currently active log files but will remove archived data.
-    <ul>
-      <li>sudo journalctl --vacuum-size=XM: Reduces the total size of journal files to a specified limit, e.g., 200M for 200 Megabytes or 1G for 1 Gigabyte.10</li>
-      <li>sudo journalctl --vacuum-time=Xd: Deletes archived journal entries older than the specified time period, e.g., 7d for 7 days, 2weeks for two weeks.10</li>
-      <li>sudo journalctl --vacuum-files=N: Retains only the N most recent journal files, deleting older ones.10</li>
-    </ul>
-  </li>
-  <li><strong>Persistent Journal Configuration (Long-Term Management):</strong> To prevent excessive log growth in the future, systemd-journald can be configured by editing its configuration file, /etc/systemd/journald.conf. Key parameters for controlling disk usage include 10:
-    <ul>
-      <li>SystemMaxUse=XM: Sets an absolute maximum disk space that persistent journal files can occupy.</li>
-      <li>SystemKeepFree=YM: Ensures that at least YM of disk space is kept free on the filesystem where the journal is stored.</li>
-      <li>SystemMaxFileSize=ZM: Limits the maximum size of individual journal files before they are rotated.</li>
-      <li>RuntimeMaxUse=, RuntimeKeepFree=, RuntimeMaxFileSize=: Similar options for volatile journals stored in /run/log/journal.</li>
-      <li>Compress=yes: Enables compression for older journal entries, saving space at the cost of some CPU overhead during compression/decompression. After modifying /etc/systemd/journald.conf, the systemd-journald service must be restarted to apply the changes: sudo systemctl restart systemd-journald.</li>
-    </ul>
-  </li>
-</ul>
-
-<p>The following table summarizes common journalctl vacuuming options for quick reference:</p>
-
-<p><strong>Table: Common journalctl --vacuum-* Options</strong></p>
-
-<table>
-  <thead>
-    <tr>
-      <th style="text-align: left">Option</th>
-      <th style="text-align: left">Description</th>
-      <th style="text-align: left">Example Command</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td style="text-align: left">--disk-usage</td>
-      <td style="text-align: left">Show current journal disk usage</td>
-      <td style="text-align: left">sudo journalctl --disk-usage</td>
-    </tr>
-    <tr>
-      <td style="text-align: left">--vacuum-size=XM</td>
-      <td style="text-align: left">Reduce journal size to X Megabytes/Gigabytes</td>
-      <td style="text-align: left">sudo journalctl --vacuum-size=500M</td>
-    </tr>
-    <tr>
-      <td style="text-align: left">--vacuum-time=Xd</td>
-      <td style="text-align: left">Delete logs older than X days/weeks/months</td>
-      <td style="text-align: left">sudo journalctl --vacuum-time=2weeks</td>
-    </tr>
-    <tr>
-      <td style="text-align: left">--vacuum-files=N</td>
-      <td style="text-align: left">Keep only the N most recent journal files</td>
-      <td style="text-align: left">sudo journalctl --vacuum-files=5</td>
-    </tr>
-  </tbody>
-</table>
-
-<h3 id="general-system-file-cleanup"><strong>General System File Cleanup</strong></h3>
-
-<p>Beyond package management and system logs, other areas can accumulate unnecessary files:</p>
-
-<ul>
-  <li>/tmp and /var/tmp: These directories are intended for temporary files. While /tmp is often configured as a tmpfs (RAM-based filesystem) and cleared on reboot, /var/tmp typically persists. Old files in /var/tmp can be manually removed.</li>
-  <li>Old Application Logs in /var/log/: Besides the systemd journal, applications may write their own logs to /var/log/. Check for excessively large files (e.g., *.log.1, *.gz). Ensure logrotate is properly configured for these applications to manage log file sizes and rotation.</li>
-  <li>User-specific caches: Directories like ~/.cache within user home directories can accumulate large amounts of cached data from applications. While not directly on /dev/root if /home is separate, if /home is part of /dev/root, these should be investigated.</li>
-</ul>
-
-<h2 id="4-phase-3-identifying-and-analyzing-large-space-consumers"><strong>4. Phase 3: Identifying and Analyzing Large Space Consumers</strong></h2>
-
-<p>After performing standard system cleanup, if the root partition space is still critically low, the next step is to identify precisely which directories and files are consuming the most space. This targeted analysis will guide further reclamation efforts.</p>
-
-<h3 id="using-ncdu-for-interactive-disk-usage-analysis"><strong>Using ncdu for Interactive Disk Usage Analysis</strong></h3>
-
-<p>ncdu (Ncurses Disk Usage) is a powerful and user-friendly disk usage analyzer that provides an interactive way to navigate the filesystem and identify space hogs.12</p>
-
-<ul>
-  <li><strong>Installation:</strong> ncdu is available in Debian Bullseye repositories and can be installed using: sudo apt install ncdu The package is available for the arm64 architecture.13</li>
-  <li><strong>Usage:</strong>
-    <ul>
-      <li>The recommended command to analyze the root filesystem is: sudo ncdu -x / The -x option is crucial as it confines the scan to the filesystem of the specified directory (in this case, /), preventing ncdu from traversing into other mounted filesystems (e.g., separate /home, /data, or network mounts).12 This ensures the analysis focuses solely on the root partition’s contents.</li>
-      <li>Upon completion of the scan (which may take some time depending on the size and number of files), ncdu presents a sorted list of files and directories by size.</li>
-      <li><strong>Navigation and Interaction</strong> 12<strong>:</strong>
-        <ul>
-          <li>Use the <strong>arrow keys</strong> (up/down) to navigate the list.</li>
-          <li>Press <strong>Enter</strong> or the <strong>right arrow key</strong> to enter a selected directory and view its contents.</li>
-          <li>Press the <strong>left arrow key</strong>, h, or &lt; to go up to the parent directory.</li>
-          <li><strong>Sorting:</strong> Press s to sort by size (default), n by name, C by item count, and M (capital M) by modification time. Pressing the sort key again toggles ascending/descending order.</li>
-          <li><strong>Deleting:</strong> Press d to delete a selected file or directory (use with extreme caution, especially when running as root). ncdu will ask for confirmation.</li>
-          <li><strong>Information:</strong> Press i to show detailed information about the selected item.</li>
-          <li><strong>Help:</strong> Press ? to display the built-in help screen.</li>
-        </ul>
-      </li>
-    </ul>
-  </li>
-  <li>ncdu allows for a quick and effective drill-down into the directory structure to pinpoint the largest consumers of disk space, which might not be obvious from standard du output alone.</li>
-</ul>
-
-<h3 id="alternative-analysis-with-du-and-find"><strong>Alternative Analysis with du and find</strong></h3>
-
-<p>For users who prefer command-line tools for non-interactive analysis or for use in scripts, du (disk usage) and find are standard utilities that can provide similar information.</p>
-
-<ul>
-  <li>
-    <table>
-      <tbody>
-        <tr>
-          <td>To display the total size of top-level directories within the root filesystem, sorted by size in human-readable format: sudo du -sh /*</td>
-          <td>sort -rh</td>
-          <td>head -n 20 This command lists the top 20 largest directories directly under /. The depth can be adjusted (e.g., sudo du -sh /var/*) to inspect specific subdirectories.</td>
-        </tr>
-      </tbody>
-    </table>
-  </li>
-  <li>
-    <table>
-      <tbody>
-        <tr>
-          <td>To find individual files larger than a certain size (e.g., 1GB) anywhere on the root filesystem: sudo find / -xdev -type f -size +1G -print0</td>
-          <td>xargs -0 du -h The -xdev option ensures find does not descend into directories on other filesystems, similar to ncdu -x. The size (+1G) can be adjusted (e.g., +500M for 500 Megabytes).</td>
-        </tr>
-      </tbody>
-    </table>
-  </li>
-</ul>
-
-<p>While ncdu offers a more convenient interactive experience, proficiency with du and find remains a valuable skill for system administrators, providing flexibility for various diagnostic scenarios. These tools can help identify large log files, forgotten backups, or unexpectedly large application data directories that were not addressed by the standard cleanup in Phase 2.</p>
-
-<h2 id="5-phase-4-advanced-space-reclamation---relocating-directories-medium-to-high-risk"><strong>5. Phase 4: Advanced Space Reclamation - Relocating Directories (Medium to High-Risk)</strong></h2>
-
-<p>If significant space is still required after general cleanup and analysis, relocating large directories from the root partition to another storage location (e.g., a separate userdata partition if available and sufficiently spacious, or an external USB drive) can be an effective strategy. However, this phase involves higher risks and requires careful execution.</p>
-
-<h3 id="disclaimer-risks-and-considerations"><strong>Disclaimer: Risks and Considerations</strong></h3>
-
-<p>Moving system directories, particularly those under /var or /usr, is a non-trivial operation that can lead to an unbootable system if not performed correctly.14 Several factors contribute to this risk:</p>
-
-<ul>
-  <li><strong>System Stability:</strong> Critical system services and the boot process itself depend on specific directory structures and file locations. Incorrectly moving these can break dependencies.</li>
-  <li><strong>Boot Process Dependencies:</strong> Some directories are accessed very early in the boot sequence, potentially before all filesystems (including the target partition for relocation) are mounted. Relocating such directories requires ensuring they are available when needed, often through methods like bind mounts configured in /etc/fstab.</li>
-  <li><strong>Permissions and Ownership:</strong> File and directory permissions, ownership, and extended attributes (like SELinux contexts or AppArmor profiles, if enabled) must be meticulously preserved during the copy process. Tools like rsync -aX or cp -aR are generally suitable for this.14</li>
-  <li><strong>OTG/MASKROM Awareness:</strong> Given the rk3588 platform, if a directory relocation attempt fails and renders the system unbootable, recovery will likely involve using MASKROM/Loader mode to re-flash the firmware, as discussed in Phase 1. Users must be prepared for this eventuality.</li>
-</ul>
-
-<h3 id="identifying-suitable-directories-for-relocation"><strong>Identifying Suitable Directories for Relocation</strong></h3>
-
-<p>Based on the analysis from Phase 3 (ncdu or du/find), identify large directories that are candidates for relocation.</p>
-
-<ul>
-  <li><strong>Good candidates often include:</strong>
-    <ul>
-      <li>/var/cache/apt/archives/: Can become very large if not regularly cleaned by apt clean. Relocating this directory or configuring APT to use a different cache location is a common practice.14</li>
-      <li>/var/log/: If systemd journald configuration is insufficient to control its size, or if other applications generate voluminous logs in this directory.18</li>
-      <li>/opt/: Frequently used for installing third-party software packages that are not part of the core OS. These can sometimes be quite large and are often safe to move, provided the applications within are not critical for the early boot process.20</li>
-      <li>/srv/: If the system is used to serve large amounts of data (e.g., web server content, FTP files), this directory might be a candidate.</li>
-      <li>/usr/local/: Often contains manually compiled software or locally installed packages, which can accumulate.</li>
-      <li>While /home is usually on a separate partition in server setups, if it resides on the root partition and is large, its relocation methods 16 are directly applicable to other directories.</li>
-    </ul>
-  </li>
-  <li><strong>Poor candidates (generally avoid moving from the root partition):</strong> Core system directories like /bin, /sbin, /lib, /etc, /dev, /proc, /sys, and /run. The /boot directory should also not be moved from the root partition unless it’s being migrated to a dedicated boot partition, which is a more complex scenario not covered here for an already installed system.</li>
-</ul>
-
-<h3 id="prerequisites-for-relocation"><strong>Prerequisites for Relocation</strong></h3>
-
-<ul>
-  <li><strong>Target Location:</strong> A pre-existing, formatted partition with sufficient free space is required. This could be another partition on the eMMC (e.g., a userdata partition that can be partially repurposed) or an external storage device (e.g., USB drive, NVMe SSD if the rk3588 board supports it).</li>
-  <li><strong>Caution for rk3588 eMMC:</strong> Creating new partitions or resizing existing ones on the live eMMC boot device without a full re-flash (Phase 5) is highly risky and generally not recommended for embedded systems. This guide assumes the target partition <em>already exists</em> or the user is relocating to external storage. If the target is on the eMMC and needs creation/resizing, refer to Phase 5.</li>
-</ul>
-
-<h3 id="methods-for-relocation"><strong>Methods for Relocation</strong></h3>
-
-<p>Several methods can be used to relocate directories. The choice depends on the directory’s criticality and the desired level of system integration.</p>
-
-<ul>
-  <li>Bind Mounts (Recommended for System Integrity):<br />
-A bind mount makes a directory or an existing mount point appear as if it’s also located at another path within the filesystem hierarchy.14 The kernel treats a bind-mounted directory much like a regularly mounted filesystem, making this method generally more robust and transparent for system directories compared to symbolic links.23
-    <ul>
-      <li><strong>Process (e.g., relocating /var/log to /mnt/new_storage/var_log_content):</strong>
-        <ol>
-          <li><strong>Enter Single-User Mode:</strong> To ensure no processes are actively writing to /var/log, boot into single-user mode or rescue target: sudo systemctl rescue.target or sudo init 1.18 This stops most services.</li>
-          <li><strong>Create Target Directory:</strong> On the new storage location, create the directory that will hold the contents of /var/log: sudo mkdir -p /mnt/new_storage/var_log_content.</li>
-          <li><strong>Copy Data:</strong> Use rsync to copy the data, preserving all attributes: sudo rsync -avX /var/log/ /mnt/new_storage/var_log_content/ The trailing slash on the source /var/log/ is important for rsync to copy the contents of the directory, not the directory itself. The -a flag archives (preserves permissions, ownership, timestamps, etc.), -v provides verbose output, and -X preserves extended attributes.14</li>
-          <li><strong>Verify Copied Data:</strong> Thoroughly check that all data has been copied correctly to /mnt/new_storage/var_log_content/.</li>
-          <li><strong>Rename Original Directory:</strong> Once confident in the copy, rename the original /var/log to serve as a temporary backup: sudo mv /var/log /var/log.old.</li>
-          <li><strong>Create New Empty Mount Point:</strong> Create an empty directory at the original location to serve as the mount point for the bind mount: sudo mkdir /var/log.</li>
-          <li><strong>Configure /etc/fstab for Permanent Mount:</strong> Add the following line to /etc/fstab to make the bind mount persistent across reboots 14: /mnt/new_storage/var_log_content /var/log none bind 0 0</li>
-          <li><strong>Mount the Bind Mount:</strong> Apply the new fstab entry or mount it manually: sudo mount -a or sudo mount /var/log.</li>
-          <li><strong>Verify Operation:</strong> Reboot the system. Check that /var/log is now sourced from /mnt/new_storage/var_log_content and that system logging functions correctly.</li>
-          <li><strong>Remove Old Directory:</strong> Once everything is confirmed to be working correctly after a reboot and some uptime, the /var/log.old directory can be removed: sudo rm -rf /var/log.old.</li>
-        </ol>
-      </li>
-    </ul>
-  </li>
-  <li>Symbolic Links (Use with Caution for System Directories):<br />
-A symbolic link (symlink) is a special type of file that acts as a pointer to another file or directory.17 While simpler to create than bind mounts, symlinks can sometimes cause issues with certain applications or during the early stages of the boot process, especially if they point to locations on filesystems that are not yet mounted.14
-    <ul>
-      <li><strong>Process (e.g., relocating /var/cache/apt/archives to /mnt/new_storage/apt_cache_content):</strong>
-        <ol>
-          <li><strong>Create Target Directory:</strong> sudo mkdir -p /mnt/new_storage/apt_cache_content.</li>
-          <li><strong>Move Data:</strong> (Ensure apt is not running) sudo mv /var/cache/apt/archives/* /mnt/new_storage/apt_cache_content/ (or use rsync then rm) sudo rmdir /var/cache/apt/archives (if empty after moving contents)</li>
-          <li><strong>Create Symbolic Link:</strong> sudo ln -s /mnt/new_storage/apt_cache_content /var/cache/apt/archives.17</li>
-        </ol>
-      </li>
-      <li>For critical system directories, bind mounts are generally preferred over symlinks due to their greater transparency and robustness.14</li>
-    </ul>
-  </li>
-  <li>Configuring apt.conf for APT Cache (Specific to APT):<br />
-For /var/cache/apt/archives/, APT itself provides a configuration option to change its cache location, which is often the cleanest method.14
-    <ol>
-      <li>Create the new cache destination, including a partial subdirectory: sudo mkdir -p /mnt/new_storage/my_apt_cache/partial</li>
-      <li>
-        <p>Edit or create a custom APT configuration file, e.g., /etc/apt/apt.conf.d/99custom_cache.conf:<br />
-Dir::Cache::Archives “/mnt/new_storage/my_apt_cache/”;</p>
-      </li>
-      <li>Move existing archives (optional, or let apt clean remove old ones and new downloads go to the new location): sudo mv /var/cache/apt/archives/* /mnt/new_storage/my_apt_cache/ sudo apt clean (to clear the old default location). This method avoids filesystem-level redirection (bind mounts or symlinks) for APT’s cache.</li>
-    </ol>
-  </li>
-</ul>
-
-<p>The choice between a bind mount and a symbolic link is significant. Bind mounts are integrated at a lower level by the kernel and are generally more reliable for directories that are essential for system operation or are accessed early in the boot process (such as components of /var). Symbolic links, while simpler, might not be resolved correctly in all situations, particularly before the target filesystem is mounted or within chroot environments.14 For /var/cache/apt/archives, the apt.conf method is the most elegant and application-aware solution.</p>
-
-<p>Regardless of the method chosen, performing these operations in single-user mode or rescue target (systemctl rescue.target) is highly recommended.18 This minimizes the risk of data corruption or service failures that could occur if files are moved while actively being used by the system.</p>
-
-<p><strong>Table: Comparison of Directory Relocation Methods</strong></p>
-
-<table>
-  <thead>
-    <tr>
-      <th style="text-align: left">Feature/Method</th>
-      <th style="text-align: left">Bind Mount</th>
-      <th style="text-align: left">Symbolic Link</th>
-      <th style="text-align: left">APT apt.conf (for apt cache)</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td style="text-align: left"><strong>Mechanism</strong></td>
-      <td style="text-align: left">Kernel-level directory mirroring</td>
-      <td style="text-align: left">Filesystem pointer</td>
-      <td style="text-align: left">Application-specific configuration</td>
-    </tr>
-    <tr>
-      <td style="text-align: left"><strong>Pros</strong></td>
-      <td style="text-align: left">Robust for system dirs, transparent to apps, better for chroots 23</td>
-      <td style="text-align: left">Simpler to create, works for files &amp; dirs</td>
-      <td style="text-align: left">Cleanest for APT, no FS manipulation</td>
-    </tr>
-    <tr>
-      <td style="text-align: left"><strong>Cons</strong></td>
-      <td style="text-align: left">Root-only manipulation, slightly more complex 24</td>
-      <td style="text-align: left">Can break with some tools/early boot 14, less transparent</td>
-      <td style="text-align: left">Only for APT cache</td>
-    </tr>
-    <tr>
-      <td style="text-align: left"><strong>Best Use Cases</strong></td>
-      <td style="text-align: left">/var/log, /opt (if critical services depend on it early)</td>
-      <td style="text-align: left">/var/cache/apt/archives (alternative), non-critical user data</td>
-      <td style="text-align: left">/var/cache/apt/archives (preferred)</td>
-    </tr>
-    <tr>
-      <td style="text-align: left"><strong>Relative Risk</strong></td>
-      <td style="text-align: left">Medium (if done carefully)</td>
-      <td style="text-align: left">Medium-High (for system dirs), Low (for user data)</td>
-      <td style="text-align: left">Low</td>
-    </tr>
-    <tr>
-      <td style="text-align: left"><strong>fstab Entry?</strong></td>
-      <td style="text-align: left">Yes (e.g., /path/to/source /target none bind)</td>
-      <td style="text-align: left">No (symlink is persistent itself)</td>
-      <td style="text-align: left">No (apt.conf change is persistent)</td>
-    </tr>
-  </tbody>
-</table>
-
-<h2 id="6-phase-5-extreme-measures---root-partition-resizing-via-re-flashing-highest-risk"><strong>6. Phase 5: Extreme Measures - Root Partition Resizing via Re-flashing (Highest Risk)</strong></h2>
-
-<p>This phase describes the process of resizing the root partition (/dev/root) on the eMMC by modifying the device’s partition table and re-flashing the firmware. This is the most invasive and highest-risk procedure detailed in this guide and should only be considered as a last resort if all previous methods are insufficient to resolve the low space issue.</p>
-
-<p><strong>Strong Warning:</strong></p>
-
-<ul>
-  <li><strong>Data Loss is Certain:</strong> This procedure involves re-partitioning the eMMC, which will erase all data on the partitions being modified or re-flashed. A complete and verified backup of all critical data (as outlined in Phase 1) is absolutely essential. Without it, data recovery will be impossible.</li>
-  <li><strong>Risk of Bricking:</strong> Incorrect execution, such as flashing an incompatible loader, a malformed parameter file, or interrupting the flashing process, can lead to a “bricked” device, rendering it unbootable. Recovery might only be possible if MASKROM mode remains accessible.</li>
-  <li><strong>Expertise Required:</strong> This operation should only be attempted by users with a thorough understanding of the Rockchip rk3588 platform, eMMC partitioning, firmware structure, and the use of flashing tools like rkdeveloptool.</li>
-</ul>
-
-<p>Directly resizing a live root partition on an eMMC device using tools like GParted (which are primarily designed for x86 systems and may not boot or function correctly on ARM SoCs for this purpose 25) is generally not feasible or safe and can lead to filesystem corruption.27 The correct method for rk3588 involves defining a new partition layout and re-flashing.</p>
-
-<h3 id="overview-of-rk3588-emmc-partitioning"><strong>Overview of rk3588 eMMC Partitioning</strong></h3>
-
-<p>Rockchip-based devices, including the rk3588, utilize a “parameter” file to define the partition layout on the eMMC storage.3 This text file specifies partition names, their sizes, and often their starting offsets on the eMMC. For systems using the GUID Partition Table (GPT), this file is typically named parameter-gpt.txt or similar, and will contain an entry like TYPE: GPT.29</p>
-
-<p>The CMDLINE entry within the parameter file often contains an mtdparts string that describes the partition layout, for example: mtdparts=rk29xxnand:0x00002000@0x00004000(uboot),0x00002000@0x00006000(misc),….29 In this format, 0x&lt;hex_size&gt; represents the partition size, 0x&lt;hex_start_offset&gt; is its starting location, and (name) is the partition label. Modifying the root partition size involves carefully editing these values.</p>
-
-<p>The primary tool for low-level interaction with Rockchip devices in MASKROM or Loader mode is rkdeveloptool.3 It is used for flashing bootloaders, the parameter file (which defines the partition table), and individual partition images.</p>
-
-<h3 id="conceptual-steps-for-re-partitioning-and-re-flashing"><strong>Conceptual Steps for Re-partitioning and Re-flashing</strong></h3>
-
-<p>The following steps provide a conceptual overview. Specific file names, offsets, and commands may vary based on the rk3588 board vendor and firmware version. Always refer to the official documentation for the specific device.</p>
-
-<ol>
-  <li><strong>Obtain Necessary Files:</strong>
-    <ul>
-      <li>The correct rkdeveloptool binary for the host operating system.</li>
-      <li>The appropriate loader file for the rk3588 SoC (e.g., rk3588_spl_loader_vX.Y.Z.bin, MiniLoaderAll.bin).2</li>
-      <li>The parameter.txt or parameter-gpt.txt file corresponding to the device’s current firmware or a known-good base image. This file will be modified.</li>
-      <li>Image files for all essential partitions: uboot.img, trust.img, boot.img (containing the kernel and device tree), and a new rootfs.img (Debian Bullseye for arm64). An image for userdata.img might also be needed, or it can be created as an empty partition to be formatted later.2</li>
-    </ul>
-  </li>
-  <li><strong>Complete eMMC Backup (Reiteration of Phase 1):</strong> Before any modification, use rkdeveloptool read-partition &lt;partition_name&gt; &lt;filename.img&gt; in MASKROM/Loader mode to back up <em>every</em> existing partition (e.g., loader, parameter, uboot, trust, boot, rootfs, userdata, and any others specific to the device). This is the most reliable way to preserve the original state.</li>
-  <li><strong>Modify the parameter.txt File:</strong> This is the most critical step for resizing. Carefully edit the parameter.txt file to reflect the new desired partition sizes.
-    <ul>
-      <li>Identify the line defining rootfs and userdata (or any subsequent partitions).</li>
-      <li>Adjust the size of rootfs. If increasing rootfs, the starting offset of userdata (and any partitions after it) must be increased accordingly. The size of userdata (or the last partition) may need to be reduced to ensure the total allocated space does not exceed the eMMC capacity.</li>
-      <li>Example (conceptual, based on mtdparts format seen in 29): Original: …&lt;size_A&gt;@&lt;offset_A&gt;(partA),&lt;size_rootfs&gt;@&lt;offset_rootfs&gt;(rootfs),&lt;size_userdata&gt;@&lt;offset_userdata&gt;(userdata)… Modified: …&lt;size_A&gt;@&lt;offset_A&gt;(partA),&lt;NEW_size_rootfs&gt;@&lt;offset_rootfs&gt;(rootfs),&lt;NEW_size_userdata&gt;@&lt;NEW_offset_userdata&gt;(userdata)…</li>
-      <li>All size and offset values are typically in hexadecimal and may represent sectors (512 bytes) or blocks of a different size. This must be handled with extreme precision. Ensure partitions are contiguous and do not overlap.</li>
-      <li>Modifying the parameter file incorrectly is a primary cause of flashing failures.</li>
-    </ul>
-  </li>
-  <li><strong>Prepare a New rootfs.img:</strong>
-    <ul>
-      <li>Since the rootfs partition size is changing, the original rootfs.img (even if backed up) might not be suitable. Flashing an old, smaller rootfs.img to a newly enlarged partition will result in unused space within that partition.</li>
-      <li>Ideally, obtain or build a fresh Debian Bullseye arm64 rootfs.img that is either pre-sized for the new larger partition or is a minimal image that can be expanded post-flash.</li>
-    </ul>
-  </li>
-  <li><strong>Enter MASKROM/Loader Mode:</strong>
-    <ul>
-      <li>Connect the rk3588 device to the host PC via USB OTG.</li>
-      <li>Follow the device-specific procedure to boot into MASKROM or Loader mode (e.g., holding the RECOVERY button while powering on or pressing RESET 1). The host PC should detect a new USB device.</li>
-    </ul>
-  </li>
-  <li><strong>Flash with rkdeveloptool:</strong> The sequence of commands is critical:
-    <ul>
-      <li>Download initial bootloader (SPL): sudo rkdeveloptool db &lt;loader_file.bin&gt;.3</li>
-      <li>(Optional, device-dependent) Upgrade loader/write IDB loader: sudo rkdeveloptool ul &lt;loader_file.bin&gt;.3</li>
-      <li>Write the modified partition table: sudo rkdeveloptool gpt &lt;modified_parameter-gpt.txt&gt;.3 (Some tools might use rkdeveloptool write-partition-table &lt;modified_parameter.txt&gt;).</li>
-      <li>Flash individual partition images to their new offsets as defined in the modified parameter file. The command can be rkdeveloptool wl &lt;hex_offset&gt; &lt;image_file.img&gt; or rkdeveloptool write-partition &lt;partition_name&gt; &lt;image_file.img&gt; if the tool can parse names from the parameter file.3
-        <ul>
-          <li>sudo rkdeveloptool write-partition uboot uboot.img</li>
-          <li>sudo rkdeveloptool write-partition trust trust.img</li>
-          <li>sudo rkdeveloptool write-partition boot boot.img</li>
-          <li>sudo rkdeveloptool write-partition rootfs &lt;new_rootfs.img&gt;</li>
-          <li>sudo rkdeveloptool write-partition userdata userdata.img (if flashing userdata)</li>
-        </ul>
-      </li>
-      <li>Reset the device: sudo rkdeveloptool rd.3</li>
-    </ul>
-  </li>
-  <li><strong>Post-Flash Operations:</strong>
-    <ul>
-      <li>The first boot after re-flashing may take longer as the system initializes.</li>
-      <li>If a generic or smaller rootfs.img was flashed to the newly enlarged rootfs partition, the filesystem within it will need to be resized to utilize the full space. Once the system boots, this can often be done with sudo resize2fs /dev/root (or the actual block device for the rootfs, e.g., /dev/mmcblkXpY). This command expands an ext2/3/4 filesystem to fill the partition it resides on.27</li>
-      <li>Restore user data and system configurations from the backups made in Phase 1.</li>
-    </ul>
-  </li>
-</ol>
-
-<p>Understanding the role of each partition is vital when modifying the parameter file and flashing. Omitting a critical partition or flashing it to the wrong location will likely result in an unbootable device.</p>
-
-<p><strong>Table: Key rk3588 eMMC Partitions and Their Purpose</strong></p>
-
-<table>
-  <thead>
-    <tr>
-      <th style="text-align: left">Partition Name</th>
-      <th style="text-align: left">Typical Content/Function</th>
-      <th style="text-align: left">Criticality</th>
-      <th style="text-align: left">Notes (rk3588 specific where known)</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td style="text-align: left">loader</td>
-      <td style="text-align: left">First stage bootloader (SPL - Secondary Program Loader)</td>
-      <td style="text-align: left">Critical</td>
-      <td style="text-align: left">e.g., rk3588_spl_loader_*.bin, MiniLoaderAll.bin 2</td>
-    </tr>
-    <tr>
-      <td style="text-align: left">parameter</td>
-      <td style="text-align: left">Partition table definition data</td>
-      <td style="text-align: left">Critical</td>
-      <td style="text-align: left">Defines layout; flashed by rkdeveloptool gpt or equivalent</td>
-    </tr>
-    <tr>
-      <td style="text-align: left">uboot</td>
-      <td style="text-align: left">Second stage bootloader (U-Boot image)</td>
-      <td style="text-align: left">Critical</td>
-      <td style="text-align: left">uboot.img 29</td>
-    </tr>
-    <tr>
-      <td style="text-align: left">trust</td>
-      <td style="text-align: left">TrustZone/security firmware (e.g., ATF, OP-TEE)</td>
-      <td style="text-align: left">Critical</td>
-      <td style="text-align: left">trust.img 29</td>
-    </tr>
-    <tr>
-      <td style="text-align: left">misc</td>
-      <td style="text-align: left">Miscellaneous data, often for recovery/boot mode flags</td>
-      <td style="text-align: left">Important</td>
-      <td style="text-align: left">misc.img 29</td>
-    </tr>
-    <tr>
-      <td style="text-align: left">dtbo</td>
-      <td style="text-align: left">Device Tree Blob Overlays</td>
-      <td style="text-align: left">Important</td>
-      <td style="text-align: left">dtbo.img 2</td>
-    </tr>
-    <tr>
-      <td style="text-align: left">boot</td>
-      <td style="text-align: left">Kernel image, Device Tree Blob (DTB), initramfs (optional)</td>
-      <td style="text-align: left">Critical</td>
-      <td style="text-align: left">boot.img 29</td>
-    </tr>
-    <tr>
-      <td style="text-align: left">recovery</td>
-      <td style="text-align: left">Recovery system image (if implemented)</td>
-      <td style="text-align: left">Optional</td>
-      <td style="text-align: left">recovery.img 29</td>
-    </tr>
-    <tr>
-      <td style="text-align: left">rootfs</td>
-      <td style="text-align: left">The main root filesystem (e.g., Debian Bullseye)</td>
-      <td style="text-align: left">Critical</td>
-      <td style="text-align: left">rootfs.img 29</td>
-    </tr>
-    <tr>
-      <td style="text-align: left">userdata</td>
-      <td style="text-align: left">User data, applications; often mounted at /userdata or /data</td>
-      <td style="text-align: left">Varies</td>
-      <td style="text-align: left">userdata.img (can be flashed empty and formatted later) 30</td>
-    </tr>
-  </tbody>
-</table>
-
-<p>The process of resizing the root partition on an rk3588’s eMMC is fundamentally a firmware re-flashing operation that rewrites the partition table based on a modified parameter file. This is distinct from live partition resizing common on x86 systems. The parameter file acts as the blueprint for the eMMC’s structure, and any changes to it necessitate re-flashing not only the partition table itself but also all essential bootloader stages and operating system images to ensure their correct placement and function according to the new layout. This interdependency means that a change in the parameter file (the cause) requires a comprehensive re-flash of related components (the effect) for the system to boot and operate correctly.</p>
-
-<h2 id="7-phase-6-post-resolution-monitoring-and-best-practices"><strong>7. Phase 6: Post-Resolution Monitoring and Best Practices</strong></h2>
-
-<p>After successfully implementing one or more of the preceding phases to alleviate the low disk space issue on the /dev/root partition, it is crucial to verify the results and establish practices for ongoing monitoring and prevention.</p>
-
-<h3 id="verifying-reclaimed-space"><strong>Verifying Reclaimed Space</strong></h3>
-
-<p>Immediately after completing any cleanup, relocation, or re-flashing procedures, verify the amount of space reclaimed on the root partition. Use the df -Th command:<br />
-df -Th /<br />
-or<br />
-df -Th /dev/root<br />
-Compare the “Avail” and “Use%” columns with the values recorded in Phase 1 to quantify the improvement.</p>
-
-<h3 id="ongoing-disk-space-monitoring"><strong>Ongoing Disk Space Monitoring</strong></h3>
-
-<p>Proactive monitoring is key to preventing future low-space emergencies.</p>
-
-<ul>
-  <li><strong>Regular Manual Checks:</strong> Periodically run df -h and, if necessary, sudo ncdu -x / to keep an eye on disk space consumption trends.</li>
-  <li><strong>Automated Monitoring/Alerts:</strong> For systems in continuous operation, consider implementing automated monitoring scripts or tools (e.g., Nagios, Zabbix, or custom scripts using cron) that can send alerts if disk usage on /dev/root exceeds a predefined threshold (e.g., 80% or 85%).</li>
-</ul>
-
-<h3 id="preventative-measures-for-the-future"><strong>Preventative Measures for the Future</strong></h3>
-
-<p>Adopting good system hygiene practices can significantly reduce the likelihood of the root partition filling up again.</p>
-
-<ul>
-  <li><strong>Regular System Maintenance:</strong>
-    <ul>
-      <li>Periodically execute sudo apt update &amp;&amp; sudo apt clean &amp;&amp; sudo apt autoremove --purge to remove cached package files and orphaned dependencies.</li>
-      <li>Routinely check and manage old kernels if apt autoremove is not consistently effective.</li>
-    </ul>
-  </li>
-  <li><strong>Log Management:</strong>
-    <ul>
-      <li>Ensure systemd-journald is configured with appropriate size limits (e.g., SystemMaxUse) in /etc/systemd/journald.conf to prevent unbounded growth of system logs.</li>
-      <li>Verify that logrotate is active and correctly configured for other application logs in /var/log/.</li>
-    </ul>
-  </li>
-  <li><strong>Mindful Software Installation and Usage:</strong>
-    <ul>
-      <li>Be cautious when installing large software packages, especially from third-party sources or compiled manually. Understand where they store their data and cache.</li>
-      <li>If applications allow, configure them to use alternative storage locations (e.g., a separate userdata partition or external storage) for large datasets, caches, or temporary files, rather than the root partition.</li>
-    </ul>
-  </li>
-  <li><strong>Developer Practices (if applicable):</strong>
-    <ul>
-      <li>For users developing applications for the rk3588 platform, profile resource consumption, including disk space usage, during development and testing. Optimize applications to minimize their storage footprint on the root filesystem.</li>
-      <li>Avoid storing large, volatile data directly within the application’s installation directory on the root partition if it can be placed on a more suitable data partition.</li>
-    </ul>
-  </li>
-</ul>
-
-<p>By addressing the immediate low space problem and implementing these preventative measures, the long-term stability and performance of the rk3588 Debian Bullseye system can be significantly enhanced. This transforms a reactive troubleshooting effort into a proactive system administration strategy.</p>
-
-<h2 id="8-appendix"><strong>8. Appendix</strong></h2>
-
-<p>This appendix provides supplementary information relevant to managing an rk3588 system.</p>
-
-<h3 id="glossary-of-rk3588-specific-terms"><strong>Glossary of rk3588-Specific Terms</strong></h3>
-
-<ul>
-  <li><strong>eMMC (embedded MultiMediaCard):</strong> A type of flash memory commonly used as primary storage in embedded systems and SoCs like the rk3588.</li>
-  <li><strong>MASKROM Mode:</strong> A low-level boot mode embedded in the SoC’s ROM. It allows the device to accept firmware flashing commands via USB OTG, even if the eMMC bootloaders are corrupted. It’s a fundamental recovery mechanism for Rockchip devices.31</li>
-  <li><strong>OTG Flashing (On-The-Go Flashing):</strong> The process of flashing firmware to the device using its USB OTG port, typically when the device is in MASKROM or Loader mode.</li>
-  <li><strong>rkdeveloptool:</strong> A command-line utility provided by Rockchip for communicating with devices in MASKROM/Loader mode. It is used to download bootloaders, flash partition tables, and write partition images to eMMC or other storage.3</li>
-  <li><strong>Parameter File (parameter.txt / parameter-gpt.txt):</strong> A text file used in Rockchip firmware to define the partition layout on the eMMC. It specifies partition names, sizes, and starting offsets.29</li>
-  <li><strong>U-Boot (Universal Bootloader):</strong> A popular open-source bootloader commonly used in embedded systems, including rk3588 devices. It is responsible for initializing hardware and loading the operating system kernel.29</li>
-  <li><strong>SPL (Secondary Program Loader):</strong> An initial, small bootloader stage often loaded by the MASKROM, which then initializes DRAM and loads the main bootloader (U-Boot). Sometimes referred to as the “miniloader”.2</li>
-  <li><strong>GPT (GUID Partition Table):</strong> A modern standard for the layout of partition tables on a physical storage device. Used by many rk3588 firmware images.2</li>
-</ul>
-
-<h3 id="links-to-relevant-rockchip-documentation-and-community-resources"><strong>Links to Relevant Rockchip Documentation and Community Resources</strong></h3>
-
-<p>For further information and support specific to the rk3588 board in use, consult the following types of resources:</p>
-
-<ul>
-  <li><strong>Board Vendor Wikis:</strong> Manufacturers like Radxa, FriendlyElec, Orange Pi, etc., provide detailed wikis and documentation for their rk3588-based boards (e.g.2).</li>
-  <li><strong>Rockchip Open Source Wiki:</strong> opensource.rock-chips.com (or similar official Rockchip developer sites) often contain core documentation about SoCs and tools.3</li>
-  <li><strong>Community Forums:</strong> Forums associated with the board vendor (e.g., Radxa Forum 42) or broader Arm/Linux communities (e.g., Armbian forums, if applicable) can be invaluable for troubleshooting and sharing experiences.43</li>
-</ul>
-
-<h3 id="troubleshooting-common-issues"><strong>Troubleshooting Common Issues</strong></h3>
-
-<ul>
-  <li><strong>rkdeveloptool Fails to Detect Device:</strong>
-    <ul>
-      <li>Ensure the device is correctly put into MASKROM or Loader mode. The procedure can be timing-sensitive.</li>
-      <li>Verify USB OTG cable and port are functional.</li>
-      <li>On Linux hosts, ensure udev rules are correctly set up for Rockchip devices, or run rkdeveloptool with sudo.</li>
-      <li>On Windows hosts, ensure the correct Rockchip USB drivers are installed.1</li>
-    </ul>
-  </li>
-  <li><strong>System Fails to Boot After Kernel Removal:</strong>
-    <ul>
-      <li>If too many kernels were removed, or the only remaining kernel is faulty, the system may not boot.</li>
-      <li>Recovery might involve booting from an SD card (if supported by the board and U-Boot) into a compatible Linux environment. From there, it might be possible to mount the eMMC root partition, chroot into it, and reinstall a known-good kernel package (linux-image-…). This is an advanced procedure.</li>
-      <li>Alternatively, re-flashing the boot and rootfs partitions via MASKROM mode might be necessary.</li>
-    </ul>
-  </li>
-  <li><strong>Errors During apt Operations:</strong>
-    <ul>
-      <li>Network issues: Ensure the device has internet connectivity.</li>
-      <li>Corrupted package lists: Try sudo rm -rf /var/lib/apt/lists/* followed by sudo apt update.</li>
-      <li>Broken packages: sudo apt --fix-broken install might resolve some dependency issues.</li>
-    </ul>
-  </li>
-</ul>
-
-<h2 id="9-conclusions-and-recommendations"><strong>9. Conclusions and Recommendations</strong></h2>
-
-<p>The issue of low disk space on the /dev/root partition of an rk3588 arm64 Debian Bullseye system, while critical, can be systematically addressed. This guide has outlined a phased approach, starting with low-risk cleanup operations and progressing to more complex and potentially risky procedures.</p>
-
-<p><strong>Key Recommendations:</strong></p>
-
-<ol>
-  <li><strong>Prioritize Safety:</strong> Before undertaking any significant modifications, especially those involving directory relocation (Phase 4) or eMMC re-partitioning (Phase 5), <strong>a comprehensive data backup is non-negotiable</strong>. Understanding the MASKROM/Loader mode recovery process for the specific rk3588 device is also a crucial preparatory step.</li>
-  <li><strong>Start with Low-Risk Methods:</strong> Always begin with standard system cleanup procedures outlined in Phase 2. Utilizing apt clean and apt autoremove --purge, managing old Linux kernels carefully, and controlling systemd journal log sizes can often free up substantial space with minimal risk.</li>
-  <li><strong>Analyze Before Acting:</strong> Employ tools like ncdu (Phase 3) to accurately identify the largest consumers of disk space. This targeted analysis will inform which specific directories or file types are the primary cause of the low space condition, allowing for more effective remediation.</li>
-  <li><strong>Approach Directory Relocation with Caution:</strong> If relocating directories (Phase 4) is deemed necessary, prefer bind mounts over symbolic links for system-critical directories due to their enhanced robustness. Always perform such operations in single-user mode or rescue target to ensure system stability. For specific cases like the APT cache, application-level configurations (e.g., apt.conf) are the preferred method.</li>
-  <li><strong>Reserve Partition Resizing as a Last Resort:</strong> Re-flashing the eMMC to resize partitions (Phase 5) is a high-risk operation that guarantees data loss on affected partitions and can render the device unbootable if not executed perfectly. This should only be attempted if all other methods fail and the user possesses the necessary expertise and has exhausted all other options. Meticulous adherence to the rk3588 platform’s specific flashing procedures, including correct modification of the parameter file and use of rkdeveloptool, is essential.</li>
-  <li><strong>Implement Proactive Monitoring and Maintenance:</strong> Once the immediate space issue is resolved, establish a routine of ongoing disk space monitoring and preventative maintenance (Phase 6). Regular cleanups, log management, and mindful software installation will help prevent recurrence of the problem.</li>
-</ol>
-
-<p>By following this structured approach, users can effectively manage and resolve low disk space issues on their rk3588 Debian Bullseye systems, ensuring continued stability and performance. The specific nature of embedded ARM SoCs like the rk3588 necessitates a greater degree of caution and platform-specific knowledge compared to managing disk space on standard desktop systems.</p>
-
-<h4 id="works-cited"><strong>Works cited</strong></h4>
-
-<ol>
-  <li>RK3588-POE-SBC/RK3588_Update_Firmware.md at main - GitHub, accessed May 28, 2025, <a href="https://github.com/industrialtablet/RK3588-POE-SBC/blob/main/RK3588_Update_Firmware.md">https://github.com/industrialtablet/RK3588-POE-SBC/blob/main/RK3588_Update_Firmware.md</a></li>
-  <li>Template:RK3588-BuildFromSource - FriendlyELEC WiKi, accessed May 28, 2025, <a href="https://wiki.friendlyelec.com/wiki/index.php/Template:RK3588-BuildFromSource">https://wiki.friendlyelec.com/wiki/index.php/Template:RK3588-BuildFromSource</a></li>
-  <li>Rkdeveloptool - Rockchip open source Document, accessed May 28, 2025, <a href="https://opensource.rock-chips.com/wiki_Rkdeveloptool">https://opensource.rock-chips.com/wiki_Rkdeveloptool</a></li>
-  <li>rkdeveloptool - rockusb bootloader utility - Ubuntu Manpage, accessed May 28, 2025, <a href="https://manpages.ubuntu.com/manpages/noble/man1/rkdeveloptool.1.html">https://manpages.ubuntu.com/manpages/noble/man1/rkdeveloptool.1.html</a></li>
-  <li>Rock5/install/spi - Radxa Wiki, accessed May 28, 2025, <a href="https://wiki.radxa.com/Rock5/install/spi">https://wiki.radxa.com/Rock5/install/spi</a></li>
-  <li>How to remove old kernels? : r/debian - Reddit, accessed May 28, 2025, <a href="https://www.reddit.com/r/debian/comments/1hg7zeo/how_to_remove_old_kernels/">https://www.reddit.com/r/debian/comments/1hg7zeo/how_to_remove_old_kernels/</a></li>
-  <li>ReduceDebian - Debian Wiki, accessed May 28, 2025, <a href="https://wiki.debian.org/ReduceDebian">https://wiki.debian.org/ReduceDebian</a></li>
-  <li>Delete Old Unused Kernels in Debian and Ubuntu - Tutorialspoint, accessed May 28, 2025, <a href="https://www.tutorialspoint.com/how-to-delete-old-unused-kernels-in-debian-and-ubuntu">https://www.tutorialspoint.com/how-to-delete-old-unused-kernels-in-debian-and-ubuntu</a></li>
-  <li>How to Check the Linux Kernel Version - Liquid Web, accessed May 28, 2025, <a href="https://www.liquidweb.com/blog/how-to-check-the-kernel-version-in-linux-ubuntu-centos/">https://www.liquidweb.com/blog/how-to-check-the-kernel-version-in-linux-ubuntu-centos/</a></li>
-  <li>Managing Journal Size - The Ultimate Guide To Logging - Loggly, accessed May 28, 2025, <a href="https://www.loggly.com/ultimate-guide/managing-journal-size/">https://www.loggly.com/ultimate-guide/managing-journal-size/</a></li>
-  <li>Systemd logs (`journalctl`) are too large and slow - Ask Ubuntu, accessed May 28, 2025, <a href="https://askubuntu.com/questions/1012912/systemd-logs-journalctl-are-too-large-and-slow">https://askubuntu.com/questions/1012912/systemd-logs-journalctl-are-too-large-and-slow</a></li>
-  <li>How to Use ncdu to Find Disk-Hogging Directories in Linux, accessed May 28, 2025, <a href="https://www.howtogeek.com/how-to-use-ncdu-to-find-disk-hogging-directories-in-linux/">https://www.howtogeek.com/how-to-use-ncdu-to-find-disk-hogging-directories-in-linux/</a></li>
-  <li>Debian -- Details of package ncdu in bullseye, accessed May 28, 2025, <a href="https://packages.debian.org/bullseye/ncdu">https://packages.debian.org/bullseye/ncdu</a></li>
-  <li>debian - How to move /var to another existing partition? - Server Fault, accessed May 28, 2025, <a href="https://serverfault.com/questions/429937/how-to-move-var-to-another-existing-partition">https://serverfault.com/questions/429937/how-to-move-var-to-another-existing-partition</a></li>
-  <li>Comprehensive Guide to Understanding and Optimizing Linux File Systems, accessed May 28, 2025, <a href="https://systemdesignschool.io/blog/linux-file-systems">https://systemdesignschool.io/blog/linux-file-systems</a></li>
-  <li>How to Convert a /Home Directory to Partition in Linux - Tecmint, accessed May 28, 2025, <a href="https://www.tecmint.com/convert-home-directory-partition-linux/">https://www.tecmint.com/convert-home-directory-partition-linux/</a></li>
-  <li>How do I change the location of the apt-get archive? - Ask Ubuntu, accessed May 28, 2025, <a href="https://askubuntu.com/questions/391296/how-do-i-change-the-location-of-the-apt-get-archive">https://askubuntu.com/questions/391296/how-do-i-change-the-location-of-the-apt-get-archive</a></li>
-  <li>
-    <table>
-      <tbody>
-        <tr>
-          <td>How to move or relocate /var folder to a new partition in Linux</td>
-          <td>Support - SUSE, accessed May 28, 2025, <a href="https://www.suse.com/support/kb/doc/?id=000018399">https://www.suse.com/support/kb/doc/?id=000018399</a></td>
-        </tr>
-      </tbody>
-    </table>
-  </li>
-  <li>Moving /var/log/ - Nagios Support, accessed May 28, 2025, <a href="https://support.nagios.com/kb/article/moving-var-log-473.html">https://support.nagios.com/kb/article/moving-var-log-473.html</a></li>
-  <li>Can I move /opt to the / partition? - Ask Ubuntu, accessed May 28, 2025, <a href="https://askubuntu.com/questions/351345/can-i-move-opt-to-the-partition">https://askubuntu.com/questions/351345/can-i-move-opt-to-the-partition</a></li>
-  <li>Moving /opt etc to another partition… - LinuxQuestions.org, accessed May 28, 2025, <a href="https://www.linuxquestions.org/questions/slackware-14/moving-opt-etc-to-another-partition-473613/">https://www.linuxquestions.org/questions/slackware-14/moving-opt-etc-to-another-partition-473613/</a></li>
-  <li>How to Move Your Linux home Directory to Another Drive - How-To Geek, accessed May 28, 2025, <a href="https://www.howtogeek.com/442101/how-to-move-your-linux-home-directory-to-another-hard-drive/">https://www.howtogeek.com/442101/how-to-move-your-linux-home-directory-to-another-hard-drive/</a></li>
-  <li>What is the difference between a symlink and binding with fstab? - Unix &amp; Linux Stack Exchange, accessed May 28, 2025, <a href="https://unix.stackexchange.com/questions/35084/what-is-the-difference-between-a-symlink-and-binding-with-fstab">https://unix.stackexchange.com/questions/35084/what-is-the-difference-between-a-symlink-and-binding-with-fstab</a></li>
-  <li>When should you use a bind mount over a symbolic link? - YouTube, accessed May 28, 2025, <a href="https://www.youtube.com/watch?v=gQA59bPTgYE">https://www.youtube.com/watch?v=gQA59bPTgYE</a></li>
-  <li>GParted Live on USB, accessed May 28, 2025, <a href="https://gparted.org/liveusb.php">https://gparted.org/liveusb.php</a></li>
-  <li>GParted -- Live CD/USB/PXE/HD, accessed May 28, 2025, <a href="https://gparted.org/livecd.php">https://gparted.org/livecd.php</a></li>
-  <li>partitioning - Cannot resize rootfs partition on a emmc memory - Ask …, accessed May 28, 2025, <a href="https://askubuntu.com/questions/1146510/cannot-resize-rootfs-partition-on-a-emmc-memory">https://askubuntu.com/questions/1146510/cannot-resize-rootfs-partition-on-a-emmc-memory</a></li>
-  <li>Extend root filesystem using CLI parted &amp; resize2fs - Raspberry Pi Forums, accessed May 28, 2025, <a href="https://forums.raspberrypi.com/viewtopic.php?t=45265">https://forums.raspberrypi.com/viewtopic.php?t=45265</a></li>
-  <li>2. Compile Linux Firmware (kernel-5.10) — Firefly Wiki, accessed May 28, 2025, <a href="https://wiki.t-firefly.com/en/ROC-RK3588-PC/linux_compile.html">https://wiki.t-firefly.com/en/ROC-RK3588-PC/linux_compile.html</a></li>
-  <li>
-    <table>
-      <tbody>
-        <tr>
-          <td>Rockchip Parameter File</td>
-          <td>Vicharak, accessed May 28, 2025, <a href="https://docs.vicharak.in/vicharak_sbcs/vaaman/vaaman-linux/linux-development-guide/rockchip-parameter-file/">https://docs.vicharak.in/vicharak_sbcs/vaaman/vaaman-linux/linux-development-guide/rockchip-parameter-file/</a></td>
-        </tr>
-      </tbody>
-    </table>
-  </li>
-  <li>Flashing eMMC Image - LUCKFOX WIKI, accessed May 28, 2025, <a href="https://wiki.luckfox.com/Luckfox-Pico-Pi/Flash-image/">https://wiki.luckfox.com/Luckfox-Pico-Pi/Flash-image/</a></li>
-  <li>Expanding the Root Partition - General - ArmSoM Community, accessed May 28, 2025, <a href="https://forum.armsom.org/t/expanding-the-root-partition/257">https://forum.armsom.org/t/expanding-the-root-partition/257</a></li>
-  <li>Repartitioning the internal/app partition - XDA Forums, accessed May 28, 2025, <a href="https://xdaforums.com/t/repartitioning-the-internal-app-partition.3251960/">https://xdaforums.com/t/repartitioning-the-internal-app-partition.3251960/</a></li>
-  <li>Rock/flash the image - Radxa Wiki, accessed May 28, 2025, <a href="https://wiki.radxa.com/Rock/flash_the_image">https://wiki.radxa.com/Rock/flash_the_image</a></li>
-  <li>CM3588 - FriendlyELEC WiKi, accessed May 28, 2025, <a href="https://wiki.friendlyelec.com/wiki/index.php/CM3588">https://wiki.friendlyelec.com/wiki/index.php/CM3588</a></li>
-  <li>Template:RK3588-UpdateLog - FriendlyELEC WiKi, accessed May 28, 2025, <a href="https://wiki.friendlyelec.com/wiki/index.php/Template:RK3588-UpdateLog">https://wiki.friendlyelec.com/wiki/index.php/Template:RK3588-UpdateLog</a></li>
-  <li>Rock/resize linux rootfs - Radxa Wiki, accessed May 28, 2025, <a href="https://wiki.radxa.com/Rock/resize_linux_rootfs">https://wiki.radxa.com/Rock/resize_linux_rootfs</a></li>
-  <li>Template:RockchipCommonLinuxTips - FriendlyELEC WiKi, accessed May 28, 2025, <a href="https://wiki.friendlyelec.com/wiki/index.php/Template:RockchipCommonLinuxTips">https://wiki.friendlyelec.com/wiki/index.php/Template:RockchipCommonLinuxTips</a></li>
-  <li>Flash BootLoader to SPI Nor Flash - Radxa Docs, accessed May 28, 2025, <a href="https://docs.radxa.com/en/rock5/lowlevel-development/bootloader_spi_flash">https://docs.radxa.com/en/rock5/lowlevel-development/bootloader_spi_flash</a></li>
-  <li>Linux SDK Configuration introduction — Firefly Wiki, accessed May 28, 2025, <a href="https://wiki.t-firefly.com/en/Core-3588J/linux_sdk.html">https://wiki.t-firefly.com/en/Core-3588J/linux_sdk.html</a></li>
-  <li>Boot option - Rockchip open source Document, accessed May 28, 2025, <a href="https://opensource.rock-chips.com/wiki_Boot_option">https://opensource.rock-chips.com/wiki_Boot_option</a></li>
-  <li>RK3588 / Rock pi 5 /Development? - Radxa forum, accessed May 28, 2025, <a href="https://forum.radxa.com/t/rk3588-rock-pi-5-development/7123/1000">https://forum.radxa.com/t/rk3588-rock-pi-5-development/7123/1000</a></li>
-  <li>Radxa Rock Pi 5c (Rockchip RK3588S2) or FriendlyElec CM3588 plus (Rockchip RK3588) for NAS? : r/HomeNAS - Reddit, accessed May 28, 2025, <a href="https://www.reddit.com/r/HomeNAS/comments/1kv8glo/radxa_rock_pi_5c_rockchip_rk3588s2_or/">https://www.reddit.com/r/HomeNAS/comments/1kv8glo/radxa_rock_pi_5c_rockchip_rk3588s2_or/</a></li>
-</ol>]]></content><author><name></name></author><category term="scratchpad" /></entry></feed>
+</ul>]]></content><author><name></name></author><category term="scratchpad" /></entry></feed>
