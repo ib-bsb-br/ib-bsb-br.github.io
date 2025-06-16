@@ -374,3 +374,379 @@ Refer to the [Storj Community Forum](https://forum.storj.io/) for ongoing discus
     *   **Egress (Download):** Storj charges for data downloaded from the network. This is relevant for restores.
     *   **Operations:** There might be minor charges for certain API operations, but these are usually less significant for typical Restic usage.
     *   Always refer to the [official Storj pricing page](https://storj.io/dcs/pricing) for current details. Restic's efficiency helps in making Storj a cost-effective option for long-term, secure backups.
+
+# Integrating Restic with Google Drive for Cloud backups and maintenance
+
+The **`gdrive-backup`** script is for *adding* data to your backup, while the **`gdrive-maintenance`** script is for *managing* that data to ensure it remains healthy and efficient over the long term.
+
+{% codeblock bash %}
+#!/bin/bash
+#
+# This script automates the setup for a "Backup-First" model using rclone and restic.
+# It intelligently installs/upgrades the latest tools, interactively guides the user
+# through the complex rclone Google Drive authentication, verifies success at each
+# step, and deploys easy-to-use scripts for backups and maintenance.
+#
+# Target System: Debian 11 (Bullseye) on ARM64 RK3588
+# Executed from: User's home directory (~/)
+
+# --- Strict Mode & Error Handling ---
+set -euo pipefail
+
+# --- Global Configuration (Can be customized) ---
+RESTIC_REPO_PATH="ResticBackups/my-linux-desktop"
+RESTIC_PASSWORD_FILE="$HOME/.config/restic/gdrive_password"
+USER_SCRIPT_DIR="$HOME/bin"
+BACKUP_SCRIPT_NAME="gdrive-backup"
+MAINTENANCE_SCRIPT_NAME="gdrive-maintenance"
+
+# This will be determined dynamically.
+RCLONE_REMOTE_NAME=""
+
+# --- Color Setup ---
+setup_colors() {
+    if tput setaf 1 >/dev/null 2>&1; then
+        C_RESET=$(tput sgr0); C_INFO=$(tput setaf 2); C_WARN=$(tput setaf 3)
+        C_ACTION=$(tput setaf 6); C_ERROR=$(tput setaf 1); C_BOLD=$(tput bold)
+    else
+        C_RESET=""; C_INFO=""; C_WARN=""; C_ACTION=""; C_ERROR=""; C_BOLD=""
+    fi
+}
+
+# --- Helper Functions ---
+
+cleanup_on_exit() {
+    if [ -n "${TEMP_DOWNLOAD_DIR:-}" ] && [ -d "$TEMP_DOWNLOAD_DIR" ]; then
+        echo; echo "${C_INFO}INFO: Cleaning up temporary directory...${C_RESET}"
+        rm -rf "$TEMP_DOWNLOAD_DIR"
+    fi
+}
+
+ensure_tool_installed() {
+    local tool_name="$1"
+    local package_name="${2:-$tool_name}"
+    if ! command -v "$tool_name" >/dev/null 2>&1; then
+        echo "${C_INFO}INFO: Tool '${C_BOLD}$tool_name${C_RESET}${C_INFO}' not found. Installing '${C_BOLD}$package_name${C_RESET}${C_INFO}'...${C_RESET}"
+        if ! sudo apt-get install -y "$package_name"; then
+            echo "${C_ERROR}ERROR: Failed to install '$package_name'. Please install it manually.${C_RESET}" >&2; exit 1
+        fi
+        echo "${C_INFO}SUCCESS: '$package_name' installed.${C_RESET}"
+    else
+        echo "${C_INFO}INFO: Tool '${C_BOLD}$tool_name${C_RESET}${C_INFO}' is already installed.${C_RESET}"
+    fi
+}
+
+ensure_path() {
+    echo "${C_INFO}INFO: Ensuring '${C_BOLD}$USER_SCRIPT_DIR${C_RESET}${C_INFO}' is in your PATH...${C_RESET}"
+    mkdir -p "$USER_SCRIPT_DIR"
+    if [[ ":$PATH:" != *":$USER_SCRIPT_DIR:"* ]]; then
+        echo "${C_WARN}WARNING: '${C_BOLD}$USER_SCRIPT_DIR${C_RESET}${C_WARN}' is not in your active PATH.${C_RESET}"
+        local profile_file="$HOME/.profile"
+        if [ -f "$HOME/.bash_profile" ]; then profile_file="$HOME/.bash_profile"; elif [ -f "$HOME/.zshrc" ]; then profile_file="$HOME/.zshrc"; elif [ -f "$HOME/.bashrc" ]; then profile_file="$HOME/.bashrc"; fi
+        if ! grep -q 'export PATH="$HOME/bin:$PATH"' "$profile_file"; then
+            echo "${C_ACTION}ACTION: Adding PATH export to '${C_BOLD}$profile_file${C_RESET}${C_ACTION}'.${C_RESET}"
+            { echo ''; echo '# Add local bin directory to PATH'; echo 'export PATH="$HOME/bin:$PATH"'; } >> "$profile_file"
+            echo "${C_WARN}You must run '${C_BOLD}source \"$profile_file\"${C_RESET}${C_WARN}' or restart your terminal for changes to take effect.${C_RESET}"
+        fi
+    fi
+}
+
+install_restic() {
+    echo "${C_INFO}INFO: Checking Restic version...${C_RESET}"
+    local latest_version installed_version
+    latest_version=$(curl -s "https://api.github.com/repos/restic/restic/releases/latest" | jq -r .tag_name | sed 's/v//')
+    installed_version=$(restic version 2>/dev/null | awk '{print $2}' || echo "0.0.0")
+
+    if dpkg --compare-versions "$installed_version" "lt" "$latest_version"; then
+        echo "${C_INFO}INFO: A new Restic version (${C_BOLD}$latest_version${C_RESET}${C_INFO}) is available (you have $installed_version). Upgrading...${C_RESET}"
+        local restic_url
+        restic_url=$(curl -s "https://api.github.com/repos/restic/restic/releases/latest" | jq -r '.assets[] | select(.name | contains("linux_arm64.bz2")) | .browser_download_url')
+        if [ -z "$restic_url" ]; then echo "${C_ERROR}ERROR: Could not find Restic ARM64 release URL.${C_RESET}" >&2; exit 1; fi
+
+        echo "${C_INFO}INFO: Downloading from: ${C_BOLD}$restic_url${C_RESET}"
+        local TEMP_DOWNLOAD_DIR; TEMP_DOWNLOAD_DIR=$(mktemp -d)
+        curl -Lfo "${TEMP_DOWNLOAD_DIR}/restic.bz2" "${restic_url}"
+        bunzip2 "${TEMP_DOWNLOAD_DIR}/restic.bz2"
+        sudo mv "${TEMP_DOWNLOAD_DIR}/restic" /usr/local/bin/restic
+        sudo chmod +x /usr/local/bin/restic
+        echo "${C_INFO}SUCCESS: Restic upgraded to version $(restic version | awk '{print $2}').${C_RESET}"
+    else
+        echo "${C_INFO}INFO: Your Restic version (${C_BOLD}$installed_version${C_RESET}${C_INFO}) is up to date.${C_RESET}"
+    fi
+}
+
+configure_rclone_remote() {
+    local gdrive_remotes
+    gdrive_remotes=$(rclone listremotes | sed 's/://' || true)
+
+    if [ -n "$gdrive_remotes" ]; then
+        echo "${C_ACTION}ACTION: Found existing rclone remotes. Please choose one or create a new one:${C_RESET}"
+        select remote in $gdrive_remotes "CREATE_A_NEW_REMOTE"; do
+            if [ "$remote" == "CREATE_A_NEW_REMOTE" ]; then
+                break # Break to the creation part
+            elif [ -n "$remote" ]; then
+                RCLONE_REMOTE_NAME=$remote
+                return
+            else
+                echo "${C_ERROR}Invalid selection.${C_RESET}"
+            fi
+        done
+    fi
+
+    # This section runs if no remotes exist or user chose to create a new one
+    echo
+    echo "${C_ACTION}------------------------- IMPORTANT: Rclone Setup Instructions -------------------------${C_RESET}"
+    echo "${C_WARN}You will now be guided through creating a Google Drive remote.${C_RESET}"
+    echo "1. When prompted for 'name', choose a simple name (e.g., 'gdrive_hub')."
+    echo "2. When prompted for 'Storage', select 'drive' (Google Drive)."
+    echo "3. For 'client_id' and 'client_secret', you must provide your own credentials from the Google Cloud Console."
+    echo "   ${C_ERROR}CRITICAL: When you copy your Client ID, copy ONLY the ID string, like:${C_RESET}"
+    echo "   ${C_BOLD}1234567890-abcdefghijklmnopqrstuvwxyz.apps.googleusercontent.com${C_RESET}"
+    echo "   ${C_ERROR}DO NOT paste the full URL or anything else.${C_RESET}"
+    echo "4. For all other options, pressing Enter for the default is usually safe."
+    echo "5. Your web browser should open for you to authorize the connection."
+    echo "${C_ACTION}--------------------------------------------------------------------------------------${C_RESET}"
+    read -r -p "Press ENTER to begin..."
+    
+    rclone config
+    
+    # After creation, ask the user to confirm the name of the new remote
+    echo "${C_ACTION}ACTION: Please enter the name of the remote you just created:${C_RESET}"
+    read -r RCLONE_REMOTE_NAME
+    if [ -z "$RCLONE_REMOTE_NAME" ]; then
+        echo "${C_ERROR}ERROR: No remote name provided. Exiting.${C_RESET}" >&2
+        exit 1
+    fi
+}
+
+# --- Main Execution ---
+
+main() {
+    setup_colors
+    trap cleanup_on_exit EXIT SIGINT SIGTERM
+
+    echo "${C_BOLD}====================================================================${C_RESET}"
+    echo "${C_BOLD}=== Robust Rclone + Restic Backup Setup for Debian             ===${C_RESET}"
+    echo "${C_BOLD}====================================================================${C_RESET}"
+    echo
+
+    # --- Step 1: Install Prerequisites ---
+    echo "--- [Step 1/7] Installing prerequisite tools..."
+    sudo apt-get update -qq
+    ensure_tool_installed "curl" "curl"
+    ensure_tool_installed "unzip" "unzip"
+    ensure_tool_installed "rclone" "rclone"
+    ensure_tool_installed "jq" "jq"
+    ensure_tool_installed "bunzip2" "bzip2"
+    echo
+
+    # --- Step 2: Ensure PATH is configured ---
+    echo "--- [Step 2/7] Verifying PATH environment..."
+    ensure_path
+    echo
+
+    # --- Step 3: Install/Upgrade Restic ---
+    echo "--- [Step 3/7] Installing/Upgrading Restic..."
+    install_restic
+    echo
+
+    # --- Step 4: Configure Rclone Remote ---
+    echo "--- [Step 4/7] Configuring Rclone remote for Google Drive..."
+    configure_rclone_remote
+    echo
+
+    # --- Step 5: Verify Rclone Authentication ---
+    echo "--- [Step 5/7] Verifying rclone authentication for '${C_BOLD}${RCLONE_REMOTE_NAME}${C_RESET}'..."
+    while ! rclone lsd "${RCLONE_REMOTE_NAME}:" >/dev/null 2>&1; do
+        echo "${C_ERROR}ERROR: Rclone cannot authenticate with '${C_BOLD}${RCLONE_REMOTE_NAME}${C_RESET}${C_ERROR}'.${C_RESET}"
+        echo "${C_WARN}This is likely due to an incomplete or incorrect initial setup.${C_RESET}"
+        echo "${C_ACTION}ACTION: Let's try to fix this by reconnecting the remote.${C_RESET}"
+        read -r -p "Press ENTER to run 'rclone config reconnect ${RCLONE_REMOTE_NAME}:'..."
+        rclone config reconnect "${RCLONE_REMOTE_NAME}:"
+        echo "${C_INFO}INFO: Re-checking connection...${C_RESET}"
+    done
+    echo "${C_INFO}SUCCESS: Rclone authentication for '${C_BOLD}${RCLONE_REMOTE_NAME}${C_RESET}${C_INFO}' is working.${C_RESET}"
+    echo
+
+    # --- Step 6: Setup Restic Repository & Password ---
+    local restic_repository="rclone:${RCLONE_REMOTE_NAME}:${RESTIC_REPO_PATH}"
+    echo "--- [Step 6/7] Setting up Restic repository and password..."
+    echo "Configuration that will be used:"
+    echo "  - Rclone Remote:  ${C_BOLD}$RCLONE_REMOTE_NAME${C_RESET}"
+    echo "  - Repository Path:  ${C_BOLD}$restic_repository${C_RESET}"
+    echo "  - Password File:    ${C_BOLD}$RESTIC_PASSWORD_FILE${C_RESET}"
+    
+    mkdir -p "$(dirname "$RESTIC_PASSWORD_FILE")"
+    if [ ! -f "$RESTIC_PASSWORD_FILE" ]; then
+        echo "${C_ACTION}ACTION: Please create a new, strong password for your backup repository.${C_RESET}"
+        read -s -p "Enter repository password: " restic_pass; echo
+        read -s -p "Confirm password: " restic_pass_confirm; echo
+        if [ "$restic_pass" = "$restic_pass_confirm" ] && [ -n "$restic_pass" ]; then
+            echo "$restic_pass" > "$RESTIC_PASSWORD_FILE" && chmod 600 "$RESTIC_PASSWORD_FILE"
+            echo "${C_INFO}SUCCESS: Password file created.${C_RESET}"
+        else
+            echo "${C_ERROR}ERROR: Passwords do not match or are empty. Please re-run the script.${C_RESET}" >&2; exit 1
+        fi
+    else
+        echo "${C_INFO}INFO: Existing password file found. Using it.${C_RESET}"
+    fi
+
+    if restic -r "$restic_repository" --password-file "$RESTIC_PASSWORD_FILE" cat config >/dev/null 2>&1; then
+        echo "${C_INFO}INFO: Restic repository already initialized. Skipping.${C_RESET}"
+    else
+        echo "${C_WARN}WARNING: Restic repository not found. Initializing...${C_RESET}"
+        if ! restic -r "$restic_repository" --password-file "$RESTIC_PASSWORD_FILE" init; then
+            echo "${C_ERROR}ERROR: Failed to initialize restic repository.${C_RESET}" >&2; exit 1
+        fi
+        echo "${C_INFO}SUCCESS: Restic repository initialized.${C_RESET}"
+    fi
+    echo
+
+    # --- Step 7: Deploy User Scripts ---
+    echo "--- [Step 7/7] Deploying helper scripts to '${C_BOLD}$USER_SCRIPT_DIR${C_RESET}'..."
+    # Deploy Backup Script
+    cat << EOF > "${USER_SCRIPT_DIR}/${BACKUP_SCRIPT_NAME}"
+#!/bin/bash
+set -euo pipefail
+if [ -z "\${1:-}" ] || [ "\$1" == "--help" ]; then echo "Usage: \$(basename "\$0") /path/to/backup"; exit 1; fi
+if [ ! -d "\$1" ]; then echo "Error: Path '\$1' is not a valid directory." >&2; exit 1; fi
+echo "--- Starting Restic Backup for '\$1' ---"
+restic -r "${restic_repository}" --password-file "${RESTIC_PASSWORD_FILE}" --verbose \\
+    -o rclone.connections=8 -o rclone.drive-skip-gdocs=true \\
+    backup "\$1" --tag "\$(date +%Y%m%d)"
+echo "--- Backup Finished ---"
+EOF
+    chmod +x "${USER_SCRIPT_DIR}/${BACKUP_SCRIPT_NAME}"
+    echo "${C_INFO}SUCCESS: Deployed '${C_BOLD}${BACKUP_SCRIPT_NAME}${C_RESET}${C_INFO}'.${C_RESET}"
+
+    # Deploy Maintenance Script
+    cat << EOF > "${USER_SCRIPT_DIR}/${MAINTENANCE_SCRIPT_NAME}"
+#!/bin/bash
+set -euo pipefail
+echo "--- Restic Repository Maintenance ---"
+echo "Repository: ${restic_repository}"
+echo
+PS3="Please choose a maintenance action: "
+select action in "Check Integrity" "Prune Old Snapshots" "Exit"; do
+    case \$action in
+        "Check Integrity")
+            echo "--- Running integrity check... ---"
+            restic -r "${restic_repository}" --password-file "${RESTIC_PASSWORD_FILE}" check
+            echo "--- Check complete. ---"; break;;
+        "Prune Old Snapshots")
+            echo "--- Applying retention policy (keep 7 daily, 4 weekly, 12 monthly) and pruning... ---"
+            restic -r "${restic_repository}" --password-file "${RESTIC_PASSWORD_FILE}" forget \\
+                --keep-daily 7 --keep-weekly 4 --keep-monthly 12 --keep-yearly 99 --prune
+            echo "--- Prune complete. ---"; break;;
+        "Exit") break;;
+        *) echo "Invalid option \$REPLY";;
+    esac
+done
+EOF
+    chmod +x "${USER_SCRIPT_DIR}/${MAINTENANCE_SCRIPT_NAME}"
+    echo "${C_INFO}SUCCESS: Deployed '${C_BOLD}${MAINTENANCE_SCRIPT_NAME}${C_RESET}${C_INFO}'.${C_RESET}"
+    echo
+    echo "${C_BOLD}=========================== SETUP COMPLETE ===========================${C_RESET}"
+    echo
+    echo "${C_INFO}You are now ready to back up your data!${C_RESET}"
+    echo "${C_WARN}If this is a new terminal, remember to run '${C_BOLD}source ~/.profile${C_RESET}${C_WARN}' (or similar).${C_RESET}"
+    echo
+    echo "  ${C_ACTION}To run a backup:${C_RESET}              ${C_BOLD}${BACKUP_SCRIPT_NAME} /path/to/your/data${C_RESET}"
+    echo "  ${C_ACTION}To run repository maintenance:${C_RESET}   ${C_BOLD}${MAINTENANCE_SCRIPT_NAME}${C_RESET}"
+    echo
+}
+
+main
+exit 0
+{% endcodeblock %}
+
+## The Backup Script: `gdrive-backup`
+
+This script is your day-to-day tool. Its only job is to take a directory you specify and back it up securely to your Google Drive repository.
+
+```bash
+#!/bin/bash
+set -euo pipefail
+if [ -z "${1:-}" ] || [ "$1" == "--help" ]; then echo "Usage: $(basename "$0") /path/to/backup"; exit 1; fi
+if [ ! -d "$1" ]; then echo "Error: Path '$1' is not a valid directory." >&2; exit 1; fi
+echo "--- Starting Restic Backup for '$1' ---"
+restic -r "rclone:gdrive_hub:ResticBackups/my-linux-desktop" --password-file "/home/linaro/.config/restic/gdrive_password" --verbose \
+    -o rclone.connections=8 -o rclone.drive-skip-gdocs=true \
+    backup "$1" --tag "$(date +%Y%m%d)"
+echo "--- Backup Finished ---"
+```
+
+#### Line-by-Line Explanation:
+
+1.  `#!/bin/bash`: This is the "shebang." It tells the system to execute this script using the Bash interpreter.
+2.  `set -euo pipefail`: This is a crucial line for safety, especially in a backup script.
+    * `set -e`: Exit immediately if any command fails. This prevents the script from continuing in an unpredictable state if a step goes wrong.
+    * `set -u`: Treat unset variables as an error. This catches typos in variable names.
+    * `set -o pipefail`: If a command in a pipeline fails, the entire pipeline's exit status is that of the failed command.
+3.  `if [ -z "${1:-}" ] ...`: This is the first input validation.
+    * `$1` is the first argument you pass to the script (e.g., in `gdrive-backup /home/linaro/Documents`, `$1` is `/home/linaro/Documents`).
+    * This line checks if you provided an argument. If `$1` is empty (`-z`) or if you asked for help (`--help`), it prints the correct usage instructions and exits.
+4.  `if [ ! -d "$1" ] ...`: This is the second input validation. It checks if the argument you provided is actually a directory (`-d`). If not, it prints an error and exits.
+5.  `echo "--- Starting..."`: A simple message to let you know the backup process has started.
+6.  The `restic ...` command is the main event. Let's break down its components:
+    * `restic`: The backup program itself.
+    * `-r "rclone:gdrive_hub:..."`: Specifies the **r**epository. This tells restic to use the `rclone` backend to connect to your remote named `gdrive_hub` and find the `ResticBackups/my-linux-desktop` folder inside it.
+    * `--password-file "..."`: Tells restic where to find the repository password. This is much more secure than typing it every time or saving it in a script.
+    * `--verbose`: Makes restic print more detailed information about what it's doing, which files it's scanning, and its progress.
+    * `-o rclone.connections=8`: The `-o` flag passes an **o**ption to the rclone backend. This specifically tells rclone to use up to 8 parallel connections to upload data, which can significantly speed up your backup.
+    * `-o rclone.drive-skip-gdocs=true`: Another option passed to rclone. This is very important for Google Drive. It tells rclone to ignore Google's proprietary files (Docs, Sheets, Slides) because they can't be downloaded as regular files and would cause errors.
+    * `backup "$1"`: This is the core command. It tells restic to perform a `backup` on the directory you provided (`$1`).
+    * `--tag "$(date +%Y%m%d)"`: This applies a label, or **tag**, to this specific backup snapshot. The `$(date +%Y%m%d)` part dynamically generates the current date in `YYYYMMDD` format (e.g., `20250616`). This is useful for finding backups from a specific day later on.
+
+## The Maintenance Script: `gdrive-maintenance`
+
+A backup system needs care. This script provides an easy-to-use menu for two critical maintenance tasks: checking for corruption and cleaning up old backups.
+
+```bash
+#!/bin/bash
+set -euo pipefail
+echo "--- Restic Repository Maintenance ---"
+echo "Repository: rclone:gdrive_hub:ResticBackups/my-linux-desktop"
+echo
+PS3="Please choose a maintenance action: "
+select action in "Check Integrity" "Prune Old Snapshots" "Exit"; do
+    case $action in
+        "Check Integrity")
+            # ...
+            ;;
+        "Prune Old Snapshots")
+            # ...
+            ;;
+        "Exit") break;;
+        *) echo "Invalid option $REPLY";;
+    esac
+done
+```
+
+#### Explanation of Components:
+
+1.  `select action in ...`: This is a special Bash loop that creates an interactive menu. It displays the options ("Check Integrity", etc.) numbered, and waits for you to type a number and press Enter. The chosen text is put into the `$action` variable.
+2.  `case $action in ... esac`: This statement checks the value of the `$action` variable and runs the code for the matching option.
+
+##### **Option 1: Check Integrity**
+
+```bash
+restic -r "..." --password-file "..." check
+```
+
+* The `restic check` command is vital. It scans the entire repository on Google Drive, verifies all the data structures, and ensures there is no corruption. It confirms that the data you've backed up can be successfully restored. It's a good idea to run this periodically (e.g., once a month).
+
+##### **Option 2: Prune Old Snapshots**
+
+```bash
+restic -r "..." --password-file "..." forget \
+    --keep-daily 7 --keep-weekly 4 --keep-monthly 12 --keep-yearly 99 --prune
+```
+
+* This is a two-part command combined into one (`forget` and `prune`).
+* `forget`: This command applies a retention policy. The `--keep-*` flags tell it which backup snapshots to keep:
+    * `--keep-daily 7`: Keep the last 7 daily backups (one for each of the last 7 days that has a backup).
+    * `--keep-weekly 4`: Keep the last 4 weekly backups (one for each of the last 4 weeks).
+    * `--keep-monthly 12`: Keep the last 12 monthly backups.
+    * `--keep-yearly 99`: Keep the last 99 yearly backups (effectively forever).
+* `--prune`: After `forget` has decided which snapshots to remove, `--prune` does the actual cleanup. It scans the repository and permanently deletes all the data chunks that are no longer needed by any of the remaining snapshots, freeing up space on your Google Drive.
