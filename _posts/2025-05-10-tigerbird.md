@@ -1,5 +1,5 @@
 ---
-tags: [aid>linux>software]
+tags: [aid>software>linux]
 info: aberto.
 date: 2025-05-10
 type: post
