@@ -1,5 +1,5 @@
 ---
-tags: [aid>linux>software>dotfile]
+tags: [aid>software>linux>dotfile]
 info: aberto.
 date: 2025-05-09
 type: post
