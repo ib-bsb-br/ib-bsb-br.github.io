@@ -1,5 +1,5 @@
 ---
-tags: [aid>linux>hardware>rockchip]
+tags: [aid>software>linux>rockchip]
 info: aberto.
 date: 2025-05-12
 type: post
