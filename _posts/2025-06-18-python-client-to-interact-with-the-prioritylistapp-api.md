@@ -310,6 +310,238 @@ if __name__ == '__main__':
 
 ```
 
+### Quick Start for Advanced Users
+
+For experienced users familiar with Python and Linux environments:
+
+1.  **Save the script:** Save the code as `prioritylist-cli.py`.
+2.  **Create venv & install:**
+    ```bash
+    python3 -m venv .venv
+    source .venv/bin/activate
+    pip install requests ptpython
+    ```
+3.  **Configure credentials:** Create `~/.config/prioritylist/config.ini` with your `phpsessid` and `rkey`.
+    ```ini
+    [auth]
+    phpsessid = YOUR_PHPSESSID_VALUE
+    rkey = YOUR_RKEY_VALUE
+    ```
+4.  **Make executable & move to PATH:**
+    ```bash
+    chmod +x prioritylist-cli.py
+    mkdir -p ~/.local/bin
+    mv prioritylist-cli.py ~/.local/bin/
+    # Ensure ~/.local/bin is in your PATH
+    ```
+5.  **Run:** `prioritylist-cli.py list pull-all`
+
+---
+
+## Table of Contents
+
+1.  **Part 1: Environment Setup (The Right Way)**
+    *   1.1. System Dependencies
+    *   1.2. Creating a Python Virtual Environment (Best Practice)
+    *   1.3. Installing Script Dependencies
+2.  **Part 2: Script Installation & Configuration**
+    *   2.1. Saving the Script
+    *   2.2. Making the Script Globally Executable
+3.  **Part 3: Authentication - The Critical Step**
+    *   3.1. Finding Your `PHPSESSID` and `rkey`
+    *   3.2. Storing Your Credentials Securely
+    *   3.3. Security Considerations
+4.  **Part 4: Command Cheatsheet & Usage**
+    *   4.1. Global Options
+    *   4.2. List Commands
+    *   4.3. Sublist Commands
+    *   4.4. Task Commands
+    *   4.5. Interactive REPL Mode
+5.  **Part 5: Troubleshooting**
+
+---
+
+## Part 1: Environment Setup (The Right Way)
+
+We will use a Python virtual environment to keep your system clean and avoid dependency conflicts.
+
+### 1.1. System Dependencies
+
+Ensure Python 3, pip, and the `venv` module are installed on your openSUSE Tumbleweed system.
+
+```bash
+sudo zypper install python3 python3-pip python3-venv
+```
+
+### 1.2. Creating a Python Virtual Environment (Best Practice)
+
+A virtual environment is an isolated space for your Python project's dependencies.
+
+1.  **Create a Project Directory:** First, make a directory for your script and its environment.
+    ```bash
+    mkdir ~/prioritylist-project
+    cd ~/prioritylist-project
+    ```
+
+2.  **Create the Virtual Environment:** Use Python's built-in `venv` module to create an environment named `.venv`.
+    ```bash
+    python3 -m venv .venv
+    ```
+
+3.  **Activate the Environment:** You must "activate" the environment to use it. Your shell prompt will change to indicate it's active.
+    ```bash
+    source .venv/bin/activate
+    ```
+    > **Note:** To leave the environment, simply type `deactivate`. You must activate the environment in any new terminal session where you want to run the script or install packages for it.
+
+### 1.3. Installing Script Dependencies
+
+With your environment active, install the required Python libraries. They will be installed inside the `.venv` directory, not system-wide.
+
+```bash
+pip install requests ptpython
+```
+
+## Part 2: Script Installation & Configuration
+
+Now we'll save the script and make it easy to run from anywhere.
+
+### 2.1. Saving the Script
+
+Save the Python code you were given into a file named `prioritylist-cli.py` inside your `~/prioritylist-project` directory.
+
+### 2.2. Making the Script Globally Executable
+
+To run `prioritylist-cli.py` from any directory without typing the full path, we'll make it executable and move it to a location in your system's `PATH`.
+
+1.  **Grant Execute Permissions:**
+    ```bash
+    chmod +x prioritylist-cli.py
+    ```
+
+2.  **Move to Local Bin Directory:** The standard location for user-specific executables is `~/.local/bin`.
+    ```bash
+    mkdir -p ~/.local/bin
+    mv prioritylist-cli.py ~/.local/bin/
+    ```
+
+3.  **Verify your PATH:** On most modern Linux systems, `~/.local/bin` is automatically added to your `PATH` when you log in. You can verify this:
+    ```bash
+    echo $PATH
+    ```
+    If you see `/home/your_username/.local/bin` in the output, you are all set. If not, add the following line to your `~/.profile` or `~/.bashrc` file and restart your shell session:
+    ```bash
+    # Add this line to ~/.profile
+    export PATH="$HOME/.local/bin:$PATH"
+    ```
+
+## Part 3: Authentication - The Critical Step
+
+The script requires your account's session cookies to work.
+
+### 3.1. Finding Your `PHPSESSID` and `rkey`
+
+1.  **Log In:** In Firefox or a Chromium-based browser, log in to [https://prioritylist.app](https://prioritylist.app).
+2.  **Open Developer Tools:** Press `F12` or right-click the page and select "Inspect".
+3.  **Go to Storage/Application:**
+    *   In **Firefox**, go to the **Storage** tab.
+    *   In **Chrome/Edge**, go to the **Application** tab.
+4.  **Find Cookies:** In the sidebar, expand "Cookies" and select `https://prioritylist.app`.
+5.  **Copy Values:** Find the rows for `PHPSESSID` and `rkey`. Carefully copy the long string from the **"Value"** column for each.
+
+> **Important Note on Credentials**
+> These cookies can and will expire (e.g., after a few days, or when you log out). If the script suddenly stops working with an "API Error" or "HTTP 401/403" error, the most likely cause is an expired cookie. You will need to repeat this step to get new, valid cookie values.
+
+### 3.2. Storing Your Credentials Securely
+
+The script checks for credentials in three places. The configuration file is the most convenient and recommended method.
+
+1.  **Create the Directory:**
+    ```bash
+    mkdir -p ~/.config/prioritylist
+    ```
+2.  **Create the Config File:**
+    ```bash
+    nano ~/.config/prioritylist/config.ini
+    ```
+3.  **Add Your Credentials:** Paste the following into the file, replacing the placeholders with your actual values.
+    ```ini
+    [auth]
+    phpsessid = YOUR_PHPSESSID_VALUE_HERE
+    rkey = YOUR_RKEY_VALUE_HERE
+    ```
+    Save and exit (`Ctrl+O`, then `Ctrl+X` in `nano`).
+
+### 3.3. Security Considerations
+
+*   **Treat these credentials like passwords.** Anyone with them can access your PriorityList account.
+*   The `config.ini` file is stored as plain text. On a multi-user system, ensure its permissions are secure (`chmod 600 ~/.config/prioritylist/config.ini`).
+*   Avoid passing credentials as command-line arguments (`--phpsessid ...`), as they will be stored in your shell's history file (`.bash_history`).
+
+## Part 4: Command Cheatsheet & Usage
+
+Remember to have your virtual environment active (`source ~/prioritylist-project/.venv/bin/activate`) before running commands.
+
+### 4.1. Global Options
+
+| Option        | Description                                                  |
+|---------------|--------------------------------------------------------------|
+| `--json`      | Output machine-readable JSON instead of human-friendly text. |
+
+### 4.2. List Commands
+
+| Action     | Description                                               | Example Command                                                   |
+|------------|-----------------------------------------------------------|-------------------------------------------------------------------|
+| `pull-all` | Fetch and display all your lists and groups.              | `prioritylist-cli.py list pull-all`                               |
+| `show`     | Show full JSON details for a single list.                 | `prioritylist-cli.py list show 12345`                             |
+| `add`      | Add a new list.                                           | `prioritylist-cli.py list add --name "New Project"`               |
+| `update`   | Rename a list.                                            | `prioritylist-cli.py list update 12345 --name "Renamed Project"`  |
+| `delete`   | **Permanently delete** a list.                            | `prioritylist-cli.py list delete 12345`                           |
+| `star`     | Toggle the star status on a list.                         | `prioritylist-cli.py list star 12345`                             |
+
+### 4.3. Sublist Commands
+
+| Action   | Description                     | Example Command                                                                 |
+|----------|---------------------------------|---------------------------------------------------------------------------------|
+| `add`    | Add a new sublist to a list.    | `prioritylist-cli.py sublist add --list-id 12345 --name "Design Phase"`         |
+| `update` | Rename a sublist.               | `prioritylist-cli.py sublist update 56789 --name "Final Designs"`               |
+| `delete` | **Permanently delete** a sublist. | `prioritylist-cli.py sublist delete 56789`                                      |
+
+### 4.4. Task Commands
+
+| Action   | Description                     | Example Command                                                                                         |
+|----------|---------------------------------|---------------------------------------------------------------------------------------------------------|
+| `add`    | Add a new task to a sublist.    | `prioritylist-cli.py task add --sublist-id 56789 --name "Create logo" -i 8 -t 3`                          |
+| `update` | Update an existing task.        | `prioritylist-cli.py task update 98765 --name "Finalize logo" --due-date "2024-12-20"`                   |
+| `delete` | **Permanently delete** a task.  | `prioritylist-cli.py task delete 98765`                                                                 |
+
+### 4.5. Interactive REPL Mode
+
+Run the script with no arguments to enter a powerful interactive shell.
+
+```bash
+prioritylist-cli.py
+```
+
+Inside the REPL, a pre-configured `client` object is available. You can explore the API directly.
+
+```python
+# Example REPL session
+>>> # Get details for a list and print it nicely
+>>> details = client.get_list_details(12345)
+>>> print_json(details)
+```
+
+## Part 5: Troubleshooting
+
+| Error Message / Symptom                             | Likely Cause & Solution                                                                                                                                                                                             |
+|-----------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `bash: prioritylist-cli.py: command not found`      | 1. Your `~/.local/bin` is not in your `PATH`. See step 2.2. <br> 2. You have not restarted your shell since modifying your `~/.profile` or `~/.bashrc`. <br> 3. You are trying to run it from a non-active venv. |
+| `ImportError: No module named 'requests'`           | The required Python libraries are not installed in your **active** virtual environment. Ensure you have run `source .venv/bin/activate` and then `pip install requests ptpython`.                                       |
+| `❌ Error: Authentication credentials not found.`   | The script could not find your `config.ini` file. Ensure it is located at `~/.config/prioritylist/config.ini` and the keys (`phpsessid`, `rkey`) are spelled correctly.                                             |
+| `❌ API Error...` or `❌ HTTP Error... 401/403`         | Your credentials have expired or are incorrect. This is the most common operational error. Repeat **Part 3.1** to get new cookie values and update your `config.ini` file.                                      |
+| `❌ Request failed... ConnectionError`              | You have a network problem. Check your internet connection and ensure you can access `prioritylist.app` in your browser.                                                                                             |
+
 {% codeblock python %}
 #!/usr/bin/env python3
 """
