@@ -67,7 +67,7 @@
         
           <span class="post-updated">
             ↣
-            <time datetime="2025-06-18T19:48:44+00:00">
+            <time datetime="2025-06-18T20:22:43+00:00">
               18 Jun 2025
             </time>
           </span>
@@ -90,11 +90,11 @@
         <div class="page-stats mt-3" role="status" aria-label="Page statistics">
       
       <span class="badge bg-primary">
-        47118 characters
+        48199 characters
       </span>
         <span class="separator mx-2" aria-hidden="true">•</span>
         <span class="badge bg-primary">
-        4765 words
+        4892 words
       </span>
       </div>
         <div class="action-buttons d-flex flex-wrap gap-2">
@@ -1183,6 +1183,8 @@ class PriorityListApiClient:
         if response_data:
             try:
                 for group in response_data:
+                    # Find the list by name to avoid relying on array order.
+                    # Note: This might not be perfect if duplicate names are allowed.
                     for lst in group.get(&#39;lists&#39;, []):
                         if lst[&#39;name&#39;] == name:
                             return lst
@@ -1194,6 +1196,8 @@ class PriorityListApiClient:
         return self._post(&quot;/list/update&quot;, {&quot;id&quot;: list_id, &quot;name&quot;: name}) is not None
 
     def delete_list(self, list_id: int) -&gt; bool:
+        # Note: The delete endpoint was not in the HAR file, this is an educated guess.
+        # If it fails, the actual endpoint might be different (e.g., /list/remove).
         return self._post(&quot;/list/delete&quot;, {&quot;id&quot;: list_id}) is not None
 
     def star_list(self, list_id: int) -&gt; bool:
@@ -1216,15 +1220,23 @@ class PriorityListApiClient:
         return self._post(&quot;/sublist/update&quot;, {&quot;id&quot;: sublist_id, &quot;name&quot;: name}) is not None
 
     def delete_sublist(self, sublist_id: int) -&gt; bool:
+        # Note: The delete endpoint was not in the HAR file, this is an educated guess.
         return self._post(&quot;/sublist/delete&quot;, {&quot;id&quot;: sublist_id}) is not None
 
     # --- Task Operations ---
     def create_task(self, sublist_id: int, name: str, **kwargs) -&gt; Optional[Dict[str, Any]]:
         &quot;&quot;&quot;Creates a new task and robustly finds and returns it.&quot;&quot;&quot;
         payload = {&quot;sublist_id&quot;: sublist_id, &quot;name&quot;: name}
+        # Map CLI-friendly names to API parameter names
+        if &#39;importance&#39; in kwargs: payload[&#39;score_i&#39;] = kwargs.pop(&#39;importance&#39;)
+        if &#39;time&#39; in kwargs: payload[&#39;score_t&#39;] = kwargs.pop(&#39;time&#39;)
+        if &#39;due_date&#39; in kwargs: payload[&#39;d_date&#39;] = kwargs.pop(&#39;due_date&#39;)
+        if &#39;dependency_id&#39; in kwargs: payload[&#39;dependency_id&#39;] = kwargs.pop(&#39;dependency_id&#39;)
+        
         payload.update(kwargs)
-        if &#39;d_date&#39; in payload and payload[&#39;d_date&#39;]:
+        if payload.get(&#39;d_date&#39;):
             payload.setdefault(&#39;d_zone&#39;, &#39;-0300&#39;)
+            
         response_data = self._post(&quot;/item/add&quot;, payload)
         if response_data:
             try:
@@ -1244,6 +1256,7 @@ class PriorityListApiClient:
         return self._post(&quot;/item/update&quot;, data=payload) is not None
 
     def delete_task(self, task_id: int) -&gt; bool:
+        # Note: The delete endpoint was not in the HAR file, this is an educated guess.
         return self._post(&quot;/item/delete&quot;, {&quot;id&quot;: task_id}) is not None
 
 # ─────────────────────────────────────────────────────────────
@@ -1261,7 +1274,8 @@ def get_credentials(ns: argparse.Namespace) -&gt; Tuple[str, str]:
         
     cfg_file = Path.home() / &quot;.config&quot; / &quot;prioritylist&quot; / &quot;config.ini&quot;
     if cfg_file.exists():
-        cp = configparser.ConfigParser()
+        # FIX: Disable interpolation to handle &#39;%&#39; characters in cookie values
+        cp = configparser.ConfigParser(interpolation=None)
         cp.read(cfg_file)
         if &quot;auth&quot; in cp and &quot;phpsessid&quot; in cp[&quot;auth&quot;] and &quot;rkey&quot; in cp[&quot;auth&quot;]:
             return cp[&quot;auth&quot;][&quot;phpsessid&quot;], cp[&quot;auth&quot;][&quot;rkey&quot;]
@@ -1341,8 +1355,8 @@ def handle_sublist_delete(client: PriorityListApiClient, ns: argparse.Namespace)
 
 def handle_task_add(client: PriorityListApiClient, ns: argparse.Namespace):
     params = {
-        &quot;score_i&quot;: ns.importance,
-        &quot;score_t&quot;: ns.time,
+        &quot;importance&quot;: ns.importance,
+        &quot;time&quot;: ns.time,
         &quot;d_date&quot;: ns.due_date or &quot;&quot;,
         &quot;dependency_id&quot;: ns.dependency_id or &quot;&quot;,
     }
@@ -1579,6 +1593,8 @@ class PriorityListApiClient:
         if response_data:
             try:
                 for group in response_data:
+                    # Find the list by name to avoid relying on array order.
+                    # Note: This might not be perfect if duplicate names are allowed.
                     for lst in group.get(&#39;lists&#39;, []):
                         if lst[&#39;name&#39;] == name:
                             return lst
@@ -1590,6 +1606,8 @@ class PriorityListApiClient:
         return self._post(&quot;/list/update&quot;, {&quot;id&quot;: list_id, &quot;name&quot;: name}) is not None
 
     def delete_list(self, list_id: int) -&gt; bool:
+        # Note: The delete endpoint was not in the HAR file, this is an educated guess.
+        # If it fails, the actual endpoint might be different (e.g., /list/remove).
         return self._post(&quot;/list/delete&quot;, {&quot;id&quot;: list_id}) is not None
 
     def star_list(self, list_id: int) -&gt; bool:
@@ -1612,15 +1630,23 @@ class PriorityListApiClient:
         return self._post(&quot;/sublist/update&quot;, {&quot;id&quot;: sublist_id, &quot;name&quot;: name}) is not None
 
     def delete_sublist(self, sublist_id: int) -&gt; bool:
+        # Note: The delete endpoint was not in the HAR file, this is an educated guess.
         return self._post(&quot;/sublist/delete&quot;, {&quot;id&quot;: sublist_id}) is not None
 
     # --- Task Operations ---
     def create_task(self, sublist_id: int, name: str, **kwargs) -&gt; Optional[Dict[str, Any]]:
         &quot;&quot;&quot;Creates a new task and robustly finds and returns it.&quot;&quot;&quot;
         payload = {&quot;sublist_id&quot;: sublist_id, &quot;name&quot;: name}
+        # Map CLI-friendly names to API parameter names
+        if &#39;importance&#39; in kwargs: payload[&#39;score_i&#39;] = kwargs.pop(&#39;importance&#39;)
+        if &#39;time&#39; in kwargs: payload[&#39;score_t&#39;] = kwargs.pop(&#39;time&#39;)
+        if &#39;due_date&#39; in kwargs: payload[&#39;d_date&#39;] = kwargs.pop(&#39;due_date&#39;)
+        if &#39;dependency_id&#39; in kwargs: payload[&#39;dependency_id&#39;] = kwargs.pop(&#39;dependency_id&#39;)
+        
         payload.update(kwargs)
-        if &#39;d_date&#39; in payload and payload[&#39;d_date&#39;]:
+        if payload.get(&#39;d_date&#39;):
             payload.setdefault(&#39;d_zone&#39;, &#39;-0300&#39;)
+            
         response_data = self._post(&quot;/item/add&quot;, payload)
         if response_data:
             try:
@@ -1640,6 +1666,7 @@ class PriorityListApiClient:
         return self._post(&quot;/item/update&quot;, data=payload) is not None
 
     def delete_task(self, task_id: int) -&gt; bool:
+        # Note: The delete endpoint was not in the HAR file, this is an educated guess.
         return self._post(&quot;/item/delete&quot;, {&quot;id&quot;: task_id}) is not None
 
 # ─────────────────────────────────────────────────────────────
@@ -1657,7 +1684,8 @@ def get_credentials(ns: argparse.Namespace) -&gt; Tuple[str, str]:
         
     cfg_file = Path.home() / &quot;.config&quot; / &quot;prioritylist&quot; / &quot;config.ini&quot;
     if cfg_file.exists():
-        cp = configparser.ConfigParser()
+        # FIX: Disable interpolation to handle &#39;%&#39; characters in cookie values
+        cp = configparser.ConfigParser(interpolation=None)
         cp.read(cfg_file)
         if &quot;auth&quot; in cp and &quot;phpsessid&quot; in cp[&quot;auth&quot;] and &quot;rkey&quot; in cp[&quot;auth&quot;]:
             return cp[&quot;auth&quot;][&quot;phpsessid&quot;], cp[&quot;auth&quot;][&quot;rkey&quot;]
@@ -1737,8 +1765,8 @@ def handle_sublist_delete(client: PriorityListApiClient, ns: argparse.Namespace)
 
 def handle_task_add(client: PriorityListApiClient, ns: argparse.Namespace):
     params = {
-        &quot;score_i&quot;: ns.importance,
-        &quot;score_t&quot;: ns.time,
+        &quot;importance&quot;: ns.importance,
+        &quot;time&quot;: ns.time,
         &quot;d_date&quot;: ns.due_date or &quot;&quot;,
         &quot;dependency_id&quot;: ns.dependency_id or &quot;&quot;,
     }
@@ -2275,7 +2303,7 @@ if __name__ == &quot;__main__&quot;:
         
         
         <a href="https://ib.bsb.br/404" aria-label="404">
-          2025-06-18 16:52:52
+          2025-06-18 17:26:11
         </a>
         &#x23;
     
@@ -2343,7 +2371,7 @@ if __name__ == &quot;__main__&quot;:
         "headline": "Python client to interact with the `prioritylist.app` API",
         "description": "",
         "datePublished": "2025-06-18T00:00:00+00:00",
-        "dateModified": "2025-06-18T19:48:44+00:00",
+        "dateModified": "2025-06-18T20:22:43+00:00",
         "author": {
           "@type": "Person",
           "name": "Author"
