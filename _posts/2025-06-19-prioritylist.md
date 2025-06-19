@@ -1,12 +1,12 @@
 ---
-title: 'prioritylist.app cheatsheet'
-date: '2025-06-19'
-comment: 'https://prioritylist.app/'
 tags: [scratchpad]
+date: 2025-06-19
+type: post
+layout: post
 published: true
 slug: prioritylist
+title: 'prioritylist.app cheatsheet'
 ---
-
 `https://prioritylist.app/`
 
 ### Importance Scale Cheatsheet
