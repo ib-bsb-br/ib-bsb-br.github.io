@@ -1,16 +1,14 @@
 ---
-tags:
-- scratchpad
+tags: [scratchpad]
 info: aberto.
 date: 2025-06-20
 type: post
 layout: post
 published: true
-slug: john-taylor-gattos-dumbing-us-down
-title: John Taylor Gatto's `Dumbing Us Down`
+slug: dumbing-us-down
+title: '`Dumbing Us Down` by John Taylor Gatto'
 comment: https://shikshantar.org/sites/default/files/PDF/John%20Taylor%20Gatto-Dumbing%20Us%20Down_%20The%20Hidden%20Curriculum%20of%20Compulsory%20Schooling%20%282002%29.pdf
 ---
-
 
 ## Introduction: The Schoolteacher as Socratic Gadfly
 
