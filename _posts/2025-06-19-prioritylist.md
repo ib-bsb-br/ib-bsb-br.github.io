@@ -89,25 +89,7 @@ Before using the table, perform this crucial **pre-triage step**: for each task,
 # thermal printing
 
 ```
-# **\======================================== TASK TRIAGE & STRATEGY FRAMEWORK**
-
-## **HOW TO USE THIS FRAMEWORK**
-
-The process has two key steps: Triage  
-and Strategy.
-
-1. Triage (Objective Assessment)  
-   Assign two scores to each task:  
-   * Impact Level: Start at Level 10  
-     and work down. The first "Yes"  
-     to a Key Question sets the score.  
-   * Effort Score: Realistically  
-     estimate the time required.  
-2. Strategy (Decision-Making)  
-   Use your scores with the guide to  
-   decide how and when to act.
-
-## **PRE-TRIAGE STEP: DEFINE PARENT GOAL**
+## PRE-TRIAGE STEP: DEFINE PARENT GOAL
 
 Before scoring, define the "parent"  
 project or goal for each task. The  
@@ -115,62 +97,68 @@ impact of a task depends on its
 parent's importance. Never score a  
 task in a vacuum.
 
-# **\======================================== QUICK REFERENCE**
+# TASK TRIAGE SUMMARY
 
-L10: Catastrophic Harm  
-L9: Critical Harm  
-L8: Substantial Harm  
-L7: High Harm (Gridlock)  
-L6: Moderate Harm (Friction)  
-L5: Tolerable Harm (Quality Debt)  
-L4: Minor Harm (Personal Clutter)  
-L3: Minor Harm (Personal Clutter)  
-L2: Negligible Harm (Backlog Noise)  
-L1: Negligible Harm (Backlog Noise)  
-L0: Negligible Harm (Backlog Noise)
+## Impact Level: 10
+Effort (Time): ~1 minute
+Key Question: Will delay cause irreversible parent failure?
 
-# **\======================================== TASK TRIAGE SUMMARY**
+## Impact Level: 9
+Effort (Time): ~5 minutes
+Key Question: Will delay make recovery prohibitively difficult/costly?
 
-## **Impact Level: 10 Effort (Time): \~1 minute Key Question: Will delay cause irreversible parent failure?**
+## Impact Level: 8
+Effort (Time): ~15 minutes
+Key Question: Will delay cause a significant slip in core resources?
 
-## **Impact Level: 9 Effort (Time): \~5 minutes Key Question: Will delay make recovery prohibitively difficult/costly?**
+## Impact Level: 7
+Effort (Time): ~30 minutes
+Key Question: Does delay completely block other people from working?
 
-## **Impact Level: 8 Effort (Time): \~15 minutes Key Question: Will delay cause a significant slip in core resources?**
+## Impact Level: 6
+Effort (Time): ~1 hour
+Key Question: Does delay create significant problems or rework for others?
 
-## **Impact Level: 7 Effort (Time): \~30 minutes Key Question: Does delay completely block other people from working?**
+## Impact Level: 5
+Effort (Time): ~2-3 hours
+Key Question: Are the consequences of delay manageable and absorbable without derailing parent progress? (Parent doesn't depend on it, but it adds value).
 
-## **Impact Level: 6 Effort (Time): \~1 hour Key Question: Does delay create significant problems or rework for others?**
+## Impact Level: 4
+Effort (Time): ~4-6 hours
+Key Question: Does delay only cause minor inconvenience for you?
 
-## **Impact Level: 5 Effort (Time): \~2-3 hours Key Question: Are the consequences of delay manageable and absorbable without derailing parent progress? (Parent doesn't depend on it, but it adds value).**
+## Impact Level: 3
+Effort (Time): ~1 day
+Key Question: Is the impact a trivial, easily-fixed annoyance for you alone?
 
-## **Impact Level: 4 Effort (Time): \~4-6 hours Key Question: Does delay only cause minor inconvenience for you?**
+## Impact Level: 2
+Effort (Time): ~2-3 days
+Key Question: Would you barely notice if this was delayed for another month?
 
-## **Impact Level: 3 Effort (Time): \~1 day Key Question: Is the impact a trivial, easily-fixed annoyance for you alone?**
-
-## **Impact Level: 2 Effort (Time): \~2-3 days Key Question: Would you barely notice if this was delayed for another month?**
-
-## **Impact Level: 1 Effort (Time): \~4-6 days Key Question: Is this a "nice to have" with no real negative consequence?**
+## Impact Level: 1
+Effort (Time): ~4-6 days
+Key Question: Is this a "nice to have" with no real negative consequence?
 
 Impact Level: 0  
 Effort (Time): \~1+ weeks  
 Key Question: Is this task  
 irrelevant or obsolete?
 
-# **\======================================== DEEPER LOOK: IMPACT LEVELS**
+# DEEPER LOOK: IMPACT LEVELS
 
-## **\--- LEVEL 10 \--- Title: Catastrophic Harm (Existential Threat) Effort: \~1 minute Principle: Delay means the project or goal ceases to exist. There is no recovery. Think About: Legal deadlines, final contract dates, critical safety failures. Example: A software bug is actively corrupting all user data. Rolling it back is Level 10 because delay causes irreversible damage.**
+## \--- LEVEL 10 \--- Title: Catastrophic Harm (Existential Threat) Effort: \~1 minute Principle: Delay means the project or goal ceases to exist. There is no recovery. Think About: Legal deadlines, final contract dates, critical safety failures. Example: A software bug is actively corrupting all user data. Rolling it back is Level 10 because delay causes irreversible damage.
 
-## **\--- LEVEL 9 \--- Title: Critical Harm (Project Jeopardy) Effort: \~5 minutes Principle: Delay triggers a crisis. Recovery is possible but extremely costly and disruptive. Think About: Losing a "once in a lifetime" opportunity, major reputation damage. Example: Forgetting to book a flight for a critical client presentation tomorrow. You can go, but at immense financial and personal cost.**
+## \--- LEVEL 9 \--- Title: Critical Harm (Project Jeopardy) Effort: \~5 minutes Principle: Delay triggers a crisis. Recovery is possible but extremely costly and disruptive. Think About: Losing a "once in a lifetime" opportunity, major reputation damage. Example: Forgetting to book a flight for a critical client presentation tomorrow. You can go, but at immense financial and personal cost.
 
-## **\--- LEVEL 8 \--- Title: Substantial Harm (Major Setback) Effort: \~15 minutes Principle: Delay causes a major Resource Drain (time, money, scope) that requires formal explanation. Think About: Will this require you to formally report a budget overrun or a change in delivery date? Example: Delaying a key software decision forces a team of five to pause work for days.**
+## \--- LEVEL 8 \--- Title: Substantial Harm (Major Setback) Effort: \~15 minutes Principle: Delay causes a major Resource Drain (time, money, scope) that requires formal explanation. Think About: Will this require you to formally report a budget overrun or a change in delivery date? Example: Delaying a key software decision forces a team of five to pause work for days.
 
-## **\--- LEVEL 7 \--- Title: High Harm (Collaborative Gridlock) Effort: \~30 minutes Principle: Your delay creates a full stop for someone else. You are a bottleneck. Think About: Is there a person whose next action is "Wait for \[Your Name\] to finish..."? Example: Finance cannot close the quarterly books until you provide the final sales numbers.**
+## \--- LEVEL 7 \--- Title: High Harm (Collaborative Gridlock) Effort: \~30 minutes Principle: Your delay creates a full stop for someone else. You are a bottleneck. Think About: Is there a person whose next action is "Wait for \[Your Name\] to finish..."? Example: Finance cannot close the quarterly books until you provide the final sales numbers.
 
-## **\--- LEVEL 6 \--- Title: Moderate Harm (Team Friction) Effort: \~1 hour Principle: Your delay creates inefficiency and frustration. It forces rework and lowers quality. Think About: Will someone have to redo their work because they had incomplete info from you? Example: Providing a draft with known errors forces your manager to review it twice, doubling their effort.**
+## \--- LEVEL 6 \--- Title: Moderate Harm (Team Friction) Effort: \~1 hour Principle: Your delay creates inefficiency and frustration. It forces rework and lowers quality. Think About: Will someone have to redo their work because they had incomplete info from you? Example: Providing a draft with known errors forces your manager to review it twice, doubling their effort.
 
-## **\--- LEVEL 5 \--- Title: Tolerable Harm (Quality Debt) Effort: \~2-3 hours Principle: Delay impacts internal quality and best practices. This creates "quality debt" to be paid later. Think About: The "important, but not urgent" tasks like refactoring code or organizing files. Example: A messy shared folder makes finding info slow, costing hundreds of hours of productivity over a year.**
+## \--- LEVEL 5 \--- Title: Tolerable Harm (Quality Debt) Effort: \~2-3 hours Principle: Delay impacts internal quality and best practices. This creates "quality debt" to be paid later. Think About: The "important, but not urgent" tasks like refactoring code or organizing files. Example: A messy shared folder makes finding info slow, costing hundreds of hours of productivity over a year.
 
-## **\--- LEVELS 4-3 \--- Title: Minor Harm (Personal Clutter) Effort: \~4-6 hours (L4), \~1 day (L3) Principle: The negative impact is contained entirely to you and your personal workflow. Think About: These tasks add mental load but don't generate real impact. Example: (L4) A messy inbox. (L3) Desktop files that need sorting.**
+## \--- LEVELS 4-3 \--- Title: Minor Harm (Personal Clutter) Effort: \~4-6 hours (L4), \~1 day (L3) Principle: The negative impact is contained entirely to you and your personal workflow. Think About: These tasks add mental load but don't generate real impact. Example: (L4) A messy inbox. (L3) Desktop files that need sorting.
 
-## **\--- LEVELS 2-0 \--- Title: Negligible Harm (Backlog Noise) Effort: Days to Weeks+ Principle: These items are not real, actionable tasks and should be aggressively removed. Think About: If you deleted it right now, would anyone notice in a month? Example: (L2) "Explore new note apps." (L1) "Learn about marketing." (L0) "Prep for Q2 meeting" (in Q4).**
+## \--- LEVELS 2-0 \--- Title: Negligible Harm (Backlog Noise) Effort: Days to Weeks+ Principle: These items are not real, actionable tasks and should be aggressively removed. Think About: If you deleted it right now, would anyone notice in a month? Example: (L2) "Explore new note apps." (L1) "Learn about marketing." (L0) "Prep for Q2 meeting" (in Q4).
 ```
