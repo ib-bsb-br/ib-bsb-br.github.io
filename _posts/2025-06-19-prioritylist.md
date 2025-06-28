@@ -9,6 +9,8 @@ title: 'prioritylist.app cheatsheet'
 ---
 `https://prioritylist.app/`
 
+### 'Harm of Delay' Scale Cheatsheet
+
 | Level | Meaning (Harm of Delay) | Concrete Example (Personal & Professional) |
 | :---- | :---- | :---- |
 | 10 | **Catastrophic Harm:** Causes failure of a primary goal, a legal/contractual breach, or irreversible damage. | "Paying my income taxes on the final deadline day to avoid severe legal and financial penalties." |
@@ -23,7 +25,7 @@ title: 'prioritylist.app cheatsheet'
 | 01 | **Insignificant Harm:** A "nice to have" with no deadline and no discernible negative consequence if delayed. | "Brainstorming potential vacation ideas for next year." |
 | 00 | **No Harm:** The task is likely irrelevant or outdated. Delay causes zero negative impact. | "A task to research a product that I've already purchased or decided against." |
 
-### Importance Scale Cheatsheet
+### 'Importance' Scale Cheatsheet
 
 | Code | Meaning |
 | :--- | :--- |
@@ -39,9 +41,7 @@ title: 'prioritylist.app cheatsheet'
 | 09 | extremely important |
 | 10 | critical |
 
-***
-
-### Effort Scale Cheatsheet
+### 'Effort' Scale Cheatsheet
 
 | Code | Estimated Time |
 | :--- | :--- |
