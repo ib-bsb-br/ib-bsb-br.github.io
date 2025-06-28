@@ -56,3 +56,100 @@ title: 'prioritylist.app cheatsheet'
 | 08 | 15 minutes |
 | 09 | 5 minutes |
 | 10 | 1 minute |
+
+***
+
+# thermal printing
+
+```
+=== HARM OF DELAY SCALE ===
+
+> 10 $ Catastrophic Harm
+>> Causes failure of a primary goal, legal breach, or irreversible damage. $ Ex: Paying income taxes on final deadline to avoid penalties.
+
+> 09 $ Critical Harm
+>> Jeopardizes major project; recovery difficult and costly. $ Ex: Submitting grant proposal just before portal closes.
+
+> 08 $ Substantial Harm
+>> Significant slip in budget or timeline for key project. $ Ex: Flight prices double if not booked this week.
+
+> 07 $ High Harm
+>> Blocks others or dependent tasks from proceeding. $ Ex: Sending financial docs so accountant can start work.
+
+> 06 $ Moderate Harm
+>> Causes friction but doesn't fully block others. $ Ex: Not finishing report draft before manager’s vacation.
+
+> 05 $ Tolerable Harm
+>> Delay manageable without derailing project. $ Ex: Postponing routine dental check-up by weeks.
+
+> 04 $ Minor Harm
+>> Personal inconvenience, no impact on others. $ Ex: Replying to non-urgent email asking for opinion.
+
+> 03 $ Slight Harm
+>> Small, easily fixed negative impact on self. $ Ex: Organizing cluttered desktop files.
+
+> 02 $ Negligible Harm
+>> Barely perceptible consequences. $ Ex: Sorting old clothes for donation; can wait.
+
+> 01 $ Insignificant Harm
+>> No deadline or negative consequence if delayed. $ Ex: Brainstorming vacation ideas for next year.
+
+> 00 $ No Harm
+>> Task is irrelevant or outdated. $ Ex: Researching product already purchased.
+
+
+
+=== EFFORT SCALE ===
+
+
+
+> 00 $ 1+ weeks
+
+> 01 $ 4~6 days
+
+> 02 $ 2~3 days
+
+> 03 $ 1 day
+
+> 04 $ 4~6 hours
+
+> 05 $ 2~3 hours
+
+> 06 $ 1 hour
+
+> 07 $ 30 minutes
+
+> 08 $ 15 minutes
+
+> 09 $ 5 minutes
+
+> 10 $ 1 minute
+
+
+
+=== IMPORTANCE SCALE ===
+
+
+
+> 10 $ Critical
+
+> 09 $ Extremely important
+
+> 08 $ Really important
+
+> 07 $ Must-do
+
+> 06 $ Fairly important
+
+> 05 $ Neutral
+
+> 04 $ Low importance
+
+> 03 $ Tiny impact
+
+> 02 $ Can wait
+
+> 01 $ Potentially not needed
+
+> 00 $ Completely unnecessary
+```
