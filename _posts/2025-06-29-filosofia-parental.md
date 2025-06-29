@@ -1,14 +1,16 @@
 ---
-tags: [fatherhood]
+tags:
+- fatherhood
 info: aberto.
 date: 2025-06-29
 type: post
 layout: post
 published: true
 slug: filosofia-parental
-title: 'Filosofia Parental'
+title: Filosofia Parental
+comment: https://www.youtube.com/watch?v=vMy-MeI7AoI
 ---
-bibref https://www.youtube.com/watch?v=vMy-MeI7AoI
+
 
 ### **Filosofia Parental: Para Além do Certo e Errado**
 
