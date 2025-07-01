@@ -1,11 +1,11 @@
 ---
-tags: [scratchpad]
+tags: [fatherhood, scratchpad]
 info: aberto.
 date: 2025-06-20
 type: post
 layout: post
 published: true
-slug: pragmatic-guide-to-parenting
+slug: pragmatic-parenting
 title: 'Pragmatic Guide to Parenting'
 ---
 ## **Introduction**
