@@ -233,3 +233,19 @@ Principle: These items are not real, actionable tasks and should be aggressively
 Think About: If you deleted it right now, would anyone notice in a month? 
 Example: (L2) "Explore new note apps." (L1) "Learn about marketing." (L0) "Prep for Q2 meeting" (in Q4).
 ```
+
+# 10 levels
+
+| Impact Level | Effort (Est. Time) | Key Question |
+| :--- | :--- | :--- |
+| **10** | ~1 minute | Will delay cause **irreversible parent failure**? |
+| **9** | ~5 minutes | Will delay make recovery **prohibitively difficult/costly**? |
+| **8** | ~15 minutes | Will delay cause a **significant slip in core resources**? |
+| **7** | ~30 minutes | Does delay **completely block other people** from working? |
+| **6** | ~1 hour | Does delay **create significant problems or rework** for others? |
+| **5** | ~2-3 hours | Are the consequences of delay manageable and absorbable without derailing **parent** **core progress**? |
+| **4** | ~4-6 hours | Does delay **only cause minor inconvenience for you**? |
+| **3** | ~1 day | Is the impact a **trivial, easily-fixed annoyance for you alone**? |
+| **2** | ~2-3 days | Would you **barely notice** if this was delayed for another month? |
+| **1** | ~4-6 days to 1+ weeks | Is this task a "nice to have" with **no real negative consequence** or **irrelevant/obsolete**? |
+
