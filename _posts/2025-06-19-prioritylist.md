@@ -9,7 +9,7 @@ title: 'prioritylist.app cheatsheet'
 ---
 `https://prioritylist.app/`
 
-#### **How to Use This Framework**
+> **How to Use This Framework**
 
 The process involves two key steps: Triage and Strategy.
 
@@ -18,49 +18,49 @@ The process involves two key steps: Triage and Strategy.
    * **Effort Score:** Estimate the time required and find the corresponding score on the scale. A crucial part of this is being realistic, not optimistic, about the time commitment.  
 2. **Strategy (The Guide Following the Table):** This is the decision-making phase. Once you have the Impact and Effort scores, use the "From Triage to Strategy" guide to decide *how* and *when* to allocate your most valuable resource: your focused time.
 
-#### **Level 10: Catastrophic Harm (Existential Threat)**
+> **Level 10: Catastrophic Harm (Existential Threat)**
 
 * **The Principle:** Delay means the project or goal ceases to exist in its current form. There is no recovery.  
 * **Think About:** Legal statutes of limitation, final contract deadlines with no extension, critical safety failures that would end the business.  
 * **Example:** A software update has a bug that is actively corrupting all user data. The task to roll back the update is a Level 10 because any delay causes irreversible damage to customer trust and data integrity, from which the company may not recover.
 
-#### **Level 9: Critical Harm (Project Jeopardy)**
+> **Level 9: Critical Harm (Project Jeopardy)**
 
 * **The Principle:** Delay triggers a crisis. The project can theoretically be saved, but only with an extreme, costly, and disruptive effort that jeopardizes future plans.  
 * **Think About:** Losing a "once in a lifetime" opportunity, damage to your reputation that will take years to repair, financial penalties that cripple your budget for the next quarter.  
 * **Example:** Forgetting to book a flight for a critical, can't-miss client presentation tomorrow. You *can* still get there by paying an exorbitant last-minute fare and pulling an all-nighter, but the financial cost and personal stress are immense, and you'll perform poorly.
 
-#### **Level 8: Substantial Harm (Major Setback)**
+> **Level 8: Substantial Harm (Major Setback)**
 
 * **The Principle:** Delay causes a major **Resource Drain** (time, money, or scope) that requires formal explanation and adjustment of the project plan.  
 * **Think About:** Will this require you to formally report a budget overrun or a change in the delivery date to stakeholders? Does it consume a significant portion (e.g., \>20%) of the project's remaining resources?  
 * **Example:** Delaying a decision on a key software library forces an entire development team of five people to pause work for several days. This directly translates to thousands of dollars in wasted salary and a guaranteed slip in the product release date.
 
-#### **Level 7: High Harm (Collaborative Gridlock)**
+> **Level 7: High Harm (Collaborative Gridlock)**
 
 * **The Principle:** Your delay creates a full stop for someone else. You are a bottleneck, and the cost of your delay is now multiplied by the number of people waiting on you.  
 * **Think About:** Is there a person or team whose next action begins with "Wait for \[Your Name\] to finish..."? This is not about making their work harder; it's about making it impossible for them to start.  
 * **Example:** You are responsible for providing the final sales numbers to the finance department so they can close the quarterly books. They cannot proceed with their reporting, investor calls, or financial planning until you are done.
 
-#### **Level 6: Moderate Harm (Team Friction)**
+> **Level 6: Moderate Harm (Team Friction)**
 
 * **The Principle:** Your delay creates inefficiency and frustration. It doesn't stop others, but it makes their work harder, forces rework, or lowers their quality. This erodes morale and project velocity.  
 * **Think About:** Will someone have to redo their work later because they had to proceed with incomplete information from you? Are you handing off a "known issue" that will cause problems downstream?  
 * **Example:** You provide a "draft" version of a document for review, knowing it has errors. Your manager spends an hour reviewing it, but will have to spend another hour reviewing the corrected version later, doubling their effort and disrupting their schedule twice.
 
-#### **Level 5: Tolerable Harm (Quality Debt)**
+> **Level 5: Tolerable Harm (Quality Debt)**
 
 * **The Principle:** Delay primarily impacts internal quality, standards, and best practices. Accumulating these creates "quality debt" that will have to be paid down later, often at a higher cost.  
 * **Think About:** These are the "important, but not urgent" tasks that separate a professional operation from a chaotic one. Refactoring code, improving documentation, organizing files.  
 * **Example:** The project's shared document folder is disorganized. It doesn't stop daily work, but it makes finding information slightly slower for everyone, every time they look. Delaying the cleanup is tolerable today, but over a year, it costs hundreds of hours of wasted team productivity.
 
-#### **Levels 4-3: Minor Harm (Personal Clutter)**
+> **Levels 4-3: Minor Harm (Personal Clutter)**
 
 * **The Principle:** The negative impact is contained entirely to you and your personal workflow. These tasks are often a source of "productive procrastination."  
 * **Think About:** These tasks add to your mental load and create a feeling of being busy without generating real impact. They do not affect anyone else or the project's bottom line.  
 * **Example:** (L4) Your email inbox is overflowing, causing you minor stress. (L3) Your desktop has a few extra files that need to be sorted into the correct folders.
 
-#### **Levels 2-0: Negligible Harm (Backlog Noise)**
+> **Levels 2-0: Negligible Harm (Backlog Noise)**
 
 * **The Principle:** These items are not real, actionable tasks and should be aggressively challenged and removed to create clarity. A bloated backlog is the enemy of focus.  
 * **Think About:** Does this item represent a vague idea, an optional exploration, or an outdated concept? If you deleted it right now, would anyone notice in a month?  
@@ -68,7 +68,7 @@ The process involves two key steps: Triage and Strategy.
 
 ### **The Pyramid of Security: A Ranked Framework for Risk Minimization**
 
-#### **Level 1: The Foundation (Prerequisites for Existence & Capacity)**
+> **Level 1: The Foundation (Prerequisites for Existence & Capacity)**
 *This is the non-negotiable base of the pyramid. A critical failure here means the entire structure collapses.*
 
 **1. Health**
@@ -79,7 +79,7 @@ The process involves two key steps: Triage and Strategy.
     *   **Financial Risk:** The potentially devastating cost of medical crises.
 *   **Pyramid Logic:** This layer is the ground itself. If the ground gives way, nothing built upon it can stand. All energy and resources must first be allocated to ensuring this foundation is secure.
 
-#### **Level 2: The Structure of Stability (Securing Your Place in the World)**
+> **Level 2: The Structure of Stability (Securing Your Place in the World)**
 *Once physical capacity is assured, this layer provides the essential structure for navigating the external world safely and effectively.*
 
 **2. Financial**
