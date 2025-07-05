@@ -249,3 +249,18 @@ Example: (L2) "Explore new note apps." (L1) "Learn about marketing." (L0) "Prep 
 | **2** | ~2-3 days | Would you **barely notice** if this was delayed for another month? |
 | **1** | ~4-6 days to 1+ weeks | Is this task a "nice to have" with **no real negative consequence** or **irrelevant/obsolete**? |
 
+# 9 levels
+
+| Impact Level | Effort (Est. Time) | Key Question |
+|--------------|--------------------|--------------|
+| **9**      | ~1 minute          | Will a delay cause **irreversible failure** of the parent project or goal? |
+| **8**      | ~5 minutes         | Will a delay make recovery **prohibitively difficult or costly**? |
+| **7**      | ~15 minutes        | Will a delay cause a **significant slip in core resources** (time, money, or scope)? |
+| **6**      | ~30 minutes        | Does a delay **completely block other people** from working, creating a bottleneck? |
+| **5**      | ~1 hour            | Will a delay **create significant problems or force rework** for others? |
+| **4**      | ~2–3 hours         | Are the consequences of the delay **manageable and absorbable without derailing the parent’s core progress**? |
+| **3**      | ~4–6 hours         | Does a delay cause only a **minor, easily remedied inconvenience** for you? |
+| **2**      | ~1 day             | Would you **barely notice** if this task’s completion were delayed by another month? |
+| **1**      | ~2–6 days          | Is this task essentially a **“nice to have” with no real negative consequence**? |
+
+# 8 levels
