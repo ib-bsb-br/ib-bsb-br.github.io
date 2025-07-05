@@ -118,44 +118,13 @@ Before using the table, perform this crucial **pre-triage step**: for each task,
     *   **Practical Risk:** The absence of a trusted network for tangible help in an emergency (e.g., childcare, temporary housing).
 *   **Pyramid Logic:** This layer is intertwined with the Financial layer. Financial stress can strain relationships, and a relational collapse (like a divorce) can trigger a financial crisis. Together, they form the core structure of a secure life.
 
-#### **Level 3: The Apex of Purpose & Sustainability (Enabling Long-Term Thriving)**
-*With a stable structure in place, this top layer focuses on long-term purpose, growth, and sustainability.*
-
-**4. Professional**
-*   **Justification:** Your professional life is the primary **engine that sustains and grows your financial pillar**. It is also a key source of purpose and agency. Securing your professional standing is a powerful, proactive risk-mitigation strategy.
-*   **Risks Mitigated:**
-    *   **Income Risk:** The long-term threat to your ability to generate resources.
-    *   **Relevance Risk:** Your skills becoming obsolete in a changing world.
-*   **Pyramid Logic:** This is the engine placed within the secure walls of your structure. A strong professional life makes the Financial layer more robust and sustainable over the long term.
-
-**5. Spiritual**
-*   **Justification:** Spiritual well-being provides your **existential anchor and moral compass**. It is your "why." It is what provides the deep, internal resilience to endure hardship and make sound, value-aligned decisions under pressure.
-*   **Risks Mitigated:**
-    *   **Existential Risk:** The risk of meaninglessness, despair, and nihilism.
-    *   **Moral Risk:** The risk of making poor, self-destructive choices that compromise your integrity and security.
-*   **Pyramid Logic:** This is the guiding intelligence at the top of the pyramid. It gives direction and purpose to all the layers below it, ensuring the entire structure is being built for a meaningful reason.
-
-**6. Recreational**
-*   **Justification:** Recreation is the **essential maintenance system** for the entire pyramid. It is the antidote to the long-term, corrosive risk of **burnout**. Neglecting rest and play leads to the degradation of your Health, the straining of your Relationships, and the collapse of your Professional performance.
-*   **Risks Mitigated:**
-    *   **Burnout Risk:** The complete exhaustion of your physical and mental resources.
-    *   **Stagnation Risk:** A loss of creativity, adaptability, and joy, which makes life feel like a prison.
-*   **Pyramid Logic:** This is the crucial activity of maintaining the pyramid itself. Without it, the structure slowly erodes from the inside out due to stress and fatigue.
-
-### **The Dynamic Nature of the Pyramid**
-
-This hierarchy is not just a static ranking; it's a dynamic system.
-
-*   **Support from Below:** Strength in a lower layer enables success in the layers above. Good health provides the energy for professional success. Financial stability reduces stress, improving relationships.
-*   **Corrosion from Above:** Neglect of a higher layer can slowly erode the foundation. A lack of purpose (`Spiritual`) can lead to apathy and self-neglect, damaging your `Health`. A high-stress, all-consuming job (`Professional`) without any rest (`Recreational`) will eventually lead to burnout and physical illness (`Health`).
-
 ### **How to Use This Framework**
 
 Use the Pyramid of Security as a strategic guide for allocating your attention:
 
 1.  **For Your Weekly Review:** Start at the bottom and work your way up. First, ask: "Are there any cracks in my foundation (`Health`)?" Then, "Are my structural walls (`Financial`, `Relational`) secure?" Only after confirming the stability of the lower levels should you focus significant energy on the apex goals.
 2.  **In Times of Crisis:** The pyramid shows you what to protect first. In an acute crisis, all resources must be diverted to shoring up the lowest affected layer.
-3.  **To Counteract Modern Pressures:** Society often pressures us to invert the pyramid—to sacrifice `Health` and `Relationships` for `Professional` success. This framework serves as a conscious corrective, reminding you that such a strategy is fundamentally unstable and leads to inevitable collapse.
+3.  **To Counteract Modern Pressures:** Society often pressures us to invert the pyramid—to sacrifice `Health` for `Financial` success. This framework serves as a conscious corrective, reminding you that such a strategy is fundamentally unstable and leads to inevitable collapse.
 
 # for printing
 
