@@ -5,7 +5,7 @@ type: post
 layout: post
 published: true
 slug: prioritylist
-title: 'prioritylist.app cheatsheet'
+title: '`prioritylist.app` cheatsheet & `dasel`'
 ---
 `https://prioritylist.app/`
 
