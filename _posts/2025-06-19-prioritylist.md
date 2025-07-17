@@ -526,7 +526,7 @@ set -euo pipefail
 # Purpose:        A reusable command-line utility to process JSON data using
 #                 powerful pipelines.
 # Tutorial:       Based on "debian 12 pipeline to maneauver JSON data".
-# Target System:  Debian 11 (Bullseye) on ARM64 RK3588.
+# Target System:  Debian 12 (Bookworm) / Debian 11 (Bullseye) on ARM64.
 # Execution:      Run by a user with sudo privileges.
 #
 # Description:
@@ -541,7 +541,7 @@ set -euo pipefail
 # --- Configuration Variables ---
 # Pinning the version of dasel ensures consistent behavior.
 # Checked against https://github.com/TomWright/dasel/releases
-DASEL_VERSION="2.2.1"
+DASEL_VERSION="v2.4.0"
 DASEL_INSTALL_DIR="/usr/local/bin"
 DASEL_EXECUTABLE_PATH="${DASEL_INSTALL_DIR}/dasel"
 
@@ -580,7 +580,7 @@ EOF
 
 #
 # Checks if a given command-line tool is installed. If not, it attempts to
-# install it using apt.
+# install it using apt-get.
 #
 # @param $1: The name of the command to check (e.g., "jq").
 # @param $2: (Optional) The name of the package to install if different.
@@ -590,7 +590,7 @@ ensure_tool_installed() {
     local package_name="${2:-$tool_name}"
     if ! command -v "$tool_name" >/dev/null 2>&1; then
         echo "INFO: Tool '$tool_name' not found. Installing package '$package_name'..."
-        if ! sudo apt install -y "$package_name"; then
+        if ! sudo apt-get install -y "$package_name"; then
             echo "ERROR: Failed to install '$package_name'. Please try installing it manually." >&2
             exit 1
         fi
@@ -610,25 +610,24 @@ install_dasel() {
         return 0
     fi
 
-    echo "INFO: Installing 'dasel' version ${DASEL_VERSION} for ARM64..."
-    # Note: For other architectures, this URL would need to be adjusted.
-    # We could use `dpkg --print-architecture` to make this dynamic in the future.
-    local dasel_url="https://github.com/TomWright/dasel/releases/download/v${DASEL_VERSION}/dasel_linux_arm64"
+    echo "INFO: Tool 'dasel' not found. Attempting to install..."
+    local download_url="https://github.com/TomWright/dasel/releases/download/${DASEL_VERSION}/dasel_linux_arm64"
     local temp_download_path="${TEMP_DIR}/dasel"
 
-    echo "INFO: Downloading from: ${dasel_url}"
-    if ! curl --fail --silent --show-error -L -o "$temp_download_path" "$dasel_url"; then
-        echo "ERROR: Failed to download dasel. Please check the URL and your network connection." >&2
+    echo "INFO: Downloading dasel ${DASEL_VERSION} for ARM64 from $download_url..."
+    if ! curl -sSL "$download_url" -o "$temp_download_path"; then
+        echo "ERROR: Failed to download dasel from $download_url" >&2
         exit 1
     fi
 
-    chmod +x "$temp_download_path"
-    echo "INFO: Moving the binary to ${DASEL_INSTALL_DIR} (requires sudo)..."
-    if ! sudo mv "$temp_download_path" "$DASEL_EXECUTABLE_PATH"; then
-        echo "ERROR: Failed to move dasel to ${DASEL_INSTALL_DIR}. Check permissions." >&2
+    echo "INFO: Installing dasel to $DASEL_INSTALL_DIR (requires sudo)..."
+    # Using 'install' is more robust than 'mv' as it can set permissions in one step.
+    if ! sudo install -m 0755 "$temp_download_path" "$DASEL_EXECUTABLE_PATH"; then
+        echo "ERROR: Failed to install dasel. Please check permissions for $DASEL_INSTALL_DIR." >&2
         exit 1
     fi
-    echo "INFO: 'dasel' installed successfully."
+
+    echo "INFO: dasel installed successfully."
 }
 
 #
@@ -637,7 +636,7 @@ install_dasel() {
 run_dependency_checks() {
     echo "--- Running Prerequisite Checks ---"
     echo "INFO: Updating package lists (requires sudo)..."
-    if ! sudo apt update; then
+    if ! sudo apt-get update; then
         echo "ERROR: Failed to update package lists. Please check your sources.list and network." >&2
         exit 1
     fi
@@ -655,7 +654,7 @@ run_dependency_checks() {
 run_classic_pipeline() {
     local input_file="$1"
     cat "$input_file" | \
-      dasel -r json 'merge(name?, sublists?.all().name?, sublists?.all().items?.all().name?).merge()' | \
+      "$DASEL_EXECUTABLE_PATH" -r json 'merge(name?, sublists?.all().name?, sublists?.all().items?.all().name?).merge()' | \
       jq -r '.[]' | \
       grep -oP '\[\K[^]]*' | \
       sort | \
@@ -670,7 +669,7 @@ run_classic_pipeline() {
 run_jq_pipeline() {
     local input_file="$1"
     cat "$input_file" | \
-      dasel -r json 'merge(name?, sublists?.all().name?, sublists?.all().items?.all().name?).merge()' | \
+      "$DASEL_EXECUTABLE_PATH" -r json 'merge(name?, sublists?.all().name?, sublists?.all().items?.all().name?).merge()' | \
       jq '[.[] | capture("\\[(?<content>.*?)\\]") | .content] | map(select(. != null)) | unique | sort'
 }
 
