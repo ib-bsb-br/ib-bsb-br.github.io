@@ -471,19 +471,7 @@ Using our recommended components (`grep` for extraction and the two-stage `jq` f
 
 ```bash
 # Replace `cat data.json` with your actual program
-cat data.json | \
-  # 1. Use dasel to reliably extract all 'name' fields into a JSON array
-  dasel -r json 'merge(name?, sublists?.all().name?, sublists?.all().items?.all().name?).merge()' | \
-  # 2. Unpack the JSON array into a raw text stream
-  jq -r '.[]' | \
-  # 3. Use grep to robustly extract only the content inside brackets
-  grep -oP '\[\K[^]]*' | \
-  # 4. Sort the results alphabetically
-  sort | \
-  # 5. Remove duplicate entries
-  uniq | \
-  # 6. Re-assemble the clean text stream into a final JSON array
-  jq -R . | jq -s .
+cat data.json | dasel -r json 'sublists?.all().items?.all().name?.merge()' | jq -r '.[]' | grep -oP '\[\K[^]]*' | sort | uniq | jq -R . | jq -s .
 ```
 
 ### **Alternative Approach: The Integrated `jq` Pipeline**
@@ -654,12 +642,7 @@ run_dependency_checks() {
 run_classic_pipeline() {
     local input_file="$1"
     cat "$input_file" | \
-      "$DASEL_EXECUTABLE_PATH" -r json 'merge(name?, sublists?.all().name?, sublists?.all().items?.all().name?).merge()' | \
-      jq -r '.[]' | \
-      grep -oP '\[\K[^]]*' | \
-      sort | \
-      uniq | \
-      jq -R . | jq -s .
+      "$DASEL_EXECUTABLE_PATH" -r json 'sublists?.all().items?.all().name?.merge()' | jq -r '.[]' | grep -oP '\[\K[^]]*' | sort | uniq | jq -R . | jq -s .
 }
 
 #
