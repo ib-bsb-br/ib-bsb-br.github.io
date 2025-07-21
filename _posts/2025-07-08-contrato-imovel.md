@@ -8,1942 +8,1943 @@ published: true
 slug: contrato-imovel
 title: 'Contrato de locação de imóvel'
 ---
-SRTVS QD. 701 BL.O Nº 110 SALAS 280/284 ED. MULTIEMPRESARIAL - BRASILIA/DF   
 
-> TELEFONE: (61) 3034 -9090
-> www.visaoimoveis.com
+FEGIF DQ. 701 OY.B Aº 110 FNYNF 280/284 RQ. ZHYGVRZCERFNEVNY - OENFVYVN/QS   
 
-INSTRUMENTO PARTICULAR DE CONTRATO DE LOCAÇÃO 
+> GRYRSBAR: (61) 3034 -9090
+> jjj.ivfnbvzbirvf.pbz
 
-CONTRATO:  00826/02 
+VAFGEHZRAGB CNEGVPHYNE QR PBAGENGB QR YBPNÇÃB 
 
-LOCADOR:  EUSTAQUIO JOSE PESSOA 
+PBAGENGB:  00826/02 
 
-LOCATÁRIO:  MARIO SEIXAS SALES 
+YBPNQBE:  RHFGNDHVB WBFR CRFFBN 
 
-ENDEREÇO DO IMÓVEL:  QNE 21 CASA 08 TAGUATINGA – DF CEP: 72.125 -080 
+YBPNGÁEVB:  ZNEVB FRVKNF FNYRF 
 
-VIGÊ NCIA DO CONTRATO:  10/07/2025 a 09/07/2028 
+RAQRERÇB QB VZÓIRY:  DAR 21 PNFN 08 GNTHNGVATN – QS PRC: 72.125 -080 
 
-VALOR DO ALUGUEL:  R$ 2.600,00 ( Dois mil e seiscentos reais )
+IVTÊ APVN QB PBAGENGB:  10/07/2025 n 09/07/2028 
 
-Pelo presente Contrato de Locação de imóvel residencial , que entre si fazem, EUSTAQUIO JOSE 
+INYBE QB NYHTHRY:  E$ 2.600,00 ( Qbvf zvy r frvfpragbf ernvf )
 
-PESSOA, Brasileiro, Bancário , portador do RG n. 125.489 SSP/DF, CPF n.008.473.481 -72, casado com 
+Cryb cerfragr Pbagengb qr Ybpnçãb qr vzóiry erfvqrapvny , dhr rager fv snmrz, RHFGNDHVB WBFR 
 
-MARIA ELZA DE OLIVEIRA PESSOA, Brasileira, Contadora, portadora do RG n. 193.716 SSP/DF, CPF 
+CRFFBN, Oenfvyrveb, Onapáevb , cbegnqbe qb ET a. 125.489 FFC/QS, PCS a.008.473.481 -72, pnfnqb pbz 
 
-n.399.603.581 -00, a seguir denominado simplesmente LOCADOR(A) , neste ato representado pela 
+ZNEVN RYMN QR BYVIRVEN CRFFBN, Oenfvyrven, Pbagnqben, cbegnqben qb ET a. 193.716 FFC/QS, PCS 
 
-empresa VISAO EMPREENDIMENTOS IMOBILIARIOS LTDA , registrada no CRECI 2554, com sede 
+a.399.603.581 -00, n frthve qrabzvanqb fvzcyrfzragr YBPNQBE(N) , arfgr ngb ercerfragnqb cryn 
 
-sito a SRTVS QD 701 BL. O N. 110 SALAS 280/284 - Ed. Multiempresarial ASA SUL - 70340 -000 -
+rzcerfn IVFNB RZCERRAQVZRAGBF VZBOVYVNEVBF YGQN , ertvfgenqn ab PERPV 2554, pbz frqr 
 
-DF, e MARIO SEIXAS SALES, Brasileiro, Policial Rodoviário Federal, portador do RG n. 2916447 
+fvgb n FEGIF DQ 701 OY. B A. 110 FNYNF 280/284 - Rq. Zhygvrzcerfnevny NFN FHY - 70340 -000 -
 
-SSP -DF, CPF n.025.123.751 -61, casado com RANGELMA FERREIRA CARVALHO SEIXAS, Brasileira, 
+QS, r ZNEVB FRVKNF FNYRF, Oenfvyrveb, Cbyvpvny Ebqbiváevb Srqreny, cbegnqbe qb ET a. 2916447 
 
-Professora, portadora do RG n. 2442046 SSP -DF, CPF n.018.256.631 -57, residentes e domiciliados à
+FFC -QS, PCS a.025.123.751 -61, pnfnqb pbz ENATRYZN SREERVEN PNEINYUB FRVKNF, Oenfvyrven, 
 
-RUA MANOEL R. LIMA, QD 05, L 18, N, 530 - CASA - 2 S. EPAMINOND II - 75805 -134 JATAÍ - GO, a 
+Cebsrffben, cbegnqben qb ET a. 2442046 FFC -QS, PCS a.018.256.631 -57, erfvqragrf r qbzvpvyvnqbf à
 
-seguir denominado simplesmente como LOCATÁRIO(A) , tem entre si justa e contratada, por este 
+EHN ZNABRY E. YVZN, DQ 05, Y 18, A, 530 - PNFN - 2 F. RCNZVABAQ VV - 75805 -134 WNGNÍ - TB, n 
 
-instrumento e na melhor forma de direito, a presente locação mediante as cláusulas e condições abaixo 
+frthve qrabzvanqb fvzcyrfzragr pbzb YBPNGÁEVB(N) , grz rager fv whfgn r pbagengnqn, cbe rfgr 
 
-discriminadas e disposições legais pertinentes, que voluntariamente aceitam e outorgam: 
+vafgehzragb r an zryube sbezn qr qvervgb, n cerfragr ybpnçãb zrqvnagr nf pyáhfhynf r pbaqvçõrf nonvkb 
 
-CLÁUSULA PRIMEIRA - DO OBJETO 
+qvfpevzvanqnf r qvfcbfvçõrf yrtnvf cregvaragrf, dhr ibyhagnevnzragr nprvgnz r bhgbetnz: 
 
-1.1. O objeto do presente contrato é a locação do imóvel situado na QNE 21 CASA 08 -
+PYÁHFHYN CEVZRVEN - QB BOWRGB 
 
-TAGUATINGA -DF , que o(a) LOCATARIO(A ) recebe nas condições em que se encontra, e que estão 
+1.1. B bowrgb qb cerfragr pbagengb é n ybpnçãb qb vzóiry fvghnqb an DAR 21 PNFN 08 -
 
-registradas no Termo de vistoria (exceto para locação de vagas de garagem), que integra este contrato, 
+GNTHNGVATN -QS , dhr b(n) YBPNGNEVB(N ) erpror anf pbaqvçõrf rz dhr fr rapbagen, r dhr rfgãb 
 
-no(s) qual Locatário(s) e Fiador(es) assinam. 
+ertvfgenqnf ab Grezb qr ivfgbevn (rkprgb cnen ybpnçãb qr intnf qr tnentrz), dhr vagrten rfgr pbagengb, 
 
-CLÁUSULA SEGUNDA - DO PRAZO 
+ab(f) dhny Ybpngáevb(f) r Svnqbe(rf) nffvanz. 
 
-2.1. O prazo de vigência da locação é de 36 (trinta e seis) meses , iniciando -se em 10 /07/2025 a
+PYÁHFHYN FRTHAQN - QB CENMB 
+
+2.1. B cenmb qr ivtêapvn qn ybpnçãb é qr 36 (gevagn r frvf) zrfrf , vavpvnaqb -fr rz 10 /07/2025 n
 
 09 /07/2028. 
 
-2.2. O LOCADOR não poderá solicitar o imóvel antes do vencimento do contrato e, caso o
+2.2. B YBPNQBE aãb cbqreá fbyvpvgne b vzóiry nagrf qb irapvzragb qb pbagengb r, pnfb b
 
-LOCATÁRIO devolva o imóvel antes de decorrido o prazo contratado, pagará ao LOCADOR multa de 
+YBPNGÁEVB qribyin b vzóiry nagrf qr qrpbeevqb b cenmb pbagengnqb, cntneá nb YBPNQBE zhygn qr 
 
-03 (três) meses do aluguel vigente, sem prejuízo de eventuais perdas e danos. A multa será calculada 
+03 (geêf) zrfrf qb nyhthry ivtragr, frz cerwhímb qr riraghnvf creqnf r qnabf. N zhygn freá pnyphynqn 
 
-proporcionalmente ao tempo que restar nos termos dos Arts. 413 e 571 do Código Civil. 
+cebcbepvbanyzragr nb grzcb dhr erfgne abf grezbf qbf Negf. 413 r 571 qb Póqvtb Pvivy. 
 
-2.3 O LOCATÁRIO deverá manifestar sobre a intenção de descontinuar o contrato 30 (trinta) dias 
+2.3 B YBPNGÁEVB qrireá znavsrfgne fboer n vagraçãb qr qrfpbagvahne b pbagengb 30 (gevagn) qvnf 
 
-antes do prazo previsto no subitem 2.1 do presente instrumento, mediante comunicação prévia por 
+nagrf qb cenmb cerivfgb ab fhovgrz 2.1 qb cerfragr vafgehzragb, zrqvnagr pbzhavpnçãb ceéivn cbe 
 
-escrito à imobiliária. 
+rfpevgb à vzbovyváevn. 
 
-2.4 Ausente a manifestação do subitem 2.3, implicará na renovação automática do presente 
+2.4 Nhfragr n znavsrfgnçãb qb fhovgrz 2.3, vzcyvpneá an erabinçãb nhgbzágvpn qb cerfragr 
 
-instrumento, por prazo indeterminado, nos mesmos termos e condições previstos neste instrumento, 
+vafgehzragb, cbe cenmb vaqrgrezvanqb, abf zrfzbf grezbf r pbaqvçõrf cerivfgbf arfgr vafgehzragb, 
 
-ressalvado os reajustes de alugueis, taxas e outros aplicáveis. 
+erffnyinqb bf ernwhfgrf qr nyhthrvf, gnknf r bhgebf ncyvpáirvf. 
 
-CLÁUSULA TERCEIRA - DO PREÇO 
+PYÁHFHYN GREPRVEN - QB CERÇB 
 
-3.1. O valor mensal do aluguel é de R$ 2.600,00 (Dois mil e seiscentos reais). 
+3.1. B inybe zrafny qb nyhthry é qr E$ 2.600,00 (Qbvf zvy r frvfpragbf ernvf). 
 
-CLÁ USULA QUARTA - DA PERIODICIDADE DO REAJUSTE 
+PYÁ HFHYN DHNEGN - QN CREVBQVPVQNQR QB ERNWHFGR 
 
-4.1. O valor do aluguel definido no item 3.1 da cláusula terceira será reajustado anualmente com 
+4.1. B inybe qb nyhthry qrsvavqb ab vgrz 3.1 qn pyáhfhyn greprven freá ernwhfgnqb nahnyzragr pbz 
 
-base na variação do INPC/IBGE. 
+onfr an inevnçãb qb VACP/VOTR. 
 
-4.2. Ocorrendo qualquer alteração na legislaçã o que estabelece a periodicidade para reajuste nos 
+4.2. Bpbeeraqb dhnydhre nygrençãb an yrtvfynçã b dhr rfgnoryrpr n crevbqvpvqnqr cnen ernwhfgr abf 
 
-contratos de locação de imóvel, as partes acordam, desde já, para todos os fins de direito que o valor do 
+pbagengbf qr ybpnçãb qr vzóiry, nf cnegrf npbeqnz, qrfqr wá, cnen gbqbf bf svaf qr qvervgb dhr b inybe qb 
 
-aluguel passará a ser reajustado de acordo com a menor periodicidade fixada no novo diploma legal. SRTVS QD. 701 BL.O Nº 110 SALAS 280/284 ED. MULTIEMPRESARIAL - BRASILIA/DF   
+nyhthry cnffneá n fre ernwhfgnqb qr npbeqb pbz n zrabe crevbqvpvqnqr svknqn ab abib qvcybzn yrtny. FEGIF DQ. 701 OY.B Aº 110 FNYNF 280/284 RQ. ZHYGVRZCERFNEVNY - OENFVYVN/QS   
 
-> TELEFONE: (61) 3034 -9090
-> www.visaoimoveis.com
+> GRYRSBAR: (61) 3034 -9090
+> jjj.ivfnbvzbirvf.pbz
 
-CLÁUSULA QUINTA - ÉPOCA E LOCAL DE PAGAMENTO 
+PYÁHFHYN DHVAGN - ÉCBPN R YBPNY QR CNTNZRAGB 
 
-5.1. Os aluguéis serão pagos até o dia 10 (Dez) de cada mês vencido , em moeda corrente 
+5.1. Bf nyhthévf freãb cntbf ngé b qvn 10 (Qrm) qr pnqn zêf irapvqb , rz zbrqn pbeeragr 
 
-ou cheque da praça emitido pelo LOCATÁRIO , exclusivamente na rede bancária, mediante título para 
+bh purdhr qn cençn rzvgvqb cryb YBPNGÁEVB , rkpyhfvinzragr an erqr onapáevn, zrqvnagr gíghyb cnen 
 
-pagamento. 
+cntnzragb. 
 
-5.2. Em caso de extravio ou não recebimento do título em tempo hábil, o(a) LOCATÁRIO(A ) deverá 
+5.2. Rz pnfb qr rkgenivb bh aãb erprovzragb qb gíghyb rz grzcb uáovy, b(n) YBPNGÁEVB(N ) qrireá 
 
-entrar em contato com a imobiliária administradora do imóvel, procuradora do LOCADOR e solicitar a 2° 
+ragene rz pbagngb pbz n vzbovyváevn nqzvavfgenqben qb vzóiry, cebphenqben qb YBPNQBE r fbyvpvgne n 2° 
 
-via do boleto bancário via e -mail. O(A) LOCATÁRIO(A) não poderá se valer de tal fato para pagar o 
+ivn qb obyrgb onapáevb ivn r -znvy. B(N) YBPNGÁEVB(N) aãb cbqreá fr inyre qr gny sngb cnen cntne b 
 
-aluguel fora do prazo. 
+nyhthry sben qb cenmb. 
 
-5.3. O pagamento do aluguel após o seu vencimento, será acrescido de multa de 10% (dez por cento) 
+5.3. B cntnzragb qb nyhthry ncóf b frh irapvzragb, freá nperfpvqb qr zhygn qr 10% (qrm cbe pragb) 
 
-e juros de mora de 1% (um por cento) ao mês. 
+r whebf qr zben qr 1% (hz cbe pragb) nb zêf. 
 
-5.4. As partes estabelecem que decorridos 10 (dez) dias de atraso no pagamento do aluguel, o(a) 
+5.4. Nf cnegrf rfgnoryrprz dhr qrpbeevqbf 10 (qrm) qvnf qr ngenfb ab cntnzragb qb nyhthry, b(n) 
 
-LOCADOR(A ) - ou sua representante legal - poderá fazer o comunicado aos Serviços de Proteção ao 
+YBPNQBE(N ) - bh fhn ercerfragnagr yrtny - cbqreá snmre b pbzhavpnqb nbf Freivçbf qr Cebgrçãb nb 
 
-Crédito (SPC) e/ou Cartórios de Protesto, obrigando -se o LOCADOR , antes da adoçã o de tais medidas, 
+Peéqvgb (FCP) r/bh Pnegóevbf qr Cebgrfgb, boevtnaqb -fr b YBPNQBE , nagrf qn nqbçã b qr gnvf zrqvqnf, 
 
-cientificar o(a) LOCATÁRIO(A) e seus fiadores, por meio de correspondência via correio. 
+pvragvsvpne b(n) YBPNGÁEVB(N) r frhf svnqberf, cbe zrvb qr pbeerfcbaqêapvn ivn pbeervb. 
 
-5.5. Em caso de atraso no pagamento, independentemente de qualquer prévia notificação a(o) 
+5.5. Rz pnfb qr ngenfb ab cntnzragb, vaqrcraqragrzragr qr dhnydhre ceéivn abgvsvpnçãb n(b) 
 
-LOCATÁRIO(A) ou seus fiadores, a cobrança dos aluguéis poderá ser feita por escritório de advocacia, 
+YBPNGÁEVB(N) bh frhf svnqberf, n pboenaçn qbf nyhthévf cbqreá fre srvgn cbe rfpevgóevb qr nqibpnpvn, 
 
-ficando o(a) LOCATÁRIO(A) sujeito às cominações dos parágrafos anteriores, despesas judiciais, 
+svpnaqb b(n) YBPNGÁEVB(N) fhwrvgb àf pbzvançõrf qbf cneátensbf nagrevberf, qrfcrfnf whqvpvnvf, 
 
-administrativas e honorários advocatícios de 20% (vinte por cento), independentemente da propositura 
+nqzvavfgengvinf r ubabeáevbf nqibpngípvbf qr 20% (ivagr cbe pragb), vaqrcraqragrzragr qn cebcbfvghen 
 
-da competente ação judicial. Para o caso de ação judicial, os honorários advocatícios ficam desde já 
+qn pbzcrgragr nçãb whqvpvny. Cnen b pnfb qr nçãb whqvpvny, bf ubabeáevbf nqibpngípvbf svpnz qrfqr wá 
 
-acordados em 20% (vinte por cento) sobre o valor da causa, inclusive para o caso de purgação da mora, 
+npbeqnqbf rz 20% (ivagr cbe pragb) fboer b inybe qn pnhfn, vapyhfvir cnen b pnfb qr chetnçãb qn zben, 
 
-com o que as partes têm ciência e estão de pleno acordo. 
+pbz b dhr nf cnegrf gêz pvêapvn r rfgãb qr cyrab npbeqb. 
 
-5.6. O(a) inquilino(a) só poderá promover alteração contratual de data de vencimento descrita no 
+5.6. B(n) vadhvyvab(n) fó cbqreá cebzbire nygrençãb pbagenghny qr qngn qr irapvzragb qrfpevgn ab 
 
-subitem 5.1 quando da renovação do presente instrumento. Caso insista na alteração de data deverá 
+fhovgrz 5.1 dhnaqb qn erabinçãb qb cerfragr vafgehzragb. Pnfb vafvfgn an nygrençãb qr qngn qrireá 
 
-arcar com a taxa administrativa de R$200(duzentos reais), a ser paga antecipadamente. 
+nepne pbz n gnkn nqzvavfgengvin qr E$200(qhmragbf ernvf), n fre cntn nagrpvcnqnzragr. 
 
-CLÁUSULA SEXTA - DOS ENCARGOS E TRIBUTOS 
+PYÁHFHYN FRKGN - QBF RAPNETBF R GEVOHGBF 
 
-6.1. Além do valor do aluguel se obriga o(a) LOCATÁRIO(A ) ao pagamento da Taxa de Fiscalização, 
+6.1. Nyéz qb inybe qb nyhthry fr boevtn b(n) YBPNGÁEVB(N ) nb cntnzragb qn Gnkn qr Svfpnyvmnçãb, 
 
-Prevenção e Extinção de Incêndio - TFPI se houver, do Imposto Predial e Territorial Urbano - (IPTU) e 
+Ceriraçãb r Rkgvaçãb qr Vapêaqvb - GSCV fr ubhire, qb Vzcbfgb Cerqvny r Greevgbevny Heonab - (VCGH) r 
 
-da Taxa de Limpeza Pública (TLP), do prêmio de Seguro Contra Incêndio, contas de consumo de 
+qn Gnkn qr Yvzcrmn Cúoyvpn (GYC), qb ceêzvb qr Frtheb Pbagen Vapêaqvb, pbagnf qr pbafhzb qr 
 
-energia elétrica e de água e esgoto e, quando se aplicar taxas ordinárias de condomínio, prestação de 
+raretvn ryégevpn r qr áthn r rftbgb r, dhnaqb fr ncyvpne gnknf beqvaáevnf qr pbaqbzíavb, cerfgnçãb qr 
 
-serviços de terceiros para manutenção de portão eletrônico, interfone, videofone, se obrigando ainda 
+freivçbf qr greprvebf cnen znahgraçãb qr cbegãb ryrgeôavpb, vagresbar, ivqrbsbar, fr boevtnaqb nvaqn 
 
-o(a) LOCATÁRIO(A) a apresentar à imobiliária administradora do imóvel, procuradora do(a) 
+b(n) YBPNGÁEVB(N) n ncerfragne à vzbovyváevn nqzvavfgenqben qb vzóiry, cebphenqben qb(n) 
 
-LOCADOR(A), os respectivos comprovantes de pagamento, sempre que solicitado. O(A) 
+YBPNQBE(N), bf erfcrpgvibf pbzcebinagrf qr cntnzragb, frzcer dhr fbyvpvgnqb. B(N) 
 
-LOCATÁRIO(A) deverá antes de qualquer procedimento para reparo no imóvel comunicar por escrito e 
+YBPNGÁEVB(N) qrireá nagrf qr dhnydhre cebprqvzragb cnen ercneb ab vzóiry pbzhavpne cbe rfpevgb r 
 
-via (A.R.) a imobiliária administradora do imóvel, procuradora do LOCADOR. 
+ivn (N.E.) n vzbovyváevn nqzvavfgenqben qb vzóiry, cebphenqben qb YBPNQBE. 
 
-6.2. Obriga -se o(a) LOCATÁRIO(A) a promover a contratação do Seguro Incêndio, caso não faça por 
+6.2. Boevtn -fr b(n) YBPNGÁEVB(N) n cebzbire n pbagengnçãb qb Frtheb Vapêaqvb, pnfb aãb snçn cbe 
 
-intermédio da representante VISÃO IMÓVEIS LTDA, deverá ser realizado no valor de 200 x o valor do 
+vagrezéqvb qn ercerfragnagr IVFÃB VZÓIRVF YGQN, qrireá fre ernyvmnqb ab inybe qr 200 k b inybe qb 
 
-aluguel, equivalente ao valor próximo ao bem ou OUTRO A SER INDICADO pela VISÃO IMÓVEIS 
+nyhthry, rdhvinyragr nb inybe ceókvzb nb orz bh BHGEB N FRE VAQVPNQB cryn IVFÃB VZÓIRVF 
 
-LTDA. 
+YGQN. 
 
-6.3. Obriga -se o(a) LOCATÁRIO(A) em promover a inclusão de seu nome nas contas de energia 
+6.3. Boevtn -fr b(n) YBPNGÁEVB(N) rz cebzbire n vapyhfãb qr frh abzr anf pbagnf qr raretvn 
 
-elétrica e de água e esgoto no prazo máximo de 10 dias, contados da assinatura do presente 
+ryégevpn r qr áthn r rftbgb ab cenmb zákvzb qr 10 qvnf, pbagnqbf qn nffvanghen qb cerfragr 
 
-instrumento. Em não havendo a alteração de titularidade e responsabilidade pelas contas de consumo 
+vafgehzragb. Rz aãb uniraqb n nygrençãb qr gvghynevqnqr r erfcbafnovyvqnqr crynf pbagnf qr pbafhzb 
 
-do(a) LOCATÁRIO(A), o(a) LOCADOR(A) fica desde já autorizado(a) expressamente a providenciar a 
+qb(n) YBPNGÁEVB(N), b(n) YBPNQBE(N) svpn qrfqr wá nhgbevmnqb(n) rkcerffnzragr n cebivqrapvne n 
 
-alteração junto as fornecedoras de serviços de consumo. 
+nygrençãb whagb nf sbearprqbenf qr freivçbf qr pbafhzb. 
 
-6.4. O IPTU/TLP do ano em curso será calculado proporcionalmente, a contar da assinatura do 
+6.4. B VCGH/GYC qb nab rz phefb freá pnyphynqb cebcbepvbanyzragr, n pbagne qn nffvanghen qb 
 
-contrato até o mês de dezembro, inclusive. O imposto proporcional será pago pelo(a) LOCATÁRIO(A) 
+pbagengb ngé b zêf qr qrmrzoeb, vapyhfvir. B vzcbfgb cebcbepvbany freá cntb cryb(n) YBPNGÁEVB(N) 
 
-junto com o pagamento do primeiro aluguel que será através do boleto bancário emitido pela imobiliária 
+whagb pbz b cntnzragb qb cevzrveb nyhthry dhr freá ngeniéf qb obyrgb onapáevb rzvgvqb cryn vzbovyváevn 
 
-administradora do imóvel, procuradora do(a) LOCADOR(A) . Idêntico procedimento será adotado ao 
+nqzvavfgenqben qb vzóiry, cebphenqben qb(n) YBPNQBE(N) . Vqêagvpb cebprqvzragb freá nqbgnqb nb 
 
-término da locação, quando o(a) LOCADOR(A) restituirá a(o) LOCATÁRIO(A) o valor proporcional ao 
+géezvab qn ybpnçãb, dhnaqb b(n) YBPNQBE(N) erfgvghveá n(b) YBPNGÁEVB(N) b inybe cebcbepvbany nb 
 
-tempo que restar para completar o ano do exercício pago pelo(a) LOCATÁRIO(A) .
+grzcb dhr erfgne cnen pbzcyrgne b nab qb rkrepípvb cntb cryb(n) YBPNGÁEVB(N) .
 
-6.5. No caso do imóvel possuir múltiplas unidades, e não possuir hidrômetro individualizado, fica o(a) 
+6.5. Ab pnfb qb vzóiry cbffhve zúygvcynf havqnqrf, r aãb cbffhve uvqeôzrgeb vaqvivqhnyvmnqb, svpn b(n) 
 
-LOCATÁRIO(A) ciente de que deverá adotar condutas e posturas econômicas de consumo da água, 
+YBPNGÁEVB(N) pvragr qr dhr qrireá nqbgne pbaqhgnf r cbfghenf rpbaôzvpnf qr pbafhzb qn áthn, 
 
-para fins de preservação, bem como de um uso coletivo/individual, ou o contrato possua a Taxa de Água 
+cnen svaf qr cerfreinçãb, orz pbzb qr hz hfb pbyrgvib/vaqvivqhny, bh b pbagengb cbffhn n Gnkn qr Áthn 
 
-embutida no valor do aluguel, o uso desmedido gerará cobrança extra para suprir os gastos a ser 
+rzohgvqn ab inybe qb nyhthry, b hfb qrfzrqvqb treneá pboenaçn rkgen cnen fhceve bf tnfgbf n fre 
 
-dividido por todas as unidades ocupadas. 
+qvivqvqb cbe gbqnf nf havqnqrf bphcnqnf. 
 
-6.6. Na hipótese do imóvel possuir múltiplas unidades, toda e quaisquer despesas decorrentes de mau 
+6.6. An uvcógrfr qb vzóiry cbffhve zúygvcynf havqnqrf, gbqn r dhnvfdhre qrfcrfnf qrpbeeragrf qr znh 
 
-uso e falta de zelo por parte dos moradores, das áreas comuns do edifício, fica o(a) LOCATÁRIO(A) SRTVS QD. 701 BL.O Nº 110 SALAS 280/284 ED. MULTIEMPRESARIAL - BRASILIA/DF   
+hfb r snygn qr mryb cbe cnegr qbf zbenqberf, qnf áernf pbzhaf qb rqvsípvb, svpn b(n) YBPNGÁEVB(N) FEGIF DQ. 701 OY.B Aº 110 FNYNF 280/284 RQ. ZHYGVRZCERFNEVNY - OENFVYVN/QS   
 
-> TELEFONE: (61) 3034 -9090
-> www.visaoimoveis.com
+> GRYRSBAR: (61) 3034 -9090
+> jjj.ivfnbvzbirvf.pbz
 
-ciente de que deverá adotar condutas e postura, para fins de preservação, bem como de um uso 
+pvragr qr dhr qrireá nqbgne pbaqhgnf r cbfghen, cnen svaf qr cerfreinçãb, orz pbzb qr hz hfb 
 
-coletivo/individua razoável , o uso de forma a não respeitar os bons costumes e o regimento gerará 
+pbyrgvib/vaqvivqhn enmbáiry , b hfb qr sbezn n aãb erfcrvgne bf obaf pbfghzrf r b ertvzragb treneá 
 
-cobrança extra para suprir os gastos excedentes a ser dividido por todas as unidades ocupadas. 
+pboenaçn rkgen cnen fhceve bf tnfgbf rkprqragrf n fre qvivqvqb cbe gbqnf nf havqnqrf bphcnqnf. 
 
-6.7. No caso do imóvel possuir múltiplas unidades, e estiver constando em seu regimento a autorização 
+6.7. Ab pnfb qb vzóiry cbffhve zúygvcynf havqnqrf, r rfgvire pbafgnaqb rz frh ertvzragb n nhgbevmnçãb 
 
-de pets de pequeno porte, o LOCATÁRIO (A), se compromete e responsabiliza a cuidar de seu pet, afim 
+qr crgf qr crdhrab cbegr, b YBPNGÁEVB (N), fr pbzcebzrgr r erfcbafnovyvmn n phvqne qr frh crg, nsvz 
 
-de não permitir que o mesmo faça suas necessidades nas áreas comuns, se comprometendo que caso 
+qr aãb crezvgve dhr b zrfzb snçn fhnf arprffvqnqrf anf áernf pbzhaf, fr pbzcebzrgraqb dhr pnfb 
 
-ocorra de forma não intencional, o mesmo se compromete em fazer a devida limpeza e higienização no 
+bpbeen qr sbezn aãb vagrapvbany, b zrfzb fr pbzcebzrgr rz snmre n qrivqn yvzcrmn r uvtvravmnçãb ab 
 
-local. Fica esclarecido também que qualquer item que venha a desgastar em razão da urina/fezes no 
+ybpny. Svpn rfpynerpvqb gnzoéz dhr dhnydhre vgrz dhr iraun n qrftnfgne rz enmãb qn hevan/srmrf ab 
 
-local não apropriado, gerara custo ao LOCATÁRIO(A) e será inserido no boleto de cobrança mensal. 
+ybpny aãb ncebcevnqb, trenen phfgb nb YBPNGÁEVB(N) r freá vafrevqb ab obyrgb qr pboenaçn zrafny. 
 
-6.8. O carnê para pagamento do IPTU/TLP normalmente é enviado ao endereço do imóvel pela 
+6.8. B pneaê cnen cntnzragb qb VCGH/GYC abeznyzragr é raivnqb nb raqrerçb qb vzóiry cryn 
 
-Secretaria da Fazenda do GDF. Em caso de não recebimento, o(a) LOCATÁRIO(A ) poderá solicitar a 2° 
+Frpergnevn qn Snmraqn qb TQS. Rz pnfb qr aãb erprovzragb, b(n) YBPNGÁEVB(N ) cbqreá fbyvpvgne n 2° 
 
-via de forma imediata, diretamente aquela Secretaria, ou via internet por meio do endereço 
+ivn qr sbezn vzrqvngn, qvergnzragr ndhryn Frpergnevn, bh ivn vagrearg cbe zrvb qb raqrerçb 
 
-www.fazenda.df.gov.br . O (A) LOCATÁRIO(A ) não poderá se valer de tal fato para pagar o IPTU/TLP 
+jjj.snmraqn.qs.tbi.oe . B (N) YBPNGÁEVB(N ) aãb cbqreá fr inyre qr gny sngb cnen cntne b VCGH/GYC 
 
-fora do prazo. 
+sben qb cenmb. 
 
-6.9. O prêmio de Seguro Contra Incêndio deverá ser pago via boleto bancário no início do período da 
+6.9. B ceêzvb qr Frtheb Pbagen Vapêaqvb qrireá fre cntb ivn obyrgb onapáevb ab vaípvb qb creíbqb qn 
 
-locação, no primeiro boleto de aluguel e terá validade de 01 (um) ano, se obrigando o(a) 
+ybpnçãb, ab cevzrveb obyrgb qr nyhthry r greá inyvqnqr qr 01 (hz) nab, fr boevtnaqb b(n) 
 
-LOCATÁRIO(A) a renová -lo anualmente, com a devida comprovação, independentemente de 
+YBPNGÁEVB(N) n erabiá -yb nahnyzragr, pbz n qrivqn pbzcebinçãb, vaqrcraqragrzragr qr 
 
-solicitação do(a) LOCADOR(A) ou de representantes do mesmo, até a efetiva restituição do imóvel. 
+fbyvpvgnçãb qb(n) YBPNQBE(N) bh qr ercerfragnagrf qb zrfzb, ngé n rsrgvin erfgvghvçãb qb vzóiry. 
 
-6.10. Será de responsabilidade do(a) LOCATÁRIO(A) o pagamento de multas decorrentes de atrasos 
+6.10. Freá qr erfcbafnovyvqnqr qb(n) YBPNGÁEVB(N) b cntnzragb qr zhygnf qrpbeeragrf qr ngenfbf 
 
-na liquidação de qualquer dos encargos, ou decorrentes de descumprimento de normas, regulamentos, 
+an yvdhvqnçãb qr dhnydhre qbf rapnetbf, bh qrpbeeragrf qr qrfphzcevzragb qr abeznf, erthynzragbf, 
 
-decisões assembleares ou convenções de condomínio do imóvel, mesmo que lançadas em nome do(a) 
+qrpvfõrf nffrzoyrnerf bh pbairaçõrf qr pbaqbzíavb qb vzóiry, zrfzb dhr ynaçnqnf rz abzr qb(n) 
 
-LOCADOR(A). 
+YBPNQBE(N). 
 
-6.11. O pagamento de qualquer despesa ou encargo relativos ao imóvel que venham a ser efetuados 
+6.11. B cntnzragb qr dhnydhre qrfcrfn bh rapnetb eryngvibf nb vzóiry dhr iraunz n fre rsrghnqbf 
 
-pelo(a) LOCADOR(A) , por motivo de inadimplência do(a) LOCATÁRIO(A), será acrescido de multa de 
+cryb(n) YBPNQBE(N) , cbe zbgvib qr vanqvzcyêapvn qb(n) YBPNGÁEVB(N), freá nperfpvqb qr zhygn qr 
 
-10% (dez por cento) e juros de mora de 1% (um por cento) ao mês, além da atualização monetária pelo 
+10% (qrm cbe pragb) r whebf qr zben qr 1% (hz cbe pragb) nb zêf, nyéz qn nghnyvmnçãb zbargáevn cryb 
 
-INPC/IBGE. 
+VACP/VOTR. 
 
-6.12. Será de responsabilidade do(a) LOCATÁRIO(A) o pagamento de eventuais sobretaxas ou multas 
+6.12. Freá qr erfcbafnovyvqnqr qb(n) YBPNGÁEVB(N) b cntnzragb qr riraghnvf fboergnknf bh zhygnf 
 
-de energia e água, inclusive decorrentes de planos governamentais de racionamento de energia, 
+qr raretvn r áthn, vapyhfvir qrpbeeragrf qr cynabf tbireanzragnvf qr enpvbanzragb qr raretvn, 
 
-cabendo ao mesmo, igualmente, se for o caso, o encargo de negociar com a empresa fornecedora sobre 
+pnoraqb nb zrfzb, vthnyzragr, fr sbe b pnfb, b rapnetb qr artbpvne pbz n rzcerfn sbearprqben fboer 
 
-situações particulares relacionadas ao consumo, sem que prejuízos que advenham a(o) LOCADOR(A). 
+fvghnçõrf cnegvphynerf erynpvbanqnf nb pbafhzb, frz dhr cerwhímbf dhr nqiraunz n(b) YBPNQBE(N). 
 
-6.13. Fica acordado que eventuais cortes de energia ou de água, qualquer que seja a sua causa, ou 
+6.13. Svpn npbeqnqb dhr riraghnvf pbegrf qr raretvn bh qr áthn, dhnydhre dhr frwn n fhn pnhfn, bh 
 
-motivo, não ensejarão abatimento no valor do aluguel. 
+zbgvib, aãb rafrwneãb nongvzragb ab inybe qb nyhthry. 
 
-6.14. Fica notificado o(a) LOCATARIO( A) que os pagamentos feitos advindos da locação, somente 
+6.14. Svpn abgvsvpnqb b(n) YBPNGNEVB( N) dhr bf cntnzragbf srvgbf nqivaqbf qn ybpnçãb, fbzragr 
 
-serão reconhecidos, se os mesmos forem pagos e autenticados pelo DEPARTAMENTO FINANCEIRO 
+freãb erpbaurpvqbf, fr bf zrfzbf sberz cntbf r nhgragvpnqbf cryb QRCNEGNZRAGB SVANAPRVEB 
 
-da imobiliária administradora do imóvel, procuradora do LOCADOR ou através do boleto bancá rio 
+qn vzbovyváevn nqzvavfgenqben qb vzóiry, cebphenqben qb YBPNQBE bh ngeniéf qb obyrgb onapá evb 
 
-emitido pelo mesmo e pago nas redes bancarias. 
+rzvgvqb cryb zrfzb r cntb anf erqrf onapnevnf. 
 
-6.15. Fica expressamente vedado depósito diretamente em conta corrente da administradora bem como 
+6.15. Svpn rkcerffnzragr irqnqb qrcófvgb qvergnzragr rz pbagn pbeeragr qn nqzvavfgenqben orz pbzb 
 
-do(a) LOCADOR(A), caso ocorra não será admitido como pagamento dos valores devidos, e será 
+qb(n) YBPNQBE(N), pnfb bpbeen aãb freá nqzvgvqb pbzb cntnzragb qbf inyberf qrivqbf, r freá 
 
-imediatamente estornado e disponibilizado a sua devolução a(o) LOCATÁRIO(A) .
+vzrqvngnzragr rfgbeanqb r qvfcbavovyvmnqb n fhn qribyhçãb n(b) YBPNGÁEVB(N) .
 
-CLÁUSULA SÉTIMA – DO IMÓVEL 
+PYÁHFHYN FÉGVZN – QB VZÓIRY 
 
-7.1. O imóvel objeto da presente locação se destina a servir de uso exclusivamente do (a) 
+7.1. B vzóiry bowrgb qn cerfragr ybpnçãb fr qrfgvan n freive qr hfb rkpyhfvinzragr qb (n) 
 
-LOCATÁRIO(A), ficando expressamente vedada a sua sublocação, a cessão e o empréstimo, total ou 
+YBPNGÁEVB(N), svpnaqb rkcerffnzragr irqnqn n fhn fhoybpnçãb, n prffãb r b rzceéfgvzb, gbgny bh 
 
-parcial, seja a que título for, sob pena da competente Ação de Despejo sem prejuízo de outras medidas 
+cnepvny, frwn n dhr gíghyb sbe, fbo cran qn pbzcrgragr Nçãb qr Qrfcrwb frz cerwhímb qr bhgenf zrqvqnf 
 
-cabíveis. 
+pnoíirvf. 
 
-7.2. O uso do imóvel não poderá, sob pena de despejo, comprometer a moralidade, os bons costumes 
+7.2. B hfb qb vzóiry aãb cbqreá, fbo cran qr qrfcrwb, pbzcebzrgre n zbenyvqnqr, bf obaf pbfghzrf 
 
-ou o sossego dos vizinhos, devendo o(a) LOCATÁRIO(A) respeitar também os limites do silêncio, os 
+bh b fbffrtb qbf ivmvaubf, qriraqb b(n) YBPNGÁEVB(N) erfcrvgne gnzoéz bf yvzvgrf qb fvyêapvb, bf 
 
-padrões do prédio no que diz respeito ao padrão das portas de entrada e das fachadas, 
+cnqeõrf qb ceéqvb ab dhr qvm erfcrvgb nb cnqeãb qnf cbegnf qr ragenqn r qnf snpunqnf, 
 
-comprometendo -se ainda a não embaraçar, de modo algum, a utilização das partes comuns. 
+pbzcebzrgraqb -fr nvaqn n aãb rzonençne, qr zbqb nythz, n hgvyvmnçãb qnf cnegrf pbzhaf. 
 
-7.3. Obriga -se o(a) LOCATÁRIO(A) a respeitar as convenções de condomínio e regimento interno e as 
+7.3. Boevtn -fr b(n) YBPNGÁEVB(N) n erfcrvgne nf pbairaçõrf qr pbaqbzíavb r ertvzragb vagreab r nf 
 
-decisões assembleares, especialmente quanto às regras para instalação de placas e sistemas de 
+qrpvfõrf nffrzoyrnerf, rfcrpvnyzragr dhnagb àf ertenf cnen vafgnynçãb qr cynpnf r fvfgrznf qr 
 
-sinalização, bem como as normas e legislação vigentes estabelecidas pela administração pública, 
+fvanyvmnçãb, orz pbzb nf abeznf r yrtvfynçãb ivtragrf rfgnoryrpvqnf cryn nqzvavfgençãb cúoyvpn, 
 
-responsabilizando -se jurídica e financeiramente pelo seu descumprimento. 
+erfcbafnovyvmnaqb -fr wheíqvpn r svanaprvenzragr cryb frh qrfphzcevzragb. 
 
-7.4. Em caso de o imóvel ser colocado à venda, o(a) LOCATÁRIO(A) autorizará a visita de 
+7.4. Rz pnfb qr b vzóiry fre pbybpnqb à iraqn, b(n) YBPNGÁEVB(N) nhgbevmneá n ivfvgn qr 
 
-compradores mediante combinação prévia de horário, depois de cumpridas as formalidades legais do 
+pbzcenqberf zrqvnagr pbzovançãb ceéivn qr ubeáevb, qrcbvf qr phzcevqnf nf sbeznyvqnqrf yrtnvf qb 
 
-direito de preferência previsto pela Lei do Inquilinato. 
+qvervgb qr cersreêapvn cerivfgb cryn Yrv qb Vadhvyvangb. 
 
-7.5. Responderá o(a) LOCATÁRIO(A) por incêndio ocorrido no imóvel se não provar caso fortuito ou 
+7.5. Erfcbaqreá b(n) YBPNGÁEVB(N) cbe vapêaqvb bpbeevqb ab vzóiry fr aãb cebine pnfb sbeghvgb bh 
 
-força maior, vício de construção que o tenha causado ou inevitável propagação de fogo originado em SRTVS QD. 701 BL.O Nº 110 SALAS 280/284 ED. MULTIEMPRESARIAL - BRASILIA/DF   
+sbeçn znvbe, iípvb qr pbafgehçãb dhr b graun pnhfnqb bh varivgáiry cebcntnçãb qr sbtb bevtvanqb rz FEGIF DQ. 701 OY.B Aº 110 FNYNF 280/284 RQ. ZHYGVRZCERFNEVNY - OENFVYVN/QS   
 
-> TELEFONE: (61) 3034 -9090
-> www.visaoimoveis.com
+> GRYRSBAR: (61) 3034 -9090
+> jjj.ivfnbvzbirvf.pbz
 
-outro prédio ou unidade, sem prejuízo da responsabilidade pelo pagamento do seguro previsto na 
+bhgeb ceéqvb bh havqnqr, frz cerwhímb qn erfcbafnovyvqnqr cryb cntnzragb qb frtheb cerivfgb an 
 
-Cláusula 6.1 ou propagação de fogo originado em outro prédio ou unidade. 
+Pyáhfhyn 6.1 bh cebcntnçãb qr sbtb bevtvanqb rz bhgeb ceéqvb bh havqnqr. 
 
-7.6. No caso de Locação de Imóvel para uso residencial ou comercial, são expressamente proibidas a 
+7.6. Ab pnfb qr Ybpnçãb qr Vzóiry cnen hfb erfvqrapvny bh pbzrepvny, fãb rkcerffnzragr cebvovqnf n 
 
-utilização de instalações elétricas paralelas, as perfurações em armários, portais, partes de madeira, 
+hgvyvmnçãb qr vafgnynçõrf ryégevpnf cnenyrynf, nf creshençõrf rz nezáevbf, cbegnvf, cnegrf qr znqrven, 
 
-tetos, azulejos, cerâmicas, pisos e ladrilhos, bem como expressamente proibido colar papéis ou pregar 
+grgbf, nmhyrwbf, preâzvpnf, cvfbf r ynqevyubf, orz pbzb rkcerffnzragr cebvovqb pbyne cncévf bh certne 
 
-outros materiais nos vidros das janelas, armários e em outros locais e partes do imóvel. 
+bhgebf zngrevnvf abf ivqebf qnf wnarynf, nezáevbf r rz bhgebf ybpnvf r cnegrf qb vzóiry. 
 
-7.7. O(A) LOCATÁRIO(A) deverá encaminhar à imobiliária administradora do imóvel, procuradora 
+7.7. B(N) YBPNGÁEVB(N) qrireá rapnzvaune à vzbovyváevn nqzvavfgenqben qb vzóiry, cebphenqben 
 
-do(a) LOCADOR(A) quaisquer papéis, documentos, notificações, contas, guias tributárias e
+qb(n) YBPNQBE(N) dhnvfdhre cncévf, qbphzragbf, abgvsvpnçõrf, pbagnf, thvnf gevohgáevnf r
 
-correspondências entregues no imóvel a ele destinados ou relacionados com a sua propriedade. 
+pbeerfcbaqêapvnf ragerthrf ab vzóiry n ryr qrfgvanqbf bh erynpvbanqbf pbz n fhn cebcevrqnqr. 
 
-7.8. Fica reservado a(o) LOCADOR(A) , ou a quem este indicar, o direito de vistoriar o imóvel, a 
+7.8. Svpn erfreinqb n(b) YBPNQBE(N) , bh n dhrz rfgr vaqvpne, b qvervgb qr ivfgbevne b vzóiry, n 
 
-qualquer tempo enquanto vigente a locação, bastando que faça previa comunicação a(o) 
+dhnydhre grzcb radhnagb ivtragr n ybpnçãb, onfgnaqb dhr snçn cerivn pbzhavpnçãb n(b) 
 
-LOCATÁRIO(A) , com antecedência mínima de 48 horas. 
+YBPNGÁEVB(N) , pbz nagrprqêapvn zíavzn qr 48 ubenf. 
 
-7.9. Não será permitido animais de médio ou grande porte, ou ainda aqueles que gerem risco, 
+7.9. Aãb freá crezvgvqb navznvf qr zéqvb bh tenaqr cbegr, bh nvaqn ndhryrf dhr trerz evfpb, 
 
-prejuízos, enfermidades aos demais moradores, ou terceiros indeterminados, (ex.: porcos, aves, 
+cerwhímbf, rasrezvqnqrf nbf qrznvf zbenqberf, bh greprvebf vaqrgrezvanqbf, (rk.: cbepbf, nirf, 
 
-ovelhas, cavalos, morcegos, moscas, cobras, aranhas e outros). 
+biryunf, pninybf, zbeprtbf, zbfpnf, pboenf, nenaunf r bhgebf). 
 
-7.10. O(A) LOCATÁRIO(A) que possuir pets de pequeno porte, tem obrigação de gerir, zelar, cuidar, 
+7.10. B(N) YBPNGÁEVB(N) dhr cbffhve crgf qr crdhrab cbegr, grz boevtnçãb qr treve, mryne, phvqne, 
 
-manter , tratar e bem zelar por seu animal de estimação, sob pena de denuncia aos órgãos competentes, 
+znagre , gengne r orz mryne cbe frh navzny qr rfgvznçãb, fbo cran qr qrahapvn nbf óetãbf pbzcrgragrf, 
 
-além dos previstos em atas, resoluções, convenções, regimentos e outros do imóvel locado, bem como 
+nyéz qbf cerivfgbf rz ngnf, erfbyhçõrf, pbairaçõrf, ertvzragbf r bhgebf qb vzóiry ybpnqb, orz pbzb 
 
-promover o devido asseio de sua unidade evitando a proliferação de odores e outros. 
+cebzbire b qrivqb nffrvb qr fhn havqnqr rivgnaqb n cebyvsrençãb qr bqberf r bhgebf. 
 
-7.11. O(A) LOCATÁRIO(A) que possuir pets tem obrigação de recolher e limpar as fezes e urinas que 
+7.11. B(N) YBPNGÁEVB(N) dhr cbffhve crgf grz boevtnçãb qr erpbyure r yvzcne nf srmrf r hevanf dhr 
 
-por ventura seu pet faça nas áreas comuns do imóvel, sob pena de penalização. 
+cbe iraghen frh crg snçn anf áernf pbzhaf qb vzóiry, fbo cran qr cranyvmnçãb. 
 
-CLÁUSULA OITAVA – DAS OBRAS, BENFEITORIAS E REPAROS 
+PYÁHFHYN BVGNIN – QNF BOENF, ORASRVGBEVNF R ERCNEBF 
 
-8.1. Qualquer benfeitoria que o(a) LOCATÁRIO(A) desejar realizar no imóvel, seja útil ou necessária, 
+8.1. Dhnydhre orasrvgbevn dhr b(n) YBPNGÁEVB(N) qrfrwne ernyvmne ab vzóiry, frwn úgvy bh arprffáevn, 
 
-deverá ser solicitada por meio de correspondência com Aviso de Recebimento (A.R.) à imobiliária 
+qrireá fre fbyvpvgnqn cbe zrvb qr pbeerfcbaqêapvn pbz Nivfb qr Erprovzragb (N.E.) à vzbovyváevn 
 
-Administradora, para que seja concedida a autorização por escrito do(a) LOCADOR(A) . E, mesmo após 
+Nqzvavfgenqben, cnen dhr frwn pbaprqvqn n nhgbevmnçãb cbe rfpevgb qb(n) YBPNQBE(N) . R, zrfzb ncóf 
 
-autorizado, o(a) LOCATÁRIO(A) não terá direito a qualquer indenização ou direito de retenção pelas 
+nhgbevmnqb, b(n) YBPNGÁEVB(N) aãb greá qvervgb n dhnydhre vaqravmnçãb bh qvervgb qr ergraçãb crynf 
 
-benfeitorias realizadas, salvo se na autorização constar expressamente o consentimento do(A) 
+orasrvgbevnf ernyvmnqnf, fnyib fr an nhgbevmnçãb pbafgne rkcerffnzragr b pbafragvzragb qb(N) 
 
-LOCADOR(A) em arcar com as despesas das benfeitorias. As benfeitorias voluptuárias igualmente não 
+YBPNQBE(N) rz nepne pbz nf qrfcrfnf qnf orasrvgbevnf. Nf orasrvgbevnf ibyhcgháevnf vthnyzragr aãb 
 
-são indenizáveis e – tal como as benfeitorias úteis ou necessárias custeadas pelo(a) LOCATÁRIO(A) –
+fãb vaqravmáirvf r – gny pbzb nf orasrvgbevnf úgrvf bh arprffáevnf phfgrnqnf cryb(n) YBPNGÁEVB(N) –
 
-só poderão ser levantadas se de sua retirada não resultar dano. 
+fó cbqreãb fre yrinagnqnf fr qr fhn ergvenqn aãb erfhygne qnab. 
 
-8.2. Caberá a(o) LOCADOR(A) garantir, durante o tempo da locação o uso pacífico do imóvel locado, 
+8.2. Pnoreá n(b) YBPNQBE(N) tnenagve, qhenagr b grzcb qn ybpnçãb b hfb cnpísvpb qb vzóiry ybpnqb, 
 
-mantendo a sua forma e destino, respondendo pelos vícios ou defeitos anteriores à locação, que não 
+znagraqb n fhn sbezn r qrfgvab, erfcbaqraqb crybf iípvbf bh qrsrvgbf nagrevberf à ybpnçãb, dhr aãb 
 
-tenham sido causados pelo(a) LOCATÁRIO(A). 
+graunz fvqb pnhfnqbf cryb(n) YBPNGÁEVB(N). 
 
-8.3. Caberá a(o) LOCATÁRIO(A) fazer por sua conta, urgência, solidez e perfeição, todos os reparos 
+8.3. Pnoreá n(b) YBPNGÁEVB(N) snmre cbe fhn pbagn, hetêapvn, fbyvqrm r cresrvçãb, gbqbf bf ercnebf 
 
-de estragos a que der causa, bem como aqueles reclamados do uso do imóvel, mantendo todas as suas 
+qr rfgentbf n dhr qre pnhfn, orz pbzb ndhryrf erpynznqbf qb hfb qb vzóiry, znagraqb gbqnf nf fhnf 
 
-instalações em normal funcionamento, se responsabilizando, também, pela sua conservação e limpeza. 
+vafgnynçõrf rz abezny shapvbanzragb, fr erfcbafnovyvmnaqb, gnzoéz, cryn fhn pbafreinçãb r yvzcrmn. 
 
-No caso do imóvel, possuir aparelho (os) de ar condicionado, a manutenção será de responsabilidade 
+Ab pnfb qb vzóiry, cbffhve ncneryub (bf) qr ne pbaqvpvbanqb, n znahgraçãb freá qr erfcbafnovyvqnqr 
 
-do LOCATÁRIO(A). 
+qb YBPNGÁEVB(N). 
 
-8.4. Será de inteira responsabilidade do(a) LOCATÁRIO(A) a contratação de empresas ou 
+8.4. Freá qr vagrven erfcbafnovyvqnqr qb(n) YBPNGÁEVB(N) n pbagengnçãb qr rzcerfnf bh 
 
-profissionais prestadores de serviços de manutenção de sistema de alarme, portão eletrônico e
+cebsvffvbanvf cerfgnqberf qr freivçbf qr znahgraçãb qr fvfgrzn qr nynezr, cbegãb ryrgeôavpb r
 
-interfone, se for o caso, arcando com as despesas decorrentes, inclusive referentes às instalações do 
+vagresbar, fr sbe b pnfb, nepnaqb pbz nf qrfcrfnf qrpbeeragrf, vapyhfvir ersreragrf àf vafgnynçõrf qb 
 
-serviço que vier a solicitar. 
+freivçb dhr ivre n fbyvpvgne. 
 
-CLÁUSULA NONA – DO ABANDONO DO IMÓVEL 
+PYÁHFHYN ABAN – QB NONAQBAB QB VZÓIRY 
 
-9.1. Com a finalidade de resguardar o imóvel e defendê -lo contra possíveis danos, invasões ou 
+9.1. Pbz n svanyvqnqr qr erfthneqne b vzóiry r qrsraqê -yb pbagen cbffíirvf qnabf, vainfõrf bh 
 
-esbulhos, fica o(a) LOCADOR(A) autorizado a ocupá -lo, independentemente de qualquer procedimento 
+rfohyubf, svpn b(n) YBPNQBE(N) nhgbevmnqb n bphcá -yb, vaqrcraqragrzragr qr dhnydhre cebprqvzragb 
 
-judicial ou extrajudicial prévio, ainda que seja necessário mandar abri -lo, no caso de ficar comprovado o 
+whqvpvny bh rkgenwhqvpvny ceéivb, nvaqn dhr frwn arprffáevb znaqne noev -yb, ab pnfb qr svpne pbzcebinqb b 
 
-seu abandono pelo(a) LOCATÁRIO(A) e depois de vencido o 2º (segundo) mês de aluguel sem o seu 
+frh nonaqbab cryb(n) YBPNGÁEVB(N) r qrcbvf qr irapvqb b 2º (frthaqb) zêf qr nyhthry frz b frh 
 
-devido pagamento. 
+qrivqb cntnzragb. 
 
-CLÁUSULA DÉCIMA – DA RESTITUIÇÃO DO IMÓVEL 
+PYÁHFHYN QÉPVZN – QN ERFGVGHVÇÃB QB VZÓIRY 
 
-10.1. Não sendo ajustada, pelas partes, a renovação do presente contrato, o(a) LOCATÁRIO(A) deverá 
+10.1. Aãb fraqb nwhfgnqn, crynf cnegrf, n erabinçãb qb cerfragr pbagengb, b(n) YBPNGÁEVB(N) qrireá 
 
-realizar a pintura do imóvel com tinta de qualidade, conforme consta no laudo de vistoria (exceto para 
+ernyvmne n cvaghen qb vzóiry pbz gvagn qr dhnyvqnqr, pbasbezr pbafgn ab ynhqb qr ivfgbevn (rkprgb cnen 
 
-locação de vagas de garagem) que faz parte integrante deste contrato, e bom acabamento bem como o 
+ybpnçãb qr intnf qr tnentrz) dhr snm cnegr vagrtenagr qrfgr pbagengb, r obz npnonzragb orz pbzb b 
 
-reparo de qualquer dano porventura verificado, de forma a adequá -lo as condições descritas no Termo 
+ercneb qr dhnydhre qnab cbeiraghen irevsvpnqb, qr sbezn n nqrdhá -yb nf pbaqvçõrf qrfpevgnf ab Grezb 
 
-de Vistoria (caso o imóvel seja de uso residencial ou comercial), antes da entrega das chaves à 
+qr Ivfgbevn (pnfb b vzóiry frwn qr hfb erfvqrapvny bh pbzrepvny), nagrf qn ragertn qnf punirf à 
 
-imobiliária administradora do imóvel, procuradora do(a) LOCADOR(A). SRTVS QD. 701 BL.O Nº 110 SALAS 280/284 ED. MULTIEMPRESARIAL - BRASILIA/DF   
+vzbovyváevn nqzvavfgenqben qb vzóiry, cebphenqben qb(n) YBPNQBE(N). FEGIF DQ. 701 OY.B Aº 110 FNYNF 280/284 RQ. ZHYGVRZCERFNEVNY - OENFVYVN/QS   
 
-> TELEFONE: (61) 3034 -9090
-> www.visaoimoveis.com
+> GRYRSBAR: (61) 3034 -9090
+> jjj.ivfnbvzbirvf.pbz
 
-10.2. O(A) LOCATÁRIO(A) deverá após a desocupação total do imóvel solicitar junto a imobiliária 
+10.2. B(N) YBPNGÁEVB(N) qrireá ncóf n qrfbphcnçãb gbgny qb vzóiry fbyvpvgne whagb n vzbovyváevn 
 
-administradora do imóvel, procuradora do(a) LOCADOR(A) a vistoria final, para que se possa constatar 
+nqzvavfgenqben qb vzóiry, cebphenqben qb(n) YBPNQBE(N) n ivfgbevn svany, cnen dhr fr cbffn pbafgngne 
 
-o estado do imóvel e posteriormente agendar a entrega das chaves do imóvel na imobiliária 
+b rfgnqb qb vzóiry r cbfgrevbezragr ntraqne n ragertn qnf punirf qb vzóiry an vzbovyváevn 
 
-administradora do imóvel, procuradora do(a) LOCADOR(A) .
+nqzvavfgenqben qb vzóiry, cebphenqben qb(n) YBPNQBE(N) .
 
-10.3. Por ocasião do recebimento do imóvel, será lavrado o respectivo "Termo de Recebimento de 
+10.3. Cbe bpnfvãb qb erprovzragb qb vzóiry, freá ynienqb b erfcrpgvib "Grezb qr Erprovzragb qr 
 
-Chaves", o qual será assinado pelas partes e por duas testemunhas, onde serão registradas, de forma 
+Punirf", b dhny freá nffvanqb crynf cnegrf r cbe qhnf grfgrzhaunf, baqr freãb ertvfgenqnf, qr sbezn 
 
-detalhada, as condições em que o imóvel se encontra conforme vistoria final. 
+qrgnyunqn, nf pbaqvçõrf rz dhr b vzóiry fr rapbagen pbasbezr ivfgbevn svany. 
 
-10.4. O término legal do presente contrato se dará com a assinatura do Termo de Entrega de Chaves, 
+10.4. B géezvab yrtny qb cerfragr pbagengb fr qneá pbz n nffvanghen qb Grezb qr Ragertn qr Punirf, 
 
-pelo(a) LOCATARIO(A). 
+cryb(n) YBPNGNEVB(N). 
 
-10.5. O Termo de Entrega de Chaves assinado após verificado previamente o seu estado de pintura, 
+10.5. B Grezb qr Ragertn qr Punirf nffvanqb ncóf irevsvpnqb cerivnzragr b frh rfgnqb qr cvaghen, 
 
-conservação e limpeza. Enquanto o termo de entrega de chaves não for assinado, os aluguéis serão 
+pbafreinçãb r yvzcrmn. Radhnagb b grezb qr ragertn qr punirf aãb sbe nffvanqb, bf nyhthévf freãb 
 
-devidos à imobiliária administradora do imóvel, procuradora do(a) LOCADOR(A) e serão calculados 
+qrivqbf à vzbovyváevn nqzvavfgenqben qb vzóiry, cebphenqben qb(n) YBPNQBE(N) r freãb pnyphynqbf 
 
-proporcionalmente até a efetiva data de liberação do imóvel e assinatura do referido Termo. 
+cebcbepvbanyzragr ngé n rsrgvin qngn qr yvorençãb qb vzóiry r nffvanghen qb ersrevqb Grezb. 
 
-10.6. A qualquer tempo e mesmo em caso de prorrogação tácita do presente contrato, se obriga o(a) 
+10.6. N dhnydhre grzcb r zrfzb rz pnfb qr cebeebtnçãb gápvgn qb cerfragr pbagengb, fr boevtn b(n) 
 
-LOCATÁRIO(A) a comunicar formalmente ao locador, por meio de carta com Aviso de Recebimento via 
+YBPNGÁEVB(N) n pbzhavpne sbeznyzragr nb ybpnqbe, cbe zrvb qr pnegn pbz Nivfb qr Erprovzragb ivn 
 
-(A.R.), com antecedência mínima de 30 (trinta) dias, a sua decisão de devolver o imóvel locado. 
+(N.E.), pbz nagrprqêapvn zíavzn qr 30 (gevagn) qvnf, n fhn qrpvfãb qr qribyire b vzóiry ybpnqb. 
 
-10.7. Na data da assinatura do Termo de Entrega de Chaves, o(a) LOCATÁRIO(A) deverá se 
+10.7. An qngn qn nffvanghen qb Grezb qr Ragertn qr Punirf, b(n) YBPNGÁEVB(N) qrireá fr 
 
-apresentar à imobiliária administradora do imóvel, procuradora do(a) LOCADOR(A) , os comprovantes 
+ncerfragne à vzbovyváevn nqzvavfgenqben qb vzóiry, cebphenqben qb(n) YBPNQBE(N) , bf pbzcebinagrf 
 
-de pagamento de IPTU/TLP, contas de consumo de energia elétrica, gás, água/esgoto, taxas ordinárias 
+qr cntnzragb qr VCGH/GYC, pbagnf qr pbafhzb qr raretvn ryégevpn, táf, áthn/rftbgb, gnknf beqvaáevnf 
 
-condominiais, declaração de nada consta fornecida pelo síndico/administradora (em papel timbrado e 
+pbaqbzvavnvf, qrpynençãb qr anqn pbafgn sbearpvqn cryb fíaqvpb/nqzvavfgenqben (rz cncry gvzoenqb r 
 
-carimbado pelo(a) síndico(a)/Administradora) e serviços de terceiros eventualmente contratados para o 
+pnevzonqb cryb(n) fíaqvpb(n)/Nqzvavfgenqben) r freivçbf qr greprvebf riraghnyzragr pbagengnqbf cnen b 
 
-imóvel, quando for o caso. Ressalte -se que o não pagamento ou o pagamento parcial de qualquer 
+vzóiry, dhnaqb sbe b pnfb. Erffnygr -fr dhr b aãb cntnzragb bh b cntnzragb cnepvny qr dhnydhre 
 
-parcela locatícia, inclusive encargos acessórios e honorários advocatícios, constitui justo motivo para a 
+cnepryn ybpngípvn, vapyhfvir rapnetbf nprffóevbf r ubabeáevbf nqibpngípvbf, pbafgvghv whfgb zbgvib cnen n 
 
-recusa ao recebimento de valores e das chaves. 
+erphfn nb erprovzragb qr inyberf r qnf punirf. 
 
-10.8. Se o(a) LOCATÁRIO(A) não devolver o imóvel nas condições em que o recebeu, de acordo com o 
+10.8. Fr b(n) YBPNGÁEVB(N) aãb qribyire b vzóiry anf pbaqvçõrf rz dhr b erprorh, qr npbeqb pbz b 
 
-Termo de Vistoria (Exceto para locação de vagas de garagem), poderá o(a) LOCADOR(A) executar os 
+Grezb qr Ivfgbevn (Rkprgb cnen ybpnçãb qr intnf qr tnentrz), cbqreá b(n) YBPNQBE(N) rkrphgne bf 
 
-serviços de reparação e pintura que se fizerem necessários, utilizando tinta de qualidade (conforme 
+freivçbf qr ercnençãb r cvaghen dhr fr svmrerz arprffáevbf, hgvyvmnaqb gvagn qr dhnyvqnqr (pbasbezr 
 
-descrito no Termo de Vistoria - exceto para locação de vagas de garagem) e contratando profissional 
+qrfpevgb ab Grezb qr Ivfgbevn - rkprgb cnen ybpnçãb qr intnf qr tnentrz) r pbagengnaqb cebsvffvbany 
 
-com reconhecido know -how, ficando desde já acordado que o não ressarcimento por parte do 
+pbz erpbaurpvqb xabj -ubj, svpnaqb qrfqr wá npbeqnqb dhr b aãb erffnepvzragb cbe cnegr qb 
 
-LOCATÁRIO das despesas efetuadas ensejará a sua cobrança judicial pela via executiva (CPC, art. 
+YBPNGÁEVB qnf qrfcrfnf rsrghnqnf rafrwneá n fhn pboenaçn whqvpvny cryn ivn rkrphgvin (PCP, neg. 
 
-585), servindo de título hábil o recibo ou documento fiscal emitido pela empresa ou profissional executor 
+585), freivaqb qr gíghyb uáovy b erpvob bh qbphzragb svfpny rzvgvqb cryn rzcerfn bh cebsvffvbany rkrphgbe 
 
-dos trabalhos de recomposição do imóvel. 
+qbf genonyubf qr erpbzcbfvçãb qb vzóiry. 
 
-10.9 Caso o LOCATÁRIO(A) tenha contratado Seguro Fiança e/ou outro tipo de Seguro, e a respectiva 
+10.9 Pnfb b YBPNGÁEVB(N) graun pbagengnqb Frtheb Svnaçn r/bh bhgeb gvcb qr Frtheb, r n erfcrpgvin 
 
-empresa seguradora não promova o pagamento integral das pendências, por qualquer justificativa, 
+rzcerfn frthenqben aãb cebzbin b cntnzragb vagrteny qnf craqêapvnf, cbe dhnydhre whfgvsvpngvin, 
 
-ficará obrigado(a) o(a) LOCATÁRIO(A) e o(a) FIADOR(A) a arcar com a diferença. 
+svpneá boevtnqb(n) b(n) YBPNGÁEVB(N) r b(n) SVNQBE(N) n nepne pbz n qvsreraçn. 
 
-CLÁUSULA DÉCIMA PRIMEIRA – DAS PENALIDADES E MULTAS 
+PYÁHFHYN QÉPVZN CEVZRVEN – QNF CRANYVQNQRF R ZHYGNF 
 
-11.1. A infringência de qualquer das cláusulas ou condições do presente contrato sujeitará a parte 
+11.1. N vasevatêapvn qr dhnydhre qnf pyáhfhynf bh pbaqvçõrf qb cerfragr pbagengb fhwrvgneá n cnegr 
 
-infratora, tanto o(a) LOCADOR(A) como o(a) LOCATÁRIO(A), ao pagamento de multa equivalente a 03 
+vasengben, gnagb b(n) YBPNQBE(N) pbzb b(n) YBPNGÁEVB(N), nb cntnzragb qr zhygn rdhvinyragr n 03 
 
-(três) mês de aluguel, sem prejuízo de eventuais perdas e danos do disposto na cláusula segunda do 
+(geêf) zêf qr nyhthry, frz cerwhímb qr riraghnvf creqnf r qnabf qb qvfcbfgb an pyáhfhyn frthaqn qb 
 
-presente contrato. 
+cerfragr pbagengb. 
 
-11.2. A multa rescisória estipulada para rescisão do presente contrato é de 03 (três) vezes o valor do 
+11.2. N zhygn erfpvfóevn rfgvchynqn cnen erfpvfãb qb cerfragr pbagengb é qr 03 (geêf) irmrf b inybe qb 
 
-aluguel vigente, respeitada a proporcionalidade de que trata o Art. 413 do Código Civil. 
+nyhthry ivtragr, erfcrvgnqn n cebcbepvbanyvqnqr qr dhr gengn b Neg. 413 qb Póqvtb Pvivy. 
 
-CLÁUSULA DÉCIMA SEGUNDA - O LOCADOR não responderá , em nenhum caso, por quaisquer 
+PYÁHFHYN QÉPVZN FRTHAQN - B YBPNQBE aãb erfcbaqreá , rz arauhz pnfb, cbe dhnvfdhre 
 
-danos que venha a sofrer o LOCATÁRIO (A) em razão de derramamento de líquido, água de 
+qnabf dhr iraun n fbsere b YBPNGÁEVB (N) rz enmãb qr qreenznzragb qr yídhvqb, áthn qr 
 
-rompimento de canos, de chuvas, de abertura de torneiras, defeitos de esgotos ou fossas, incêndios, 
+ebzcvzragb qr pnabf, qr puhinf, qr noreghen qr gbearvenf, qrsrvgbf qr rftbgbf bh sbffnf, vapêaqvbf, 
 
-arrombamentos, roubos, furtos, de casos fortuitos ou de força maior. 
+neebzonzragbf, ebhobf, shegbf, qr pnfbf sbeghvgbf bh qr sbeçn znvbe. 
 
-CLÁUSULA DÉCIMA TERCEIRA – DA FIANÇA 
+PYÁHFHYN QÉPVZN GREPRVEN – QN SVNAÇN 
 
-13.1. Como fiadores e principais pagadores de todas as obrigações que incumbem a(o) 
+13.1. Pbzb svnqberf r cevapvcnvf cntnqberf qr gbqnf nf boevtnçõrf dhr vaphzorz n(b) 
 
-LOCATÁRIO(A), assumindo solidariamente entre si e juntamente com o afiançado, o compromisso de 
+YBPNGÁEVB(N), nffhzvaqb fbyvqnevnzragr rager fv r whagnzragr pbz b nsvnaçnqb, b pbzcebzvffb qr 
 
-bem fiel cumprirem o presente contrato até a desocupação do imóvel em todas as suas cláusulas e 
+orz svry phzceverz b cerfragr pbagengb ngé n qrfbphcnçãb qb vzóiry rz gbqnf nf fhnf pyáhfhynf r 
 
-condições, mesmo durante a prorrogação da locação , escrita ou tácita, por prazo indeterminado ou não, 
+pbaqvçõrf, zrfzb qhenagr n cebeebtnçãb qn ybpnçãb , rfpevgn bh gápvgn, cbe cenmb vaqrgrezvanqb bh aãb, 
 
-com ou sem o consentimento do(a) LOCADOR(A), até a efetiva e comprovada entrega do imóvel 
+pbz bh frz b pbafragvzragb qb(n) YBPNQBE(N), ngé n rsrgvin r pbzcebinqn ragertn qb vzóiry 
 
-mediante Termo de Recebimento, assinam o presente contrato: ADALBERTO CASTRO CARVALHO, 
+zrqvnagr Grezb qr Erprovzragb, nffvanz b cerfragr pbagengb: NQNYOREGB PNFGEB PNEINYUB, 
 
-Brasileiro, MEI, portador do RG n. 1814243 SSP -DF, CPF n.322.489.623 -04, casado com MARIA SRTVS QD. 701 BL.O Nº 110 SALAS 280/284 ED. MULTIEMPRESARIAL - BRASILIA/DF   
+Oenfvyrveb, ZRV, cbegnqbe qb ET a. 1814243 FFC -QS, PCS a.322.489.623 -04, pnfnqb pbz ZNEVN FEGIF DQ. 701 OY.B Aº 110 FNYNF 280/284 RQ. ZHYGVRZCERFNEVNY - OENFVYVN/QS   
 
-> TELEFONE: (61) 3034 -9090
-> www.visaoimoveis.com
+> GRYRSBAR: (61) 3034 -9090
+> jjj.ivfnbvzbirvf.pbz
 
-INES FERREIRA CARVALHO, Brasileira, Dona de Casa, portadora do RG n. 1377684 SSP -DF, CPF 
+VARF SREERVEN PNEINYUB, Oenfvyrven, Qban qr Pnfn, cbegnqben qb ET a. 1377684 FFC -QS, PCS 
 
-n.579.041.381 -15, Residentes e domiciliados à QD 29 CONJ O CASA 04 PARANOA - 71573 -015 
+a.579.041.381 -15, Erfvqragrf r qbzvpvyvnqbf à DQ 29 PBAW B PNFN 04 CNENABN - 71573 -015 
 
-BRASILIA - DF; RONELMA FERREIRA CARVALHO, Brasileira, MEI, portadora do RG n. 2434061, 
+OENFVYVN - QS; EBARYZN SREERVEN PNEINYUB, Oenfvyrven, ZRV, cbegnqben qb ET a. 2434061, 
 
-CPF n.018.308.181 -12, solteira, residente e domiciliad a à QD 501, CONJ 2, LOT 04, CD 52, BL A1 
+PCS a.018.308.181 -12, fbygrven, erfvqragr r qbzvpvyvnq n à DQ 501, PBAW 2, YBG 04, PQ 52, OY N1 
 
-ITAPOA PARQUE - 71592 -059 BRASILIA - DF; os quais renunciam ao benefício que se refere o art. 
+VGNCBN CNEDHR - 71592 -059 OENFVYVN - QS; bf dhnvf erahapvnz nb orarsípvb dhr fr ersrer b neg. 
 
-366 do Código Civil Brasileiro, que trata da exoneração da fiança. 
+366 qb Póqvtb Pvivy Oenfvyrveb, dhr gengn qn rkbarençãb qn svnaçn. 
 
-13.2. A garantia fidejussória compreenderá quaisquer acréscimos, reajustes ou acessórios da dívida 
+13.2. N tnenagvn svqrwhffóevn pbzcerraqreá dhnvfdhre npeéfpvzbf, ernwhfgrf bh nprffóevbf qn qíivqn 
 
-principal, inclusive despesas judiciais, incluídos os honorários advocatícios de 20% (vinte por cento), 
+cevapvcny, vapyhfvir qrfcrfnf whqvpvnvf, vapyhíqbf bf ubabeáevbf nqibpngípvbf qr 20% (ivagr cbe pragb), 
 
-taxas e despesas judiciais e extrajudiciais, bem como eventuais gastos com recuperação do imóvel após 
+gnknf r qrfcrfnf whqvpvnvf r rkgenwhqvpvnvf, orz pbzb riraghnvf tnfgbf pbz erphcrençãb qb vzóiry ncóf 
 
-a devolução, até a final liquidação de qualquer ação ou procedimento decorrente do presente contrato. 
+n qribyhçãb, ngé n svany yvdhvqnçãb qr dhnydhre nçãb bh cebprqvzragb qrpbeeragr qb cerfragr pbagengb. 
 
-13.3. Os fiadores se comprometem a solicitar do(a) LOCATÁRIO(A), mensalmente, os comprovantes de 
+13.3. Bf svnqberf fr pbzcebzrgrz n fbyvpvgne qb(n) YBPNGÁEVB(N), zrafnyzragr, bf pbzcebinagrf qr 
 
-pagamento, desobrigando expressamente o(a) LOCADOR(A) de notificá -los judicialmente ou 
+cntnzragb, qrfboevtnaqb rkcerffnzragr b(n) YBPNQBE(N) qr abgvsvpá -ybf whqvpvnyzragr bh 
 
-extrajudicialmente de quaisquer procedimentos contra o(a) LOCATÁRIO(A). 
+rkgenwhqvpvnyzragr qr dhnvfdhre cebprqvzragbf pbagen b(n) YBPNGÁEVB(N). 
 
-13.4. O(s) fiador(es) renunciam ao benefício da prévia exclusão dos bens do afiançado. 
+13.4. B(f) svnqbe(rf) erahapvnz nb orarsípvb qn ceéivn rkpyhfãb qbf oraf qb nsvnaçnqb. 
 
-13.5. O(s) fiador(es) renunciam expressamente à faculdade de se exonerarem desta fiança, que é 
+13.5. B(f) svnqbe(rf) erahapvnz rkcerffnzragr à snphyqnqr qr fr rkbarenerz qrfgn svnaçn, dhr é 
 
-prestada sem limitações. 
+cerfgnqn frz yvzvgnçõrf. 
 
-13.6. Neste ato o(s) fiador(es) declara(m) que possuem renda e patrimônio suficiente, livre e
+13.6. Arfgr ngb b(f) svnqbe(rf) qrpynen(z) dhr cbffhrz eraqn r cngevzôavb fhsvpvragr, yvier r
 
-desembaraçado, para cobrir eventuais débitos (obrigações principais e acessórias previstas no presente 
+qrfrzonençnqb, cnen pboeve riraghnvf qéovgbf (boevtnçõrf cevapvcnvf r nprffóevnf cerivfgnf ab cerfragr 
 
-contrato), estando cientes que a transferência escusa desses bens, sem a reserva de provisões 
+pbagengb), rfgnaqb pvragrf dhr n genafsreêapvn rfphfn qrffrf oraf, frz n erfrein qr cebivfõrf 
 
-suficientes para o pagamento dos débitos locatícios, caracterizará fraude a credores e à execução, 
+fhsvpvragrf cnen b cntnzragb qbf qéovgbf ybpngípvbf, pnenpgrevmneá senhqr n perqberf r à rkrphçãb, 
 
-passíveis de anulação judicial, sem prejuízo de outras medidas. 
+cnffíirvf qr nahynçãb whqvpvny, frz cerwhímb qr bhgenf zrqvqnf. 
 
-13.7. Por motivo de transparência e lealdade contratual os fiadores se comprometem a manter 
+13.7. Cbe zbgvib qr genafcneêapvn r yrnyqnqr pbagenghny bf svnqberf fr pbzcebzrgrz n znagre 
 
-atualizados seus endereços (residências e comerciais), e -mails e telefones, bem como de seus sócios e 
+nghnyvmnqbf frhf raqrerçbf (erfvqêapvnf r pbzrepvnvf), r -znvyf r gryrsbarf, orz pbzb qr frhf fópvbf r 
 
-familiares junto à imobiliária administradora do imóvel, procuradora do(a) LOCADOR(A) , inclusive sob 
+snzvyvnerf whagb à vzbovyváevn nqzvavfgenqben qb vzóiry, cebphenqben qb(n) YBPNQBE(N) , vapyhfvir fbo 
 
-pena de serem compelidos ao pagamento de multa contratual prevista na Cláusula Décima Primeira. 
+cran qr frerz pbzcryvqbf nb cntnzragb qr zhygn pbagenghny cerivfgn an Pyáhfhyn Qépvzn Cevzrven. 
 
-13.8. Em caso de falecimento, mudança de residência para outra cidade, incapacidade civil, falência, 
+13.8. Rz pnfb qr snyrpvzragb, zhqnaçn qr erfvqêapvn cnen bhgen pvqnqr, vapncnpvqnqr pvivy, snyêapvn, 
 
-insolvência ou idoneidade moral ou financeira de qualquer fiador, se obriga o(a) LOCATÁRIO(A) a
+vafbyiêapvn bh vqbarvqnqr zbeny bh svanaprven qr dhnydhre svnqbe, fr boevtn b(n) YBPNGÁEVB(N) n
 
-independentemente de prévia notificação dar substituto idôneo, no prazo Máximo de 30 (trinta) dias 
+vaqrcraqragrzragr qr ceéivn abgvsvpnçãb qne fhofgvghgb vqôarb, ab cenmb Zákvzb qr 30 (gevagn) qvnf 
 
-contados de fato, sob pena de rescisão imediata e de pleno direito do contrato, com a aplicação das 
+pbagnqbf qr sngb, fbo cran qr erfpvfãb vzrqvngn r qr cyrab qvervgb qb pbagengb, pbz n ncyvpnçãb qnf 
 
-penalidades contratuais, ficando sujeito, inclusive, a Ação de Despejo. 
+cranyvqnqrf pbagenghnvf, svpnaqb fhwrvgb, vapyhfvir, n Nçãb qr Qrfcrwb. 
 
-13.9. Os fiadores se comprometem a zelar pelo pagamento pontual dos aluguéis e acessórios, 
+13.9. Bf svnqberf fr pbzcebzrgrz n mryne cryb cntnzragb cbaghny qbf nyhthévf r nprffóevbf, 
 
-fiscalizando e exigindo tal conduta do(a) LOCATÁRIO(A). Os fiadores declaram e consentem 
+svfpnyvmnaqb r rkvtvaqb gny pbaqhgn qb(n) YBPNGÁEVB(N). Bf svnqberf qrpynenz r pbafragrz 
 
-expressamente que a fiança será mantida por prazo indeterminado, independentemente de qualquer 
+rkcerffnzragr dhr n svnaçn freá znagvqn cbe cenmb vaqrgrezvanqb, vaqrcraqragrzragr qr dhnydhre 
 
-notificação, em caso de prorrogação automática do presente contrato ou da locação em si, da qual, 
+abgvsvpnçãb, rz pnfb qr cebeebtnçãb nhgbzágvpn qb cerfragr pbagengb bh qn ybpnçãb rz fv, qn dhny, 
 
-desde já, se manifestam de pleno acordo. Ou seja, em qualquer caso, a responsabilidade dos fiadores 
+qrfqr wá, fr znavsrfgnz qr cyrab npbeqb. Bh frwn, rz dhnydhre pnfb, n erfcbafnovyvqnqr qbf svnqberf 
 
-persistirá até a entrega das chaves, devendo o imóvel estar em boas condições de conservação e 
+crefvfgveá ngé n ragertn qnf punirf, qriraqb b vzóiry rfgne rz obnf pbaqvçõrf qr pbafreinçãb r 
 
-habitabilidade, sob pena de ficarem sujeitos também ao pagamento das despesas dos reparos 
+unovgnovyvqnqr, fbo cran qr svpnerz fhwrvgbf gnzoéz nb cntnzragb qnf qrfcrfnf qbf ercnebf 
 
-promovidos pelo LOCADOR. 
+cebzbivqbf cryb YBPNQBE. 
 
-13.10. O(A) LOCATÁRIO(A) e fiadores neste instrumento outorgam -se, mútua e reciprocamente, 
+13.10. B(N) YBPNGÁEVB(N) r svnqberf arfgr vafgehzragb bhgbetnz -fr, zúghn r erpvcebpnzragr, 
 
-poderes bastantes, especiais e irrevogáveis, para serem, um pelo outro, representados passivamente 
+cbqrerf onfgnagrf, rfcrpvnvf r veeribtáirvf, cnen frerz, hz cryb bhgeb, ercerfragnqbf cnffvinzragr 
 
-em juízo em decorrência do presente contrato, de forma que, em razão do mandato, possa, um pelo 
+rz whímb rz qrpbeeêapvn qb cerfragr pbagengb, qr sbezn dhr, rz enmãb qb znaqngb, cbffn, hz cryb 
 
-outro, receber notificações, intimações e inclusive citação inicial, enquanto pender qualquer obrigação 
+bhgeb, erprore abgvsvpnçõrf, vagvznçõrf r vapyhfvir pvgnçãb vavpvny, radhnagb craqre dhnydhre boevtnçãb 
 
-decorrente da locação ora ajustada. 
+qrpbeeragr qn ybpnçãb ben nwhfgnqn. 
 
-13.11. As garantias previstas neste instrumento se estenderão por toda a vigência do contrato, 
+13.11. Nf tnenagvnf cerivfgnf arfgr vafgehzragb fr rfgraqreãb cbe gbqn n ivtêapvn qb pbagengb, 
 
-enquanto possuírem o encargo de fiadores e das dívidas geradas enquanto existente a fiança, bem 
+radhnagb cbffhíerz b rapnetb qr svnqberf r qnf qíivqnf trenqnf radhnagb rkvfgragr n svnaçn, orz 
 
-como para as renovações contratuais (automáticas ou não) do presente instrumento, seja por prazo 
+pbzb cnen nf erabinçõrf pbagenghnvf (nhgbzágvpnf bh aãb) qb cerfragr vafgehzragb, frwn cbe cenmb 
 
-determinado ou indeterminado. 
+qrgrezvanqb bh vaqrgrezvanqb. 
 
-13.12. Não poderá O(A)(S) FIADOR(A)(S) se exonerar(em) da fiança durante a vigência do contrato 
+13.12. Aãb cbqreá B(N)(F) SVNQBE(N)(F) fr rkbarene(rz) qn svnaçn qhenagr n ivtêapvn qb pbagengb 
 
-prevista no subitem 2.1, conforme previsto no art. 40, inc. X da Lei 8.245/90, e do art. 835 do Código 
+cerivfgn ab fhovgrz 2.1, pbasbezr cerivfgb ab neg. 40, vap. K qn Yrv 8.245/90, r qb neg. 835 qb Póqvtb 
 
-Civil Brasileiro. 
+Pvivy Oenfvyrveb. 
 
-13.13. Caso O(A) LOCATÁRIO(A) contrato Seguro Fiança, Carta Fiança, Caução, Deposito, Título de 
+13.13. Pnfb B(N) YBPNGÁEVB(N) pbagengb Frtheb Svnaçn, Pnegn Svnaçn, Pnhçãb, Qrcbfvgb, Gíghyb qr 
 
-Capitalização ou alguma modalidade que não seja fiador(a), O(a)(s) LOCATÁRIO(a)(s) arcará( ão ) com 
+Pncvgnyvmnçãb bh nythzn zbqnyvqnqr dhr aãb frwn svnqbe(n), B(n)(f) YBPNGÁEVB(n)(f) nepneá( ãb ) pbz 
 
-as despesas que excederem as previsões destas contratações, que nã o forem acobertadas pelas 
+nf qrfcrfnf dhr rkprqrerz nf cerivfõrf qrfgnf pbagengnçõrf, dhr aã b sberz npboregnqnf crynf 
 
-modalidades contratadas (Seguro Fiança, Carta Fiança, Caução, Deposito, Título de Capitalização ou 
+zbqnyvqnqrf pbagengnqnf (Frtheb Svnaçn, Pnegn Svnaçn, Pnhçãb, Qrcbfvgb, Gíghyb qr Pncvgnyvmnçãb bh 
 
-alguma modalidade), caso a contratação se dê na modalidade Fiador, todos responder ão solidariamente 
+nythzn zbqnyvqnqr), pnfb n pbagengnçãb fr qê an zbqnyvqnqr Svnqbe, gbqbf erfcbaqre ãb fbyvqnevnzragr 
 
-pelas responsabilidades contratuais previstas neste contrato. SRTVS QD. 701 BL.O Nº 110 SALAS 280/284 ED. MULTIEMPRESARIAL - BRASILIA/DF   
+crynf erfcbafnovyvqnqrf pbagenghnvf cerivfgnf arfgr pbagengb. FEGIF DQ. 701 OY.B Aº 110 FNYNF 280/284 RQ. ZHYGVRZCERFNEVNY - OENFVYVN/QS   
 
-> TELEFONE: (61) 3034 -9090
-> www.visaoimoveis.com
+> GRYRSBAR: (61) 3034 -9090
+> jjj.ivfnbvzbirvf.pbz
 
-CLÁUSULA DÉCIMA QUARTA – DO ENCERRAMENTO DO CONTRATO 
+PYÁHFHYN QÉPVZN DHNEGN – QB RAPREENZRAGB QB PBAGENGB 
 
-14.1. Não sendo ajustada pelas partes a prorrogação da locação, sob as devidas garantias e
+14.1. Aãb fraqb nwhfgnqn crynf cnegrf n cebeebtnçãb qn ybpnçãb, fbo nf qrivqnf tnenagvnf r
 
-formalidades, será reservado a(o) LOCADOR(A) o direito de requerer judicialmente o Despejo em face 
+sbeznyvqnqrf, freá erfreinqb n(b) YBPNQBE(N) b qvervgb qr erdhrere whqvpvnyzragr b Qrfcrwb rz snpr 
 
-do término do prazo estabelecido na Cláusula Segunda. 
+qb géezvab qb cenmb rfgnoryrpvqb an Pyáhfhyn Frthaqn. 
 
-14.2. As infrações às disposições legais e contratuais, inclusive o inadimplemento, mesmo que apenas 
+14.2. Nf vasençõrf àf qvfcbfvçõrf yrtnvf r pbagenghnvf, vapyhfvir b vanqvzcyrzragb, zrfzb dhr ncranf 
 
-parcial, de parcelas principais ou acessórias, o incêndio, desabamento, desapropriação efetivada ou 
+cnepvny, qr cneprynf cevapvcnvf bh nprffóevnf, b vapêaqvb, qrfnonzragb, qrfncebcevnçãb rsrgvinqn bh 
 
-quaisquer ocorrências que atinjam total ou parcialmente o imóvel, serão causas de pleno direito de 
+dhnvfdhre bpbeeêapvnf dhr ngvawnz gbgny bh cnepvnyzragr b vzóiry, freãb pnhfnf qr cyrab qvervgb qr 
 
-rescisão do presente contrato, não sendo devida qualquer indenização por parte do(a) LOCADOR(A). 
+erfpvfãb qb cerfragr pbagengb, aãb fraqb qrivqn dhnydhre vaqravmnçãb cbe cnegr qb(n) YBPNQBE(N). 
 
-CLÁUSULA DÉCIMA QUINTA - ESPECIAL – O (A) LOCATÁRIO(A) somente poderá rescindir o 
+PYÁHFHYN QÉPVZN DHVAGN - RFCRPVNY – B (N) YBPNGÁEVB(N) fbzragr cbqreá erfpvaqve b 
 
-contrato, sem aplicação de multa, após decorridos os 12 (doze) meses iniciais deste contrato e desde 
+pbagengb, frz ncyvpnçãb qr zhygn, ncóf qrpbeevqbf bf 12 (qbmr) zrfrf vavpvnvf qrfgr pbagengb r qrfqr 
 
-que esteja em dia com suas obrigações contratuais, necessitando inclusive que seja informada a 
+dhr rfgrwn rz qvn pbz fhnf boevtnçõrf pbagenghnvf, arprffvgnaqb vapyhfvir dhr frwn vasbeznqn n 
 
-imobiliária do interesse em rescindir se manifestando POR ESCRITO, com antecedência mínima de 30 
+vzbovyváevn qb vagrerffr rz erfpvaqve fr znavsrfgnaqb CBE RFPEVGB, pbz nagrprqêapvn zíavzn qr 30 
 
-(trinta) dias sobre sua intenção de rescisão, iniciando -se o prazo para desocupação do imóvel. 
+(gevagn) qvnf fboer fhn vagraçãb qr erfpvfãb, vavpvnaqb -fr b cenmb cnen qrfbphcnçãb qb vzóiry. 
 
-CLAUSULA DÉCIMA SEXTA DO SINAL DE TELEVISÃO 
+PYNHFHYN QÉPVZN FRKGN QB FVANY QR GRYRIVFÃB 
 
-O LOCADOR nã o se responsabiliza pela disponibilização ou funcionamento do sinal de televisão aberta 
+B YBPNQBE aã b fr erfcbafnovyvmn cryn qvfcbavovyvmnçãb bh shapvbanzragb qb fvany qr gryrivfãb noregn 
 
-(digital ou analógica), cabendo exclusivamente ao LOCATÁRIO (A) , se assim desejar, a instalação, 
+(qvtvgny bh nanyótvpn), pnoraqb rkpyhfvinzragr nb YBPNGÁEVB (N) , fr nffvz qrfrwne, n vafgnynçãb, 
 
-aquisição de equipamentos e demais providências necessárias para a captação do referido sinal na 
+ndhvfvçãb qr rdhvcnzragbf r qrznvf cebivqêapvnf arprffáevnf cnen n pncgnçãb qb ersrevqb fvany an 
 
-unidade locada, vedado instalação física afixada as paredes externas ou em áreas comuns do imóvel. 
+havqnqr ybpnqn, irqnqb vafgnynçãb sífvpn nsvknqn nf cnerqrf rkgreanf bh rz áernf pbzhaf qb vzóiry. 
 
-Fica, portanto, excluída qualquer obrigação do LOCADOR quanto ao fornecimento, manutenção ou 
+Svpn, cbegnagb, rkpyhíqn dhnydhre boevtnçãb qb YBPNQBE dhnagb nb sbearpvzragb, znahgraçãb bh 
 
-custeio de serviços relacionados à recepção de canais de televisão, telefonia, internet e outros. 
+phfgrvb qr freivçbf erynpvbanqbf à erprcçãb qr pnanvf qr gryrivfãb, gryrsbavn, vagrearg r bhgebf. 
 
-CLAUSULA DÉCIMA SÉTIMA – ASSINATURA DIGITAL – Além da forma convencional de 
+PYNHFHYN QÉPVZN FÉGVZN – NFFVANGHEN QVTVGNY – Nyéz qn sbezn pbairapvbany qr 
 
-reconhecimento cartorário das assinaturas, as partes e as testemunhas que subscrevem o presente 
+erpbaurpvzragb pnegbeáevb qnf nffvanghenf, nf cnegrf r nf grfgrzhaunf dhr fhofperirz b cerfragr 
 
-instrumento poderão assina -lo de forma digital com a utilização de certificado digital ou através das 
+vafgehzragb cbqreãb nffvan -yb qr sbezn qvtvgny pbz n hgvyvmnçãb qr pregvsvpnqb qvtvgny bh ngeniéf qnf 
 
-plataformas digitais que melhor lhes aprouver, responsabilizando -se o signatário pela veracidade da 
+cyngnsbeznf qvtvgnvf dhr zryube yurf ncebhire, erfcbafnovyvmnaqb -fr b fvtangáevb cryn irenpvqnqr qn 
 
-assinatura e concordando expressamente que este será assinado eletronicamente com fundamento no 
+nffvanghen r pbapbeqnaqb rkcerffnzragr dhr rfgr freá nffvanqb ryrgebavpnzragr pbz shaqnzragb ab 
 
-Artigo 10, parágrafo 2º da MP 2200 -2/2001, do Artigo 6º do Decreto 10.278/2020 e da Lei nº 
+Negvtb 10, cneátensb 2º qn ZC 2200 -2/2001, qb Negvtb 6º qb Qrpergb 10.278/2020 r qn Yrv aº 
 
 14.063/2020. 
 
-CLÁUSULA DÉCIMA OITAVA - O LOCATÁRIO declara expresso CONSENTIMENTO que o
+PYÁHFHYN QÉPVZN BVGNIN - B YBPNGÁEVB qrpynen rkcerffb PBAFRAGVZRAGB dhr b
 
-LOCADOR irá coletar tratar e compartilhar os dados necessários ao cumprimento do contrato, nos 
+YBPNQBE veá pbyrgne gengne r pbzcnegvyune bf qnqbf arprffáevbf nb phzcevzragb qb pbagengb, abf 
 
-termos do art. 7º, inc. V e VI da Lei 13.709/2018 ( LGPD ), bem como os dados, se necessários para 
+grezbf qb neg. 7º, vap. I r IV qn Yrv 13.709/2018 ( YTCQ ), orz pbzb bf qnqbf, fr arprffáevbf cnen 
 
-proteção ao crédito, e interesses do LOCADOR , conforme autorizado pela LGPD ou outra lei aplicável 
+cebgrçãb nb peéqvgb, r vagrerffrf qb YBPNQBE , pbasbezr nhgbevmnqb cryn YTCQ bh bhgen yrv ncyvpáiry 
 
-ao caso. 
+nb pnfb. 
 
-CLÁUSULA DÉCIMA NONA – DO FORO 
+PYÁHFHYN QÉPVZN ABAN – QB SBEB 
 
-19.1. As partes elegem o foro de Brasília, Distrito Federal, de fácil acesso e de mútua conveniência, 
+19.1. Nf cnegrf ryrtrz b sbeb qr Oenfíyvn, Qvfgevgb Srqreny, qr sápvy nprffb r qr zúghn pbairavêapvn, 
 
-para solução de quaisquer divergências deste contrato, renunciando as partes a qualquer outro. E por 
+cnen fbyhçãb qr dhnvfdhre qviretêapvnf qrfgr pbagengb, erahapvnaqb nf cnegrf n dhnydhre bhgeb. R cbe 
 
-estarem assim contratadas, de forma livre e consensual, compreendendo o exato sentido e a extensão 
+rfgnerz nffvz pbagengnqnf, qr sbezn yvier r pbafrafhny, pbzcerraqraqb b rkngb fragvqb r n rkgrafãb 
 
-das previsões expandidas acima, as partes assinam o presente instrumento em 02 (duas) vias de igual 
+qnf cerivfõrf rkcnaqvqnf npvzn, nf cnegrf nffvanz b cerfragr vafgehzragb rz 02 (qhnf) ivnf qr vthny 
 
-teor e forma, com as testemunhas abaixo identificadas. 
+grbe r sbezn, pbz nf grfgrzhaunf nonvkb vqragvsvpnqnf. 
 
-Brasília /DF, 07 de julho de 2025 
-
-___________________________________________________ 
-
-LOCADOR(A): EUSTAQUIO JOSE PESSOA 
-
-P/P: VISAO EMPREENDIMENTOS IMOBILIARIOS LTDA SRTVS QD. 701 BL.O Nº 110 SALAS 280/284 ED. MULTIEMPRESARIAL - BRASILIA/DF   
-
-> TELEFONE: (61) 3034 -9090
-> www.visaoimoveis.com
+Oenfíyvn /QS, 07 qr whyub qr 2025 
 
 ___________________________________________________ 
 
-LOCATÁRIO(A): MARIO SEIXAS SALES 
+YBPNQBE(N): RHFGNDHVB WBFR CRFFBN 
+
+C/C: IVFNB RZCERRAQVZRAGBF VZBOVYVNEVBF YGQN FEGIF DQ. 701 OY.B Aº 110 FNYNF 280/284 RQ. ZHYGVRZCERFNEVNY - OENFVYVN/QS   
+
+> GRYRSBAR: (61) 3034 -9090
+> jjj.ivfnbvzbirvf.pbz
 
 ___________________________________________________ 
 
-CÔNJUGE: RANGELMA FERREIRA CARVALHO SEIXAS 
+YBPNGÁEVB(N): ZNEVB FRVKNF FNYRF 
 
 ___________________________________________________ 
 
-1° FIADOR: ADALBERTO CASTRO CARVALHO 
+PÔAWHTR: ENATRYZN SREERVEN PNEINYUB FRVKNF 
 
 ___________________________________________________ 
 
-CÔNJUGE: MARIA INES FERREIRA CARVALHO 
+1° SVNQBE: NQNYOREGB PNFGEB PNEINYUB 
 
 ___________________________________________________ 
 
-2º FIADOR: RONELMA FERREIRA CARVALHO 
-
-TESTEMUNHA(S): 
-
-________________________________ ________________________________ SRTVS QD. 701 BL.O Nº 110 SALAS 280/284 ED. MULTIEMPRESARIAL - BRASILIA/DF   
-
-> TELEFONE: (61) 3034 -9090
-> www.visaoimoveis.com
-
-LAUDO DE VISTORIA – ENTRADA           
-
-> CONTRATO: 00826/02
-> LOCADOR: EUSTAQUIO JOSE PESSOA
-> LOCATÁRIO: MARIO SEIXAS SALES
-> ENDEREÇO DO IMÓVEL: QNE 21 CASA 08 TAGUATINGA –DF CEP: 72.125 -080
-> VIGÊNCIA DO CONTRATO: 10/07/2025 a 09/07/2028
-> VALOR DO ALUGUEL: R$ 2.600,00 ( Dois mil e seiscentos reais )
-
-LEIA COM ATENÇÃO: A VISÃO IMÓVEIS LTDA , solicita que o (a) Sr(a) 
-
-LOCATÁRIO(A) confira esta vistoria rigorosamente no prazo máximo de 03 (três) 
-
-# dias úteis , trazendo suas observações por escrito em duas vias e assinado para que 
-
-uma seja protocolada na imobiliária no horário de 09h ás 17h de segunda a 
-
-# sexta -feira . Caso envie por e -mail, confirmar o recebimento. A Administradora se 
-
-reserva no direito legal de NÃO aceitar qualquer outra forma de reclamação contrária 
-
-ao que estiver expresso neste documento, vencido o prazo para contestação. 
-
-# Contestação - são itens que não estão de acordo com o laudo de 
-
-# vistoria. 
-
-Vimos pela presente conforme solicitado pela Visão Imóveis , encaminhar abaixo, o laudo de 
-
-Vistoria e Inventario de Imóvel realizado em 04 de Julho de 2025, as 13:15hs, no endereço QNE 
-
-21 CASA 08 – TAGUATINGA NORTE - Brasília -DF., a fim de constatar a situação física 
-
-atual do imóvel, para confecção de Contrato de Locação. o vistoriador não assume 
-
-responsabilidade técnica do imóvel (estrutural, elétrica, hidráulica, etc), danos ou objetos 
-
-subtraídos do mesmo. Para tanto segue abaixo relacionado a descrição completa do Imóvel: 
-
-INVENTÁRIO DE CHAVES: 
-
-• 02 CHAVES TETRAS DA PORTA DA SALA 
-
-• 02 CHAVES SIMPLES DO PORTÃO DE PEDESTRE 
-
-• 01 CHAVE SIMPLES DO CADEADO DO PORTÃO DE GARAGEM 
-
-• 01 CHAVE ALLEN DA TRAVA DO MOTOR DE GARAGEM 
-
-• 02 CHAVES SIMPLES DA TRAVA DO MOTOR DE GARAGEM 
-
-• 02 CONTROLE REMOTO DE GARAGEM FUNCIONANDO OK 
-
-• 03 CHAVES SIMPLES NÃO IDENTIFICADA SRTVS QD. 701 BL.O Nº 110 SALAS 280/284 ED. MULTIEMPRESARIAL - BRASILIA/DF   
-
-> TELEFONE: (61) 3034 -9090
-> www.visaoimoveis.com
-
-ÁREA EXTERNA: 
-
-CASA DE FRENTE: 
-
-FRENTE: 
-
-- Lado rua calçada de cimento sem aca bamento, trincas, rachaduras, pontos danificados, mato; 
-
-01 lixeira de estrutura metálica com pintura pva nova na cor verde, amassados, sinais de 
-
-ferrugem, deteriorada, sobre o piso; 
-
-FRENTE: 
-
-- Grade de proteção de estrutura metálica com pintura pva nova na cor verde, sinais de ferrugem, 
-
-deteriorada, chapas pontiagudas na parte superior; 03 portões de garagem de estrutura metálica 
-
-com pintura pva nova na cor verde, sinais de ferrugem, deteriorada, porta cadeados, sendo 01 
-
-com 01 cadeado com 01 chave simples, sendo 02 com acionadores eletrônicos marca Rossi, 
-
-sujos de tinta, com 02 controles remoto funcionando ok, sendo 01 faltando a caixa do imã de fim 
-
-curso, com 01 chave allem e 02 chaves simples da trava do motor; 01 caixa de correio com 
-
-tampa metálica com pintura pva nova na cor verde, deteriorada, fixada na grade de proteção; 01 
-
-portão de pedestre de estrutura metálica com pintura pva nova na cor verde, sinais de ferrugem, 
-
-deteriorada, com 01 fechadura simples marca Soprano com 02 chaves simples ok; calçada de 
-
-cerâmica nova, rodapé de cerâmica; muro direito/esquerdo de alvenaria com pintura pva nova na 
-
-cor palha fosca com textura, furos, bucha, ganchos fixados, pontos sem acabamento; 01 caixa 
-
-metálica com tampa com dobradiças danificadas com pintura a óleo nova na cor creme, sinais de 
-
-ferrugem, parte interna 01 relógio de água potável; mureta de alvenaria com pintura pva nova na 
-
-cor palha fosca com textura com 01 caixa metálica com tampa com pintura pva nova na cor 
-
-palha fosca, visor de vidro sujo de tinta, com 01 relógio de energia elétrica e 01 disjuntor; 02 
-
-tampas de caixa de passagem metálicas sem pintura com sinais de ferrugem; 01 tampa de esgoto 
-
-revestida de cerâmica sem danos; paredes da casa de alvenaria com pintura pva nova na cor 
-
-palha fosca parte com textura, molduras das janelas com pintura pva nova na cor verde; telhado 
-
-da casa de estrutura de madeira com telhas de fibro cimento; 01 enrolador de mangueira de pvc 
-
-com pintura pva nova na cor palha fosca; 01 torneira de jardim sem bico invertida com 01 
-
-pequena mangueira de pvc usada na cor verde; 01 interruptor de campainha com espelho no 
-
-muro, funcionando ok; 
-
-LATERAL DIREITA: 
-
-- Calçada de cerâmica, peças com esmalte danificado, manchas, rodapé de cerâmica sujo de 
-
-tinta; paredes da casa de alvenaria com pintura pva nova na cor branco gelo fosca parte com 
-
-textura, parte sem acabamento, furos sem acabamento com cabo de antena; 01 escada de 
-
-estrutura metálica sem pintura fixada na parede; 01 portinhola de estrutura metálica com pintura SRTVS QD. 701 BL.O Nº 110 SALAS 280/284 ED. MULTIEMPRESARIAL - BRASILIA/DF   
-
-> TELEFONE: (61) 3034 -9090
-> www.visaoimoveis.com
-
-a óleo usada na cor branca com 01 fechadura simples, desgastada, suja de tinta de acesso ao 
-
-telhado; muro de alvenaria com pintura pva nova na cor azul fosca, trincas, rachaduras, pontos 
-
-sem acabamento com chapas metálicas na parte superior; 01 tampa de ralo de pvc na cor branca 
-
-desgastada, manchas; 01 tampa de esgoto metálica sem pintura com sinais de ferrugem; 01 
-
-luminária fluorescente faltando acabamento com lâmpada ok, fixada na parede da casa; 
-
-FUNDOS: 
-
-- Calçada de cerâmica, peças com esmalte danificado e peças danificadas, manchas, suja de tinta 
-
-rodapé de cerâmica sujo de tinta; 02 tampa de ralo sendo 01 quebrada, 01 tampa de esgoto 
-
-metálicas sem pintura com sinais de ferrugem; 01 jardineira de alvenaria com pontos danificados 
-
-com pintura pva usada na cor marrom, com várias plantas sem manutenção com 01 vaso de 
-
-plantas de alvenaria com pintura pva usada na cor branca com planta sem manutenção; 
-
-paredes da casa de alvenaria com pintura pva nova na cor branco gelo fosca, manchas, pontos 
-
-com reparo e parte sem acabamento; muro de alvenaria com pintura pva nova na cor azul fosca, 
-
-trincas, rachaduras, pontos sem acabamento com chapas metálicas na parte superior 
-
-GARAGEM: 
-
-1 – armário: não tem 
-
-2 – chave(s) do armário: não tem 
-
-3 – iluminaçã o: 02 painel de led na cor branca 
-
-4 – interruptor(es): não tem 
-
-5 – lâmpada(s): ok 
-
-6 – pintura: pva nova na cor palha fosca, trincas, rachaduras, pontos sem acabamento 
-
-7 – piso: cerâmica, manchas, peças com esmalte danificado, suja de tinta 
-
-8 – rodapé: cerâmica sujo de tinta 
-
-9 – tomada(s): não tem 
-
-10 – teto: pintura pva usada na cor branca fosca 
-
-11 – porta e portal: estrutura metálica com pintura a óleo nova na cor creme, deteriorada, sinais 
-
-de ferrugem, com vidros canelados, moldura em volta da porta com pintura pva nova na cor 
-
-verde 
-
-12 – chaves: 02 tetras ok 
-
-13 – fechadura: 01 tetra marca Papaiz ok 
-
-Obs.: - 01 caixa de passagem metálica com tampa com pintura a óleo nova na cor creme, 
-
-amassados, para cabo de antena e telefone, fixada na parede. 
-
-ÁREA DE CHURRASQUEIRA: 
-
-1 – armário: 03 prateleiras de mármore/granito, manchas, suja de tinta, fixadas nas paredes e na 
-
-pia 
-
-2 – chave(s) do armário: não tem 
-
-3 – iluminação: 02 bocais 
-
-4 – interruptor(es): com espelho com manchas ok 
-
-5 – lâmpada(s): ok 
-
-6 – pintura: pva nova na cor branco gelo fosca, manchas, pontos sem acabamento, pilar de 
-
-madeira com verniz usado SRTVS QD. 701 BL.O Nº 110 SALAS 280/284 ED. MULTIEMPRESARIAL - BRASILIA/DF   
-
-> TELEFONE: (61) 3034 -9090
-> www.visaoimoveis.com
-
-7 – piso: cerâmica, manchas, peças com esmalte danificado, cor diferente 
-
-8 – rodapé: cerâmica sujo de tinta 
-
-9 – tomada(s ): com espelho ok, manchas 
-
-10 – teto: estrutura de madeira com pintura a óleo usada na cor vermelha com telhas de fibro 
-
-cimento sendo 01 com ponta quebrada 
-
-11 – porta e portal: não tem 
-
-12 – chaves: não tem 
-
-13 – fechadura: não tem 
-
-14 – pia: tampão/cuba metálica inox, riscos, arranhões, amassados, válvula e ralinho 
-
-desgastados, sobre mureta de alvenaria com pintura pva nova na cor branco gelo fosca, sem 
-
-acabamento 
-
-15 – torneira: metálica inox com bico, suja de tinta 
-
-16 – sifão: pvc na cor branca 
-
-17 – churrasqueira: estrutura de alvenaria com tijolinhos aparente com pintura pva nova na cor 
-
-vermelha, ferragens para espeto na parte interna com ferrugem, iluminação interna com lâmpada 
-
-funcionando ok, gavetas para cinza metálica com pintura a óleo nova na cor branca 
-
-Obs.: - 02 caixa de gordura com tampas de pvc na cor preta/granito sobre o piso 
-
-ÁREA INTERNA: 
-
-SALA: 
-
-1 – campainha: não tem 
-
-2 – porta e portal: 01 porta de estrutura metálica com pintura a óleo nova na cor creme, 
-
-deteriorada, descascados sob a tinta, com vidros canelados, manchas, sujo de tinta, moldura em 
-
-volta da porta com pintura pva nova na cor verde; 01 porta de estrutura metálica com pintura a 
-
-óleo nova na cor creme, deteriorada, descascados sob a tinta, marcas de solda, com vidros 
-
-canelados, manchas, sujo de tinta 
-
-3 – chave de porta: 02 simples ok; 02 tetras 
-
-4 – fechadura(s): 01 simples marca Stam, 01 tetra marca Papaiz desgastada, miolo mal fixado 
-
-5 – tomada(s): com espelhos ok 
-
-6 – interruptor(es): com espelhos ok 
-
-7 – iluminação: 02 painel de led na cor branca 
-
-8 – lâmpada(s): ok 
-
-9 – basculante(s): estrutura metálica com pintura a óleo nova na cor creme com puxadores ok 
-
-10 – janela(s): estrutura metálica com grade de proteção com pintura a ó leo nova na cor creme 
-
-com puxador e trinco com sinais de ferrugem 
-
-11 – vidro(s): canelados, manchas, sujos de tinta 
-
-12 – cortina(s): não tem 
-
-13 – persiana(s): 02 vertical usadas na cor creme, danificadas, faltando correntes, correntes 
-
-embaralhadas 
-
-14 – pintura: pva nova na cor palha semi brilho 
-
-15 – teto: pintura pva nova na cor branca fosca com rodo teto de gesso 
-
-16 – alvenaria: ok sem furos 
-
-17 – piso: cerâmica, peças com esmalte danificado 
-
-18 – rodapé: cerâmica sujo de tinta 
-
-Obs.: 
-
-ÁREA DE VENTILAÇÃO DA SALA: 
-
-1 – armário: não tem SRTVS QD. 701 BL.O Nº 110 SALAS 280/284 ED. MULTIEMPRESARIAL - BRASILIA/DF   
-
-> TELEFONE: (61) 3034 -9090
-> www.visaoimoveis.com
-
-2 – chave(s) do armário: não tem 
-
-3 – iluminação: não tem 
-
-4 – interruptor(es): não tem 
-
-5 – lâmpada(s): não tem 
-
-6 – pintura: pva nova na cor palha semi brilho, pontos danificados, manchas, furos sem 
-
-acabamento 
-
-7 – piso: cerâmica, manchas, peças com esmalte danificado 
-
-8 – rodapé: cerâmica sujo de tinta 
-
-9 – tomada(s): não tem 
-
-10 – teto: estrutura de madeira com telhas de fibro cimento/pvc na cor branca 
-
-11 – porta e portal: não tem 
-
-12 – chaves: não tem 
-
-13 – fechadura: não tem 
-
-14 – ralo: 01 tampa de pvc na cor branca 
-
-Obs.: 
-
-BANHEIRO SOCIAL: 
-
-1 – chave de porta: 01 simples e 01 reserva reta ok 
-
-2 – fechadura(s): 01 simples marca Stam ok 
-
-3 – porta e portal: madeira com laminado madeira com verniz novo ok, danificada na parte 
-
-inferior 
-
-4 – tomada(s): com espelho ok 
-
-5 – interruptor(es): com espelho ok 
-
-6 – iluminação: 01 painel de led na cor branca 
-
-7 – lâmpada(s): ok 
-
-8 – piso: cerâmica, peça de cor diferente 
-
-9 – armário de banheiro: 01 de parede de alumínio/pvc na cor azul, com 02 portas, espelhos, 
-
-prateleiras, desalinhado e mal fixado 
-
-10 – box: não tem 
-
-11 – basculante(s): estrutura metálica com pintura a óleo nova na cor creme com puxador com 
-
-vidros canelados, manchas, sujo de tinta, sendo 01 quebrado 
-
-12 – banheira: não tem 
-
-13 – aquecedor: não tem 
-
-14 – chuveiro: 01 marca Fame com mangueira com duchinha, funcionando ok, registro mal 
-
-fixado, falta acabamento 
-
-15 – espelho(s): 02 no armário de parede 
-
-16 – bidê: 01 ducha higiê nica, funcionando ok, suporte mal fixado 
-
-17 – descarga: acoplada de porcelana na cor bege com acionador marca Deca 
-
-18 – vaso: porcelana na cor bege marca Deca ok 
-
-19 – assento sanitário: madeira com pintura laqueada usada na cor bege 
-
-20 – revestimento: cerâmica, peças trincadas, sujo de tinta 
-
-21 – teto: pintura pva nova na cor branca fosca com rodo teto de gesso 
-
-22 – lavatório: porcelana na cor bege com coluna, sem rejunte 
-
-23 – torneira: metálica inox com bico 
-
-24 – sifão: pvc na cor branca 
-
-25 – acessórios: 01 porta papel higiênico metálico inox; 03 porta toalha metálico inox; 02 
-
-corrimão metálico inox 
-
-26 – ralo(s): 01 tampa metálica inox SRTVS QD. 701 BL.O Nº 110 SALAS 280/284 ED. MULTIEMPRESARIAL - BRASILIA/DF   
-
-> TELEFONE: (61) 3034 -9090
-> www.visaoimoveis.com
-
-Obs.: 
-
-1º QUARTO DIREITA: 
-
-1 – armário embutido: não tem 
-
-2 – armário de parede: não tem 
-
-3 – porta e portal: madeira com laminado madeira com verniz novo ok, marcas antiga fechadura, 
-
-danificada na parte inferior 
-
-4 – chave de porta: 02 simples ok 
-
-5 – fechadura(s): 01 simples marca Stam ok 
-
-6 – tomada(s): com espelhos ok 
-
-7 – interruptor(es): com espelho ok 
-
-8 – iluminação: 01 painel de led na cor branca 
-
-9 – lâmpada(s): ok 
-
-10 – basculante(s): estrutura metálica com pintura a óleo nova na cor creme com puxadores ok 
-
-11 – janela(s): estrutura metálica com grade de proteção com pintura a ó leo nova na cor creme 
-
-com puxador e trinco com sinais de ferrugem 
-
-12 – vidro(s): canelados, manchas, sujos de tinta 
-
-13 – cortina(s): somente trilho 
-
-14 – persiana(s): não tem 
-
-15 – pintura: pva nova na cor palha fosca 
-
-16 – teto: pintura pva nova na cor branca fosca com rodo teto de gesso 
-
-17 – piso: cerâmica, peças com esmalte danificado 
-
-18 – rodapé: cerâmica sujo de tinta 
-
-Obs.: 
-
-2º QUARTO: 
-
-1 – armário embutido: não tem 
-
-2 – armário de parede: não tem 
-
-3 – porta e portal: madeira com laminado madeira com verniz novo ok, marcas antiga fechadura, 
-
-danificada na parte inferior 
-
-4 – chave de porta: 02 simples ok 
-
-5 – fechadura(s): 01 simples marca Stam ok 
-
-6 – tomada(s): com espelhos ok 
-
-7 – interruptor(es): com espelho ok 
-
-8 – iluminação: 01 painel de led na cor branca 
-
-9 – lâmpada(s): ok 
-
-10 – basculante(s): estrutura metálica com pintura a óleo nova na cor creme com puxadores ok 
-
-11 – janela(s): estrutura metálica com grade de proteção com pintura a óleo nova na cor creme 
-
-com puxador e trinco com sinais de ferrugem 
-
-12 – vidro(s): canelados, manchas, sujos de tinta 
-
-13 – cortina(s): somente trilho 
-
-14 – persiana(s): não tem 
-
-15 – pintura: pva nova na cor palha fosca, manchas 
-
-16 – teto: pintura pva nova na cor branca fosca com rodo teto de gesso 
-
-17 – piso: cerâmica, peças com esmalte danificado 
-
-18 – rodapé: cerâmica sujo de tinta 
-
-Obs.: SRTVS QD. 701 BL.O Nº 110 SALAS 280/284 ED. MULTIEMPRESARIAL - BRASILIA/DF   
-
-> TELEFONE: (61) 3034 -9090
-> www.visaoimoveis.com
-
-COZINHA: 
-
-1 – armário sob a pia: MDF na cor branca, com 03 portas, prateleiras e gavetas (novo) 
-
-2 – armário de parede: MDF na cor branca, com 06 portas e prateleiras (novo); 01 prateleira de 
-
-granito fixada na parede 
-
-3 – armário embutido: não tem 
-
-4 – chave de porta: 02 simples ok 
-
-5 – fechadura(s): 01 simples marca Stam desgastada, maçanetas folgadas, espelho no portal 
-
-raspado 
-
-6 – porta e portal: estrutura metálica com pintura a óleo nova na cor creme, desgastada, 
-
-deteriorada, com vidros canelados, manchas, sujos de tinta 
-
-7 – revestimento: cerâmica, furo sem acabamento 
-
-8 – pintura: não tem 
-
-9 – teto: pintura pva nova na cor branca fosca com rodo teto de gesso 
-
-10 – basculante(s): estrutura metálica com pintura a óleo nova na cor creme com puxadores ok 
-
-11 – janela(s): 02 estrutura metálica com grade de proteção com pintura a óleo nova na cor 
-
-creme com puxador e trinco com sinais de ferrugem sendo 01 trinco danificado 
-
-12 – vidro(s): canelados, manchas, sujos de tinta 
-
-13 – bujões: não tem 
-
-14 – caixa de registro de luz: pvc na cor branca com 02 tampas com 10 disjuntores, 03 DPS, 01 
-
-DR 
-
-15 – interfone: não tem 
-
-16 – filtro de parede: ponto com tampão 
-
-17 – tomada(s): com espelhos ok 
-
-18 – interruptor(es): com espelhos ok 
-
-19 – iluminação: 01 painel de led na cor branca 
-
-20 – lâmpada(s): ok 
-
-21 – pia(s): tampão de granito com cuba metálica inox, riscos, arranhões, amassados, com 
-
-válvula desgastada e ralinho danificado 
-
-22 – torneira(s): metálica inox sem bico 
-
-13 – sifão: cano de pvc na cor branca 
-
-24 – piso: cerâmica, manchas, peças com esmalte danificado 
-
-25 – ralo(s): não tem 
-
-Obs.: - 02 cadeados sendo 01 amassados, com 04 chaves simples sobre a pia. 
-
-- 01 campainha fixada na parede, funcionando ok. 
-
-ÁREA DE SERVIÇO: 
-
-1 – aquecedor: não tem 
-
-2 – cobogós: não tem 
-
-3 – revestimento: cerâmica, furos rejuntados, furos, bucha, parafuso, sujo de tinta; mureta de 
-
-alvenaria revestida de cerâmica de cor/modelo diferente 
-
-4 – pintura: não tem 
-
-5 – teto: pintura pva nova na cor branca fosca com rodo teto de gesso 
-
-6 – armário: não tem 
-
-7 – basculante(s): não tem 
-
-8 – janela(s): não tem 
-
-9 – vidro(s): não tem 
-
-10 – chave(s): não tem 
-
-11 – fechadura(s): não tem 
-
-12 – porta e portal: não tem SRTVS QD. 701 BL.O Nº 110 SALAS 280/284 ED. MULTIEMPRESARIAL - BRASILIA/DF   
-
-> TELEFONE: (61) 3034 -9090
-> www.visaoimoveis.com
-
-13 – tomada(s): com espelhos ok 
-
-14 – interruptor(es): com espelhos ok 
-
-15 – iluminação: 01 painel de led na cor branca 
-
-16 – lâmpada(s): ok 
-
-16 – secador(es): não tem 
-
-18 – tanque: material sintético na cor bege, desgastado, sujo de tinta, manchas, com 03 cubas, 
-
-02 válvulas danificadas, sobre mureta de alvenaria revestida de cerâmica 
-
-19 – torneira: 02 pvc na cor preta sendo 01 sem bico, desgastadas 
-
-20 – sifão: 03 de pvc na cor branca 
-
-21 – piso: cerâmica, manchas, peças com esmalte danificado 
-
-22 – ralo(s): não tem 
-
-Obs.: - 01 entrada e saída de água com tampão para máquina de lavar. 
-
-- Registro geral mal fixado, sujo de tinta 
-
-BANHEIRO DE SERVIÇO: 
-
-1 – chave de porta: 01 simples e 01 reserva reta ok 
-
-2 – fechadura(s): 01 simples marca Stam ok 
-
-3 – porta e portal: madeira com laminado madeira com verniz novo ok, danificada na parte 
-
-inferior 
-
-4 – tomada(s): com espelho ok 
-
-5 – interruptor(es): com espelho ok 
-
-6 – iluminação: 01 painel de led na cor branca 
-
-7 – lâmpada(s): ok 
-
-8 – piso: cerâmica 
-
-9 – armário de banheiro: 01 de parede de alumínio/pvc na cor bege, mancahs, com 01 porta, 
-
-espelhos, manchas, oxidado, prateleiras 
-
-10 – box: não tem 
-
-11 – basculante(s): estrutura metálica, deteriorado, sinais de ferrugem, com pintura a óleo nova 
-
-na cor creme com puxador com vidros canelados, manchas, sujo de tinta 
-
-12 – banheira: não tem 
-
-13 – aquecedor: não tem 
-
-14 – chuveiro: 01 marca Hydra, vazando água na parte superior com mangueira com duchinha, 
-
-funcionando ok, registro mal fixado e falta acabamento 
-
-15 – espelho(s): 01 com manchas, oxidado no armário de parede 
-
-16 – bidê: não temfixado 
-
-17 – descarga: marca Docol ok 
-
-18 – vaso: porcelana na cor camurça marca Ideal Stander ok 
-
-19 – assento sanitário: plástico usado na cor preta 
-
-20 – revestimento: cerâmica, furos no rejunte, sujo de tinta 
-
-21 – teto: pintura pva nova na cor branca fosca com rodo teto de gesso 
-
-22 – lavatório: porcelana na cor camurça com coluna, rejunte danificado 
-
-23 – torneira: metálica inox 
-
-24 – sifão: pvc na cor cinza 
-
-25 – acessórios: 01 porta papel higiênico metálico inox; 04 porta toalha metálico inox; 02 
-
-corrimão metálico inox 
-
-26 – ralo(s): 01 tampa metálica inox 
-
-Obs.: SRTVS QD. 701 BL.O Nº 110 SALAS 280/284 ED. MULTIEMPRESARIAL - BRASILIA/DF   
-
-> TELEFONE: (61) 3034 -9090
-> www.visaoimoveis.com
-
-CASA DE FUNDO: 
-
-ÁREA EXTERNA: 
-
-- Paredes externa de alvenaria com pintura pva nova na cor branco gelo sem acabamento; 
-
-telhado de estrutura de madeira com telhas de fibro cimento, 01 cano de pvc na cor branca 
-
-sobre calha fixado na parede; calçada de cerâmica, manchas, peças com esmalte danificado, 
-
-rodapé de cerâmica sujo de tinta; 
-
-ÁREA DE SERVIÇO: 
-
-1 – aquecedor: não tem 
-
-2 – cobogós: não tem 
-
-3 – revestimento: cerâmica sobre o tanque de lavar roupas 
-
-4 – pintura: pva nova na cor branco gelo sem acabamento, furo, bucha 
-
-5 – teto: estrutura de madeira com pintura a óleo usada na cor vermelha com telhas de fibro 
-
-cimento 
-
-6 – armário: não tem 
-
-7 – basculante(s): não tem 
-
-8 – janela(s): não tem 
-
-9 – vidro(s): não tem 
-
-10 – chave(s): não tem 
-
-11 – fechadura(s): não tem 
-
-12 – porta e portal: não tem 
-
-13 – tomada(s): com espelhos ok, manchas 
-
-14 – interruptor(es): com espelhos ok, manchas 
-
-15 – iluminação: 01 bocal 
-
-16 – lâmpada(s): ok 
-
-16 – secador(es): não tem 
-
-18 – tanque: porcelana na cor branca com coluna, manchas, válvula desgastada 
-
-19 – torneira: metálica inox sem bico 
-
-20 – sifão: cano de pvc na cor branca 
-
-21 – piso: cerâmica, manchas, peças com esmalte danificado 
-
-22 – ralo(s): 01 caixa de gordura com tampa de pvc na cor branca, manchas, trincada 
-
-Obs.: 
-
-ÁREA INTERNA: 
-
-SALA: 
-
-1 – campainha: não tem 
-
-2 – porta e portal: 01 porta de estrutura/grade de proteção metálica com pintura a óleo nova na 
-
-cor creme com portinhola com trincos com vidro mini boreal sujo de tinta 
-
-3 – chave de porta: 02 simples ok 
-
-4 – fechadura(s): 01 simples marca Soprano ok, falta espelho no portal 
-
-5 – tomada(s): com espelhos ok, manchas 
-
-6 – interruptor(es): com espelhos ok, manchas 
-
-7 – iluminação: 01 plafonier de pvc na cor branca, manchas, mal fixado 
-
-8 – lâmpada(s): ok SRTVS QD. 701 BL.O Nº 110 SALAS 280/284 ED. MULTIEMPRESARIAL - BRASILIA/DF   
-
-> TELEFONE: (61) 3034 -9090
-> www.visaoimoveis.com
-
-9 – basculante(s): não tem 
-
-10 – janela(s): estrutura metálica/veneziana/grade de proteção com pintura a óleo nova na cor 
-
-creme com puxador e trinco ok 
-
-11 – vidro(s): não tem tinta 
-
-12 – cortina(s): não tem 
-
-13 – persiana(s): 01 horizontal metálica na cor alumínio, manchas, suja, falta o acionador do 
-
-basculante, sobre a porta 
-
-14 – pintura: pva nova na cor branco gelo fosca, manchas, pontos sem acabamento, descascados, 
-
-sinais de infiltração 
-
-15 – teto: forro/rodo teto de pvc na cor branca, manchas 
-
-16 – alvenaria: manchas, pontos sem acabamento, descascados, sinais de infiltração 
-
-17 – piso: cerâmica, manchas, peças com esmalte danificado 
-
-18 – rodapé: cerâmica sujo de tinta 
-
-Obs.: 
-
-BANHEIRO SOCIAL: 
-
-1 – chave de porta: não tem 
-
-2 – fechadura(s): não tem 
-
-3 – porta e portal: pvc na cor branca tipo sanfonada com puxadores e trinco de pvc, manchas 
-
-4 – tomada(s): com espelho ok, manchas 
-
-5 – interruptor(es): com espelho ok, manchas 
-
-6 – iluminação: 01 plafonier de pvc na cor branca, manchas 
-
-7 – lâmpada(s): ok 
-
-8 – piso: cerâmica, manchas 
-
-9 – armário de banheiro: 01 de parede de alumínio/pvc na cor azul, com 01 porta, espelho, 
-
-prateleiras 
-
-10 – box: não tem 
-
-11 – basculante(s): estrutura metálica com pintura a óleo nova na cor creme com puxador com 
-
-vidros mini boreal manchas 
-
-12 – banheira: não tem 
-
-13 – aquecedor: não tem 
-
-14 – chuveiro: 01 marca Lorenzatti com mangueira (falta o suporte) com duchinha, funcionando 
-
-ok 
-
-15 – espelho(s): 01 com manchas no armário de parede 
-
-16 – bidê: não tem 
-
-17 – descarga: acoplada de porcelana na cor branca com acionador marca Logasa 
-
-18 – vaso: porcelana na cor branca marca Logasa ok 
-
-19 – assento sanitário: plástico usado na cor branca, incompatível, manchas 
-
-20 – revestimento: cerâmica ok sem furos 
-
-21 – teto: forro/rodo teto de pvc na cor branca, manchas 
-
-22 – lavatório: porcelana na cor branca, rejunte trincado 
-
-23 – torneira: metálica inox desgastada 
-
-24 – sifão: pvc na cor branca 
-
-25 – acessórios: 01 saboneteira de pvc com acrílico; 02 porta toalha de pvc cromado; 03 
-
-suportes metálico inox para prateleira ; 01 porta papel higiênico de pvc com acrílico 
-
-26 – ralo(s): 01 tampa de pvc na cor branca 
-
-Obs.: SRTVS QD. 701 BL.O Nº 110 SALAS 280/284 ED. MULTIEMPRESARIAL - BRASILIA/DF   
-
-> TELEFONE: (61) 3034 -9090
-> www.visaoimoveis.com
-
-QUARTO: 
-
-1 – armário embutido: não tem 
-
-2 – armário de parede: não tem 
-
-3 – porta e portal: estrutura metálica/veneziana com pintura a óleo nova na cor creme, portal 
-
-com sinais de ferrugem e deteriorado, pontos danificados 
-
-4 – chave de porta: 02 simples ok 
-
-5 – fechadura(s): 01 simples marca Gold falta espelho no portal 
-
-6 – tomada(s): com espelhos ok, manchas 
-
-7 – interruptor(es): com espelho ok 
-
-8 – iluminaçã o: 01 plafonier de pvc na cor branca, manchas, mal fixado 
-
-9 – lâmpada(s): ok 
-
-10 – basculante(s): não tem 
-
-11 – janela(s): estrutura metálica/veneziana/grade de proteção amassados com pintura a óleo 
-
-nova na cor creme com puxador e trinco 
-
-12 – vidro(s): não tem 
-
-13 – cortina(s): não tem 
-
-14 – persiana(s): não tem 
-
-15 – pintura: pva nova na cor branco gelo fosca, manchas, pontos sem acabamento, descascados, 
-
-sinais de infiltração 
-
-16 – teto: forro/rodo teto de pvc na cor branca, manchas 
-
-17 – piso: cerâmica, manchas, peças com esmalte danificado 
-
-18 – rodapé: cerâmica sujo de tinta 
-
-Obs.: - 01 prateleira de vidro, manchas, suja de tinta, fixada na parede com suportes metálicos 
-
-inox sujos de tinta. 
-
-COZINHA: 
-
-1 – armário sob a pia: não tem 
-
-2 – armário de parede: não tem 
-
-3 – armário embutido: não tem 
-
-4 – chave de porta: não tem 
-
-5 – fechadura(s): não temolgadas 
-
-6 – porta e portal: não tem 
-
-7 – revestimento: cerâmica sobre a pia 
-
-8 – pintura: pva nova na cor branco gelo fosca, manchas, pontos sem acabamento, descascados, 
-
-sinais de infiltração 
-
-9 – teto: forro/rodo teto de pvc na cor branca, manchas 
-
-10 – basculante(s): não tem 
-
-11 – janela(s): estrutura metálica/veneziana/grade de proteção com pintura a óleo nova na cor 
-
-creme com puxador e trinco 
-
-12 – vidro(s): não tem 
-
-13 – bujões: não tem 
-
-14 – caixa de registro de luz: não tem 
-
-15 – interfone: não tem 
-
-16 – filtro de parede: não tem 
-
-17 – tomada(s): com espelhos ok, manchas 
-
-18 – interruptor(es): com espelhos ok, manchas 
-
-19 – iluminação: 01 plafonier de pvc na cor branca, manchas, mal fixado SRTVS QD. 701 BL.O Nº 110 SALAS 280/284 ED. MULTIEMPRESARIAL - BRASILIA/DF   
-
-> TELEFONE: (61) 3034 -9090
-> www.visaoimoveis.com
-
-20 – lâmpada(s): ok 
-
-21 – pia(s): tampão/cuba metálica inox, riscos, arranhões, amassados, com válvula desgastada, 
-
-sobre mureta de alvenaria com pintura pva nova na cor branco gelo fosca 
-
-22 – torneira(s): metálica inox com bico, desgastada 
-
-13 – sifão: pvc na cor branca 
-
-24 – piso: cerâmica, manchas, peças com esmalte danificado; rodapé de cerâmica sujo de tinta 
-
-25 – ralo(s): não tem 
-
-Obs.: 
-
-Brasília/DF, 07 de julho de 2025 
+PÔAWHTR: ZNEVN VARF SREERVEN PNEINYUB 
 
 ___________________________________________________ 
 
-LOCADOR(A): EUSTAQUIO JOSE PESSOA 
+2º SVNQBE: EBARYZN SREERVEN PNEINYUB 
 
-P/P: VISAO EM PREENDIMENTOS IMOBILIARIOS LTDA 
+GRFGRZHAUN(F): 
+
+________________________________ ________________________________ FEGIF DQ. 701 OY.B Aº 110 FNYNF 280/284 RQ. ZHYGVRZCERFNEVNY - OENFVYVN/QS   
+
+> GRYRSBAR: (61) 3034 -9090
+> jjj.ivfnbvzbirvf.pbz
+
+YNHQB QR IVFGBEVN – RAGENQN           
+
+> PBAGENGB: 00826/02
+> YBPNQBE: RHFGNDHVB WBFR CRFFBN
+> YBPNGÁEVB: ZNEVB FRVKNF FNYRF
+> RAQRERÇB QB VZÓIRY: DAR 21 PNFN 08 GNTHNGVATN –QS PRC: 72.125 -080
+> IVTÊAPVN QB PBAGENGB: 10/07/2025 n 09/07/2028
+> INYBE QB NYHTHRY: E$ 2.600,00 ( Qbvf zvy r frvfpragbf ernvf )
+
+YRVN PBZ NGRAÇÃB: N IVFÃB VZÓIRVF YGQN , fbyvpvgn dhr b (n) Fe(n) 
+
+YBPNGÁEVB(N) pbasven rfgn ivfgbevn evtbebfnzragr ab cenmb zákvzb qr 03 (geêf) 
+
+# qvnf úgrvf , genmraqb fhnf bofreinçõrf cbe rfpevgb rz qhnf ivnf r nffvanqb cnen dhr 
+
+hzn frwn cebgbpbynqn an vzbovyváevn ab ubeáevb qr 09u áf 17u qr frthaqn n 
+
+# frkgn -srven . Pnfb raivr cbe r -znvy, pbasvezne b erprovzragb. N Nqzvavfgenqben fr 
+
+erfrein ab qvervgb yrtny qr AÃB nprvgne dhnydhre bhgen sbezn qr erpynznçãb pbageáevn 
+
+nb dhr rfgvire rkcerffb arfgr qbphzragb, irapvqb b cenmb cnen pbagrfgnçãb. 
+
+# Pbagrfgnçãb - fãb vgraf dhr aãb rfgãb qr npbeqb pbz b ynhqb qr 
+
+# ivfgbevn. 
+
+Ivzbf cryn cerfragr pbasbezr fbyvpvgnqb cryn Ivfãb Vzóirvf , rapnzvaune nonvkb, b ynhqb qr 
+
+Ivfgbevn r Vairagnevb qr Vzóiry ernyvmnqb rz 04 qr Whyub qr 2025, nf 13:15uf, ab raqrerçb DAR 
+
+21 PNFN 08 – GNTHNGVATN ABEGR - Oenfíyvn -QS., n svz qr pbafgngne n fvghnçãb sífvpn 
+
+nghny qb vzóiry, cnen pbasrpçãb qr Pbagengb qr Ybpnçãb. b ivfgbevnqbe aãb nffhzr 
+
+erfcbafnovyvqnqr gépavpn qb vzóiry (rfgehgheny, ryégevpn, uvqeáhyvpn, rgp), qnabf bh bowrgbf 
+
+fhogeníqbf qb zrfzb. Cnen gnagb frthr nonvkb erynpvbanqb n qrfpevçãb pbzcyrgn qb Vzóiry: 
+
+VAIRAGÁEVB QR PUNIRF: 
+
+• 02 PUNIRF GRGENF QN CBEGN QN FNYN 
+
+• 02 PUNIRF FVZCYRF QB CBEGÃB QR CRQRFGER 
+
+• 01 PUNIR FVZCYRF QB PNQRNQB QB CBEGÃB QR TNENTRZ 
+
+• 01 PUNIR NYYRA QN GENIN QB ZBGBE QR TNENTRZ 
+
+• 02 PUNIRF FVZCYRF QN GENIN QB ZBGBE QR TNENTRZ 
+
+• 02 PBAGEBYR ERZBGB QR TNENTRZ SHAPVBANAQB BX 
+
+• 03 PUNIRF FVZCYRF AÃB VQRAGVSVPNQN FEGIF DQ. 701 OY.B Aº 110 FNYNF 280/284 RQ. ZHYGVRZCERFNEVNY - OENFVYVN/QS   
+
+> GRYRSBAR: (61) 3034 -9090
+> jjj.ivfnbvzbirvf.pbz
+
+ÁERN RKGREAN: 
+
+PNFN QR SERAGR: 
+
+SERAGR: 
+
+- Ynqb ehn pnyçnqn qr pvzragb frz npn onzragb, gevapnf, enpunqhenf, cbagbf qnavsvpnqbf, zngb; 
+
+01 yvkrven qr rfgehghen zrgáyvpn pbz cvaghen cin abin an pbe ireqr, nznffnqbf, fvanvf qr 
+
+sreehtrz, qrgrevbenqn, fboer b cvfb; 
+
+SERAGR: 
+
+- Tenqr qr cebgrçãb qr rfgehghen zrgáyvpn pbz cvaghen cin abin an pbe ireqr, fvanvf qr sreehtrz, 
+
+qrgrevbenqn, puncnf cbagvnthqnf an cnegr fhcrevbe; 03 cbegõrf qr tnentrz qr rfgehghen zrgáyvpn 
+
+pbz cvaghen cin abin an pbe ireqr, fvanvf qr sreehtrz, qrgrevbenqn, cbegn pnqrnqbf, fraqb 01 
+
+pbz 01 pnqrnqb pbz 01 punir fvzcyrf, fraqb 02 pbz npvbanqberf ryrgeôavpbf znepn Ebffv, 
+
+fhwbf qr gvagn, pbz 02 pbagebyrf erzbgb shapvbanaqb bx, fraqb 01 snygnaqb n pnvkn qb vzã qr svz 
+
+phefb, pbz 01 punir nyyrz r 02 punirf fvzcyrf qn genin qb zbgbe; 01 pnvkn qr pbeervb pbz 
+
+gnzcn zrgáyvpn pbz cvaghen cin abin an pbe ireqr, qrgrevbenqn, svknqn an tenqr qr cebgrçãb; 01 
+
+cbegãb qr crqrfger qr rfgehghen zrgáyvpn pbz cvaghen cin abin an pbe ireqr, fvanvf qr sreehtrz, 
+
+qrgrevbenqn, pbz 01 srpunqhen fvzcyrf znepn Fbcenab pbz 02 punirf fvzcyrf bx; pnyçnqn qr 
+
+preâzvpn abin, ebqncé qr preâzvpn; zheb qvervgb/rfdhreqb qr nyiranevn pbz cvaghen cin abin an 
+
+pbe cnyun sbfpn pbz grkghen, shebf, ohpun, tnapubf svknqbf, cbagbf frz npnonzragb; 01 pnvkn 
+
+zrgáyvpn pbz gnzcn pbz qboenqvçnf qnavsvpnqnf pbz cvaghen n óyrb abin an pbe perzr, fvanvf qr 
+
+sreehtrz, cnegr vagrean 01 eryótvb qr áthn cbgáiry; zhergn qr nyiranevn pbz cvaghen cin abin an 
+
+pbe cnyun sbfpn pbz grkghen pbz 01 pnvkn zrgáyvpn pbz gnzcn pbz cvaghen cin abin an pbe 
+
+cnyun sbfpn, ivfbe qr ivqeb fhwb qr gvagn, pbz 01 eryótvb qr raretvn ryégevpn r 01 qvfwhagbe; 02 
+
+gnzcnf qr pnvkn qr cnffntrz zrgáyvpnf frz cvaghen pbz fvanvf qr sreehtrz; 01 gnzcn qr rftbgb 
+
+erirfgvqn qr preâzvpn frz qnabf; cnerqrf qn pnfn qr nyiranevn pbz cvaghen cin abin an pbe 
+
+cnyun sbfpn cnegr pbz grkghen, zbyqhenf qnf wnarynf pbz cvaghen cin abin an pbe ireqr; gryunqb 
+
+qn pnfn qr rfgehghen qr znqrven pbz gryunf qr svoeb pvzragb; 01 raebynqbe qr znathrven qr cip 
+
+pbz cvaghen cin abin an pbe cnyun sbfpn; 01 gbearven qr wneqvz frz ovpb vairegvqn pbz 01 
+
+crdhran znathrven qr cip hfnqn an pbe ireqr; 01 vagreehcgbe qr pnzcnvaun pbz rfcryub ab 
+
+zheb, shapvbanaqb bx; 
+
+YNGRENY QVERVGN: 
+
+- Pnyçnqn qr preâzvpn, crçnf pbz rfznygr qnavsvpnqb, znapunf, ebqncé qr preâzvpn fhwb qr 
+
+gvagn; cnerqrf qn pnfn qr nyiranevn pbz cvaghen cin abin an pbe oenapb tryb sbfpn cnegr pbz 
+
+grkghen, cnegr frz npnonzragb, shebf frz npnonzragb pbz pnob qr nagran; 01 rfpnqn qr 
+
+rfgehghen zrgáyvpn frz cvaghen svknqn an cnerqr; 01 cbegvaubyn qr rfgehghen zrgáyvpn pbz cvaghen FEGIF DQ. 701 OY.B Aº 110 FNYNF 280/284 RQ. ZHYGVRZCERFNEVNY - OENFVYVN/QS   
+
+> GRYRSBAR: (61) 3034 -9090
+> jjj.ivfnbvzbirvf.pbz
+
+n óyrb hfnqn an pbe oenapn pbz 01 srpunqhen fvzcyrf, qrftnfgnqn, fhwn qr gvagn qr nprffb nb 
+
+gryunqb; zheb qr nyiranevn pbz cvaghen cin abin an pbe nmhy sbfpn, gevapnf, enpunqhenf, cbagbf 
+
+frz npnonzragb pbz puncnf zrgáyvpnf an cnegr fhcrevbe; 01 gnzcn qr enyb qr cip an pbe oenapn 
+
+qrftnfgnqn, znapunf; 01 gnzcn qr rftbgb zrgáyvpn frz cvaghen pbz fvanvf qr sreehtrz; 01 
+
+yhzvaáevn syhberfpragr snygnaqb npnonzragb pbz yâzcnqn bx, svknqn an cnerqr qn pnfn; 
+
+SHAQBF: 
+
+- Pnyçnqn qr preâzvpn, crçnf pbz rfznygr qnavsvpnqb r crçnf qnavsvpnqnf, znapunf, fhwn qr gvagn 
+
+ebqncé qr preâzvpn fhwb qr gvagn; 02 gnzcn qr enyb fraqb 01 dhroenqn, 01 gnzcn qr rftbgb 
+
+zrgáyvpnf frz cvaghen pbz fvanvf qr sreehtrz; 01 wneqvarven qr nyiranevn pbz cbagbf qnavsvpnqbf 
+
+pbz cvaghen cin hfnqn an pbe zneebz, pbz iáevnf cynagnf frz znahgraçãb pbz 01 infb qr 
+
+cynagnf qr nyiranevn pbz cvaghen cin hfnqn an pbe oenapn pbz cynagn frz znahgraçãb; 
+
+cnerqrf qn pnfn qr nyiranevn pbz cvaghen cin abin an pbe oenapb tryb sbfpn, znapunf, cbagbf 
+
+pbz ercneb r cnegr frz npnonzragb; zheb qr nyiranevn pbz cvaghen cin abin an pbe nmhy sbfpn, 
+
+gevapnf, enpunqhenf, cbagbf frz npnonzragb pbz puncnf zrgáyvpnf an cnegr fhcrevbe 
+
+TNENTRZ: 
+
+1 – nezáevb: aãb grz 
+
+2 – punir(f) qb nezáevb: aãb grz 
+
+3 – vyhzvançã b: 02 cnvary qr yrq an pbe oenapn 
+
+4 – vagreehcgbe(rf): aãb grz 
+
+5 – yâzcnqn(f): bx 
+
+6 – cvaghen: cin abin an pbe cnyun sbfpn, gevapnf, enpunqhenf, cbagbf frz npnonzragb 
+
+7 – cvfb: preâzvpn, znapunf, crçnf pbz rfznygr qnavsvpnqb, fhwn qr gvagn 
+
+8 – ebqncé: preâzvpn fhwb qr gvagn 
+
+9 – gbznqn(f): aãb grz 
+
+10 – grgb: cvaghen cin hfnqn an pbe oenapn sbfpn 
+
+11 – cbegn r cbegny: rfgehghen zrgáyvpn pbz cvaghen n óyrb abin an pbe perzr, qrgrevbenqn, fvanvf 
+
+qr sreehtrz, pbz ivqebf pnarynqbf, zbyqhen rz ibygn qn cbegn pbz cvaghen cin abin an pbe 
+
+ireqr 
+
+12 – punirf: 02 grgenf bx 
+
+13 – srpunqhen: 01 grgen znepn Cncnvm bx 
+
+Bof.: - 01 pnvkn qr cnffntrz zrgáyvpn pbz gnzcn pbz cvaghen n óyrb abin an pbe perzr, 
+
+nznffnqbf, cnen pnob qr nagran r gryrsbar, svknqn an cnerqr. 
+
+ÁERN QR PUHEENFDHRVEN: 
+
+1 – nezáevb: 03 cengryrvenf qr záezber/tenavgb, znapunf, fhwn qr gvagn, svknqnf anf cnerqrf r an 
+
+cvn 
+
+2 – punir(f) qb nezáevb: aãb grz 
+
+3 – vyhzvançãb: 02 obpnvf 
+
+4 – vagreehcgbe(rf): pbz rfcryub pbz znapunf bx 
+
+5 – yâzcnqn(f): bx 
+
+6 – cvaghen: cin abin an pbe oenapb tryb sbfpn, znapunf, cbagbf frz npnonzragb, cvyne qr 
+
+znqrven pbz ireavm hfnqb FEGIF DQ. 701 OY.B Aº 110 FNYNF 280/284 RQ. ZHYGVRZCERFNEVNY - OENFVYVN/QS   
+
+> GRYRSBAR: (61) 3034 -9090
+> jjj.ivfnbvzbirvf.pbz
+
+7 – cvfb: preâzvpn, znapunf, crçnf pbz rfznygr qnavsvpnqb, pbe qvsreragr 
+
+8 – ebqncé: preâzvpn fhwb qr gvagn 
+
+9 – gbznqn(f ): pbz rfcryub bx, znapunf 
+
+10 – grgb: rfgehghen qr znqrven pbz cvaghen n óyrb hfnqn an pbe irezryun pbz gryunf qr svoeb 
+
+pvzragb fraqb 01 pbz cbagn dhroenqn 
+
+11 – cbegn r cbegny: aãb grz 
+
+12 – punirf: aãb grz 
+
+13 – srpunqhen: aãb grz 
+
+14 – cvn: gnzcãb/phon zrgáyvpn vabk, evfpbf, neenauõrf, nznffnqbf, iáyihyn r enyvaub 
+
+qrftnfgnqbf, fboer zhergn qr nyiranevn pbz cvaghen cin abin an pbe oenapb tryb sbfpn, frz 
+
+npnonzragb 
+
+15 – gbearven: zrgáyvpn vabk pbz ovpb, fhwn qr gvagn 
+
+16 – fvsãb: cip an pbe oenapn 
+
+17 – puheenfdhrven: rfgehghen qr nyiranevn pbz gvwbyvaubf ncneragr pbz cvaghen cin abin an pbe 
+
+irezryun, sreentraf cnen rfcrgb an cnegr vagrean pbz sreehtrz, vyhzvançãb vagrean pbz yâzcnqn 
+
+shapvbanaqb bx, tnirgnf cnen pvamn zrgáyvpn pbz cvaghen n óyrb abin an pbe oenapn 
+
+Bof.: - 02 pnvkn qr tbeqhen pbz gnzcnf qr cip an pbe cergn/tenavgb fboer b cvfb 
+
+ÁERN VAGREAN: 
+
+FNYN: 
+
+1 – pnzcnvaun: aãb grz 
+
+2 – cbegn r cbegny: 01 cbegn qr rfgehghen zrgáyvpn pbz cvaghen n óyrb abin an pbe perzr, 
+
+qrgrevbenqn, qrfpnfpnqbf fbo n gvagn, pbz ivqebf pnarynqbf, znapunf, fhwb qr gvagn, zbyqhen rz 
+
+ibygn qn cbegn pbz cvaghen cin abin an pbe ireqr; 01 cbegn qr rfgehghen zrgáyvpn pbz cvaghen n 
+
+óyrb abin an pbe perzr, qrgrevbenqn, qrfpnfpnqbf fbo n gvagn, znepnf qr fbyqn, pbz ivqebf 
+
+pnarynqbf, znapunf, fhwb qr gvagn 
+
+3 – punir qr cbegn: 02 fvzcyrf bx; 02 grgenf 
+
+4 – srpunqhen(f): 01 fvzcyrf znepn Fgnz, 01 grgen znepn Cncnvm qrftnfgnqn, zvbyb zny svknqb 
+
+5 – gbznqn(f): pbz rfcryubf bx 
+
+6 – vagreehcgbe(rf): pbz rfcryubf bx 
+
+7 – vyhzvançãb: 02 cnvary qr yrq an pbe oenapn 
+
+8 – yâzcnqn(f): bx 
+
+9 – onfphynagr(f): rfgehghen zrgáyvpn pbz cvaghen n óyrb abin an pbe perzr pbz chknqberf bx 
+
+10 – wnaryn(f): rfgehghen zrgáyvpn pbz tenqr qr cebgrçãb pbz cvaghen n ó yrb abin an pbe perzr 
+
+pbz chknqbe r gevapb pbz fvanvf qr sreehtrz 
+
+11 – ivqeb(f): pnarynqbf, znapunf, fhwbf qr gvagn 
+
+12 – pbegvan(f): aãb grz 
+
+13 – crefvnan(f): 02 iregvpny hfnqnf an pbe perzr, qnavsvpnqnf, snygnaqb pbeeragrf, pbeeragrf 
+
+rzonenyunqnf 
+
+14 – cvaghen: cin abin an pbe cnyun frzv oevyub 
+
+15 – grgb: cvaghen cin abin an pbe oenapn sbfpn pbz ebqb grgb qr trffb 
+
+16 – nyiranevn: bx frz shebf 
+
+17 – cvfb: preâzvpn, crçnf pbz rfznygr qnavsvpnqb 
+
+18 – ebqncé: preâzvpn fhwb qr gvagn 
+
+Bof.: 
+
+ÁERN QR IRAGVYNÇÃB QN FNYN: 
+
+1 – nezáevb: aãb grz FEGIF DQ. 701 OY.B Aº 110 FNYNF 280/284 RQ. ZHYGVRZCERFNEVNY - OENFVYVN/QS   
+
+> GRYRSBAR: (61) 3034 -9090
+> jjj.ivfnbvzbirvf.pbz
+
+2 – punir(f) qb nezáevb: aãb grz 
+
+3 – vyhzvançãb: aãb grz 
+
+4 – vagreehcgbe(rf): aãb grz 
+
+5 – yâzcnqn(f): aãb grz 
+
+6 – cvaghen: cin abin an pbe cnyun frzv oevyub, cbagbf qnavsvpnqbf, znapunf, shebf frz 
+
+npnonzragb 
+
+7 – cvfb: preâzvpn, znapunf, crçnf pbz rfznygr qnavsvpnqb 
+
+8 – ebqncé: preâzvpn fhwb qr gvagn 
+
+9 – gbznqn(f): aãb grz 
+
+10 – grgb: rfgehghen qr znqrven pbz gryunf qr svoeb pvzragb/cip an pbe oenapn 
+
+11 – cbegn r cbegny: aãb grz 
+
+12 – punirf: aãb grz 
+
+13 – srpunqhen: aãb grz 
+
+14 – enyb: 01 gnzcn qr cip an pbe oenapn 
+
+Bof.: 
+
+ONAURVEB FBPVNY: 
+
+1 – punir qr cbegn: 01 fvzcyrf r 01 erfrein ergn bx 
+
+2 – srpunqhen(f): 01 fvzcyrf znepn Fgnz bx 
+
+3 – cbegn r cbegny: znqrven pbz ynzvanqb znqrven pbz ireavm abib bx, qnavsvpnqn an cnegr 
+
+vasrevbe 
+
+4 – gbznqn(f): pbz rfcryub bx 
+
+5 – vagreehcgbe(rf): pbz rfcryub bx 
+
+6 – vyhzvançãb: 01 cnvary qr yrq an pbe oenapn 
+
+7 – yâzcnqn(f): bx 
+
+8 – cvfb: preâzvpn, crçn qr pbe qvsreragr 
+
+9 – nezáevb qr onaurveb: 01 qr cnerqr qr nyhzíavb/cip an pbe nmhy, pbz 02 cbegnf, rfcryubf, 
+
+cengryrvenf, qrfnyvaunqb r zny svknqb 
+
+10 – obk: aãb grz 
+
+11 – onfphynagr(f): rfgehghen zrgáyvpn pbz cvaghen n óyrb abin an pbe perzr pbz chknqbe pbz 
+
+ivqebf pnarynqbf, znapunf, fhwb qr gvagn, fraqb 01 dhroenqb 
+
+12 – onaurven: aãb grz 
+
+13 – ndhrprqbe: aãb grz 
+
+14 – puhirveb: 01 znepn Snzr pbz znathrven pbz qhpuvaun, shapvbanaqb bx, ertvfgeb zny 
+
+svknqb, snygn npnonzragb 
+
+15 – rfcryub(f): 02 ab nezáevb qr cnerqr 
+
+16 – ovqê: 01 qhpun uvtvê avpn, shapvbanaqb bx, fhcbegr zny svknqb 
+
+17 – qrfpnetn: npbcynqn qr cbeprynan an pbe ortr pbz npvbanqbe znepn Qrpn 
+
+18 – infb: cbeprynan an pbe ortr znepn Qrpn bx 
+
+19 – nffragb fnavgáevb: znqrven pbz cvaghen yndhrnqn hfnqn an pbe ortr 
+
+20 – erirfgvzragb: preâzvpn, crçnf gevapnqnf, fhwb qr gvagn 
+
+21 – grgb: cvaghen cin abin an pbe oenapn sbfpn pbz ebqb grgb qr trffb 
+
+22 – yningóevb: cbeprynan an pbe ortr pbz pbyhan, frz erwhagr 
+
+23 – gbearven: zrgáyvpn vabk pbz ovpb 
+
+24 – fvsãb: cip an pbe oenapn 
+
+25 – nprffóevbf: 01 cbegn cncry uvtvêavpb zrgáyvpb vabk; 03 cbegn gbnyun zrgáyvpb vabk; 02 
+
+pbeevzãb zrgáyvpb vabk 
+
+26 – enyb(f): 01 gnzcn zrgáyvpn vabk FEGIF DQ. 701 OY.B Aº 110 FNYNF 280/284 RQ. ZHYGVRZCERFNEVNY - OENFVYVN/QS   
+
+> GRYRSBAR: (61) 3034 -9090
+> jjj.ivfnbvzbirvf.pbz
+
+Bof.: 
+
+1º DHNEGB QVERVGN: 
+
+1 – nezáevb rzohgvqb: aãb grz 
+
+2 – nezáevb qr cnerqr: aãb grz 
+
+3 – cbegn r cbegny: znqrven pbz ynzvanqb znqrven pbz ireavm abib bx, znepnf nagvtn srpunqhen, 
+
+qnavsvpnqn an cnegr vasrevbe 
+
+4 – punir qr cbegn: 02 fvzcyrf bx 
+
+5 – srpunqhen(f): 01 fvzcyrf znepn Fgnz bx 
+
+6 – gbznqn(f): pbz rfcryubf bx 
+
+7 – vagreehcgbe(rf): pbz rfcryub bx 
+
+8 – vyhzvançãb: 01 cnvary qr yrq an pbe oenapn 
+
+9 – yâzcnqn(f): bx 
+
+10 – onfphynagr(f): rfgehghen zrgáyvpn pbz cvaghen n óyrb abin an pbe perzr pbz chknqberf bx 
+
+11 – wnaryn(f): rfgehghen zrgáyvpn pbz tenqr qr cebgrçãb pbz cvaghen n ó yrb abin an pbe perzr 
+
+pbz chknqbe r gevapb pbz fvanvf qr sreehtrz 
+
+12 – ivqeb(f): pnarynqbf, znapunf, fhwbf qr gvagn 
+
+13 – pbegvan(f): fbzragr gevyub 
+
+14 – crefvnan(f): aãb grz 
+
+15 – cvaghen: cin abin an pbe cnyun sbfpn 
+
+16 – grgb: cvaghen cin abin an pbe oenapn sbfpn pbz ebqb grgb qr trffb 
+
+17 – cvfb: preâzvpn, crçnf pbz rfznygr qnavsvpnqb 
+
+18 – ebqncé: preâzvpn fhwb qr gvagn 
+
+Bof.: 
+
+2º DHNEGB: 
+
+1 – nezáevb rzohgvqb: aãb grz 
+
+2 – nezáevb qr cnerqr: aãb grz 
+
+3 – cbegn r cbegny: znqrven pbz ynzvanqb znqrven pbz ireavm abib bx, znepnf nagvtn srpunqhen, 
+
+qnavsvpnqn an cnegr vasrevbe 
+
+4 – punir qr cbegn: 02 fvzcyrf bx 
+
+5 – srpunqhen(f): 01 fvzcyrf znepn Fgnz bx 
+
+6 – gbznqn(f): pbz rfcryubf bx 
+
+7 – vagreehcgbe(rf): pbz rfcryub bx 
+
+8 – vyhzvançãb: 01 cnvary qr yrq an pbe oenapn 
+
+9 – yâzcnqn(f): bx 
+
+10 – onfphynagr(f): rfgehghen zrgáyvpn pbz cvaghen n óyrb abin an pbe perzr pbz chknqberf bx 
+
+11 – wnaryn(f): rfgehghen zrgáyvpn pbz tenqr qr cebgrçãb pbz cvaghen n óyrb abin an pbe perzr 
+
+pbz chknqbe r gevapb pbz fvanvf qr sreehtrz 
+
+12 – ivqeb(f): pnarynqbf, znapunf, fhwbf qr gvagn 
+
+13 – pbegvan(f): fbzragr gevyub 
+
+14 – crefvnan(f): aãb grz 
+
+15 – cvaghen: cin abin an pbe cnyun sbfpn, znapunf 
+
+16 – grgb: cvaghen cin abin an pbe oenapn sbfpn pbz ebqb grgb qr trffb 
+
+17 – cvfb: preâzvpn, crçnf pbz rfznygr qnavsvpnqb 
+
+18 – ebqncé: preâzvpn fhwb qr gvagn 
+
+Bof.: FEGIF DQ. 701 OY.B Aº 110 FNYNF 280/284 RQ. ZHYGVRZCERFNEVNY - OENFVYVN/QS   
+
+> GRYRSBAR: (61) 3034 -9090
+> jjj.ivfnbvzbirvf.pbz
+
+PBMVAUN: 
+
+1 – nezáevb fbo n cvn: ZQS an pbe oenapn, pbz 03 cbegnf, cengryrvenf r tnirgnf (abib) 
+
+2 – nezáevb qr cnerqr: ZQS an pbe oenapn, pbz 06 cbegnf r cengryrvenf (abib); 01 cengryrven qr 
+
+tenavgb svknqn an cnerqr 
+
+3 – nezáevb rzohgvqb: aãb grz 
+
+4 – punir qr cbegn: 02 fvzcyrf bx 
+
+5 – srpunqhen(f): 01 fvzcyrf znepn Fgnz qrftnfgnqn, znçnargnf sbytnqnf, rfcryub ab cbegny 
+
+enfcnqb 
+
+6 – cbegn r cbegny: rfgehghen zrgáyvpn pbz cvaghen n óyrb abin an pbe perzr, qrftnfgnqn, 
+
+qrgrevbenqn, pbz ivqebf pnarynqbf, znapunf, fhwbf qr gvagn 
+
+7 – erirfgvzragb: preâzvpn, sheb frz npnonzragb 
+
+8 – cvaghen: aãb grz 
+
+9 – grgb: cvaghen cin abin an pbe oenapn sbfpn pbz ebqb grgb qr trffb 
+
+10 – onfphynagr(f): rfgehghen zrgáyvpn pbz cvaghen n óyrb abin an pbe perzr pbz chknqberf bx 
+
+11 – wnaryn(f): 02 rfgehghen zrgáyvpn pbz tenqr qr cebgrçãb pbz cvaghen n óyrb abin an pbe 
+
+perzr pbz chknqbe r gevapb pbz fvanvf qr sreehtrz fraqb 01 gevapb qnavsvpnqb 
+
+12 – ivqeb(f): pnarynqbf, znapunf, fhwbf qr gvagn 
+
+13 – ohwõrf: aãb grz 
+
+14 – pnvkn qr ertvfgeb qr yhm: cip an pbe oenapn pbz 02 gnzcnf pbz 10 qvfwhagberf, 03 QCF, 01 
+
+QE 
+
+15 – vagresbar: aãb grz 
+
+16 – svygeb qr cnerqr: cbagb pbz gnzcãb 
+
+17 – gbznqn(f): pbz rfcryubf bx 
+
+18 – vagreehcgbe(rf): pbz rfcryubf bx 
+
+19 – vyhzvançãb: 01 cnvary qr yrq an pbe oenapn 
+
+20 – yâzcnqn(f): bx 
+
+21 – cvn(f): gnzcãb qr tenavgb pbz phon zrgáyvpn vabk, evfpbf, neenauõrf, nznffnqbf, pbz 
+
+iáyihyn qrftnfgnqn r enyvaub qnavsvpnqb 
+
+22 – gbearven(f): zrgáyvpn vabk frz ovpb 
+
+13 – fvsãb: pnab qr cip an pbe oenapn 
+
+24 – cvfb: preâzvpn, znapunf, crçnf pbz rfznygr qnavsvpnqb 
+
+25 – enyb(f): aãb grz 
+
+Bof.: - 02 pnqrnqbf fraqb 01 nznffnqbf, pbz 04 punirf fvzcyrf fboer n cvn. 
+
+- 01 pnzcnvaun svknqn an cnerqr, shapvbanaqb bx. 
+
+ÁERN QR FREIVÇB: 
+
+1 – ndhrprqbe: aãb grz 
+
+2 – pbobtóf: aãb grz 
+
+3 – erirfgvzragb: preâzvpn, shebf erwhagnqbf, shebf, ohpun, cnenshfb, fhwb qr gvagn; zhergn qr 
+
+nyiranevn erirfgvqn qr preâzvpn qr pbe/zbqryb qvsreragr 
+
+4 – cvaghen: aãb grz 
+
+5 – grgb: cvaghen cin abin an pbe oenapn sbfpn pbz ebqb grgb qr trffb 
+
+6 – nezáevb: aãb grz 
+
+7 – onfphynagr(f): aãb grz 
+
+8 – wnaryn(f): aãb grz 
+
+9 – ivqeb(f): aãb grz 
+
+10 – punir(f): aãb grz 
+
+11 – srpunqhen(f): aãb grz 
+
+12 – cbegn r cbegny: aãb grz FEGIF DQ. 701 OY.B Aº 110 FNYNF 280/284 RQ. ZHYGVRZCERFNEVNY - OENFVYVN/QS   
+
+> GRYRSBAR: (61) 3034 -9090
+> jjj.ivfnbvzbirvf.pbz
+
+13 – gbznqn(f): pbz rfcryubf bx 
+
+14 – vagreehcgbe(rf): pbz rfcryubf bx 
+
+15 – vyhzvançãb: 01 cnvary qr yrq an pbe oenapn 
+
+16 – yâzcnqn(f): bx 
+
+16 – frpnqbe(rf): aãb grz 
+
+18 – gnadhr: zngrevny fvagégvpb an pbe ortr, qrftnfgnqb, fhwb qr gvagn, znapunf, pbz 03 phonf, 
+
+02 iáyihynf qnavsvpnqnf, fboer zhergn qr nyiranevn erirfgvqn qr preâzvpn 
+
+19 – gbearven: 02 cip an pbe cergn fraqb 01 frz ovpb, qrftnfgnqnf 
+
+20 – fvsãb: 03 qr cip an pbe oenapn 
+
+21 – cvfb: preâzvpn, znapunf, crçnf pbz rfznygr qnavsvpnqb 
+
+22 – enyb(f): aãb grz 
+
+Bof.: - 01 ragenqn r fníqn qr áthn pbz gnzcãb cnen zádhvan qr ynine. 
+
+- Ertvfgeb treny zny svknqb, fhwb qr gvagn 
+
+ONAURVEB QR FREIVÇB: 
+
+1 – punir qr cbegn: 01 fvzcyrf r 01 erfrein ergn bx 
+
+2 – srpunqhen(f): 01 fvzcyrf znepn Fgnz bx 
+
+3 – cbegn r cbegny: znqrven pbz ynzvanqb znqrven pbz ireavm abib bx, qnavsvpnqn an cnegr 
+
+vasrevbe 
+
+4 – gbznqn(f): pbz rfcryub bx 
+
+5 – vagreehcgbe(rf): pbz rfcryub bx 
+
+6 – vyhzvançãb: 01 cnvary qr yrq an pbe oenapn 
+
+7 – yâzcnqn(f): bx 
+
+8 – cvfb: preâzvpn 
+
+9 – nezáevb qr onaurveb: 01 qr cnerqr qr nyhzíavb/cip an pbe ortr, znapnuf, pbz 01 cbegn, 
+
+rfcryubf, znapunf, bkvqnqb, cengryrvenf 
+
+10 – obk: aãb grz 
+
+11 – onfphynagr(f): rfgehghen zrgáyvpn, qrgrevbenqb, fvanvf qr sreehtrz, pbz cvaghen n óyrb abin 
+
+an pbe perzr pbz chknqbe pbz ivqebf pnarynqbf, znapunf, fhwb qr gvagn 
+
+12 – onaurven: aãb grz 
+
+13 – ndhrprqbe: aãb grz 
+
+14 – puhirveb: 01 znepn Ulqen, inmnaqb áthn an cnegr fhcrevbe pbz znathrven pbz qhpuvaun, 
+
+shapvbanaqb bx, ertvfgeb zny svknqb r snygn npnonzragb 
+
+15 – rfcryub(f): 01 pbz znapunf, bkvqnqb ab nezáevb qr cnerqr 
+
+16 – ovqê: aãb grzsvknqb 
+
+17 – qrfpnetn: znepn Qbpby bx 
+
+18 – infb: cbeprynan an pbe pnzheçn znepn Vqrny Fgnaqre bx 
+
+19 – nffragb fnavgáevb: cyáfgvpb hfnqb an pbe cergn 
+
+20 – erirfgvzragb: preâzvpn, shebf ab erwhagr, fhwb qr gvagn 
+
+21 – grgb: cvaghen cin abin an pbe oenapn sbfpn pbz ebqb grgb qr trffb 
+
+22 – yningóevb: cbeprynan an pbe pnzheçn pbz pbyhan, erwhagr qnavsvpnqb 
+
+23 – gbearven: zrgáyvpn vabk 
+
+24 – fvsãb: cip an pbe pvamn 
+
+25 – nprffóevbf: 01 cbegn cncry uvtvêavpb zrgáyvpb vabk; 04 cbegn gbnyun zrgáyvpb vabk; 02 
+
+pbeevzãb zrgáyvpb vabk 
+
+26 – enyb(f): 01 gnzcn zrgáyvpn vabk 
+
+Bof.: FEGIF DQ. 701 OY.B Aº 110 FNYNF 280/284 RQ. ZHYGVRZCERFNEVNY - OENFVYVN/QS   
+
+> GRYRSBAR: (61) 3034 -9090
+> jjj.ivfnbvzbirvf.pbz
+
+PNFN QR SHAQB: 
+
+ÁERN RKGREAN: 
+
+- Cnerqrf rkgrean qr nyiranevn pbz cvaghen cin abin an pbe oenapb tryb frz npnonzragb; 
+
+gryunqb qr rfgehghen qr znqrven pbz gryunf qr svoeb pvzragb, 01 pnab qr cip an pbe oenapn 
+
+fboer pnyun svknqb an cnerqr; pnyçnqn qr preâzvpn, znapunf, crçnf pbz rfznygr qnavsvpnqb, 
+
+ebqncé qr preâzvpn fhwb qr gvagn; 
+
+ÁERN QR FREIVÇB: 
+
+1 – ndhrprqbe: aãb grz 
+
+2 – pbobtóf: aãb grz 
+
+3 – erirfgvzragb: preâzvpn fboer b gnadhr qr ynine ebhcnf 
+
+4 – cvaghen: cin abin an pbe oenapb tryb frz npnonzragb, sheb, ohpun 
+
+5 – grgb: rfgehghen qr znqrven pbz cvaghen n óyrb hfnqn an pbe irezryun pbz gryunf qr svoeb 
+
+pvzragb 
+
+6 – nezáevb: aãb grz 
+
+7 – onfphynagr(f): aãb grz 
+
+8 – wnaryn(f): aãb grz 
+
+9 – ivqeb(f): aãb grz 
+
+10 – punir(f): aãb grz 
+
+11 – srpunqhen(f): aãb grz 
+
+12 – cbegn r cbegny: aãb grz 
+
+13 – gbznqn(f): pbz rfcryubf bx, znapunf 
+
+14 – vagreehcgbe(rf): pbz rfcryubf bx, znapunf 
+
+15 – vyhzvançãb: 01 obpny 
+
+16 – yâzcnqn(f): bx 
+
+16 – frpnqbe(rf): aãb grz 
+
+18 – gnadhr: cbeprynan an pbe oenapn pbz pbyhan, znapunf, iáyihyn qrftnfgnqn 
+
+19 – gbearven: zrgáyvpn vabk frz ovpb 
+
+20 – fvsãb: pnab qr cip an pbe oenapn 
+
+21 – cvfb: preâzvpn, znapunf, crçnf pbz rfznygr qnavsvpnqb 
+
+22 – enyb(f): 01 pnvkn qr tbeqhen pbz gnzcn qr cip an pbe oenapn, znapunf, gevapnqn 
+
+Bof.: 
+
+ÁERN VAGREAN: 
+
+FNYN: 
+
+1 – pnzcnvaun: aãb grz 
+
+2 – cbegn r cbegny: 01 cbegn qr rfgehghen/tenqr qr cebgrçãb zrgáyvpn pbz cvaghen n óyrb abin an 
+
+pbe perzr pbz cbegvaubyn pbz gevapbf pbz ivqeb zvav oberny fhwb qr gvagn 
+
+3 – punir qr cbegn: 02 fvzcyrf bx 
+
+4 – srpunqhen(f): 01 fvzcyrf znepn Fbcenab bx, snygn rfcryub ab cbegny 
+
+5 – gbznqn(f): pbz rfcryubf bx, znapunf 
+
+6 – vagreehcgbe(rf): pbz rfcryubf bx, znapunf 
+
+7 – vyhzvançãb: 01 cynsbavre qr cip an pbe oenapn, znapunf, zny svknqb 
+
+8 – yâzcnqn(f): bx FEGIF DQ. 701 OY.B Aº 110 FNYNF 280/284 RQ. ZHYGVRZCERFNEVNY - OENFVYVN/QS   
+
+> GRYRSBAR: (61) 3034 -9090
+> jjj.ivfnbvzbirvf.pbz
+
+9 – onfphynagr(f): aãb grz 
+
+10 – wnaryn(f): rfgehghen zrgáyvpn/irarmvnan/tenqr qr cebgrçãb pbz cvaghen n óyrb abin an pbe 
+
+perzr pbz chknqbe r gevapb bx 
+
+11 – ivqeb(f): aãb grz gvagn 
+
+12 – pbegvan(f): aãb grz 
+
+13 – crefvnan(f): 01 ubevmbagny zrgáyvpn an pbe nyhzíavb, znapunf, fhwn, snygn b npvbanqbe qb 
+
+onfphynagr, fboer n cbegn 
+
+14 – cvaghen: cin abin an pbe oenapb tryb sbfpn, znapunf, cbagbf frz npnonzragb, qrfpnfpnqbf, 
+
+fvanvf qr vasvygençãb 
+
+15 – grgb: sbeeb/ebqb grgb qr cip an pbe oenapn, znapunf 
+
+16 – nyiranevn: znapunf, cbagbf frz npnonzragb, qrfpnfpnqbf, fvanvf qr vasvygençãb 
+
+17 – cvfb: preâzvpn, znapunf, crçnf pbz rfznygr qnavsvpnqb 
+
+18 – ebqncé: preâzvpn fhwb qr gvagn 
+
+Bof.: 
+
+ONAURVEB FBPVNY: 
+
+1 – punir qr cbegn: aãb grz 
+
+2 – srpunqhen(f): aãb grz 
+
+3 – cbegn r cbegny: cip an pbe oenapn gvcb fnasbanqn pbz chknqberf r gevapb qr cip, znapunf 
+
+4 – gbznqn(f): pbz rfcryub bx, znapunf 
+
+5 – vagreehcgbe(rf): pbz rfcryub bx, znapunf 
+
+6 – vyhzvançãb: 01 cynsbavre qr cip an pbe oenapn, znapunf 
+
+7 – yâzcnqn(f): bx 
+
+8 – cvfb: preâzvpn, znapunf 
+
+9 – nezáevb qr onaurveb: 01 qr cnerqr qr nyhzíavb/cip an pbe nmhy, pbz 01 cbegn, rfcryub, 
+
+cengryrvenf 
+
+10 – obk: aãb grz 
+
+11 – onfphynagr(f): rfgehghen zrgáyvpn pbz cvaghen n óyrb abin an pbe perzr pbz chknqbe pbz 
+
+ivqebf zvav oberny znapunf 
+
+12 – onaurven: aãb grz 
+
+13 – ndhrprqbe: aãb grz 
+
+14 – puhirveb: 01 znepn Yberamnggv pbz znathrven (snygn b fhcbegr) pbz qhpuvaun, shapvbanaqb 
+
+bx 
+
+15 – rfcryub(f): 01 pbz znapunf ab nezáevb qr cnerqr 
+
+16 – ovqê: aãb grz 
+
+17 – qrfpnetn: npbcynqn qr cbeprynan an pbe oenapn pbz npvbanqbe znepn Ybtnfn 
+
+18 – infb: cbeprynan an pbe oenapn znepn Ybtnfn bx 
+
+19 – nffragb fnavgáevb: cyáfgvpb hfnqb an pbe oenapn, vapbzcngíiry, znapunf 
+
+20 – erirfgvzragb: preâzvpn bx frz shebf 
+
+21 – grgb: sbeeb/ebqb grgb qr cip an pbe oenapn, znapunf 
+
+22 – yningóevb: cbeprynan an pbe oenapn, erwhagr gevapnqb 
+
+23 – gbearven: zrgáyvpn vabk qrftnfgnqn 
+
+24 – fvsãb: cip an pbe oenapn 
+
+25 – nprffóevbf: 01 fnobargrven qr cip pbz npeíyvpb; 02 cbegn gbnyun qr cip pebznqb; 03 
+
+fhcbegrf zrgáyvpb vabk cnen cengryrven ; 01 cbegn cncry uvtvêavpb qr cip pbz npeíyvpb 
+
+26 – enyb(f): 01 gnzcn qr cip an pbe oenapn 
+
+Bof.: FEGIF DQ. 701 OY.B Aº 110 FNYNF 280/284 RQ. ZHYGVRZCERFNEVNY - OENFVYVN/QS   
+
+> GRYRSBAR: (61) 3034 -9090
+> jjj.ivfnbvzbirvf.pbz
+
+DHNEGB: 
+
+1 – nezáevb rzohgvqb: aãb grz 
+
+2 – nezáevb qr cnerqr: aãb grz 
+
+3 – cbegn r cbegny: rfgehghen zrgáyvpn/irarmvnan pbz cvaghen n óyrb abin an pbe perzr, cbegny 
+
+pbz fvanvf qr sreehtrz r qrgrevbenqb, cbagbf qnavsvpnqbf 
+
+4 – punir qr cbegn: 02 fvzcyrf bx 
+
+5 – srpunqhen(f): 01 fvzcyrf znepn Tbyq snygn rfcryub ab cbegny 
+
+6 – gbznqn(f): pbz rfcryubf bx, znapunf 
+
+7 – vagreehcgbe(rf): pbz rfcryub bx 
+
+8 – vyhzvançã b: 01 cynsbavre qr cip an pbe oenapn, znapunf, zny svknqb 
+
+9 – yâzcnqn(f): bx 
+
+10 – onfphynagr(f): aãb grz 
+
+11 – wnaryn(f): rfgehghen zrgáyvpn/irarmvnan/tenqr qr cebgrçãb nznffnqbf pbz cvaghen n óyrb 
+
+abin an pbe perzr pbz chknqbe r gevapb 
+
+12 – ivqeb(f): aãb grz 
+
+13 – pbegvan(f): aãb grz 
+
+14 – crefvnan(f): aãb grz 
+
+15 – cvaghen: cin abin an pbe oenapb tryb sbfpn, znapunf, cbagbf frz npnonzragb, qrfpnfpnqbf, 
+
+fvanvf qr vasvygençãb 
+
+16 – grgb: sbeeb/ebqb grgb qr cip an pbe oenapn, znapunf 
+
+17 – cvfb: preâzvpn, znapunf, crçnf pbz rfznygr qnavsvpnqb 
+
+18 – ebqncé: preâzvpn fhwb qr gvagn 
+
+Bof.: - 01 cengryrven qr ivqeb, znapunf, fhwn qr gvagn, svknqn an cnerqr pbz fhcbegrf zrgáyvpbf 
+
+vabk fhwbf qr gvagn. 
+
+PBMVAUN: 
+
+1 – nezáevb fbo n cvn: aãb grz 
+
+2 – nezáevb qr cnerqr: aãb grz 
+
+3 – nezáevb rzohgvqb: aãb grz 
+
+4 – punir qr cbegn: aãb grz 
+
+5 – srpunqhen(f): aãb grzbytnqnf 
+
+6 – cbegn r cbegny: aãb grz 
+
+7 – erirfgvzragb: preâzvpn fboer n cvn 
+
+8 – cvaghen: cin abin an pbe oenapb tryb sbfpn, znapunf, cbagbf frz npnonzragb, qrfpnfpnqbf, 
+
+fvanvf qr vasvygençãb 
+
+9 – grgb: sbeeb/ebqb grgb qr cip an pbe oenapn, znapunf 
+
+10 – onfphynagr(f): aãb grz 
+
+11 – wnaryn(f): rfgehghen zrgáyvpn/irarmvnan/tenqr qr cebgrçãb pbz cvaghen n óyrb abin an pbe 
+
+perzr pbz chknqbe r gevapb 
+
+12 – ivqeb(f): aãb grz 
+
+13 – ohwõrf: aãb grz 
+
+14 – pnvkn qr ertvfgeb qr yhm: aãb grz 
+
+15 – vagresbar: aãb grz 
+
+16 – svygeb qr cnerqr: aãb grz 
+
+17 – gbznqn(f): pbz rfcryubf bx, znapunf 
+
+18 – vagreehcgbe(rf): pbz rfcryubf bx, znapunf 
+
+19 – vyhzvançãb: 01 cynsbavre qr cip an pbe oenapn, znapunf, zny svknqb FEGIF DQ. 701 OY.B Aº 110 FNYNF 280/284 RQ. ZHYGVRZCERFNEVNY - OENFVYVN/QS   
+
+> GRYRSBAR: (61) 3034 -9090
+> jjj.ivfnbvzbirvf.pbz
+
+20 – yâzcnqn(f): bx 
+
+21 – cvn(f): gnzcãb/phon zrgáyvpn vabk, evfpbf, neenauõrf, nznffnqbf, pbz iáyihyn qrftnfgnqn, 
+
+fboer zhergn qr nyiranevn pbz cvaghen cin abin an pbe oenapb tryb sbfpn 
+
+22 – gbearven(f): zrgáyvpn vabk pbz ovpb, qrftnfgnqn 
+
+13 – fvsãb: cip an pbe oenapn 
+
+24 – cvfb: preâzvpn, znapunf, crçnf pbz rfznygr qnavsvpnqb; ebqncé qr preâzvpn fhwb qr gvagn 
+
+25 – enyb(f): aãb grz 
+
+Bof.: 
+
+Oenfíyvn/QS, 07 qr whyub qr 2025 
+
+___________________________________________________ 
+
+YBPNQBE(N): RHFGNDHVB WBFR CRFFBN 
+
+C/C: IVFNB RZ CERRAQVZRAGBF VZBOVYVNEVBF YGQN 
 
 _____________________________________________ 
 
-VISTORIADOR: MARIO ALVES CRECI DF 17755 
+IVFGBEVNQBE: ZNEVB NYIRF PERPV QS 17755 
 
 __________________________________________________ 
 
-LOCATÁRIO(A): MARIO SEIXAS SALES 
+YBPNGÁEVB(N): ZNEVB FRVKNF FNYRF 
 
 ___________________________________________________ 
 
-CÔNJUGE: RANGELMA FERREIRA CARVALHO SEIXAS SRTVS QD. 701 BL.O Nº 110 SALAS 280/284 ED. MULTIEMPRESARIAL - BRASILIA/DF   
+PÔAWHTR: ENATRYZN SREERVEN PNEINYUB FRVKNF FEGIF DQ. 701 OY.B Aº 110 FNYNF 280/284 RQ. ZHYGVRZCERFNEVNY - OENFVYVN/QS   
 
-> TELEFONE: (61) 3034 -9090
-> www.visaoimoveis.com
-
-___________________________________________________ 
-
-1° FIADOR: ADALBERTO CASTRO CARVALHO 
+> GRYRSBAR: (61) 3034 -9090
+> jjj.ivfnbvzbirvf.pbz
 
 ___________________________________________________ 
 
-CÔNJUGE: MARIA INES FERREIRA CARVALHO 
+1° SVNQBE: NQNYOREGB PNFGEB PNEINYUB 
 
 ___________________________________________________ 
 
-2º FIADOR: RONELMA FERREIRA CARVALHO 
+PÔAWHTR: ZNEVN VARF SREERVEN PNEINYUB 
 
-TESTEMUNHA(S): 
+___________________________________________________ 
 
-________________________________ ________________________________ SRTVS QD. 701 BL.O Nº 110 SALAS 280/284 ED. MULTIEMPRESARIAL - BRASILIA/DF   
+2º SVNQBE: EBARYZN SREERVEN PNEINYUB 
 
-> TELEFONE: (61) 3034 -9090
-> www.visaoimoveis.com
+GRFGRZHAUN(F): 
 
-TERMO DE RECEBIMENTO DAS CHAVES 
+________________________________ ________________________________ FEGIF DQ. 701 OY.B Aº 110 FNYNF 280/284 RQ. ZHYGVRZCERFNEVNY - OENFVYVN/QS   
 
-CONTRATO 00826/02    
+> GRYRSBAR: (61) 3034 -9090
+> jjj.ivfnbvzbirvf.pbz
 
-> Eu, MARIO SEIXAS SALES portador(a) do CPF/CNPJ 025.123.751 -61, declaro que recebi
-> da Visão Imóveis Ltda:
-> Quantas chaves:
+GREZB QR ERPROVZRAGB QNF PUNIRF 
 
-• 02 CHAVES TETRAS DA PORTA DA SALA 
+PBAGENGB 00826/02    
 
-• 02 CHAVES SIMPLES DO PORTÃO DE PEDESTRE 
+> Rh, ZNEVB FRVKNF FNYRF cbegnqbe(n) qb PCS/PACW 025.123.751 -61, qrpyneb dhr erprov
+> qn Ivfãb Vzóirvf Ygqn:
+> Dhnagnf punirf:
 
-• 01 CHAVE SIMPLES DO CADEADO DO PORTÃO DE GARAGEM 
+• 02 PUNIRF GRGENF QN CBEGN QN FNYN 
 
-• 01 CHAVE ALLEN DA TRAVA DO MOTOR DE GARAGEM 
+• 02 PUNIRF FVZCYRF QB CBEGÃB QR CRQRFGER 
 
-• 02 CHAVES SIMPLES DA TRAVA DO MOTOR DE GARAGEM 
+• 01 PUNIR FVZCYRF QB PNQRNQB QB CBEGÃB QR TNENTRZ 
 
-• 02 CONTROLE REMOTO DE GARAGEM FUNCIONANDO OK 
+• 01 PUNIR NYYRA QN GENIN QB ZBGBE QR TNENTRZ 
 
-• 03 CHAVES SIMPLES NÃO IDENTIFICADA     
+• 02 PUNIRF FVZCYRF QN GENIN QB ZBGBE QR TNENTRZ 
 
-> Do imóvel abaixo discriminado:
-> Locatário: MARIO SEIXAS SALES
-> Imóvel: QNE 21 CASA 08 TAGUATINGA –DF CEP: 72.125 -080 .
+• 02 PBAGEBYR ERZBGB QR TNENTRZ SHAPVBANAQB BX 
 
-Cobranças ou créditos adicionais para pagamento no 1º boleto bancário, junto com 
+• 03 PUNIRF FVZCYRF AÃB VQRAGVSVPNQN     
 
-aluguel: 
+> Qb vzóiry nonvkb qvfpevzvanqb:
+> Ybpngáevb: ZNEVB FRVKNF FNYRF
+> Vzóiry: DAR 21 PNFN 08 GNTHNGVATN –QS PRC: 72.125 -080 .
 
-Diferença de dias de IPTU/TLP: A 4ª parcela será cobrada no primeiro boleto de aluguel n o
+Pboenaçnf bh peéqvgbf nqvpvbanvf cnen cntnzragb ab 1º obyrgb onapáevb, whagb pbz 
 
-valor proporcional de R$ 92,80 (referente ao período de 10 /07 à 31/07/2025 ), já a 5ª e 6ª 
+nyhthry: 
 
-parcelas serão de responsabilidade do LOCATÁRIO(A). E deverão ser retiradas diretamente 
+Qvsreraçn qr qvnf qr VCGH/GYC: N 4ª cnepryn freá pboenqn ab cevzrveb obyrgb qr nyhthry a b
 
-no site da Secretaria da Fazenda, por meio do link: 
+inybe cebcbepvbany qr E$ 92,80 (ersreragr nb creíbqb qr 10 /07 à 31/07/2025 ), wá n 5ª r 6ª 
 
-https://ww1.receita.fazenda.df.gov.br/emissao -segunda -via/iptu 
+cneprynf freãb qr erfcbafnovyvqnqr qb YBPNGÁEVB(N). R qrireãb fre ergvenqnf qvergnzragr 
 
-Caesb : INSCRIÇÃO: 157433 -7 – Desligada - O LOCATÁRIO(A) deverá solicitar a troca de 
+ab fvgr qn Frpergnevn qn Snmraqn, cbe zrvb qb yvax: 
 
-titularidade e na rescisão deverá ser desligada . Site da CAESB: <https://www.caesb.df.gov.br/> 
+uggcf://jj1.erprvgn.snmraqn.qs.tbi.oe/rzvffnb -frthaqn -ivn/vcgh 
 
-Entrar no link: portal de serviços -> So licitar a Tr oca de Titularidade. 
+Pnrfo : VAFPEVÇÃB: 157433 -7 – Qrfyvtnqn - B YBPNGÁEVB(N) qrireá fbyvpvgne n gebpn qr 
 
-As informações sobre o período que a companhia de água vai ao imóvel não é de 
+gvghynevqnqr r an erfpvfãb qrireá fre qrfyvtnqn . Fvgr qn PNRFO: <uggcf://jjj.pnrfo.qs.tbi.oe/> 
 
-responsabilidade da imobiliária e sim da própria companhia. Dúvidas, o Locatário(a) deverá 
+Ragene ab yvax: cbegny qr freivçbf -> Fb yvpvgne n Ge bpn qr Gvghynevqnqr. 
 
-entrar em contato pelo nº 115 . O acesso ao hidrômetro é de responsabilidade do Locatário(a). 
+Nf vasbeznçõrf fboer b creíbqb dhr n pbzcnauvn qr áthn inv nb vzóiry aãb é qr 
 
-Neoenergia : CODIGO DO CLIENTE: 1323692 -X – Desligada - O(A) LOCATÁRIO(A) deverá 
+erfcbafnovyvqnqr qn vzbovyváevn r fvz qn ceócevn pbzcnauvn. Qúivqnf, b Ybpngáevb(n) qrireá 
 
-alterar a conta para o seu nome e na rescisão deverá ser desligada. O LOCATÁRIO(A) poderá 
+ragene rz pbagngb cryb aº 115 . B nprffb nb uvqeôzrgeb é qr erfcbafnovyvqnqr qb Ybpngáevb(n). 
 
-ir pessoalmente a qualquer agencia, ou solicitar pelo site da Neoenergia :
+Arbraretvn : PBQVTB QB PYVRAGR: 1323692 -K – Qrfyvtnqn - B(N) YBPNGÁEVB(N) qrireá 
 
-https://agenciavirtual.neoenergiabrasilia.com.br e acessar o link - serviços expressos –> alterar 
+nygrene n pbagn cnen b frh abzr r an erfpvfãb qrireá fre qrfyvtnqn. B YBPNGÁEVB(N) cbqreá 
 
-titular da conta. 
+ve crffbnyzragr n dhnydhre ntrapvn, bh fbyvpvgne cryb fvgr qn Arbraretvn :
 
-As informações sobre o período que a companhia de energia vai ao imóvel não é de 
+uggcf://ntrapvniveghny.arbraretvnoenfvyvn.pbz.oe r nprffne b yvax - freivçbf rkcerffbf –> nygrene 
 
-responsabilidade da i mobiliária e sim da própria companhia, dúvidas , deverá entrar em 
+gvghyne qn pbagn. 
 
-contato com a Neoenergia pelo nº 116 . O acesso ao relógio de luz é de responsabilidade do 
+Nf vasbeznçõrf fboer b creíbqb dhr n pbzcnauvn qr raretvn inv nb vzóiry aãb é qr 
 
-LOCATÁRIO(A). 
+erfcbafnovyvqnqr qn v zbovyváevn r fvz qn ceócevn pbzcnauvn, qúivqnf , qrireá ragene rz 
 
-Conforme clá usula contratual: 6.2. Obriga -se o(a) LOCATÁRIO(A) em promover a inclusão de 
+pbagngb pbz n Arbraretvn cryb aº 116 . B nprffb nb eryótvb qr yhm é qr erfcbafnovyvqnqr qb 
 
-seu nome nas contas de energia elétrica e de água e esgoto no prazo máximo de 10 dias ,SRTVS QD. 701 BL.O Nº 110 SALAS 280/284 ED. MULTIEMPRESARIAL - BRASILIA/DF   
+YBPNGÁEVB(N). 
 
-> TELEFONE: (61) 3034 -9090
-> www.visaoimoveis.com
+Pbasbezr pyá hfhyn pbagenghny: 6.2. Boevtn -fr b(n) YBPNGÁEVB(N) rz cebzbire n vapyhfãb qr 
 
-contados da assinatura do presente instrumento. 
+frh abzr anf pbagnf qr raretvn ryégevpn r qr áthn r rftbgb ab cenmb zákvzb qr 10 qvnf ,FEGIF DQ. 701 OY.B Aº 110 FNYNF 280/284 RQ. ZHYGVRZCERFNEVNY - OENFVYVN/QS   
 
-Cobrança ou crédito s adicionais: 
+> GRYRSBAR: (61) 3034 -9090
+> jjj.ivfnbvzbirvf.pbz
 
-Seguro Contra Incêndio: R$ 728 ,00 (Taxa anual, referente a 12 meses) , finalidade: 
+pbagnqbf qn nffvanghen qb cerfragr vafgehzragb. 
 
-Residencial. 
+Pboenaçn bh peéqvgb f nqvpvbanvf: 
 
-OBS: Caso seja feito Seguro Incêndio particular deverá colocar na apólice o proprietário 
+Frtheb Pbagen Vapêaqvb: E$ 728 ,00 (Gnkn nahny, ersreragr n 12 zrfrf) , svanyvqnqr: 
 
-como beneficiário e apresentar a apó lice, ou primeira parcela paga em até 03 dias do 
+Erfvqrapvny. 
 
-vencimento do primeiro boleto de aluguel. Caso não apresente a apólice deverá ser pago o 
+BOF: Pnfb frwn srvgb Frtheb Vapêaqvb cnegvphyne qrireá pbybpne an ncóyvpr b cebcevrgáevb 
 
-valor indicado acima, no dia do vencimento do aluguel e sendo assim, não poderá ser retirado. 
+pbzb orarsvpváevb r ncerfragne n ncó yvpr, bh cevzrven cnepryn cntn rz ngé 03 qvnf qb 
 
-Pagamento do Aluguel: 
+irapvzragb qb cevzrveb obyrgb qr nyhthry. Pnfb aãb ncerfragr n ncóyvpr qrireá fre cntb b 
 
-O boleto para pagamento do aluguel deverá ser retirado no site: www.visaoimoveis.com ,
+inybe vaqvpnqb npvzn, ab qvn qb irapvzragb qb nyhthry r fraqb nffvz, aãb cbqreá fre ergvenqb. 
 
-clicando em Locatário Boleto , digitando seu CPF/CNPJ e a seguinte senha: 117342 
+Cntnzragb qb Nyhthry: 
 
-Quaisquer esclarecimentos sobre cobrança contactar o Departamento Financeiro 
+B obyrgb cnen cntnzragb qb nyhthry qrireá fre ergvenqb ab fvgr: jjj.ivfnbvzbirvf.pbz ,
 
-3034 -9059 / financeiro@visaoimoveis.com / vanessaferreira@visaoimoveis.com 
+pyvpnaqb rz Ybpngáevb Obyrgb , qvtvgnaqb frh PCS/PACW r n frthvagr fraun: 117342 
 
-Obs.: A contestação de vistoria deverá ser comunicada a Sra. Camila no (61) 3034 -9065 
+Dhnvfdhre rfpynerpvzragbf fboer pboenaçn pbagnpgne b Qrcnegnzragb Svanaprveb 
 
-manutencao@visaoimoveis.com 
+3034 -9059 / svanaprveb@ivfnbvzbirvf.pbz / inarffnsreerven@ivfnbvzbirvf.pbz 
 
-Departamentos: Financeiro: 3034 -9059 financeiro@visaoimoveis.com / Encerramento: 3034 -9060 
+Bof.: N pbagrfgnçãb qr ivfgbevn qrireá fre pbzhavpnqn n Fen. Pnzvyn ab (61) 3034 -9065 
 
-encerramento@visaoimoveis.com / Cobrança: cobranca@visaoimoveis.com / Contrato: 3034 -9072 
+znahgrapnb@ivfnbvzbirvf.pbz 
 
-contrato@visaoimoveis.com / Renovação: 3034 -9063 renovacao@visaoimoveis.com / Manutenção: 
+Qrcnegnzragbf: Svanaprveb: 3034 -9059 svanaprveb@ivfnbvzbirvf.pbz / Rapreenzragb: 3034 -9060 
 
-3034 -9065 manutencao@visaoimoveis.com. 
+rapreenzragb@ivfnbvzbirvf.pbz / Pboenaçn: pboenapn@ivfnbvzbirvf.pbz / Pbagengb: 3034 -9072 
 
-Brasília -DF, 07 de julho de 2025 
+pbagengb@ivfnbvzbirvf.pbz / Erabinçãb: 3034 -9063 erabinpnb@ivfnbvzbirvf.pbz / Znahgraçãb: 
+
+3034 -9065 znahgrapnb@ivfnbvzbirvf.pbz. 
+
+Oenfíyvn -QS, 07 qr whyub qr 2025 
 
 ___________________________________________ 
 
-Locatário: MARIO SEIXAS SALES 
+Ybpngáevb: ZNEVB FRVKNF FNYRF 
 
 ____________________________________________ 
 
-VISAO EMPREENDIMENTOS IMOBILIARIOS LTDA 
+IVFNB RZCERRAQVZRAGBF VZBOVYVNEVBF YGQN 
 
-Departamento Comercial
+Qrcnegnzragb Pbzrepvny
