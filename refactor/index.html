@@ -67,8 +67,8 @@
         
           <span class="post-updated">
             ↣
-            <time datetime="2025-08-10T20:12:03+00:00">
-              10 Aug 2025
+            <time datetime="2025-08-11T00:46:57+00:00">
+              11 Aug 2025
             </time>
           </span>
         
@@ -90,11 +90,11 @@
         <div class="page-stats mt-3" role="status" aria-label="Page statistics">
       
       <span class="badge bg-primary">
-        15854 characters
+        18186 characters
       </span>
         <span class="separator mx-2" aria-hidden="true">•</span>
         <span class="badge bg-primary">
-        1234 words
+        1483 words
       </span>
       </div>
         <div class="action-buttons d-flex flex-wrap gap-2">
@@ -140,7 +140,7 @@
 
   &lt;constraints&gt;
     &lt;constraint&gt;Output is code-only. No explanatory prose. In diff mode: strictly a valid unified diff with no comments. In full_file mode: only code and in-file comments.&lt;/constraint&gt;
-    &lt;constraint&gt;Preserve behavior and public APIs unless [[allow_breaking_changes]] is true and requested via [[refactoring_goals]].&lt;/constraint&gt;
+    &lt;constraint&gt;Preserve behavior and public APIs unless [[allow_breaking_changes]] is true and explicitly requested via [[refactoring_goals]].&lt;/constraint&gt;
     &lt;constraint&gt;Do not add external dependencies or services unless explicitly listed in [[allowed_dependencies]]. Do not remove required dependencies without preserving functionality.&lt;/constraint&gt;
     &lt;constraint&gt;Adhere to [[style_guide]] and [[target_language_version]] when provided; otherwise follow idiomatic, widely accepted conventions.&lt;/constraint&gt;
     &lt;constraint&gt;Do not fabricate missing code, APIs, or environment details. If context is insufficient, perform the safest minimal refactor and include concise TODOs only as code comments (full_file mode only).&lt;/constraint&gt;
@@ -169,7 +169,7 @@
       &lt;typing&gt;Prefer explicit types/annotations where supported; meaningful names&lt;/typing&gt;
       &lt;concurrency&gt;Preserve thread/process safety; avoid shared mutable state; use safe synchronization primitives&lt;/concurrency&gt;
       &lt;resources&gt;Deterministic cleanup (RAII/defer/using), timeouts, backpressure&lt;/resources&gt;
-      &lt;i18n/logging&gt;No PII in logs; keep existing structured logging only&lt;/i18n/logging&gt;
+      &lt;i18n_logging&gt;No PII in logs; keep existing structured logging only&lt;/i18n_logging&gt;
       &lt;tests&gt;Respect existing tests; update minimally when signatures/renames are necessary; add tests only if [[allow_test_additions]] is true&lt;/tests&gt;
     &lt;/technical_conventions&gt;
   &lt;/context&gt;
@@ -209,9 +209,21 @@
       - For multiple files: output_mode must be diff; emit a valid unified diff with ---/+++ headers and @@ hunks; no comments or prose.
       - For a single file: default to full_file; emit the complete refactored file. Only code and in-file comments are allowed.
       - If [[wrap_in_fence]] is true and in full_file mode: wrap the file content in ```[[language]] fences. Do not use fences in diff mode.&lt;/instruction&gt;
-    &lt;instruction&gt;8. Keep diffs review-friendly: avoid reformatting unrelated lines unless [[enforce_reformat]] is true or formatter is explicitly provided.&lt;/instruction&gt;
+    &lt;instruction&gt;8. Keep diffs review-friendly: avoid reformatting unrelated lines unless [[enforce_reformat]] is true or a formatter is explicitly provided.&lt;/instruction&gt;
     &lt;instruction&gt;9. Ensure code remains buildable with given inputs; do not reference non-existent symbols. Use TODO comments rather than fabricating missing parts.&lt;/instruction&gt;
     &lt;instruction&gt;10. Avoid cross-file renames in languages with file-name/class-name constraints unless explicitly authorized.&lt;/instruction&gt;
+    &lt;instruction&gt;11. Conflict resolution defaults:
+      - If [[output_mode]] conflicts with input cardinality: enforce diff for multi-file; enforce full_file for single-file.
+      - Prefer API stability over stylistic changes when in conflict.
+      - Prefer minimal-diff transformations when multiple equivalent refactors exist.&lt;/instruction&gt;
+    &lt;instruction&gt;12. Self-check before emitting:
+      - Validate output format: diff vs full file, headers/hunks correctness (diff), and no extra text.
+      - Confirm license headers, encodings, and line endings are preserved.
+      - Confirm no new dependencies and no removed required dependencies.
+      - Confirm public APIs unchanged unless explicitly allowed.
+      - Confirm no unrelated reformatting unless [[enforce_reformat]] is true.
+      - Confirm resource-safety and error-handling remain correct and explicit.
+      - Confirm changes compile conceptually and do not introduce missing symbols.&lt;/instruction&gt;
   &lt;/instructions&gt;
 
   &lt;input_data&gt;
@@ -307,10 +319,10 @@ def process(items: Iterable[Any]) -&gt; List[str]:
       &lt;/input_data&gt;
       &lt;output&gt;&lt;![CDATA[
 diff --git a/src/main/java/app/Service.java b/src/main/java/app/Service.java
-index e69de29..1a2b3c4 100644
+index 1111111..2222222 100644
 --- a/src/main/java/app/Service.java
 +++ b/src/main/java/app/Service.java
-@@ -1,10 +1,14 @@
+@@ -1,10 +1,16 @@
  package app;
  
  public class Service {
@@ -332,6 +344,38 @@ index e69de29..1a2b3c4 100644
 +    return name.trim();
 +  }
  }
+      ]]&gt;&lt;/output&gt;
+    &lt;/example&gt;
+
+    &lt;example id=&quot;typescript-multi-file-diff&quot;&gt;
+      &lt;input_data&gt;
+        &lt;input_code&gt;&lt;![CDATA[
+{
+  &quot;src/util.ts&quot;: &quot;export function pad(s: string, len: number) { while (s.length &lt; len) { s = s + &#39; &#39;; } return s; }\n&quot;,
+  &quot;src/index.ts&quot;: &quot;import { pad } from &#39;./util&#39;;\nconsole.log(pad(&#39;hi&#39;, 5));\n&quot;
+}
+        ]]&gt;&lt;/input_code&gt;
+        &lt;language&gt;typescript&lt;/language&gt;
+        &lt;target_language_version&gt;4.9&lt;/target_language_version&gt;
+        &lt;output_mode&gt;diff&lt;/output_mode&gt;
+        &lt;refactoring_goals&gt;{&quot;readability&quot;: true, &quot;performance&quot;: true}&lt;/refactoring_goals&gt;
+      &lt;/input_data&gt;
+      &lt;output&gt;&lt;![CDATA[
+diff --git a/src/util.ts b/src/util.ts
+index a1b2c3d..d4e5f6a 100644
+--- a/src/util.ts
++++ b/src/util.ts
+@@ -1 +1,9 @@
+-export function pad(s: string, len: number) { while (s.length &lt; len) { s = s + &#39; &#39;; } return s; }
++export function pad(s: string, len: number): string {
++  let out = s;
++  // Avoid quadratic behavior by appending once.
++  const deficit = len - out.length;
++  if (deficit &gt; 0) {
++    out = out + &quot; &quot;.repeat(deficit);
++  }
++  return out;
++}
       ]]&gt;&lt;/output&gt;
     &lt;/example&gt;
   &lt;/examples&gt;" data-download-link="" data-download-label="Download ">
@@ -346,7 +390,7 @@ index e69de29..1a2b3c4 100644
 
   &lt;constraints&gt;
     &lt;constraint&gt;Output is code-only. No explanatory prose. In diff mode: strictly a valid unified diff with no comments. In full_file mode: only code and in-file comments.&lt;/constraint&gt;
-    &lt;constraint&gt;Preserve behavior and public APIs unless [[allow_breaking_changes]] is true and requested via [[refactoring_goals]].&lt;/constraint&gt;
+    &lt;constraint&gt;Preserve behavior and public APIs unless [[allow_breaking_changes]] is true and explicitly requested via [[refactoring_goals]].&lt;/constraint&gt;
     &lt;constraint&gt;Do not add external dependencies or services unless explicitly listed in [[allowed_dependencies]]. Do not remove required dependencies without preserving functionality.&lt;/constraint&gt;
     &lt;constraint&gt;Adhere to [[style_guide]] and [[target_language_version]] when provided; otherwise follow idiomatic, widely accepted conventions.&lt;/constraint&gt;
     &lt;constraint&gt;Do not fabricate missing code, APIs, or environment details. If context is insufficient, perform the safest minimal refactor and include concise TODOs only as code comments (full_file mode only).&lt;/constraint&gt;
@@ -375,7 +419,7 @@ index e69de29..1a2b3c4 100644
       &lt;typing&gt;Prefer explicit types/annotations where supported; meaningful names&lt;/typing&gt;
       &lt;concurrency&gt;Preserve thread/process safety; avoid shared mutable state; use safe synchronization primitives&lt;/concurrency&gt;
       &lt;resources&gt;Deterministic cleanup (RAII/defer/using), timeouts, backpressure&lt;/resources&gt;
-      &lt;i18n/logging&gt;No PII in logs; keep existing structured logging only&lt;/i18n/logging&gt;
+      &lt;i18n_logging&gt;No PII in logs; keep existing structured logging only&lt;/i18n_logging&gt;
       &lt;tests&gt;Respect existing tests; update minimally when signatures/renames are necessary; add tests only if [[allow_test_additions]] is true&lt;/tests&gt;
     &lt;/technical_conventions&gt;
   &lt;/context&gt;
@@ -415,9 +459,21 @@ index e69de29..1a2b3c4 100644
       - For multiple files: output_mode must be diff; emit a valid unified diff with ---/+++ headers and @@ hunks; no comments or prose.
       - For a single file: default to full_file; emit the complete refactored file. Only code and in-file comments are allowed.
       - If [[wrap_in_fence]] is true and in full_file mode: wrap the file content in ```[[language]] fences. Do not use fences in diff mode.&lt;/instruction&gt;
-    &lt;instruction&gt;8. Keep diffs review-friendly: avoid reformatting unrelated lines unless [[enforce_reformat]] is true or formatter is explicitly provided.&lt;/instruction&gt;
+    &lt;instruction&gt;8. Keep diffs review-friendly: avoid reformatting unrelated lines unless [[enforce_reformat]] is true or a formatter is explicitly provided.&lt;/instruction&gt;
     &lt;instruction&gt;9. Ensure code remains buildable with given inputs; do not reference non-existent symbols. Use TODO comments rather than fabricating missing parts.&lt;/instruction&gt;
     &lt;instruction&gt;10. Avoid cross-file renames in languages with file-name/class-name constraints unless explicitly authorized.&lt;/instruction&gt;
+    &lt;instruction&gt;11. Conflict resolution defaults:
+      - If [[output_mode]] conflicts with input cardinality: enforce diff for multi-file; enforce full_file for single-file.
+      - Prefer API stability over stylistic changes when in conflict.
+      - Prefer minimal-diff transformations when multiple equivalent refactors exist.&lt;/instruction&gt;
+    &lt;instruction&gt;12. Self-check before emitting:
+      - Validate output format: diff vs full file, headers/hunks correctness (diff), and no extra text.
+      - Confirm license headers, encodings, and line endings are preserved.
+      - Confirm no new dependencies and no removed required dependencies.
+      - Confirm public APIs unchanged unless explicitly allowed.
+      - Confirm no unrelated reformatting unless [[enforce_reformat]] is true.
+      - Confirm resource-safety and error-handling remain correct and explicit.
+      - Confirm changes compile conceptually and do not introduce missing symbols.&lt;/instruction&gt;
   &lt;/instructions&gt;
 
   &lt;input_data&gt;
@@ -513,10 +569,10 @@ def process(items: Iterable[Any]) -&gt; List[str]:
       &lt;/input_data&gt;
       &lt;output&gt;&lt;![CDATA[
 diff --git a/src/main/java/app/Service.java b/src/main/java/app/Service.java
-index e69de29..1a2b3c4 100644
+index 1111111..2222222 100644
 --- a/src/main/java/app/Service.java
 +++ b/src/main/java/app/Service.java
-@@ -1,10 +1,14 @@
+@@ -1,10 +1,16 @@
  package app;
  
  public class Service {
@@ -538,6 +594,38 @@ index e69de29..1a2b3c4 100644
 +    return name.trim();
 +  }
  }
+      ]]&gt;&lt;/output&gt;
+    &lt;/example&gt;
+
+    &lt;example id=&quot;typescript-multi-file-diff&quot;&gt;
+      &lt;input_data&gt;
+        &lt;input_code&gt;&lt;![CDATA[
+{
+  &quot;src/util.ts&quot;: &quot;export function pad(s: string, len: number) { while (s.length &lt; len) { s = s + &#39; &#39;; } return s; }\n&quot;,
+  &quot;src/index.ts&quot;: &quot;import { pad } from &#39;./util&#39;;\nconsole.log(pad(&#39;hi&#39;, 5));\n&quot;
+}
+        ]]&gt;&lt;/input_code&gt;
+        &lt;language&gt;typescript&lt;/language&gt;
+        &lt;target_language_version&gt;4.9&lt;/target_language_version&gt;
+        &lt;output_mode&gt;diff&lt;/output_mode&gt;
+        &lt;refactoring_goals&gt;{&quot;readability&quot;: true, &quot;performance&quot;: true}&lt;/refactoring_goals&gt;
+      &lt;/input_data&gt;
+      &lt;output&gt;&lt;![CDATA[
+diff --git a/src/util.ts b/src/util.ts
+index a1b2c3d..d4e5f6a 100644
+--- a/src/util.ts
++++ b/src/util.ts
+@@ -1 +1,9 @@
+-export function pad(s: string, len: number) { while (s.length &lt; len) { s = s + &#39; &#39;; } return s; }
++export function pad(s: string, len: number): string {
++  let out = s;
++  // Avoid quadratic behavior by appending once.
++  const deficit = len - out.length;
++  if (deficit &gt; 0) {
++    out = out + &quot; &quot;.repeat(deficit);
++  }
++  return out;
++}
       ]]&gt;&lt;/output&gt;
     &lt;/example&gt;
   &lt;/examples&gt;</code>
@@ -689,7 +777,7 @@ index e69de29..1a2b3c4 100644
         
         
         <a href="https://ib.bsb.br/404" aria-label="404">
-          2025-08-10 17:16:06
+          2025-08-10 21:51:06
         </a>
         &#x23;
     
@@ -757,7 +845,7 @@ index e69de29..1a2b3c4 100644
         "headline": "refactor",
         "description": "",
         "datePublished": "2025-08-10T00:00:00+00:00",
-        "dateModified": "2025-08-10T20:12:03+00:00",
+        "dateModified": "2025-08-11T00:46:57+00:00",
         "author": {
           "@type": "Person",
           "name": "Author"
