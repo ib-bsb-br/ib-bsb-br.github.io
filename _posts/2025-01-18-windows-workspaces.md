@@ -316,3 +316,113 @@ exit
 ```
 start "" "G:\05-portable\ExplorerPlusPlus\Explorer++.exe"
 ```
+
+
+# non-admin setup
+
+# **Windows 10 Workspace Hotkeys for Non-Admins**
+
+This guide details how to create Win \+ Numpad \[Number\] hotkeys to switch directly to specific virtual desktops on Windows 10 without requiring administrator privileges. This is achieved by using the VirtualDesktop.exe tool, batch files, and an AutoHotkey script.
+
+### **Part 0: Prerequisites**
+
+Before starting, complete these two essential setup steps.
+
+#### **Step 0.1: Create Nine Virtual Desktops**
+
+The script will create hotkeys for nine desktops. You must ensure these desktops exist first.
+
+1. Press Win \+ Tab to open the Task View.  
+2. At the top of the screen, click the **"New desktop"** button eight times until you have a total of nine desktops available (Desktop 1 through Desktop 9).
+
+#### **Step 0.2: Create a Main Project Folder**
+
+To avoid any permission issues, we will store all files in your personal Documents folder.
+
+1. Open File Explorer and navigate to your **Documents** folder.  
+2. Create a new folder and name it WindowsHotkeys. All subsequent files and folders will be created inside this one.
+
+### **Part 1: Prepare the Workspace Switching Tools**
+
+This section covers the download and setup of the necessary files and scripts inside your project folder.
+
+#### **Step 1.1: Download and Place the VirtualDesktop Tool**
+
+1. Navigate to the VirtualDesktop releases page on GitHub: [https://github.com/MScholtes/VirtualDesktop/releases](https://github.com/MScholtes/VirtualDesktop/releases)  
+2. Download the latest .zip file (e.g., VirtualDesktop\_v1.19.zip).  
+3. Inside your Documents\\WindowsHotkeys folder, create a new folder named Tools.  
+4. Inside Tools, create another folder named VirtualDesktop.  
+5. Extract the contents of the downloaded ZIP file. From the extracted files, copy VirtualDesktop.exe into the Documents\\WindowsHotkeys\\Tools\\VirtualDesktop folder.
+
+#### **Step 1.2: Create Directories for Scripts and Batch Files**
+
+1. Inside Documents\\WindowsHotkeys, create a folder named Scripts.  
+2. Inside Documents\\WindowsHotkeys, create a folder named QuickAccess.
+
+#### **Step 1.3: Create and Run the PowerShell Batch File Generator**
+
+1. Open Notepad or another plain text editor.  
+2. Copy and paste the entire PowerShell script below into the editor. This script has been updated to use the correct folder paths.  
+   \# Define paths relative to the user's profile.  
+   $basePath \= "$env:USERPROFILE\\Documents\\WindowsHotkeys"  
+   $virtualDesktopPath \= Join-Path \-Path $basePath \-ChildPath "Tools\\VirtualDesktop\\VirtualDesktop.exe"  
+   $outputFolder \= Join-Path \-Path $basePath \-ChildPath "QuickAccess"
+
+   \# Check if the VirtualDesktop executable exists.  
+   if (-not (Test-Path \-Path $virtualDesktopPath)) {  
+       Write-Error "VirtualDesktop.exe not found at '$virtualDesktopPath'. Please check the path."  
+       return  
+   }
+
+   \# Generate batch files 1.bat through 9.bat.  
+   for ($i \= 1; $i \-le 9; $i++) {  
+       \# Desktop numbers are 0-indexed, so we subtract 1\.  
+       $desktopNumber \= $i \- 1  
+       $batchFilePath \= Join-Path \-Path $outputFolder \-ChildPath "$i.bat"
+
+       \# Content of the batch file.  
+       $batchContent \= "@echo off\`n\`"$virtualDesktopPath\`" /Switch:$desktopNumber"
+
+       try {  
+           Set-Content \-Path $batchFilePath \-Value $batchContent \-Encoding Ascii  
+           Write-Host "Successfully created $batchFilePath"  
+       }  
+       catch {  
+           Write-Error "Failed to create $batchFilePath. Error: $\_"  
+       }  
+   }
+
+   Write-Host "Batch file generation complete."
+
+3. Save the file as GenerateBatchFiles.ps1 inside the Documents\\WindowsHotkeys\\Scripts folder.  
+4. Open PowerShell by pressing Win \+ X and selecting **Windows PowerShell**.  
+5. Run the following command. This command navigates to your script folder and runs the script, bypassing the default security policy that normally blocks local scripts.  
+   Set-Location "$env:USERPROFILE\\Documents\\WindowsHotkeys\\Scripts"; powershell \-ExecutionPolicy Bypass \-File .\\GenerateBatchFiles.ps1
+
+6. Press Enter. Verify that the script output says it successfully created 1.bat through 9.bat.
+
+### **Part 2: Create Hotkeys with AutoHotkey**
+
+#### **Step 2.1: Install AutoHotkey**
+
+1. Go to the official AutoHotkey website: [https://www.autohotkey.com](https://www.autohotkey.com)  
+2. Download and run the installer, choosing the **Express Installation** option.
+
+#### **Step 2.2: Create the AutoHotkey Hotkey Script**
+
+1. Go to your Desktop, right-click an empty space, and select **New** \> **AutoHotkey Script**.  
+2. Name the file WorkspaceHotkeys.ahk.  
+3. Right-click the new file and select **Edit Script**.  
+4. Delete all default text and paste the following code, which points to the batch files in your Documents folder. This script uses modern AutoHotkey v2 syntax.
+```
+   ; \=== HOTKEYS TO TRIGGER WORKSPACE BATCH FILES (AutoHotkey v2 Syntax) \===  
+   \#Numpad1::Run(A\_MyDocuments . "\\WindowsHotkeys\\QuickAccess\\1.bat")  
+   \#Numpad2::Run(A\_MyDocuments . "\\WindowsHotkeys\\QuickAccess\\2.bat")  
+   \#Numpad3::Run(A\_MyDocuments . "\\WindowsHotkeys\\QuickAccess\\3.bat")  
+   \#Numpad4::Run(A\_MyDocuments . "\\WindowsHotkeys\\QuickAccess\\4.bat")  
+   \#Numpad5::Run(A\_MyDocuments . "\\WindowsHotkeys\\QuickAccess\\5.bat")  
+   \#Numpad6::Run(A\_MyDocuments . "\\WindowsHotkeys\\QuickAccess\\6.bat")  
+   \#Numpad7::Run(A\_MyDocuments . "\\WindowsHotkeys\\QuickAccess\\7.bat")  
+   \#Numpad8::Run(A\_MyDocuments . "\\WindowsHotkeys\\QuickAccess\\8.bat")  
+   \#Numpad9::Run(A\_MyDocuments . "\\WindowsHotkeys\\QuickAccess\\9.bat")  
+```
