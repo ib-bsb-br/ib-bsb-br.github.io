@@ -318,11 +318,7 @@ start "" "G:\05-portable\ExplorerPlusPlus\Explorer++.exe"
 ```
 
 
-# non-admin setup
-
-# **Windows 10 Workspace Hotkeys for Non-Admins**
-
-This guide details how to create Win \+ Numpad \[Number\] hotkeys to switch directly to specific virtual desktops on Windows 10 without requiring administrator privileges. This is achieved by using the VirtualDesktop.exe tool, batch files, and an AutoHotkey script.
+## non-admin setup
 
 ### **Part 0: Prerequisites**
 
@@ -362,7 +358,7 @@ This section covers the download and setup of the necessary files and scripts in
 #### **Step 1.3: Create and Run the PowerShell Batch File Generator**
 
 1. Open Notepad or another plain text editor.  
-2. Copy and paste the entire PowerShell script below into the editor. This script has been updated to use the correct folder paths.  
+2. Copy and paste the entire PowerShell script below into the editor.  
    \# Define paths relative to the user's profile.  
    $basePath \= "$env:USERPROFILE\\Documents\\WindowsHotkeys"  
    $virtualDesktopPath \= Join-Path \-Path $basePath \-ChildPath "Tools\\VirtualDesktop\\VirtualDesktop.exe"  
@@ -406,16 +402,21 @@ This section covers the download and setup of the necessary files and scripts in
 #### **Step 2.1: Install AutoHotkey**
 
 1. Go to the official AutoHotkey website: [https://www.autohotkey.com](https://www.autohotkey.com)  
-2. Download and run the installer, choosing the **Express Installation** option.
+2. Download and run the installer, choosing the **Express Installation** option for AutoHotkey v2.
 
-#### **Step 2.2: Create the AutoHotkey Hotkey Script**
+#### **Step 2.2: Create the Combined AutoHotkey Hotkey Script**
+
+This single script will enable both switching between workspaces and moving windows to them.
 
 1. Go to your Desktop, right-click an empty space, and select **New** \> **AutoHotkey Script**.  
 2. Name the file WorkspaceHotkeys.ahk.  
 3. Right-click the new file and select **Edit Script**.  
-4. Delete all default text and paste the following code, which points to the batch files in your Documents folder. This script uses modern AutoHotkey v2 syntax.
+4. Delete all default text and paste the complete code below.  
 ```
-   ; \=== HOTKEYS TO TRIGGER WORKSPACE BATCH FILES (AutoHotkey v2 Syntax) \===  
+   ; \=== SCRIPT FOR WORKSPACE MANAGEMENT (AutoHotkey v2 Syntax) \===
+
+   ; \--- Section 1: Switch to a Workspace \---  
+   ; Hotkey: Win \+ Numpad  
    \#Numpad1::Run(A\_MyDocuments . "\\WindowsHotkeys\\QuickAccess\\1.bat")  
    \#Numpad2::Run(A\_MyDocuments . "\\WindowsHotkeys\\QuickAccess\\2.bat")  
    \#Numpad3::Run(A\_MyDocuments . "\\WindowsHotkeys\\QuickAccess\\3.bat")  
@@ -424,5 +425,39 @@ This section covers the download and setup of the necessary files and scripts in
    \#Numpad6::Run(A\_MyDocuments . "\\WindowsHotkeys\\QuickAccess\\6.bat")  
    \#Numpad7::Run(A\_MyDocuments . "\\WindowsHotkeys\\QuickAccess\\7.bat")  
    \#Numpad8::Run(A\_MyDocuments . "\\WindowsHotkeys\\QuickAccess\\8.bat")  
-   \#Numpad9::Run(A\_MyDocuments . "\\WindowsHotkeys\\QuickAccess\\9.bat")  
+   \#Numpad9::Run(A\_MyDocuments . "\\WindowsHotkeys\\QuickAccess\\9.bat")
+
+   ; \--- Section 2: Move Active Window AND Switch to that Workspace \---  
+   ; Hotkey: Win \+ Alt \+ Numpad  
+   ; \#\! stands for Win \+ Alt  
+   ; The /MoveActiveAndSwitch command moves the window and follows it.  
+   ; Desktop numbers are 0-indexed (Desktop 1 is 0, Desktop 2 is 1, etc.).  
+   \#\!Numpad1::Run(A\_MyDocuments . "\\WindowsHotkeys\\Tools\\VirtualDesktop\\VirtualDesktop.exe /MoveActiveAndSwitch:0")  
+   \#\!Numpad2::Run(A\_MyDocuments . "\\WindowsHotkeys\\Tools\\VirtualDesktop\\VirtualDesktop.exe /MoveActiveAndSwitch:1")  
+   \#\!Numpad3::Run(A\_MyDocuments . "\\WindowsHotkeys\\Tools\\VirtualDesktop\\VirtualDesktop.exe /MoveActiveAndSwitch:2")  
+   \#\!Numpad4::Run(A\_MyDocuments . "\\WindowsHotkeys\\Tools\\VirtualDesktop\\VirtualDesktop.exe /MoveActiveAndSwitch:3")  
+   \#\!Numpad5::Run(A\_MyDocuments . "\\WindowsHotkeys\\Tools\\VirtualDesktop\\VirtualDesktop.exe /MoveActiveAndSwitch:4")  
+   \#\!Numpad6::Run(A\_MyDocuments . "\\WindowsHotkeys\\Tools\\VirtualDesktop\\VirtualDesktop.exe /MoveActiveAndSwitch:5")  
+   \#\!Numpad7::Run(A\_MyDocuments . "\\WindowsHotkeys\\Tools\\VirtualDesktop\\VirtualDesktop.exe /MoveActiveAndSwitch:6")  
+   \#\!Numpad8::Run(A\_MyDocuments . "\\WindowsHotkeys\\Tools\\VirtualDesktop\\VirtualDesktop.exe /MoveActiveAndSwitch:7")  
+   \#\!Numpad9::Run(A\_MyDocuments . "\\WindowsHotkeys\\Tools\\VirtualDesktop\\VirtualDesktop.exe /MoveActiveAndSwitch:8")  
 ```
+
+Save and close the file.
+
+Part 3: Activate the Hotkeys
+Step 3.1: Run the AutoHotkey Script
+Go to your Desktop and double-click the WorkspaceHotkeys.ahk file.
+
+A green "H" icon will appear in your system tray (bottom-right of the screen). This indicates the hotkeys are active.
+
+You can now use Win + Numpad [Number] to switch desktops, and Win + Alt + Numpad [Number] to move the active window to a new desktop. A small command window may flash on screen; this is normal.
+
+Step 3.2: Make Hotkeys Run Automatically on Startup
+Press Win + R to open the Run dialog.
+
+Type shell:startup and press Enter.
+
+Copy the WorkspaceHotkeys.ahk file from your Desktop and paste it into this Startup folder.
+
+The setup is now complete. The hotkeys will activate automatically every time you log into Windows.
