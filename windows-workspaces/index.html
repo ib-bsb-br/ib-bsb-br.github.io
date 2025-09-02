@@ -69,7 +69,7 @@
         
           <span class="post-updated">
             ↣
-            <time datetime="2025-09-02T02:13:24+00:00">
+            <time datetime="2025-09-02T10:23:09+00:00">
               02 Sep 2025
             </time>
           </span>
@@ -94,11 +94,11 @@
         <div class="page-stats mt-3" role="status" aria-label="Page statistics">
       
       <span class="badge bg-primary">
-        15782 characters
+        17202 characters
       </span>
         <span class="separator mx-2" aria-hidden="true">•</span>
         <span class="badge bg-primary">
-        1729 words
+        2010 words
       </span>
       </div>
         <div class="action-buttons d-flex flex-wrap gap-2">
@@ -773,38 +773,134 @@ Set-Location “$env:USERPROFILE\Documents\WindowsHotkeys\Scripts”; powershell
   <li>Go to your Desktop, right-click an empty space, and select <strong>New</strong> &gt; <strong>AutoHotkey Script</strong>.</li>
   <li>Name the file WorkspaceHotkeys.ahk.</li>
   <li>Right-click the new file and select <strong>Edit Script</strong>.</li>
-  <li>Delete all default text and paste the complete code below.
-    <div class="language-plaintext highlighter-rouge"><div class="highlight"><section><code>; \=== SCRIPT FOR WORKSPACE MANAGEMENT (AutoHotkey v2 Syntax) \===
-
-; \--- Section 1: Switch to a Workspace \---  
-; Hotkey: Win \+ Numpad  
-\#Numpad1::Run(A\_MyDocuments . "\\WindowsHotkeys\\QuickAccess\\1.bat")  
-\#Numpad2::Run(A\_MyDocuments . "\\WindowsHotkeys\\QuickAccess\\2.bat")  
-\#Numpad3::Run(A\_MyDocuments . "\\WindowsHotkeys\\QuickAccess\\3.bat")  
-\#Numpad4::Run(A\_MyDocuments . "\\WindowsHotkeys\\QuickAccess\\4.bat")  
-\#Numpad5::Run(A\_MyDocuments . "\\WindowsHotkeys\\QuickAccess\\5.bat")  
-\#Numpad6::Run(A\_MyDocuments . "\\WindowsHotkeys\\QuickAccess\\6.bat")  
-\#Numpad7::Run(A\_MyDocuments . "\\WindowsHotkeys\\QuickAccess\\7.bat")  
-\#Numpad8::Run(A\_MyDocuments . "\\WindowsHotkeys\\QuickAccess\\8.bat")  
-\#Numpad9::Run(A\_MyDocuments . "\\WindowsHotkeys\\QuickAccess\\9.bat")
-
-; \--- Section 2: Move Active Window AND Switch to that Workspace \---  
-; Hotkey: Win \+ Alt \+ Numpad  
-; \#\! stands for Win \+ Alt  
-; The /MoveActiveAndSwitch command moves the window and follows it.  
-; Desktop numbers are 0-indexed (Desktop 1 is 0, Desktop 2 is 1, etc.).  
-\#\!Numpad1::Run(A\_MyDocuments . "\\WindowsHotkeys\\Tools\\VirtualDesktop\\VirtualDesktop.exe /MoveActiveAndSwitch:0")  
-\#\!Numpad2::Run(A\_MyDocuments . "\\WindowsHotkeys\\Tools\\VirtualDesktop\\VirtualDesktop.exe /MoveActiveAndSwitch:1")  
-\#\!Numpad3::Run(A\_MyDocuments . "\\WindowsHotkeys\\Tools\\VirtualDesktop\\VirtualDesktop.exe /MoveActiveAndSwitch:2")  
-\#\!Numpad4::Run(A\_MyDocuments . "\\WindowsHotkeys\\Tools\\VirtualDesktop\\VirtualDesktop.exe /MoveActiveAndSwitch:3")  
-\#\!Numpad5::Run(A\_MyDocuments . "\\WindowsHotkeys\\Tools\\VirtualDesktop\\VirtualDesktop.exe /MoveActiveAndSwitch:4")  
-\#\!Numpad6::Run(A\_MyDocuments . "\\WindowsHotkeys\\Tools\\VirtualDesktop\\VirtualDesktop.exe /MoveActiveAndSwitch:5")  
-\#\!Numpad7::Run(A\_MyDocuments . "\\WindowsHotkeys\\Tools\\VirtualDesktop\\VirtualDesktop.exe /MoveActiveAndSwitch:6")  
-\#\!Numpad8::Run(A\_MyDocuments . "\\WindowsHotkeys\\Tools\\VirtualDesktop\\VirtualDesktop.exe /MoveActiveAndSwitch:7")  
-\#\!Numpad9::Run(A\_MyDocuments . "\\WindowsHotkeys\\Tools\\VirtualDesktop\\VirtualDesktop.exe /MoveActiveAndSwitch:8")  
-</code></section></div>    </div>
-  </li>
+  <li>Delete all default text and paste the complete code below.</li>
 </ol>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><section><code>#Requires AutoHotkey v2.0
+#SingleInstance Force
+#Warn
+
+; === Windows 10/11 Workspace Hotkeys (Non-Admin) ===
+; Uses VirtualDesktop.exe to switch/move windows across virtual desktops.
+; Fixes for reliable window moves:
+;  - Capture active window handle before launching the CLI
+;  - Use /MoveWindowHandle:&lt;hwnd&gt; (not /MoveActiveWindow)
+;  - Run the CLI hidden and in quiet mode (/q) with RunWait to serialize calls
+;  - Ensure target desktop exists (auto-create as needed)
+
+; --- Configuration ---
+VD_DIR := A_MyDocuments . "\WindowsHotkeys\Tools\VirtualDesktop"
+
+; Try common executable names. First found will be used.
+candidates := [
+    VD_DIR . "\VirtualDesktop.exe",
+    VD_DIR . "\VirtualDesktop11.exe",
+    VD_DIR . "\VirtualDesktop11-24H2.exe",
+    VD_DIR . "\VirtualDesktopServer2022.exe",
+    VD_DIR . "\VirtualDesktopServer2016.exe"
+]
+
+global VD_EXE := ""
+for _, path in candidates {
+    if FileExist(path) {
+        VD_EXE := path
+        break
+    }
+}
+
+if (VD_EXE = "") {
+    msg := "VirtualDesktop executable not found in:`n" VD_DIR "`n`nExpected one of:`n"
+    for _, p in candidates
+        msg .= p "`n"
+    MsgBox msg, "WorkspaceHotkeys.ahk - Error", 48
+    ExitApp
+}
+
+; --- Internal Helpers ---
+VD_Run(args) {
+    ; Run the VirtualDesktop tool hidden; return exit code (last command's result)
+    global VD_EXE, VD_DIR
+    try {
+        return RunWait('"' . VD_EXE . '" ' . args, VD_DIR, "Hide")
+    } catch {
+        return -1
+    }
+}
+
+EnsureDesktopExists(desktopIndex) {
+    ; Make sure a 0-based desktop index exists; create desktops if needed
+    count := VD_Run("/q /Count")
+    if (count &lt; 0)
+        return false
+    while (count &lt;= desktopIndex) {
+        res := VD_Run("/q /New")
+        if (res &lt; 0)
+            return false
+        count++
+    }
+    return true
+}
+
+IsMovableWindow(hwnd) {
+    if !hwnd
+        return false
+    cls := WinGetClass("ahk_id " hwnd)
+    ; Avoid trying to move shell/taskbar/desktop windows
+    if (cls = "Progman" || cls = "WorkerW" || cls = "Shell_TrayWnd" || cls = "TaskListThumbnailWnd")
+        return false
+    return true
+}
+
+; --- Public Functions ---
+SwitchToDesktop(desktopIndex) {
+    if !EnsureDesktopExists(desktopIndex)
+        return
+    VD_Run("/q /Switch:" . desktopIndex)
+}
+
+MoveWindowAndSwitch(desktopIndex) {
+    ; Capture the active window handle before launching the CLI
+    hwnd := WinExist("A")
+    if !IsMovableWindow(hwnd)
+        return
+    if !EnsureDesktopExists(desktopIndex)
+        return
+    ; Chain: target desktop -&gt; move specific window by handle -&gt; switch
+    VD_Run("/q /GetDesktop:" . desktopIndex . " /MoveWindowHandle:" . hwnd . " /Switch")
+}
+
+; --- Hotkeys ---
+; Note: VirtualDesktop indices are 0-based (Desktop 1 = 0)
+; Switching: Win + Numpad [1-9]
+#Numpad1::SwitchToDesktop(0)
+#Numpad2::SwitchToDesktop(1)
+#Numpad3::SwitchToDesktop(2)
+#Numpad4::SwitchToDesktop(3)
+#Numpad5::SwitchToDesktop(4)
+#Numpad6::SwitchToDesktop(5)
+#Numpad7::SwitchToDesktop(6)
+#Numpad8::SwitchToDesktop(7)
+#Numpad9::SwitchToDesktop(8)
+
+; Move &amp; Switch: Ctrl + Numpad [1-9]
+^Numpad1::MoveWindowAndSwitch(0)
+^Numpad2::MoveWindowAndSwitch(1)
+^Numpad3::MoveWindowAndSwitch(2)
+^Numpad4::MoveWindowAndSwitch(3)
+^Numpad5::MoveWindowAndSwitch(4)
+^Numpad6::MoveWindowAndSwitch(5)
+^Numpad7::MoveWindowAndSwitch(6)
+^Numpad8::MoveWindowAndSwitch(7)
+^Numpad9::MoveWindowAndSwitch(8)
+
+; Sequential navigation: Win + NumpadSub / Win + NumpadAdd
+#NumpadSub::VD_Run("/q /Left")
+#NumpadAdd::VD_Run("/q /Right")
+
+; Management: Win + Ctrl + NumpadAdd / NumpadSub
+#^NumpadAdd::VD_Run("/q /New")
+#^NumpadSub::VD_Run("/q /Remove:LAST")
+</code></section></div></div>
 
 <p>Save and close the file.</p>
 
@@ -962,7 +1058,7 @@ Press Win + R to open the Run dialog.</p>
         
         
         <a href="https://ib.bsb.br/404" aria-label="404">
-          2025-09-01 23:17:35
+          2025-09-02 07:27:18
         </a>
         &#x23;
     
@@ -1039,7 +1135,7 @@ Press Win + R to open the Run dialog.</p>
         "headline": "Windows 11: Switch Workspaces via VirtualDesktop Module with custom shortcuts",
         "description": "",
         "datePublished": "2025-01-18T00:00:00+00:00",
-        "dateModified": "2025-09-02T02:13:24+00:00",
+        "dateModified": "2025-09-02T10:23:09+00:00",
         "author": {
           "@type": "Person",
           "name": "Author"
