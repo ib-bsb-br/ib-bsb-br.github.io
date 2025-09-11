@@ -138,7 +138,7 @@ if (isset($_GET['asset'])) {
     header('Cache-Control: public, max-age=3600');
     ?>
 // Service Worker for memor.ia.br
-const CACHE_NAME = 'memor-cache-v1.2';
+const CACHE_NAME = 'memor-cache-v1.4';
 const SHELL = [
   '/?b=public',
   '/?asset=manifest',
@@ -373,21 +373,42 @@ htmlHeader();
   @media (prefers-color-scheme: dark) {
     :root { --bg:#0c0c0c; --fg:#eee; --muted:#aaa; --border:#222; --accent:#e5e5e5; --ok:#4cc27f; --warn:#ff736a; --chip:#171717; --chipA:#0f3050; --focus:#6aa3ff; }
   }
+  /* Prevent padding/border from causing overflow on small screens */
+  *, *::before, *::after { box-sizing: border-box; }
+
   html,body{height:100%}
   body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.5 system-ui,Segoe UI,Roboto,Arial}
   .wrap{max-width:920px;margin:0 auto;padding:18px}
   .box{border:1px solid var(--border);border-radius:12px;padding:14px;background:rgba(0,0,0,0.02)}
-  .row{display:flex;gap:.5rem;align-items:center}
-  input[type=text], input[type=search]{flex:1;padding:.65rem;border:1px solid var(--border);border-radius:10px;background:transparent;color:var(--fg)}
+  /* Allow items to wrap instead of overflowing horizontally */
+  .row{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap}
+  /* Inputs are flex items that may shrink; ensure they can */
+  input[type=text], input[type=search]{
+    flex:1 1 auto;
+    min-width:0; /* allow shrink within flex containers */
+    padding:.65rem;border:1px solid var(--border);border-radius:10px;background:transparent;color:var(--fg)
+  }
   button{padding:.6rem .9rem;border:0;border-radius:10px;background:var(--accent);color:#fff;cursor:pointer}
   button.secondary{background:transparent;color:var(--fg);border:1px solid var(--border)}
   button.warn{background:var(--warn)}
   button.ok{background:var(--ok)}
   ul{list-style:none;padding:0;margin:12px 0}
-  li{display:flex;align-items:center;gap:.5rem;padding:.45rem .3rem;border-bottom:1px solid var(--border)}
+  /* Let task rows wrap controls/text on narrow screens */
+  li{
+    display:flex;
+    align-items:center;
+    gap:.5rem;
+    padding:.45rem .3rem;
+    border-bottom:1px solid var(--border);
+    flex-wrap:wrap;
+  }
   li:focus{outline:2px solid var(--focus);outline-offset:2px;border-radius:8px}
   li.done .txt{text-decoration:line-through;color:var(--muted)}
-  .txt{flex:1;outline:none}
+  .txt{
+    flex:1 1 auto;
+    min-width:0; /* avoid pushing buttons offscreen */
+    outline:none
+  }
   .txt:focus{background:rgba(127,127,127,.1);border-radius:4px;padding:2px}
   .meta{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px}
   .small{font-size:.9rem;color:var(--muted)}
@@ -406,6 +427,60 @@ htmlHeader();
   .status{min-height:1.4rem}
   .status button{margin-left:.5rem}
   .sr{position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden;}
+
+  /* Keep drag handle/checkbox/delete visible; text fills remaining space */
+  li > .drag{flex:0 0 auto}
+  li > input[type=checkbox]{flex:0 0 auto}
+  li > button[aria-label="Delete task"]{flex:0 0 auto}
+
+  /* Defensive text wrapping to avoid horizontal scroll from long tokens/URLs */
+  .wrap, .box, .txt, #title, #newtodo, #search, #shareUrl {
+    overflow-wrap:anywhere;
+    word-break:break-word;
+  }
+
+  /* --- Responsive layout --- */
+  /* Toolbar: allow the shortcuts block to wrap to its own line on small screens */
+  @media (max-width: 620px) {
+    .wrap{padding:12px}
+    .toolbar .row{flex:1 1 100%}
+    .toolbar .row.right{flex:1 1 100%; order:2; font-size:.95rem}
+  }
+
+  /* Title + bulk actions row:
+     - Title takes full width on narrow viewports
+     - Buttons wrap to two columns, then single column on very narrow screens */
+  .box > .row:first-of-type > #title{flex:1 1 320px; min-width:0}
+  @media (max-width: 820px) {
+    .box > .row:first-of-type > #title{flex:1 1 100%}
+  }
+  @media (max-width: 620px) {
+    .box > .row:first-of-type > #title{flex:1 1 100%}
+    .box > .row:first-of-type > button{
+      flex:1 1 calc(50% - .5rem);
+      min-width:0;
+    }
+  }
+  @media (max-width: 420px) {
+    .box > .row:first-of-type > button{flex:1 1 100%}
+  }
+
+  /* Add/search/filter row: allow clean wrapping */
+  #newtodo{flex:2 1 260px; min-width:0}
+  #search{flex:1 1 180px; min-width:0}
+  @media (max-width: 620px) {
+    .box > .row:nth-of-type(2) > #newtodo{flex:1 1 100%}
+    .box > .row:nth-of-type(2) > #search{flex:1 1 100%}
+    .chips{flex:1 1 100%}
+    /* Override inline max-widths so fields can span full width on small screens */
+    #slug, #search, #shareUrl { max-width:100% !important; }
+  }
+
+  /* List items: small screens may move Delete to next line neatly */
+  @media (max-width: 420px) {
+    li{row-gap:.35rem}
+    li > button[aria-label="Delete task"]{margin-left:auto}
+  }
 </style>
 
 <div class="wrap">
@@ -445,6 +520,16 @@ htmlHeader();
     </div>
 
     <ul id="list" aria-live="polite"></ul>
+
+    <div class="meta">
+      <div>
+        <span class="small">Share this board URL:</span>
+        <input id="shareUrl" type="text" readonly style="max-width:380px" aria-label="Share URL">
+        <button class="secondary" id="copy">Copy</button>
+        <span class="small count" id="counts"></span>
+      </div>
+      <span class="small right" id="updated"></span>
+    </div>
 
     <div class="meta">
       <div>
