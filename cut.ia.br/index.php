@@ -76,8 +76,8 @@ if ($slug !== '') {
     <button type="submit">Shorten</button>
   </form>
   <div id="result"></div>
-  <p><small>Tip: bookmarklet — drag this to your toolbar: <a href="javascript:location.href='https://<?= htmlspecialchars($_SERVER['HTTP_HOST'] ?? '') ?>/?add='+encodeURIComponent(location.href)">shorten page</a></small></p>
-
+  <p><small>Tip: bookmarklet — drag this to your toolbar: <a href="javascript:location.href='https://<?= htmlspecialchars($_SERVER['HTTP_HOST'] ?? '') ?>/?op=task_add&text='+encodeURIComponent(location.href)">add page as task</a></small></p>
+    
 <script>
   const form = document.getElementById('shortenForm');
   const urlInput = document.getElementById('urlInput');
