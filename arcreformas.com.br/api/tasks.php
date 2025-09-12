@@ -146,7 +146,17 @@ function handle_task_operations(PDO $pdo, string $board_slug): void {
                     ));
                     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
                     curl_setopt($ch, CURLOPT_TIMEOUT, 5); // Fire-and-forget
-                    curl_exec($ch);
+
+                    $curl_response = curl_exec($ch);
+                    if ($curl_response === false) {
+                        error_log("GitHub Actions dispatch failed: cURL error: " . curl_error($ch));
+                    } else {
+                        $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                        // GitHub returns 204 No Content on success
+                        if ($http_code !== 204) {
+                            error_log("GitHub Actions dispatch failed: HTTP status {$http_code}, response: {$curl_response}");
+                        }
+                    }
                     curl_close($ch);
                 }
                 // --- END WORKFLOW ---

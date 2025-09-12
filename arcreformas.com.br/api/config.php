@@ -14,7 +14,7 @@ define('DB_PASS', 'your_database_password');
 // and you want to store files one level above it for security.
 // Adjust if your structure is different. A common setup is a `storage`
 // or `uploads` directory alongside `public_html`.
-define('UPLOAD_DIR', realpath(__DIR__ . '/../..') . '/storage_arcreformas/');
+define('UPLOAD_DIR', __DIR__ . '/../../storage_arcreformas/');
 
 // The public-facing base URL for accessing the files.
 // This MUST correspond to how the UPLOAD_DIR is served. If it's outside the
@@ -35,6 +35,16 @@ define('API_INTERNAL_URL', 'https://arcreformas.com.br/api');
 define('GITHUB_TOKEN', getenv('GITHUB_TOKEN') ?: 'your_github_personal_access_token_here');
 define('GITHUB_REPO', 'ib-bsb-br/ib-bsb-br.github.io'); // The owner/repo slug
 define('GITHUB_WORKFLOW_ID', 'refresh-content.yml'); // The workflow filename
+
+// Validate that a real token is available if publishing is intended.
+// This check is here to fail early if the configuration is incomplete.
+// Note: This simple check runs on every API call. In a more complex app,
+// this might be moved to a dedicated health check endpoint.
+if (empty(getenv('GITHUB_TOKEN')) && GITHUB_TOKEN === 'your_github_personal_access_token_here') {
+    // We don't exit() here, but the publish feature will fail later.
+    // This allows the app to run even if the publish feature is not configured.
+    // A warning could be logged here in a production system.
+}
 
 
 // --- GENERAL HELPERS ---
