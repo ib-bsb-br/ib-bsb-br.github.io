@@ -64,13 +64,9 @@ function upload_new_file(): void {
     $base = sanitize_filename($pathinfo['filename']);
     $ext = isset($pathinfo['extension']) ? '.' . strtolower($pathinfo['extension']) : '';
 
-    // Ensure a unique filename in the upload directory
-    $counter = 0;
-    $unique_filename = $base . $ext;
-    while (file_exists(UPLOAD_DIR . $unique_filename)) {
-        $counter++;
-        $unique_filename = $base . '_' . $counter . $ext;
-    }
+    // Append a short random string to the filename to prevent race conditions and overwrites.
+    $unique_id = bin2hex(random_bytes(4)); // 8 hex characters
+    $unique_filename = $base . '-' . $unique_id . $ext;
 
     $destination = UPLOAD_DIR . $unique_filename;
 

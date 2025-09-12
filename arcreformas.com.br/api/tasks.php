@@ -10,13 +10,9 @@ function handle_tasks_request(?string $board_slug): void {
     $method = $_SERVER['REQUEST_METHOD'];
     $pdo = get_pdo();
 
-    // Ensure board exists, or create it on demand
-    $stmt = $pdo->prepare("SELECT slug FROM boards WHERE slug = ?");
-    $stmt->execute([$board_slug]);
-    if (!$stmt->fetch()) {
-        $stmt = $pdo->prepare("INSERT INTO boards (slug, title) VALUES (?, ?)");
-        $stmt->execute([$board_slug, 'Board: ' . htmlspecialchars($board_slug)]);
-    }
+    // Ensure board exists, or create it on demand. This requires a UNIQUE index on the 'slug' column.
+    $stmt = $pdo->prepare("INSERT IGNORE INTO boards (slug, title) VALUES (?, ?)");
+    $stmt->execute([$board_slug, 'Board: ' . htmlspecialchars($board_slug)]);
 
     switch ($method) {
         case 'GET':

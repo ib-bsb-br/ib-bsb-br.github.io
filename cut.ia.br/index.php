@@ -51,9 +51,8 @@ if ($slug !== '') {
             exit;
         }
     }
-    // If the API call fails or the link is not found, fall through to the 404 page.
-}
-    // If slug not found or empty, show an error
+
+    // If we reach here, the slug was provided but not found, or the API failed. Show 404.
     http_response_code(404);
     echo '<!doctype html><meta charset="utf-8"><title>Not Found</title><h1>Link Not Found</h1><p>The short link you requested does not exist or has been removed.</p><p><a href="/">Create a new short link</a></p>';
     exit;
