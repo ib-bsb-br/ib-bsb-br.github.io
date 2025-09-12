@@ -91,7 +91,19 @@ function upload_new_file(): void {
             curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: application/json'));
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($ch, CURLOPT_TIMEOUT, 2); // Use a short timeout; don't make the user wait.
-            curl_exec($ch);
+
+            // Execute the call and add error logging for robustness
+            $curl_response = curl_exec($ch);
+            if ($curl_response === false) {
+                // Log cURL errors (e.g., connection timeout)
+                error_log("Failed to create task for '{$unique_filename}': cURL error: " . curl_error($ch));
+            } else {
+                $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                if ($http_code < 200 || $http_code >= 300) {
+                    // Log API errors (e.g., 4xx or 5xx responses from the tasks API)
+                    error_log("Failed to create task for '{$unique_filename}': HTTP status {$http_code}, response: {$curl_response}");
+                }
+            }
             curl_close($ch);
             // --- END WORKFLOW ---
 

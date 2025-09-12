@@ -53,7 +53,6 @@ self.addEventListener('fetch', (e) => {
             }
             return networkResponse;
           });
-          // Return cached response immediately if available, otherwise wait for network
           return cachedResponse || fetchPromise;
         });
       })
@@ -61,23 +60,26 @@ self.addEventListener('fetch', (e) => {
     return;
   }
 
-  // For other GET requests (app shell), use network-first, fallback to cache
+  // For other GET requests (app shell), use a robust network-falling-back-to-cache strategy
   if (e.request.method === 'GET') {
-      e.respondWith(
-          fetch(e.request)
-              .then(networkResponse => {
-                  // If fetch is successful, update the cache
-                  if (networkResponse.ok) {
-                      return caches.open(CACHE_NAME).then(cache => {
-                          cache.put(e.request, networkResponse.clone());
-                          return networkResponse;
-                      });
-                  }
-                  // If network fails, try to serve from cache
-                  return caches.match(e.request).then(cachedResponse => {
-                      return cachedResponse || new Response('<!doctype html><meta charset="utf-8"><title>Offline</title><h1>You are Offline</h1><p>This page could not be loaded. Please check your network connection.</p>', { headers: {'Content-Type':'text/html; charset=utf-8'} });
-                  });
-              })
-      );
+    e.respondWith(
+      caches.open(CACHE_NAME).then(cache => {
+        return fetch(e.request)
+          .then(networkResponse => {
+            // If we get a good response, cache it and return it
+            if (networkResponse.ok) {
+              cache.put(e.request, networkResponse.clone());
+            }
+            return networkResponse;
+          })
+          .catch(() => {
+            // If the network fails entirely, immediately try the cache
+            return cache.match(e.request).then(cachedResponse => {
+              // If we have a cached response, serve it, otherwise show offline page
+              return cachedResponse || new Response('<!doctype html><meta charset="utf-8"><title>Offline</title><h1>You are Offline</h1><p>This page could not be loaded. Please check your network connection.</p>', { headers: {'Content-Type':'text/html; charset=utf-8'} });
+            });
+          });
+      })
+    );
   }
 });
