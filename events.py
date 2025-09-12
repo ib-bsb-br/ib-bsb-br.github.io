@@ -1,4 +1,3 @@
-python
 import requests, json, os
 from requests.auth import HTTPDigestAuth
 from icalendar import Calendar
