@@ -1,0 +1,27 @@
+name: Fetch and Update Calendar Events
+on:
+  schedule:
+    - cron: '0 * * * *'
+  workflow_dispatch:
+jobs:
+  fetch-events:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - run: pip install requests icalendar
+      - name: Run events script
+        env:
+          CALENDAR_URL: ${{ secrets.CALENDAR_URL }}
+          CALENDAR_USER: ${{ secrets.CALENDAR_USER }}
+          CALENDAR_PASS: ${{ secrets.CALENDAR_PASS }}
+        run: python events.py
+      - name: Commit and push if changed
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git add assets/data/events.json
+          git diff --staged --quiet || git commit -m "Automated update of calendar events"
+          git push
