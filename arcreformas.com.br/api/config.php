@@ -41,9 +41,9 @@ define('GITHUB_WORKFLOW_ID', 'refresh-content.yml'); // The workflow filename
 // Note: This simple check runs on every API call. In a more complex app,
 // this might be moved to a dedicated health check endpoint.
 if (empty(getenv('GITHUB_TOKEN')) && GITHUB_TOKEN === 'your_github_personal_access_token_here') {
-    // We don't exit() here, but the publish feature will fail later.
-    // This allows the app to run even if the publish feature is not configured.
-    // A warning could be logged here in a production system.
+    // The publish feature will fail if no valid token is provided.
+    // Log a warning for the administrator to make this easier to debug.
+    error_log('[WARNING] GITHUB_TOKEN is not set via environment variable and the fallback placeholder is being used. GitHub publishing will fail.');
 }
 
 
@@ -96,6 +96,10 @@ function id(int $length = 6): string {
 
 // Ensure upload directory exists
 if (!is_dir(UPLOAD_DIR)) {
-    @mkdir(UPLOAD_DIR, 0755, true);
+    // The second is_dir() check handles a potential race condition.
+    if (!mkdir(UPLOAD_DIR, 0755, true) && !is_dir(UPLOAD_DIR)) {
+        // Log the error for the administrator.
+        error_log('Failed to create upload directory: ' . UPLOAD_DIR);
+    }
 }
 ?>
