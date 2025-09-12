@@ -49,7 +49,7 @@ function get_board_state(PDO $pdo, string $board_slug): array {
     $board['updated'] = strtotime($board['updated_at']);
     unset($board['created_at'], $board['updated_at']);
 
-    foreach($tasks as &$task) {
+    foreach ($tasks as &$task) {
         $task['done'] = (bool)$task['done'];
         $task['ts'] = strtotime($task['ts']);
     }

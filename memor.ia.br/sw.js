@@ -74,12 +74,8 @@ self.addEventListener('fetch', (e) => {
                       });
                   }
                   // If network fails, try to serve from cache
-                  return caches.match(e.request);
-              })
-              .catch(() => {
-                  // If fetch fails (offline), try to serve from cache
                   return caches.match(e.request).then(cachedResponse => {
-                    return cachedResponse || new Response('<!doctype html><meta charset="utf-8"><title>Offline</title><h1>You are Offline</h1><p>This page could not be loaded. Please check your network connection.</p>', { headers: {'Content-Type':'text/html; charset=utf-8'} });
+                      return cachedResponse || new Response('<!doctype html><meta charset="utf-8"><title>Offline</title><h1>You are Offline</h1><p>This page could not be loaded. Please check your network connection.</p>', { headers: {'Content-Type':'text/html; charset=utf-8'} });
                   });
               })
       );

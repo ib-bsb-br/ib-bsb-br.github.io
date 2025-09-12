@@ -84,8 +84,7 @@ function upload_new_file(): void {
             // Use cURL to make a fire-and-forget POST to our own tasks API.
             // This is an internal, server-to-server call.
             $ch = curl_init();
-            // Assuming the API is on the same host. Adjust if not.
-            $tasks_api_url = 'https://' . $_SERVER['HTTP_HOST'] . '/api/tasks/inbox';
+            $tasks_api_url = API_INTERNAL_URL . '/tasks/inbox';
             curl_setopt($ch, CURLOPT_URL, $tasks_api_url);
             curl_setopt($ch, CURLOPT_POST, 1);
             curl_setopt($ch, CURLOPT_POSTFIELDS, $taskPayload);

@@ -22,12 +22,17 @@ define('UPLOAD_DIR', realpath(__DIR__ . '/../..') . '/storage_arcreformas/');
 // For simplicity, we'll assume a symlink or direct mapping for now.
 define('FILE_PUBLIC_URL', 'https://arcreformas.com.br/files/');
 
+// The base URL for internal, server-to-server API calls.
+// Using a fixed constant is more secure than relying on $_SERVER['HTTP_HOST'].
+define('API_INTERNAL_URL', 'https://arcreformas.com.br/api');
+
 
 // --- GITHUB PUBLISHING CONFIGURATION ---
 // Create a GitHub Personal Access Token (classic) with 'repo' and 'workflow' scopes.
-// It is recommended to store this token in a file outside the web root and read it from there,
-// but for simplicity in this frictionless setup, we define it here.
-define('GITHUB_TOKEN', 'your_github_personal_access_token_here');
+// It is strongly recommended to store this token in an environment variable named 'GITHUB_TOKEN'.
+// For example, in Apache you can use `SetEnv GITHUB_TOKEN your_token_here` in your .htaccess or vhost config.
+// The constant below is used as a fallback for simpler setups.
+define('GITHUB_TOKEN', getenv('GITHUB_TOKEN') ?: 'your_github_personal_access_token_here');
 define('GITHUB_REPO', 'ib-bsb-br/ib-bsb-br.github.io'); // The owner/repo slug
 define('GITHUB_WORKFLOW_ID', 'refresh-content.yml'); // The workflow filename
 

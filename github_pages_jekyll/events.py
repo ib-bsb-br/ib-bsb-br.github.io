@@ -41,7 +41,8 @@ def fetch_ical_events():
         print(f"Successfully fetched {len(events)} iCal events.")
         return events
     except requests.exceptions.RequestException as e:
-        print(f"Failed to access iCal feed. Status code: {e.response.status_code if e.response else 'N/A'}")
+        status_code = e.response.status_code if e.response is not None else "Connection Error"
+        print(f"Failed to access iCal feed. Status code: {status_code}")
         print(f"Error: {e}")
         return []
 
@@ -56,7 +57,8 @@ def fetch_published_notes():
         print(f"Successfully fetched {len(notes)} published notes.")
         return notes
     except requests.exceptions.RequestException as e:
-        print(f"Failed to access Central API. Status code: {e.response.status_code if e.response else 'N/A'}")
+        status_code = e.response.status_code if e.response is not None else "Connection Error"
+        print(f"Failed to access Central API. Status code: {status_code}")
         print(f"Error: {e}")
         return []
     except json.JSONDecodeError:
