@@ -4,11 +4,38 @@ declare(strict_types=1);
 // --- CONFIGURATION ---
 const API_BASE_URL = 'https://arcreformas.com.br/api';
 
-// --- REDIRECTION HANDLER ---
-if (isset($_GET['s'])) {
-    $slug = trim((string)$_GET['s']);
-    if ($slug !== '') {
-        // Use file_get_contents for simplicity, requires `allow_url_fopen` in php.ini
+// --- ROUTER ---
+$op = $_GET['op'] ?? '';
+$slug = $_GET['s'] ?? '';
+
+// 1. Handle Quick Add Task
+if ($op === 'task_add') {
+    $text = trim((string)($_GET['text'] ?? ''));
+    $board = trim((string)($_GET['b'] ?? 'inbox'));
+
+    if ($text !== '') {
+        // Make a server-to-server call to the central API to create the task
+        $taskPayload = json_encode(['op' => 'add', 'text' => $text]);
+        $ch = curl_init();
+        $tasks_api_url = API_BASE_URL . '/tasks/' . rawurlencode($board);
+        curl_setopt($ch, CURLOPT_URL, $tasks_api_url);
+        curl_setopt($ch, CURLOPT_POST, 1);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $taskPayload);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: application/json'));
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 3);
+        curl_exec($ch);
+        curl_close($ch);
+    }
+
+    // Redirect the user to their board to see the new task
+    header('Location: https://memor.ia.br/?b=' . rawurlencode($board), true, 303);
+    exit;
+}
+
+
+// 2. Handle Redirection
+if ($slug !== '') {
         // For better error handling or if allow_url_fopen is off, use cURL.
         $context = stream_context_create(['http' => ['ignore_errors' => true]]);
         $response_json = file_get_contents(API_BASE_URL . '/links/' . rawurlencode($slug), false, $context);

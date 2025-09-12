@@ -75,9 +75,30 @@ function upload_new_file(): void {
             $stmt->execute([$unique_filename, $file['size'], $file['type']]);
             $new_file_id = $pdo->lastInsertId();
 
+            // --- BEGIN "Capture -> Process" WORKFLOW ---
+            // After successful upload, automatically create a task in the 'inbox' board.
+            $file_url = FILE_PUBLIC_URL . rawurlencode($unique_filename);
+            $taskText = "Process new file: [{$unique_filename}]({$file_url})";
+            $taskPayload = json_encode(['op' => 'add', 'text' => $taskText]);
+
+            // Use cURL to make a fire-and-forget POST to our own tasks API.
+            // This is an internal, server-to-server call.
+            $ch = curl_init();
+            // Assuming the API is on the same host. Adjust if not.
+            $tasks_api_url = 'https://' . $_SERVER['HTTP_HOST'] . '/api/tasks/inbox';
+            curl_setopt($ch, CURLOPT_URL, $tasks_api_url);
+            curl_setopt($ch, CURLOPT_POST, 1);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $taskPayload);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: application/json'));
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 2); // Use a short timeout; don't make the user wait.
+            curl_exec($ch);
+            curl_close($ch);
+            // --- END WORKFLOW ---
+
             emit_json([
                 'status' => 'success',
-                'message' => 'File uploaded successfully as ' . htmlspecialchars($unique_filename),
+                'message' => 'File uploaded and task created: ' . htmlspecialchars($unique_filename),
                 'id' => $new_file_id,
                 'filename' => $unique_filename,
                 'url' => FILE_PUBLIC_URL . rawurlencode($unique_filename)

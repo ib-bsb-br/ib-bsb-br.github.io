@@ -81,7 +81,24 @@ $boardSlug = htmlspecialchars($_GET['b'] ?? 'public', ENT_QUOTES, 'UTF-8');
 </style>
 </head>
 <body>
-
+    <style>
+      .pkm-nav { background: #0c0c0c; padding: 8px 18px; display: flex; gap: 24px; align-items: center; border-bottom: 1px solid #222; }
+      .pkm-nav a { color: #eee; text-decoration: none; font-size: 14px; font-weight: 500; }
+      .pkm-nav a:hover { text-decoration: underline; color: #fff; }
+      .pkm-nav .brand { font-weight: bold; color: #fff; margin-right: auto; }
+      @media (prefers-color-scheme: light) {
+        .pkm-nav { background: #f8f9fa; border-bottom: 1px solid #dee2e6; }
+        .pkm-nav a { color: #495057; }
+        .pkm-nav .brand { color: #000; }
+      }
+    </style>
+    <nav class="pkm-nav">
+      <span class="brand">PKM System</span>
+      <a href="https://memor.ia.br/?b=inbox" title="Tasks and Notes">Workshop</a>
+      <a href="https://arcreformas.com.br" title="File Storage">Storage</a>
+      <a href="https://cut.ia.br" title="Capture and Tools">Gateway</a>
+      <a href="https://ib-bsb-br.github.io/" title="Public Site" target="_blank" rel="noopener">Published</a>
+    </nav>
 <div class="wrap">
   <div class="toolbar">
     <div class="row" style="flex:1;gap:.5rem">

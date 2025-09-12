@@ -128,6 +128,28 @@ function handle_task_operations(PDO $pdo, string $board_slug): void {
                 $id = (string)($input['id'] ?? '');
                 $stmt = $pdo->prepare("UPDATE tasks SET is_published = 1 WHERE id = ? AND board_slug = ?");
                 $stmt->execute([$id, $board_slug]);
+
+                // --- BEGIN "Process -> Publish" WORKFLOW ---
+                // After flagging the task, trigger the GitHub Actions workflow for instant publishing.
+                if (defined('GITHUB_TOKEN') && GITHUB_TOKEN !== 'your_github_personal_access_token_here') {
+                    $ch = curl_init();
+                    $url = "https://api.github.com/repos/" . GITHUB_REPO . "/actions/workflows/" . GITHUB_WORKFLOW_ID . "/dispatches";
+                    $payload = json_encode(['ref' => 'main']);
+
+                    curl_setopt($ch, CURLOPT_URL, $url);
+                    curl_setopt($ch, CURLOPT_POST, 1);
+                    curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
+                    curl_setopt($ch, CURLOPT_HTTPHEADER, array(
+                        'Accept: application/vnd.github.v3+json',
+                        'Authorization: Bearer ' . GITHUB_TOKEN,
+                        'User-Agent: arcreformas-api-publisher'
+                    ));
+                    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                    curl_setopt($ch, CURLOPT_TIMEOUT, 5); // Fire-and-forget
+                    curl_exec($ch);
+                    curl_close($ch);
+                }
+                // --- END WORKFLOW ---
                 break;
 
             default:

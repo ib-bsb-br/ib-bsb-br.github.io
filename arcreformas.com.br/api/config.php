@@ -23,6 +23,15 @@ define('UPLOAD_DIR', realpath(__DIR__ . '/../..') . '/storage_arcreformas/');
 define('FILE_PUBLIC_URL', 'https://arcreformas.com.br/files/');
 
 
+// --- GITHUB PUBLISHING CONFIGURATION ---
+// Create a GitHub Personal Access Token (classic) with 'repo' and 'workflow' scopes.
+// It is recommended to store this token in a file outside the web root and read it from there,
+// but for simplicity in this frictionless setup, we define it here.
+define('GITHUB_TOKEN', 'your_github_personal_access_token_here');
+define('GITHUB_REPO', 'ib-bsb-br/ib-bsb-br.github.io'); // The owner/repo slug
+define('GITHUB_WORKFLOW_ID', 'refresh-content.yml'); // The workflow filename
+
+
 // --- GENERAL HELPERS ---
 
 function get_pdo(): PDO {
