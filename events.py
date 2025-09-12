@@ -1,33 +1,34 @@
-# This script fetches calendar events from a specified URL using HTTP Digest Authentication and saves them as a JSON file.
-
-import requests
+import requests, json, os
 from requests.auth import HTTPDigestAuth
-import json
 from icalendar import Calendar
+from pathlib import Path
 
-url = "https://dav.heydola.com/dav.php/calendars/py28wj81/default/?export"
-username = "py28wj81"
-password = "20287290"
+url = os.environ.get("CALENDAR_URL")
+username = os.environ.get("CALENDAR_USER")
+password = os.environ.get("CALENDAR_PASS")
 
-response = requests.get(url, auth=HTTPDigestAuth(username, password))
+if not all([url, username, password]):
+    print("Missing CALENDAR_URL/CALENDAR_USER/CALENDAR_PASS.")
+    exit(1)
 
-if response.status_code == 200:
-    print("Access successful!")
-    calendar = Calendar.from_ical(response.text)
+try:
+    r = requests.get(url, auth=HTTPDigestAuth(username, password), timeout=30)
+    r.raise_for_status()
+    cal = Calendar.from_ical(r.text)
     events = []
-
-    for component in calendar.walk():
-        if component.name == "VEVENT":
-            event = {
-                "title": str(component.get('SUMMARY')),
-                "start": component.get('DTSTART').dt.isoformat(),
-                "end": component.get('DTEND').dt.isoformat(),
-            }
-            events.append(event)
-
-    # Save the file locally in the repository structure
-    with open("assets/data/events.json", "w") as f:
-        json.dump(events, f)
-else:
-    print(f"Failed to access. Status code: {response.status_code}")
-    print(response.text)
+    for comp in cal.walk():
+        if comp.name == "VEVENT":
+            start = comp.get('DTSTART'); end = comp.get('DTEND')
+            if start and end:
+                events.append({
+                    "title": str(comp.get('SUMMARY', 'No Title')),
+                    "start": start.dt.isoformat(),
+                    "end":   end.dt.isoformat()
+                })
+    Path("assets/data").mkdir(parents=True, exist_ok=True)
+    with open("assets/data/events.json", "w", encoding="utf-8") as f:
+        json.dump(events, f, ensure_ascii=False, indent=2)
+    print(f"Wrote {len(events)} events.")
+except Exception as e:
+    print(f"Error: {e}")
+    exit(1)
