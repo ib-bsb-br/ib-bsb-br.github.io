@@ -131,7 +131,7 @@ function handle_task_operations(PDO $pdo, string $board_slug): void {
 
                 // --- BEGIN "Process -> Publish" WORKFLOW ---
                 // After flagging the task, trigger the GitHub Actions workflow for instant publishing.
-                if (defined('GITHUB_TOKEN') && GITHUB_TOKEN !== 'your_github_personal_access_token_here') {
+                if (defined('GITHUB_TOKEN') && !empty(GITHUB_TOKEN) && GITHUB_TOKEN !== 'your_github_personal_access_token_here') {
                     $ch = curl_init();
                     $url = "https://api.github.com/repos/" . GITHUB_REPO . "/actions/workflows/" . GITHUB_WORKFLOW_ID . "/dispatches";
                     $payload = json_encode(['ref' => 'main']);
