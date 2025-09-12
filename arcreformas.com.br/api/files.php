@@ -1,6 +1,16 @@
 <?php
 declare(strict_types=1);
 
+function sanitize_filename(string $filename): string {
+    // Remove characters that are illegal in most filesystems or could be used for traversal.
+    $filename = str_replace(['..', '/', '\\', ':', '*', '?', '"', '<', '>', '|'], '_', $filename);
+    // Remove control characters
+    $filename = preg_replace('/[\x00-\x1F\x7F]/u', '', $filename);
+    // Trim whitespace and dots from the ends
+    $filename = trim($filename, ' .-_');
+    return $filename ?: 'unnamed_file';
+}
+
 function handle_files_request(?string $id): void {
     $method = $_SERVER['REQUEST_METHOD'];
 
@@ -51,9 +61,7 @@ function upload_new_file(): void {
     // Sanitize the filename
     $client_filename = $file['name'];
     $pathinfo = pathinfo($client_filename);
-    $base = preg_replace("/([^A-Za-z0-9_\-\.]|[\.]{2,})/", '', $pathinfo['filename']);
-    $base = ltrim($base, '._-');
-    $base = $base ?: 'unnamed_file';
+    $base = sanitize_filename($pathinfo['filename']);
     $ext = isset($pathinfo['extension']) ? '.' . strtolower($pathinfo['extension']) : '';
 
     // Ensure a unique filename in the upload directory
