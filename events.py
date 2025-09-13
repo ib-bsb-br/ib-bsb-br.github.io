@@ -1,34 +1,92 @@
-import requests, json, os
+import requests
 from requests.auth import HTTPDigestAuth
+import json
 from icalendar import Calendar
+import os
 from pathlib import Path
 
-url = os.environ.get("CALENDAR_URL")
-username = os.environ.get("CALENDAR_USER")
-password = os.environ.get("CALENDAR_PASS")
+# --- CONFIGURATION ---
+CENTRAL_API_URL = "https://arcreformas.com.br/api/published"
+OUTPUT_FILE = Path("assets/data/published_content.json")
 
-if not all([url, username, password]):
-    print("Missing CALENDAR_URL/CALENDAR_USER/CALENDAR_PASS.")
-    exit(1)
+# iCal credentials from GitHub Actions secrets
+ICAL_URL = os.getenv("ICAL_URL")
+ICAL_USER = os.getenv("ICAL_USER")
+ICAL_PASS = os.getenv("ICAL_PASS")
 
-try:
-    r = requests.get(url, auth=HTTPDigestAuth(username, password), timeout=30)
-    r.raise_for_status()
-    cal = Calendar.from_ical(r.text)
-    events = []
-    for comp in cal.walk():
-        if comp.name == "VEVENT":
-            start = comp.get('DTSTART'); end = comp.get('DTEND')
-            if start and end:
-                events.append({
-                    "title": str(comp.get('SUMMARY', 'No Title')),
-                    "start": start.dt.isoformat(),
-                    "end":   end.dt.isoformat()
-                })
-    Path("assets/data").mkdir(parents=True, exist_ok=True)
-    with open("assets/data/events.json", "w", encoding="utf-8") as f:
-        json.dump(events, f, ensure_ascii=False, indent=2)
-    print(f"Wrote {len(events)} events.")
-except Exception as e:
-    print(f"Error: {e}")
-    exit(1)
+def fetch_ical_events():
+    """Fetches and parses events from the iCal feed."""
+    if not all([ICAL_URL, ICAL_USER, ICAL_PASS]):
+        print("iCal credentials not found in environment variables. Skipping.")
+        return []
+
+    print("Fetching iCal events...")
+    try:
+        response = requests.get(ICAL_URL, auth=HTTPDigestAuth(ICAL_USER, ICAL_PASS), timeout=15)
+        response.raise_for_status()
+
+        calendar = Calendar.from_ical(response.text)
+        events = []
+        for component in calendar.walk():
+            if component.name == "VEVENT":
+                try:
+                    event = {
+                        "title": str(component.get('SUMMARY')),
+                        "start": component.get('DTSTART').dt.isoformat(),
+                        "end": component.get('DTEND').dt.isoformat(),
+                    }
+                    events.append(event)
+                except Exception as e:
+                    print(f"Skipping a malformed VEVENT: {e}")
+        print(f"Successfully fetched {len(events)} iCal events.")
+        return events
+    except requests.exceptions.RequestException as e:
+        status_code = getattr(e.response, 'status_code', 'Connection Error')
+        print(f"Failed to access iCal feed. Status code: {status_code}")
+        print(f"Error: {e}")
+        return []
+
+def fetch_published_notes():
+    """Fetches published notes from the central API."""
+    print("Fetching published notes from Central API...")
+    try:
+        response = requests.get(CENTRAL_API_URL, timeout=15)
+        response.raise_for_status()
+        data = response.json()
+        notes = data.get("tasks", [])
+        print(f"Successfully fetched {len(notes)} published notes.")
+        return notes
+    except requests.exceptions.RequestException as e:
+        status_code = getattr(e.response, 'status_code', 'Connection Error')
+        print(f"Failed to access Central API. Status code: {status_code}")
+        print(f"Error: {e}")
+        return []
+    except json.JSONDecodeError:
+        print("Failed to decode JSON response from Central API.")
+        return []
+
+def main():
+    """Main function to fetch all data and write to file."""
+
+    # Create the data directory if it doesn't exist
+    OUTPUT_FILE.parent.mkdir(parents=True, exist_ok=True)
+
+    # Fetch data from all sources
+    ical_events = fetch_ical_events()
+    published_notes = fetch_published_notes()
+
+    # Combine into a single data structure
+    combined_data = {
+        "events": ical_events,
+        "notes": published_notes
+    }
+
+    # Write to the output file
+    print(f"Writing combined data to {OUTPUT_FILE}...")
+    with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
+        json.dump(combined_data, f, indent=2, ensure_ascii=False)
+
+    print("Script finished successfully.")
+
+if __name__ == "__main__":
+    main()
