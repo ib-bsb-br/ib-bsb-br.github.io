@@ -1,0 +1,41 @@
+name: Refresh Site Content
+
+on:
+  workflow_dispatch: # Allows manual triggering from the GitHub Actions tab
+  schedule:
+    - cron: '0 */6 * * *' # Runs every 6 hours
+
+jobs:
+  refresh-and-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests icalendar
+
+      - name: Fetch and process content
+        env:
+          ICAL_URL: ${{ secrets.ICAL_URL }}
+          ICAL_USER: ${{ secrets.ICAL_USER }}
+          ICAL_PASS: ${{ secrets.ICAL_PASS }}
+        run: python ./events.py # Assumes events.py is in the root
+
+      - name: Commit and push if changed
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "chore: Refresh site content"
+          file_pattern: "assets/data/published_content.json"
+          # This action will only commit if the file has changed.
+          # The commit will automatically trigger a GitHub Pages build.
+        env:
+          # This token is provided by GitHub automatically
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
