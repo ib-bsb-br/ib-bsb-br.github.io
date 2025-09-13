@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>
     
-      Events — infoBAG
+      Agenda & Notes — infoBAG
     
   </title>
   <link rel="canonical" href="https://ib.bsb.br/events/">
@@ -37,16 +37,66 @@
     </nav>
   </header>
   <main class="content">
-    <h1 class="post-title"><a href="#bottom-of-page" aria-label="Go to bottom">Events</a></h1>
-<p><button id="triggerWorkflow">🔄</button></p>
+    <style>
+  .notes-section {
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid #eee;
+  }
+  @media (prefers-color-scheme: dark) {
+    .notes-section {
+      border-top-color: #333;
+    }
+  }
+  .notes-list {
+    list-style: none;
+    padding-left: 0;
+  }
+  .note-item {
+    padding: 0.75rem;
+    border-bottom: 1px solid #eee;
+  }
+  @media (prefers-color-scheme: dark) {
+    .note-item {
+      border-bottom-color: #333;
+    }
+  }
+  .note-item:last-child {
+    border-bottom: none;
+  }
+  .note-text {
+    display: block;
+    font-size: 1.1rem;
+  }
+  .note-meta {
+    display: block;
+    font-size: 0.85rem;
+    color: #888;
+    margin-top: 0.25rem;
+  }
+</style>
+
+<h1 class="post-title">Agenda &amp; Notes</h1>
+
+<p>A consolidated view of calendar events and published notes from the productivity system.</p>
+
 <div id="calendar"></div>
+
+<div class="notes-section">
+  <h2>Published Notes</h2>
+  <div id="notes-container">
+    <p>Loading notes...</p>
+  </div>
+</div>
 
 <script src="/assets/js/vendor/fullcalendar/index.global.min.js"></script>
 
 <script>
   document.addEventListener('DOMContentLoaded', function() {
     const calendarEl = document.getElementById('calendar');
-    fetch('/assets/data/events.json')
+    const notesContainer = document.getElementById('notes-container');
+
+    fetch('/assets/data/published_content.json')
       .then(response => {
         if (!response.ok) {
           throw new Error(`Network response was not ok: ${response.statusText}`);
@@ -54,62 +104,53 @@
         return response.json();
       })
       .then(data => {
+        // Render the FullCalendar with events data
         const calendar = new FullCalendar.Calendar(calendarEl, {
           initialView: 'listMonth',
-          events: data,
+          events: data.events || [], // Use events array
           headerToolbar: {
             left: 'prev,next today',
             center: 'title',
-            right: 'listMonth,dayGridMonth,timeGridWeek,timeGridDay'
+            right: 'listMonth,dayGridMonth,timeGridWeek'
           },
           navLinks: true,
-          editable: false,
-          selectable: false,
-          selectMirror: false,
           dayMaxEvents: true,
         });
         calendar.render();
+
+        // Render the published notes
+        const notes = data.notes || [];
+        if (notes.length > 0) {
+          notesContainer.innerHTML = ''; // Clear "Loading..." message
+          const notesList = document.createElement('ul');
+          notesList.className = 'notes-list';
+          notes.forEach(note => {
+            const item = document.createElement('li');
+            item.className = 'note-item';
+
+            const textSpan = document.createElement('span');
+            textSpan.className = 'note-text';
+            textSpan.textContent = note.text;
+
+            const metaSpan = document.createElement('span');
+            metaSpan.className = 'note-meta';
+            const updatedDate = new Date(note.updated_at);
+            metaSpan.textContent = `Published on: ${updatedDate.toLocaleDateString()}`;
+
+            item.appendChild(textSpan);
+            item.appendChild(metaSpan);
+            notesList.appendChild(item);
+          });
+          notesContainer.appendChild(notesList);
+        } else {
+          notesContainer.innerHTML = '<p>No notes have been published yet.</p>';
+        }
       })
       .catch(error => {
-        console.error('Error loading events:', error);
-        alert('Failed to load events. Please try again later.');
+        console.error('Error loading content:', error);
+        calendarEl.innerHTML = '<p style="color:red;">Could not load calendar events.</p>';
+        notesContainer.innerHTML = '<p style="color:red;">Could not load published notes.</p>';
       });
-  });
-</script>
-
-<script>
-  document.getElementById('triggerWorkflow').addEventListener('click', async () => {
-    const webhookEndpoint = 'https://8k5ij92zn4.execute-api.us-east-1.amazonaws.com/dev/trigger_github_workflow'; // Replace with your actual endpoint
-
-    const payload = {
-      ref: 'main',
-      workflow_id: 'dispatch-workflow.yml', // Ensure this matches your GitHub Actions workflow filename
-      inputs: {
-        some_input: 'An example input' // Replace with actual inputs your workflow expects
-      }
-    };
-
-    try {
-      const response = await fetch(webhookEndpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(`Server error: ${response.status} - ${errorData.message}`);
-      }
-
-      const data = await response.json();
-      console.log('Workflow dispatched successfully:', data);
-      alert('Workflow has been successfully triggered.');
-    } catch (error) {
-      console.error('Error triggering workflow:', error);
-      alert(`Failed to trigger workflow: ${error.message}`);
-    }
   });
 </script>
 
@@ -127,7 +168,7 @@
       
       
       <a href="https://ib.bsb.br/404" aria-label="404">
-        2025-09-12 10:00:39
+        2025-09-12 21:25:49
       </a>
       &hArr;
       <a href="https://github.com/ib-bsb-br/ib-bsb-br.github.io" aria-label="GitHub">&#8505;</a>
