@@ -6,13 +6,14 @@ import os
 from pathlib import Path
 
 # --- CONFIGURATION ---
-CENTRAL_API_URL = "https://arcreformas.com.br/api/published"
+CENTRAL_API_URL = "https://arcreformas.com.br/api"
 OUTPUT_FILE = Path("assets/data/published_content.json")
 
 # iCal credentials from GitHub Actions secrets
 ICAL_URL = os.getenv("ICAL_URL")
 ICAL_USER = os.getenv("ICAL_USER")
 ICAL_PASS = os.getenv("ICAL_PASS")
+
 
 def fetch_ical_events():
     """Fetches and parses events from the iCal feed."""
@@ -22,7 +23,8 @@ def fetch_ical_events():
 
     print("Fetching iCal events...")
     try:
-        response = requests.get(ICAL_URL, auth=HTTPDigestAuth(ICAL_USER, ICAL_PASS), timeout=15)
+        response = requests.get(ICAL_URL, auth=HTTPDigestAuth(
+            ICAL_USER, ICAL_PASS), timeout=15)
         response.raise_for_status()
 
         calendar = Calendar.from_ical(response.text)
@@ -46,6 +48,7 @@ def fetch_ical_events():
         print(f"Error: {e}")
         return []
 
+
 def fetch_published_notes():
     """Fetches published notes from the central API."""
     print("Fetching published notes from Central API...")
@@ -64,6 +67,7 @@ def fetch_published_notes():
     except json.JSONDecodeError:
         print("Failed to decode JSON response from Central API.")
         return []
+
 
 def main():
     """Main function to fetch all data and write to file."""
@@ -87,6 +91,7 @@ def main():
         json.dump(combined_data, f, indent=2, ensure_ascii=False)
 
     print("Script finished successfully.")
+
 
 if __name__ == "__main__":
     main()
