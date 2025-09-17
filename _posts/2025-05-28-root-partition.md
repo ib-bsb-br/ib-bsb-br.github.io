@@ -5,9 +5,506 @@ date: 2025-05-28
 type: post
 layout: post
 published: true
-slug: low-root-partition-space-on-rk3588
+slug: root-partition
 title: 'Low Root Partition Space on rk3588'
 ---
+
+{% codeblock bash %}
+#!/bin/bash
+set -euo pipefail
+
+# ==============================================================================
+# Overcoming Low Root Partition Space on rk3588 (Debian 11 / ARM64)
+# Phases implemented: Assessment, Cleanup (Phase 2), Analysis (Phase 3),
+# and Optional Directory Relocation via bind mounts / APT config (Phase 4).
+#
+# Target: Debian 11 (Bullseye) on ARM64 RK3588 bare-metal.
+# Run as a regular user with sudo privileges, from your home directory.
+#
+# Safety:
+# - No partitioning or flashing (Phase 5) is performed.
+# - Potentially risky steps (kernel purges, directory relocation, deletions,
+#   journald persistent-limit changes) require explicit confirmation ("yes").
+# - Backups of critical files (e.g., /etc/fstab) are made with timestamps.
+#
+# Idempotency:
+# - Re-checks for installed tools and existing mounts.
+# - Avoids duplicate /etc/fstab entries (uses a marker comment).
+# - Safe to re-run; will skip completed operations when possible.
+# ==============================================================================
+
+# ----------------------------- Configuration ----------------------------------
+DEFAULT_TARGETS=("/userdata" "/mnt/mSATA")  # Preferred relocation targets (must be mounted)
+FSTAB_MARK="# rk3588-space-tool"            # Marker used to identify fstab entries we add
+APT_CONF_FILE="/etc/apt/apt.conf.d/99custom_cache.conf"
+
+# ------------------------------ Utilities -------------------------------------
+log()  { echo -e "[INFO ] $*"; }
+warn() { echo -e "[WARN ] $*" >&2; }
+die()  { echo -e "[ERROR] $*" >&2; exit 1; }
+
+confirm() {
+  # Usage: confirm "WARNING message"
+  local msg="$1"
+  echo "$msg"
+  read -r -p "Type 'yes' to proceed (anything else to cancel): " _ans
+  [[ "${_ans}" == "yes" ]]
+}
+
+ensure_tool_installed() {
+  # Usage: ensure_tool_installed <binary> [apt-package-name]
+  local bin="$1"
+  local pkg="${2:-$1}"
+  if ! command -v "$bin" >/dev/null 2>&1; then
+    log "Installing required tool: $pkg"
+    if ! sudo apt install -y "$pkg"; then
+      die "Failed to install package: $pkg"
+    fi
+  fi
+}
+
+timestamp() { date +%Y%m%d%H%M%S; }
+
+backup_file() {
+  # Usage: backup_file /path/to/file
+  local path="$1"
+  if [[ -f "$path" ]]; then
+    local bak="${path}.bak.$(timestamp)"
+    if ! sudo cp -a "$path" "$bak"; then
+      die "Failed to backup $path to $bak"
+    fi
+    log "Backed up $path to $bak"
+  fi
+}
+
+# ------------------------ Target mount selection ------------------------------
+detect_or_choose_target() {
+  local chosen=""
+  # Prefer default targets if mounted
+  for t in "${DEFAULT_TARGETS[@]}"; do
+    if mountpoint -q "$t"; then
+      chosen="$t"
+      break
+    fi
+  done
+
+  if [[ -z "$chosen" ]]; then
+    echo
+    warn "No default relocation targets are mounted (${DEFAULT_TARGETS[*]})."
+    echo "Available mounts:"
+    if ! df -Th; then die "Failed to list filesystems."; fi
+    read -r -p "Enter an existing, mounted directory to use as relocation base (or leave blank to skip Phase 4): " custom
+    if [[ -n "${custom:-}" ]]; then
+      if mountpoint -q "$custom"; then
+        chosen="$custom"
+      else
+        warn "'$custom' is not a mount point. Skipping Phase 4."
+      fi
+    fi
+  fi
+  echo "$chosen"
+}
+
+# --------------------------- Kernel management --------------------------------
+list_installed_kernel_pkgs() {
+  # Lists versioned linux-image packages (avoid meta packages)
+  dpkg -l 'linux-image-[0-9]*' 2>/dev/null | awk '/^ii/ {print $2}'
+}
+
+pick_kernels_to_purge() {
+  # Excludes current kernel and retains one fallback (highest remaining version)
+  local current="$(uname -r)"
+  mapfile -t imgs < <(list_installed_kernel_pkgs)
+  # Filter out current
+  local candidates=()
+  for p in "${imgs[@]}"; do
+    [[ "$p" == *"$current"* ]] && continue
+    candidates+=("$p")
+  done
+  if (( ${#candidates[@]} == 0 )); then
+    echo ""
+    return 0
+  fi
+  # Keep the highest version as fallback
+  local highest
+  highest="$(printf '%s\n' "${candidates[@]}" | sort -V | tail -1)"
+  local to_purge=()
+  for p in "${candidates[@]}"; do
+    [[ "$p" == "$highest" ]] && continue
+    to_purge+=("$p")
+  done
+  printf "%s\n" "${to_purge[@]}"
+}
+
+# ------------------------- Journald configuration -----------------------------
+maybe_set_journald_limits() {
+  echo
+  read -r -p "Set persistent journald limits (e.g., SystemMaxUse=200M, SystemKeepFree=200M)? (yes/NO): " jset
+  if [[ "$jset" != "yes" ]]; then
+    log "Skipping persistent journald limits."
+    return 0
+  fi
+
+  local conf="/etc/systemd/journald.conf"
+  backup_file "$conf"
+
+  # Ensure keys exist or are updated (uncomment and set values)
+  local tmp="$(mktemp)"
+  if ! sudo cp -a "$conf" "$tmp"; then
+    die "Failed to copy $conf to $tmp"
+  fi
+
+  # Update or append settings
+  sudo awk '
+    BEGIN { sysmax=0; keepfree=0; }
+    /^#?SystemMaxUse=/ { print "SystemMaxUse=200M"; sysmax=1; next }
+    /^#?SystemKeepFree=/ { print "SystemKeepFree=200M"; keepfree=1; next }
+    { print }
+    END {
+      if (!sysmax) print "SystemMaxUse=200M";
+      if (!keepfree) print "SystemKeepFree=200M";
+    }
+  ' "$tmp" | sudo tee "$conf" >/dev/null || die "Failed to update $conf"
+
+  if ! sudo systemctl restart systemd-journald; then
+    die "Failed to restart systemd-journald after updating limits"
+  fi
+  log "Configured journald limits and restarted systemd-journald."
+}
+
+# ---------------------------- Relocation helpers ------------------------------
+safe_service_stop_if_present() {
+  # Stop a service if it exists (ignore errors). Usage: safe_service_stop_if_present rsyslog
+  local svc="$1"
+  if sudo systemctl list-unit-files | awk '{print $1}' | grep -qx "${svc}.service"; then
+    sudo systemctl is-active --quiet "$svc" && sudo systemctl stop "$svc" || true
+  fi
+}
+
+safe_service_start_if_present() {
+  local svc="$1"
+  if sudo systemctl list-unit-files | awk '{print $1}' | grep -qx "${svc}.service"; then
+    sudo systemctl start "$svc" || true
+  fi
+}
+
+ensure_rsync() { ensure_tool_installed rsync rsync; }
+
+append_fstab_bind_once() {
+  # Usage: append_fstab_bind_once <src> <dst>
+  local src="$1" dst="$2"
+  local line="$src $dst none bind,nofail 0 0 $FSTAB_MARK"
+  backup_file /etc/fstab
+  if grep -Fq "$FSTAB_MARK" /etc/fstab | grep -q "."; then
+    :
+  fi
+  if grep -Eq "^[^#]*[[:space:]]${dst}[[:space:]]" /etc/fstab; then
+    log "fstab already contains a mount for $dst; not adding duplicate."
+  else
+    echo "$line" | sudo tee -a /etc/fstab >/dev/null || die "Failed to append bind mount to /etc/fstab"
+    log "Added bind mount to /etc/fstab: $line"
+  fi
+}
+
+relocate_bind() {
+  # Usage: relocate_bind <source_dir> <base_target_mount>
+  # Copies source to base_target_mount/<safe_name>, bind-mounts back, updates fstab.
+  local src="$1"
+  local base="$2"
+
+  [[ -d "$src" ]] || die "Source directory does not exist: $src"
+  mountpoint -q "$src" && { warn "$src is already a mount point; skipping."; return 0; }
+  ensure_rsync
+
+  # Disallow critical system dirs (never relocate)
+  case "$src" in
+    /|/bin|/sbin|/lib|/lib32|/lib64|/libx32|/etc|/dev|/proc|/sys|/run|/boot)
+      die "Refusing to relocate critical system directory: $src"
+      ;;
+  esac
+
+  local safe_name
+  safe_name="$(echo "$src" | sed 's#^/##; s#[/ ]#_#g')"
+  local dst="${base}/${safe_name}"
+
+  log "Preparing relocation of $src -> $dst (via bind mount)"
+
+  if ! confirm "WARNING: Relocating $src. A copy will be made to $dst and then bind-mounted back. Proceed?"; then
+    warn "User cancelled relocation of $src."
+    return 0
+  fi
+
+  if ! sudo mkdir -p "$dst"; then die "Failed to create destination $dst"; fi
+
+  # Special handling for /var/log (quiesce rsyslog; minimize journald writes)
+  if [[ "$src" == "/var/log" ]]; then
+    safe_service_stop_if_present rsyslog
+    sudo journalctl --flush || true
+  fi
+
+  log "Copying data from $src to $dst (preserving permissions, xattrs, ACLs)..."
+  if ! sudo rsync -aAX --delete "$src"/ "$dst"/; then
+    [[ "$src" == "/var/log" ]] && safe_service_start_if_present rsyslog
+    die "rsync failed when copying $src to $dst"
+  fi
+
+  local backup="${src}.old.$(timestamp)"
+  log "Renaming original $src to $backup ..."
+  if ! sudo mv "$src" "$backup"; then
+    [[ "$src" == "/var/log" ]] && safe_service_start_if_present rsyslog
+    die "Failed to rename $src to $backup"
+  fi
+
+  if ! sudo mkdir -p "$src"; then
+    sudo mv "$backup" "$src" || true
+    [[ "$src" == "/var/log" ]] && safe_service_start_if_present rsyslog
+    die "Failed to create mount point $src"
+  fi
+
+  log "Bind-mounting $dst onto $src ..."
+  if ! sudo mount --bind "$dst" "$src"; then
+    warn "Bind mount failed; attempting rollback..."
+    sudo rm -rf "$src" || true
+    sudo mv "$backup" "$src" || true
+    [[ "$src" == "/var/log" ]] && safe_service_start_if_present rsyslog
+    die "Bind mount failed for $src"
+  fi
+
+  append_fstab_bind_once "$dst" "$src"
+
+  # Restart services if needed
+  if [[ "$src" == "/var/log" ]]; then
+    if ! sudo systemctl restart systemd-journald; then
+      warn "Failed to restart systemd-journald."
+    fi
+    safe_service_start_if_present rsyslog
+  fi
+
+  # Verify
+  if ! mountpoint -q "$src"; then
+    die "Verification failed: $src is not a mount point after relocation"
+  fi
+
+  log "Relocation of $src completed successfully."
+  echo "A backup of the original directory remains at: $backup"
+  if confirm "OPTIONAL: Delete the backup $backup now to free space? (Irreversible)"; then
+    if ! sudo rm -rf "$backup"; then
+      warn "Failed to remove backup $backup; please remove manually later."
+    else
+      log "Backup $backup removed."
+    fi
+  else
+    log "Backup retained at $backup."
+  fi
+}
+
+relocate_apt_cache() {
+  # Usage: relocate_apt_cache <base_target_mount>
+  local base="$1"
+  local new_dir="${base}/apt_cache"
+  log "Configuring APT cache to use: $new_dir"
+
+  if ! sudo mkdir -p "${new_dir}/partial"; then
+    die "Failed to create ${new_dir}/partial"
+  fi
+
+  backup_file "$APT_CONF_FILE"
+
+  # Inspect existing settings across apt.conf.d
+  local existing
+  existing="$(grep -RhoE '^\s*Dir::Cache::Archives\s+"[^"]+"/;' /etc/apt/apt.conf.d 2>/dev/null || true)"
+
+  if [[ -n "$existing" ]]; then
+    echo "Existing APT cache dir setting(s):"
+    echo "$existing"
+    if ! confirm "Update APT cache directory to ${new_dir}/ in all occurrences?"; then
+      warn "User chose not to update APT cache settings."
+      return 0
+    fi
+    # Update all occurrences to point at the new path
+    while IFS= read -r file; do
+      backup_file "$file"
+      sudo sed -i -E "s|^\s*Dir::Cache::Archives\s+\"[^\"]+\";|Dir::Cache::Archives \"${new_dir}/\";|g" "$file" || die "Failed to update $file"
+    done < <(grep -Rl 'Dir::Cache::Archives' /etc/apt/apt.conf.d 2>/dev/null || true)
+  else
+    # Create our own conf if none exists
+    echo "Dir::Cache::Archives \"${new_dir}/\";" | sudo tee "$APT_CONF_FILE" >/dev/null || die "Failed to write $APT_CONF_FILE"
+    log "Created $APT_CONF_FILE to set APT cache directory."
+  fi
+
+  # Optionally move current cache contents
+  if ls -1 /var/cache/apt/archives/*.deb >/dev/null 2>&1; then
+    if confirm "Move existing .deb files from /var/cache/apt/archives to ${new_dir}/ ?"; then
+      ensure_rsync
+      if ! sudo rsync -a --remove-source-files /var/cache/apt/archives/*.deb "${new_dir}/"; then
+        warn "Failed to move some .deb files; you can move them manually."
+      fi
+    fi
+  fi
+
+  # Clean old cache location’s partial
+  sudo rm -rf /var/cache/apt/archives/partial/* 2>/dev/null || true
+  log "APT cache relocation configured."
+}
+
+# ------------------------------- Main Flow ------------------------------------
+log "Starting low disk space mitigation tool for RK3588 (Debian 11)."
+echo
+log "Phase 1: Assessment (df -Th, lsblk, journal disk-usage)"
+if ! df -Th; then die "df -Th failed"; fi
+echo "-------------------------------------------"
+if ! lsblk; then die "lsblk failed"; fi
+echo "-------------------------------------------"
+if command -v journalctl >/dev/null 2>&1; then
+  sudo journalctl --disk-usage || true
+fi
+
+# Phase 2: Cleanup
+echo
+log "Phase 2: Standard System Cleanup"
+initial_avail_kb="$(df -k / | awk 'NR==2{print $4}')"
+initial_use_pct="$(df -h / | awk 'NR==2{print $5}')"
+
+log "Cleaning APT cache..."
+if ! sudo apt clean; then die "apt clean failed"; fi
+
+log "Removing orphaned packages..."
+if ! sudo apt autoremove --purge -y; then die "apt autoremove --purge failed"; fi
+
+# Optional old kernel purge
+mapfile -t purge_list < <(pick_kernels_to_purge || true)
+if (( ${#purge_list[@]} > 0 )); then
+  echo "Old kernel packages that can be purged (keeping current and one fallback):"
+  printf '  %s\n' "${purge_list[@]}"
+  if confirm "Purge the above old kernel packages now?"; then
+    # try to purge headers matching those images as well
+    headers=()
+    for img in "${purge_list[@]}"; do
+      hdr="${img/linux-image/linux-headers}"
+      dpkg -s "$hdr" >/dev/null 2>&1 && headers+=("$hdr") || true
+    done
+    log "Purging: ${purge_list[*]} ${headers[*]:-}"
+    if ! sudo apt purge -y "${purge_list[@]}" "${headers[@]:-}"; then
+      warn "Some kernel packages failed to purge."
+    fi
+  else
+    log "Skipping old kernel purge."
+  fi
+else
+  log "No old kernel packages found to purge."
+fi
+
+# Journal vacuum (non-destructive to active logs)
+log "Vacuuming journal logs older than 7 days (if persistent journaling is enabled)..."
+sudo journalctl --vacuum-time=7d || true
+
+# Clean /var/tmp (older than 7 days)
+log "Cleaning files older than 7 days in /var/tmp ..."
+sudo find /var/tmp -type f -mtime +7 -print -delete || warn "Some /var/tmp files could not be removed."
+
+# Summarize freed space
+final_avail_kb="$(df -k / | awk 'NR==2{print $4}')"
+freed_kb=$(( final_avail_kb - initial_avail_kb ))
+freed_mb=$(( freed_kb / 1024 ))
+final_use_pct="$(df -h / | awk 'NR==2{print $5}')"
+log "Cleanup complete. Freed approximately ${freed_mb} MB (root usage: $initial_use_pct -> $final_use_pct)."
+
+# Offer persistent journald limits
+maybe_set_journald_limits
+
+# Phase 3: Analysis
+echo
+log "Phase 3: Disk Usage Analysis (top directories/files on /)"
+ensure_tool_installed numfmt coreutils
+echo "Top 15 directories under / (one level):"
+sudo du -x -k -d1 / 2>/dev/null | sort -rn | head -n 15 | numfmt --to=iec --field 1 || warn "Directory size listing failed."
+echo "-------------------------------------------"
+echo "Top 15 directories under /var (one level):"
+sudo du -x -k -d1 /var 2>/dev/null | sort -rn | head -n 15 | numfmt --to=iec --field 1 || true
+echo "-------------------------------------------"
+echo "Largest files on / (>500M):"
+sudo find / -xdev -type f -size +500M -printf '%s %p\n' 2>/dev/null | sort -nr | head -n 15 | numfmt --to=iec --field 1 || true
+
+# ncdu (interactive)
+if confirm "OPTIONAL: Launch ncdu (interactive) to explore disk usage on / now? (You can quit ncdu with 'q')"; then
+  ensure_tool_installed ncdu ncdu
+  sudo ncdu -x /
+fi
+
+# Phase 4: Optional Relocation
+echo
+log "Phase 4: Optional Directory Relocation (bind mounts / APT cache)"
+RELOC_BASE="$(detect_or_choose_target)"
+if [[ -z "$RELOC_BASE" ]]; then
+  log "No relocation base selected. Skipping Phase 4."
+  log "All done."
+  exit 0
+fi
+
+# Show target capacity
+log "Relocation target: $RELOC_BASE"
+df -Th "$RELOC_BASE" || warn "Could not show target filesystem capacity."
+
+if ! confirm "IMPORTANT: Ensure you have backups. Proceed with relocation tasks on '$RELOC_BASE'?"; then
+  log "User skipped Phase 4."
+  exit 0
+fi
+
+# Menu-driven relocation loop
+while true; do
+  echo
+  echo "Choose a relocation task (base: $RELOC_BASE):"
+  echo "  1) Relocate APT cache (/var/cache/apt/archives) using apt.conf"
+  echo "  2) Relocate /var/log (bind mount)"
+  echo "  3) Relocate /opt (bind mount)"
+  echo "  4) Relocate /usr/local (bind mount)"
+  echo "  5) Relocate /srv (bind mount)"
+  echo "  6) Relocate a custom directory (bind mount)"
+  echo "  7) Done (exit Phase 4)"
+  read -r -p "Enter choice [1-7]: " choice
+  case "$choice" in
+    1)
+      relocate_apt_cache "$RELOC_BASE"
+      ;;
+    2)
+      relocate_bind "/var/log" "$RELOC_BASE"
+      ;;
+    3)
+      relocate_bind "/opt" "$RELOC_BASE"
+      ;;
+    4)
+      relocate_bind "/usr/local" "$RELOC_BASE"
+      ;;
+    5)
+      relocate_bind "/srv" "$RELOC_BASE"
+      ;;
+    6)
+      read -r -p "Enter absolute directory path to relocate (e.g., /var/lib/myapp): " custom_src
+      if [[ -z "${custom_src:-}" || "${custom_src:0:1}" != "/" ]]; then
+        warn "Please enter an absolute path."
+      else
+        relocate_bind "$custom_src" "$RELOC_BASE"
+      fi
+      ;;
+    7)
+      break
+      ;;
+    *)
+      warn "Invalid choice. Please select 1-7."
+      ;;
+  esac
+done
+
+echo
+log "Post-relocation verification:"
+df -Th /
+df -Th "$RELOC_BASE" || true
+mount | grep -E "(/var/log|/opt|/usr/local|/srv)" || true
+
+log "Completed. Consider rebooting to validate persistent mounts and confirm system logging is healthy."
+exit 0
+{% endcodeblock %}
+
 ## **1\. Introduction: Addressing Root Partition Space on rk3588**
 
 ### **Overview of the Low Space Issue**
