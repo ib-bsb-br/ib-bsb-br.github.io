@@ -1,0 +1,959 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>
+      
+        Backing up Windows machines using rsync and ssh - infoBAG
+      
+    </title>
+    <meta name="title" content="Backing up Windows machines using rsync and ssh - infoBAG" />
+    <meta name="description" content="">
+    <meta property="og:type" content="article">
+    <meta property="og:url" content="https://ib.bsb.br/windows-rsync/">
+    <meta property="og:title" content="Backing up Windows machines using rsync and ssh - infoBAG">
+    <meta property="og:description" content="">
+    <meta property="og:image" content="/favicon.ico">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:url" content="https://ib.bsb.br/windows-rsync/">
+    <meta name="twitter:title" content="Backing up Windows machines using rsync and ssh - infoBAG">
+    <meta name="twitter:description" content="">
+    <meta name="twitter:image" content="/favicon.ico">
+    <link rel="canonical" href="https://ib.bsb.br/windows-rsync/">
+    <link rel="alternate" type="application/rss+xml" title="infoBAG" href="https://ib.bsb.br/rss.xml">
+    
+      <meta name="keywords" content="scratchpad">
+      
+        <meta property="article:tag" content="scratchpad">
+      
+    
+    <link rel="icon" href="/favicon.ico" type="image/x-icon">
+    <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon">
+    
+    <link rel="stylesheet" href="/style.css">
+  </head>
+  <body class="post-content-body">
+    <header class="header-container">
+      <nav aria-label="Main navigation" class="header-content">
+        <a href="/" aria-label="Home">
+          <img src="/favicon.ico" alt="Home" class="favicon search-link" width="32" height="32" loading="lazy">
+        </a>
+        <a href="/tags" aria-label="Tags">
+          <img src="/assets/Label.gif" alt="Tags" class="favicon search-link" width="32" height="32" loading="lazy">
+        </a>
+        <a href="/send" aria-label="send">
+          <img src="/assets/rot.gif" alt="send" class="favicon search-link" width="32" height="32" loading="lazy">
+        </a> 
+        <a href="/created" aria-label="archive created">
+          <img src="/assets/Loose_Stone_Pile.gif" alt="archive created" class="favicon search-link" width="32" height="32" loading="lazy">
+        </a>
+        <a href="/events" aria-label="Events">
+          <img src="/assets/Paralyse_Rune.gif" alt="Events" class="favicon search-link" width="32" height="32" loading="lazy">
+        </a>
+        <a href="/modified" aria-label="archive modified">
+          <img src="/assets/Hole_(Rock).gif" alt="archive modified" class="favicon search-link" width="32" height="32" loading="lazy">
+        </a>
+    </nav>
+      <h5 class="post-title">
+        <a href="#bottom-of-page" aria-label="Go to bottom">
+          Backing up Windows machines using rsync and ssh
+        </a>
+      </h5>
+      <div class="post-meta">
+        <time datetime="2025-03-23T00:00:00+00:00" class="post-date">
+          23 Mar 2025
+        </time>
+        
+          <span class="post-updated">
+            ↣
+            <time datetime="2025-09-19T02:08:02+00:00">
+              19 Sep 2025
+            </time>
+          </span>
+        
+        
+          <p class="post-slug">
+            Slug: <a href="https://ib.bsb.br/windows-rsync" class="tag">windows-rsync</a>
+          </p>
+        
+        
+          <p class="post-tags">
+            Tags:
+            
+              <a href="https://ib.bsb.br/tags/#scratchpad" class="tag">scratchpad</a>
+            
+          </p>
+        
+      </div>
+      <div class="post-actions">
+        <div class="page-stats mt-3" role="status" aria-label="Page statistics">
+      
+      <span class="badge bg-primary">
+        19033 characters
+      </span>
+        <span class="separator mx-2" aria-hidden="true">•</span>
+        <span class="badge bg-primary">
+        2397 words
+      </span>
+      </div>
+        <div class="action-buttons d-flex flex-wrap gap-2">
+          
+            
+              <form action="https://github.com/ib-bsb-br/ib-bsb-br.github.io/edit/main/_posts/2025-03-23-windows-rsync.md"
+                    method="GET"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="d-inline-block">
+                <button type="submit" class="btn btn-danger" aria-label="Edit page content">
+                  <span class="button-text">Improve this page?</span>
+                  <span class="info-text">aberto.</span>
+                </button>
+              </form>
+            
+            <form action="https://github.com/ib-bsb-br/ib-bsb-br.github.io/commits/main/_posts/2025-03-23-windows-rsync.md"
+                  method="GET"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="d-inline-block">
+              <button type="submit" class="btn btn-danger" aria-label="View page revision history">
+                View revision history
+              </button>
+            </form>
+          
+        </div>
+      </div>
+    </header>
+    <main class="content">
+      <article class="post-wrapper">
+        <div class="post-content-body">
+          
+<ul><li><a href="#executive-summary-windows-10-local-user">Executive summary (Windows 10 local user)</a></li><li><a href="#section-0-immediate-steps-to-secure-your-server-access-after-key-compromise-windows-10">Section 0: Immediate Steps to Secure Your Server Access After Key Compromise (Windows 10)</a></li><li><a href="#section-1-understanding-your-server-information-recap">Section 1: Understanding Your Server Information (Recap)</a></li><li><a href="#section-2-connecting-remotely-with-ssh">Section 2: Connecting Remotely with SSH</a></li><li><a href="#section-3-transferring-files-securely">Section 3: Transferring Files Securely</a></li><li><a href="#section-4-important-general-considerations-server-side">Section 4: Important General Considerations (server-side)</a></li><li><a href="#section-5-troubleshooting">Section 5: Troubleshooting</a></li><li><a href="#powershell-automation-windows-10-local-user">PowerShell automation (Windows 10 local user)</a><ul><li><a href="#usage">Usage</a></li></ul></li><li><a href="#economical-backup-solution-rsync-and-ssh">Economical backup solution: rsync and ssh</a></li><li><a href="#putting-it-all-in-scripts">Putting it all in scripts:</a></li></ul>
+          <h2 id="executive-summary-windows-10-local-user">
+    
+    
+     <a href="#executive-summary-windows-10-local-user">#</a><a href="#" aria-label="Back to top">Executive summary (Windows 10 local user)</a>
+        
+    
+  </h2>
+      
+
+<ol>
+  <li>Generate a <strong>new</strong> SSH key (<code class="language-plaintext highlighter-rouge">ssh-keygen -t ed25519</code>) and append the <strong>public</strong> key to <code class="language-plaintext highlighter-rouge">~/.ssh/authorized_keys</code> on <code class="language-plaintext highlighter-rouge">dc2.myusadc.com</code> for user <code class="language-plaintext highlighter-rouge">ibbsbbry</code>.</li>
+  <li>Test <code class="language-plaintext highlighter-rouge">ssh -i ~/.ssh/id_ed25519 ibbsbbry@dc2.myusadc.com</code>.</li>
+  <li>Prefer <strong>rsync over SSH</strong> (no daemon). If you need rsync modules, use <strong>daemon+tunnel</strong> with a user-owned <code class="language-plaintext highlighter-rouge">rsyncd.conf</code>.</li>
+  <li>Use the PowerShell script below to automate: it can add your key, sync files listed in <code class="language-plaintext highlighter-rouge">filelist.txt</code> (Cygwin paths), and optionally create a minimal <code class="language-plaintext highlighter-rouge">rsyncd.conf</code>.</li>
+</ol><hr />
+  <h2 id="section-0-immediate-steps-to-secure-your-server-access-after-key-compromise-windows-10">
+    
+    
+     <a href="#section-0-immediate-steps-to-secure-your-server-access-after-key-compromise-windows-10">#</a><a href="#" aria-label="Back to top">Section 0: Immediate Steps to Secure Your Server Access After Key Compromise (Windows 10)</a>
+        
+    
+  </h2>
+      
+
+<p><strong>0.1 Generate a NEW SSH key (PowerShell):</strong></p>
+
+<div class="language-powershell highlighter-rouge"><div class="highlight"><section><code><span class="c"># Recommended</span><span class="w">
+</span><span class="n">ssh-keygen</span><span class="w"> </span><span class="nt">-t</span><span class="w"> </span><span class="nx">ed25519</span><span class="w"> </span><span class="nt">-C</span><span class="w"> </span><span class="s2">"your_email@example.com"</span><span class="w">
+</span><span class="c"># OR</span><span class="w">
+</span><span class="n">ssh-keygen</span><span class="w"> </span><span class="nt">-t</span><span class="w"> </span><span class="nx">rsa</span><span class="w"> </span><span class="nt">-b</span><span class="w"> </span><span class="nx">4096</span><span class="w"> </span><span class="nt">-C</span><span class="w"> </span><span class="s2">"your_email@example.com"</span><span class="w">
+</span></code></section></div></div>
+
+<p>Default path: <code class="language-plaintext highlighter-rouge">C:\Users\&lt;you&gt;\.ssh\id_ed25519</code>. Use a strong passphrase.</p>
+
+<p><strong>0.2 Add your NEW public key to the server (Windows lacks ssh-copy-id):</strong></p>
+
+<div class="language-powershell highlighter-rouge"><div class="highlight"><section><code><span class="nv">$pub</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"</span><span class="nv">$</span><span class="nn">env</span><span class="p">:</span><span class="nv">USERPROFILE</span><span class="s2">\.ssh\id_ed25519.pub"</span><span class="w">
+</span><span class="n">scp</span><span class="w"> </span><span class="nv">$pub</span><span class="w"> </span><span class="nx">ibbsbbry</span><span class="err">@</span><span class="nx">dc2.myusadc.com:~/.ssh/tmp_newkey.pub</span><span class="w">
+</span><span class="n">ssh</span><span class="w"> </span><span class="nx">ibbsbbry</span><span class="err">@</span><span class="nx">dc2.myusadc.com</span><span class="w"> </span><span class="s2">"mkdir -p ~/.ssh &amp;&amp; chmod 700 ~/.ssh &amp;&amp; cat ~/.ssh/tmp_newkey.pub &gt;&gt; ~/.ssh/authorized_keys &amp;&amp; rm ~/.ssh/tmp_newkey.pub &amp;&amp; chmod 600 ~/.ssh/authorized_keys"</span><span class="w">
+</span></code></section></div></div>
+
+<p><strong>0.3 Test login with the NEW key:</strong></p>
+
+<div class="language-powershell highlighter-rouge"><div class="highlight"><section><code><span class="n">ssh</span><span class="w"> </span><span class="nt">-i</span><span class="w"> </span><span class="s2">"</span><span class="nv">$</span><span class="nn">env</span><span class="p">:</span><span class="nv">USERPROFILE</span><span class="s2">\.ssh\id_ed25519"</span><span class="w"> </span><span class="nx">ibbsbbry</span><span class="err">@</span><span class="nx">dc2.myusadc.com</span><span class="w">
+</span><span class="c"># If using a custom port, add: -p 2222</span><span class="w">
+</span></code></section></div></div>
+
+<p><strong>0.4 Remove the compromised key from <code class="language-plaintext highlighter-rouge">authorized_keys</code> on the server.</strong></p>
+
+<p><strong>0.5 Delete the compromised private key wherever it existed.</strong></p>
+
+<p><strong>Optional <code class="language-plaintext highlighter-rouge">ssh-agent</code> (enter passphrase once per session):</strong></p>
+
+<div class="language-powershell highlighter-rouge"><div class="highlight"><section><code><span class="n">Start-Service</span><span class="w"> </span><span class="nx">ssh-agent</span><span class="w"> </span><span class="nt">-ErrorAction</span><span class="w"> </span><span class="nx">SilentlyContinue</span><span class="w">
+</span><span class="n">ssh-add</span><span class="w"> </span><span class="s2">"</span><span class="nv">$</span><span class="nn">env</span><span class="p">:</span><span class="nv">USERPROFILE</span><span class="s2">\.ssh\id_ed25519"</span><span class="w">
+</span></code></section></div></div><hr />
+  <h2 id="section-1-understanding-your-server-information-recap">
+    
+    
+     <a href="#section-1-understanding-your-server-information-recap">#</a><a href="#" aria-label="Back to top">Section 1: Understanding Your Server Information (Recap)</a>
+        
+    
+  </h2>
+      
+
+<ul>
+  <li><strong>Username:</strong> <code class="language-plaintext highlighter-rouge">ibbsbbry</code></li>
+  <li><strong>Hostname:</strong> <code class="language-plaintext highlighter-rouge">dc2.myusadc.com</code></li>
+  <li><strong>Public IP:</strong> <code class="language-plaintext highlighter-rouge">15.204.42.250</code></li>
+  <li><strong>SSH Port:</strong> default <code class="language-plaintext highlighter-rouge">22</code> unless you use a custom port.</li>
+</ul><hr />
+  <h2 id="section-2-connecting-remotely-with-ssh">
+    
+    
+     <a href="#section-2-connecting-remotely-with-ssh">#</a><a href="#" aria-label="Back to top">Section 2: Connecting Remotely with SSH</a>
+        
+    
+  </h2>
+      
+
+<p><strong>2.1 OpenSSH (PowerShell):</strong></p>
+
+<div class="language-powershell highlighter-rouge"><div class="highlight"><section><code><span class="n">ssh</span><span class="w"> </span><span class="nx">ibbsbbry</span><span class="err">@</span><span class="nx">dc2.myusadc.com</span><span class="w">
+</span><span class="n">ssh</span><span class="w"> </span><span class="nt">-i</span><span class="w"> </span><span class="s2">"</span><span class="nv">$</span><span class="nn">env</span><span class="p">:</span><span class="nv">USERPROFILE</span><span class="s2">\.ssh\id_ed25519"</span><span class="w"> </span><span class="nx">ibbsbbry</span><span class="err">@</span><span class="nx">dc2.myusadc.com</span><span class="w">
+</span><span class="n">ssh</span><span class="w"> </span><span class="nt">-i</span><span class="w"> </span><span class="s2">"</span><span class="nv">$</span><span class="nn">env</span><span class="p">:</span><span class="nv">USERPROFILE</span><span class="s2">\.ssh\id_ed25519"</span><span class="w"> </span><span class="nt">-p</span><span class="w"> </span><span class="nx">2222</span><span class="w"> </span><span class="nx">ibbsbbry</span><span class="err">@</span><span class="nx">dc2.myusadc.com</span><span class="w">
+</span></code></section></div></div>
+
+<p><em>First connection adds the host key. If your OpenSSH is older and doesn’t support <code class="language-plaintext highlighter-rouge">StrictHostKeyChecking=accept-new</code>, use the script’s <code class="language-plaintext highlighter-rouge">-InsecureHostKey</code> fallback only if needed.</em></p>
+
+<p><strong>2.2 PuTTY/Plink (optional):</strong></p>
+
+<ul>
+  <li>Convert OpenSSH key to <code class="language-plaintext highlighter-rouge">.ppk</code> via <strong>PuTTYgen</strong>.</li>
+  <li>PuTTY: Host <code class="language-plaintext highlighter-rouge">dc2.myusadc.com</code>, Port <code class="language-plaintext highlighter-rouge">22</code>, Auth → select <code class="language-plaintext highlighter-rouge">.ppk</code>. Save session and connect.</li>
+  <li>Plink: <code class="language-plaintext highlighter-rouge">plink -i C:\path\to\id_ed25519.ppk ibbsbbry@dc2.myusadc.com</code></li>
+</ul><hr />
+  <h2 id="section-3-transferring-files-securely">
+    
+    
+     <a href="#section-3-transferring-files-securely">#</a><a href="#" aria-label="Back to top">Section 3: Transferring Files Securely</a>
+        
+    
+  </h2>
+      
+
+<p><strong>3.1 SFTP (interactive):</strong></p>
+
+<div class="language-powershell highlighter-rouge"><div class="highlight"><section><code><span class="n">sftp</span><span class="w"> </span><span class="nx">ibbsbbry</span><span class="err">@</span><span class="nx">dc2.myusadc.com</span><span class="w">
+</span><span class="c"># or with key/port:</span><span class="w">
+</span><span class="n">sftp</span><span class="w"> </span><span class="nt">-i</span><span class="w"> </span><span class="s2">"</span><span class="nv">$</span><span class="nn">env</span><span class="p">:</span><span class="nv">USERPROFILE</span><span class="s2">\.ssh\id_ed25519"</span><span class="w"> </span><span class="nt">-oPort</span><span class="o">=</span><span class="mi">2222</span><span class="w"> </span><span class="n">ibbsbbry</span><span class="err">@</span><span class="nx">dc2.myusadc.com</span><span class="w">
+</span></code></section></div></div>
+
+<p>Common commands: <code class="language-plaintext highlighter-rouge">put</code>, <code class="language-plaintext highlighter-rouge">get</code>, <code class="language-plaintext highlighter-rouge">ls</code>, <code class="language-plaintext highlighter-rouge">cd</code>, <code class="language-plaintext highlighter-rouge">lcd</code>, <code class="language-plaintext highlighter-rouge">mkdir</code>, <code class="language-plaintext highlighter-rouge">rm</code>, <code class="language-plaintext highlighter-rouge">exit</code>.</p>
+
+<p><strong>GUI options (quick):</strong></p>
+
+<ul>
+  <li><strong>WinSCP:</strong> Protocol <code class="language-plaintext highlighter-rouge">SFTP</code> → Host <code class="language-plaintext highlighter-rouge">dc2.myusadc.com</code> → Port <code class="language-plaintext highlighter-rouge">22</code> → User <code class="language-plaintext highlighter-rouge">ibbsbbry</code> → Advanced → SSH → Authentication → point to <code class="language-plaintext highlighter-rouge">.ppk</code> → Login.</li>
+  <li><strong>FileZilla:</strong> Host <code class="language-plaintext highlighter-rouge">sftp://dc2.myusadc.com</code> → User <code class="language-plaintext highlighter-rouge">ibbsbbry</code> → Port <code class="language-plaintext highlighter-rouge">22</code> → Settings → Connection → SFTP → add key.</li>
+</ul>
+
+<p><strong>3.2 SCP:</strong></p>
+
+<div class="language-powershell highlighter-rouge"><div class="highlight"><section><code><span class="c"># Upload</span><span class="w">
+</span><span class="n">scp</span><span class="w"> </span><span class="nt">-i</span><span class="w"> </span><span class="s2">"</span><span class="nv">$</span><span class="nn">env</span><span class="p">:</span><span class="nv">USERPROFILE</span><span class="s2">\.ssh\id_ed25519"</span><span class="w"> </span><span class="o">.</span><span class="nx">\local\file.txt</span><span class="w"> </span><span class="nx">ibbsbbry</span><span class="err">@</span><span class="nx">dc2.myusadc.com:/remote/path/</span><span class="w">
+</span><span class="c"># Download</span><span class="w">
+</span><span class="n">scp</span><span class="w"> </span><span class="nt">-i</span><span class="w"> </span><span class="s2">"</span><span class="nv">$</span><span class="nn">env</span><span class="p">:</span><span class="nv">USERPROFILE</span><span class="s2">\.ssh\id_ed25519"</span><span class="w"> </span><span class="nx">ibbsbbry</span><span class="err">@</span><span class="nx">dc2.myusadc.com:/remote/path/file.txt</span><span class="w"> </span><span class="o">.</span><span class="nx">\</span><span class="w">
+</span><span class="c"># Custom port: add -P 2222</span><span class="w">
+</span></code></section></div></div>
+
+<p><strong>3.3 rsync (efficient sync; requires Cygwin/MSYS2 rsync installed under your user)</strong></p>
+
+<ul>
+  <li>Windows paths → Cygwin/MSYS2 paths (<code class="language-plaintext highlighter-rouge">C:\</code> ⇒ <code class="language-plaintext highlighter-rouge">/cygdrive/c</code>).</li>
+  <li><strong>SSH mode (simpler; recommended):</strong></li>
+</ul>
+
+<div class="language-powershell highlighter-rouge"><div class="highlight"><section><code><span class="n">rsync</span><span class="w"> </span><span class="nt">-avz</span><span class="w"> </span><span class="nt">--progress</span><span class="w"> </span><span class="nt">-e</span><span class="w"> </span><span class="s2">"ssh -i </span><span class="nv">$</span><span class="nn">env</span><span class="p">:</span><span class="nv">USERPROFILE</span><span class="s2">/.ssh/id_ed25519"</span><span class="w"> </span><span class="nx">/cygdrive/d/mydata/</span><span class="w"> </span><span class="nx">ibbsbbry</span><span class="err">@</span><span class="nx">dc2.myusadc.com:/backup/ibbsbbry/</span><span class="w">
+</span></code></section></div></div>
+
+<ul>
+  <li>
+    <p><strong>Daemon+tunnel mode (module-based):</strong></p>
+
+    <ol>
+      <li>
+        <p>Create <code class="language-plaintext highlighter-rouge">~/rsyncd.conf</code> (user-owned):</p>
+
+        <div class="language-plaintext highlighter-rouge"><div class="highlight"><section><code>use chroot = no
+pid file = /home/ibbsbbry/rsyncd.pid
+[backup]
+    path = /backup
+    read only = no
+    comment = backup area
+    hosts allow = 127.0.0.1
+    hosts deny  = *
+</code></section></div>        </div>
+      </li>
+      <li>
+        <p>Start daemon &amp; forward local 873 → remote 1873:</p>
+
+        <div class="language-powershell highlighter-rouge"><div class="highlight"><section><code><span class="n">ssh</span><span class="w"> </span><span class="nx">ibbsbbry</span><span class="err">@</span><span class="nx">dc2.myusadc.com</span><span class="w"> </span><span class="s1">'rsync --daemon --port=1873 --config=$HOME/rsyncd.conf'</span><span class="w">
+</span><span class="n">ssh</span><span class="w"> </span><span class="nt">-N</span><span class="w"> </span><span class="nt">-L</span><span class="w"> </span><span class="nx">873:localhost:1873</span><span class="w"> </span><span class="nx">ibbsbbry</span><span class="err">@</span><span class="nx">dc2.myusadc.com</span><span class="w">   </span><span class="c"># separate window</span><span class="w">
+</span></code></section></div>        </div>
+      </li>
+      <li>
+        <p>Sync via module:</p>
+
+        <div class="language-powershell highlighter-rouge"><div class="highlight"><section><code><span class="n">rsync</span><span class="w"> </span><span class="nt">-avz</span><span class="w"> </span><span class="nt">--progress</span><span class="w"> </span><span class="nx">/cygdrive/d/mydata</span><span class="w"> </span><span class="nx">127.0.0.1::backup/ibbsbbry</span><span class="w">
+</span></code></section></div>        </div>
+      </li>
+      <li>
+        <p>Stop daemon:</p>
+
+        <div class="language-powershell highlighter-rouge"><div class="highlight"><section><code><span class="n">ssh</span><span class="w"> </span><span class="nx">ibbsbbry</span><span class="err">@</span><span class="nx">dc2.myusadc.com</span><span class="w"> </span><span class="s1">'kill $(cat ~/rsyncd.pid)'</span><span class="w">
+</span></code></section></div>        </div>
+      </li>
+    </ol>
+  </li>
+</ul><hr />
+  <h2 id="section-4-important-general-considerations-server-side">
+    
+    
+     <a href="#section-4-important-general-considerations-server-side">#</a><a href="#" aria-label="Back to top">Section 4: Important General Considerations (server-side)</a>
+        
+    
+  </h2>
+      
+
+<ul>
+  <li><strong>Firewall:</strong> Ensure inbound SSH (e.g., 22 or your custom port) is allowed (<code class="language-plaintext highlighter-rouge">ufw</code>, <code class="language-plaintext highlighter-rouge">firewalld</code>, security groups).</li>
+  <li>
+    <p><strong><code class="language-plaintext highlighter-rouge">/etc/ssh/sshd_config</code> (admin-controlled):</strong></p>
+
+    <ul>
+      <li><code class="language-plaintext highlighter-rouge">Port 22</code> (or your custom)</li>
+      <li><code class="language-plaintext highlighter-rouge">PubkeyAuthentication yes</code></li>
+      <li><code class="language-plaintext highlighter-rouge">PasswordAuthentication no</code> (once keys work)</li>
+      <li><code class="language-plaintext highlighter-rouge">PermitRootLogin no</code></li>
+      <li>Restart SSH after changes: <code class="language-plaintext highlighter-rouge">sudo systemctl restart sshd</code></li>
+    </ul>
+  </li>
+  <li><strong>Client private key security:</strong> Keep your private key private; use a strong passphrase and <code class="language-plaintext highlighter-rouge">ssh-agent</code>.</li>
+</ul><hr />
+  <h2 id="section-5-troubleshooting">
+    
+    
+     <a href="#section-5-troubleshooting">#</a><a href="#" aria-label="Back to top">Section 5: Troubleshooting</a>
+        
+    
+  </h2>
+      
+
+<ul>
+  <li><strong><code class="language-plaintext highlighter-rouge">Permission denied (publickey…)</code></strong>: Check that your <strong>new</strong> public key is in <code class="language-plaintext highlighter-rouge">~/.ssh/authorized_keys</code>, server perms <code class="language-plaintext highlighter-rouge">~/.ssh</code>=700, <code class="language-plaintext highlighter-rouge">authorized_keys</code>=600, and client private key perms are restrictive.</li>
+  <li><strong><code class="language-plaintext highlighter-rouge">Connection refused</code></strong>: Verify host/port, SSH service running, firewall rules, and reachability (<code class="language-plaintext highlighter-rouge">ping</code>, <code class="language-plaintext highlighter-rouge">tracert</code>).</li>
+  <li><strong>Rsync path errors</strong>: Use Cygwin paths on Windows; ensure the remote target directory exists and is writable.</li>
+</ul><hr />
+  <h2 id="powershell-automation-windows-10-local-user">
+    
+    
+     <a href="#powershell-automation-windows-10-local-user">#</a><a href="#" aria-label="Back to top">PowerShell automation (Windows 10 local user)</a>
+        
+    
+  </h2>
+      
+
+<blockquote>
+  <p>Save as <code class="language-plaintext highlighter-rouge">coolice-ssh-rsync.ps1</code>.
+Requires: <code class="language-plaintext highlighter-rouge">ssh</code>, <code class="language-plaintext highlighter-rouge">scp</code> (OpenSSH), and <code class="language-plaintext highlighter-rouge">rsync</code> (Cygwin/MSYS2 in <strong>user</strong> PATH).
+Supports: custom SSH port, host-key fallback, optional creation of <code class="language-plaintext highlighter-rouge">rsyncd.conf</code>, SSH mode or Daemon+tunnel mode, <code class="language-plaintext highlighter-rouge">--progress</code> and <code class="language-plaintext highlighter-rouge">-z</code> toggles, and safe file list normalization.</p>
+</blockquote>
+
+<div class="language-powershell highlighter-rouge"><div class="highlight"><section><code><span class="cm">&lt;# 
+</span><span class="cs">.SYNOPSIS</span><span class="cm">
+  Secure SSH setup + rsync backups for Windows 10 local users.
+
+</span><span class="cs">.PARAMETER</span><span class="cm"> ServerHost
+  SSH host (e.g., dc2.myusadc.com)
+
+</span><span class="cs">.PARAMETER</span><span class="cm"> ServerUser
+  SSH username (e.g., ibbsbbry)
+
+</span><span class="cs">.PARAMETER</span><span class="cm"> SshPort
+  SSH port (default 22)
+
+</span><span class="cs">.PARAMETER</span><span class="cm"> PrivateKey / PublicKey
+  Paths to your keypair (default: ~/.ssh/id_ed25519)
+
+</span><span class="cs">.PARAMETER</span><span class="cm"> FileList
+  File with one Cygwin/MSYS2 path per line; lines starting with # are ignored.
+  Quotes around paths are allowed; the script strips surrounding quotes.
+
+</span><span class="cs">.PARAMETER</span><span class="cm"> Mode
+  SSH  : rsync over SSH (simpler)
+  Daemon: rsync-daemon + SSH tunnel to localhost
+
+</span><span class="cs">.PARAMETER</span><span class="cm"> EnsureKey
+  Append PublicKey to server's authorized_keys (creates ~/.ssh if needed)
+
+</span><span class="cs">.PARAMETER</span><span class="cm"> OldKeyPrefix
+  If provided, removes lines containing this substring from authorized_keys (backup kept)
+
+</span><span class="cs">.PARAMETER</span><span class="cm"> EnsureRsyncdConf
+  In Daemon mode, create a minimal ~/rsyncd.conf if missing (user-owned, loopback-only)
+
+</span><span class="cs">.PARAMETER</span><span class="cm"> Compress
+  Add -z to rsync
+
+</span><span class="cs">.PARAMETER</span><span class="cm"> Progress
+  Add --progress to rsync
+
+</span><span class="cs">.PARAMETER</span><span class="cm"> InsecureHostKey
+  Fallback host-key policy if accept-new isn’t supported (less secure)
+#&gt;</span><span class="w">
+
+</span><span class="p">[</span><span class="n">CmdletBinding</span><span class="p">(</span><span class="bp">SupportsShouldProcess</span><span class="o">=</span><span class="bp">$true</span><span class="p">)]</span><span class="w">
+</span><span class="kr">param</span><span class="p">(</span><span class="w">
+  </span><span class="p">[</span><span class="n">string</span><span class="p">]</span><span class="nv">$ServerHost</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"dc2.myusadc.com"</span><span class="p">,</span><span class="w">
+  </span><span class="p">[</span><span class="n">string</span><span class="p">]</span><span class="nv">$ServerUser</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"ibbsbbry"</span><span class="p">,</span><span class="w">
+  </span><span class="p">[</span><span class="n">int</span><span class="p">]</span><span class="nv">$SshPort</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">22</span><span class="p">,</span><span class="w">
+
+  </span><span class="p">[</span><span class="n">string</span><span class="p">]</span><span class="nv">$PrivateKey</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"</span><span class="nv">$</span><span class="nn">env</span><span class="p">:</span><span class="nv">USERPROFILE</span><span class="s2">\.ssh\id_ed25519"</span><span class="p">,</span><span class="w">
+  </span><span class="p">[</span><span class="n">string</span><span class="p">]</span><span class="nv">$PublicKey</span><span class="w">  </span><span class="o">=</span><span class="w"> </span><span class="s2">"</span><span class="nv">$</span><span class="nn">env</span><span class="p">:</span><span class="nv">USERPROFILE</span><span class="s2">\.ssh\id_ed25519.pub"</span><span class="p">,</span><span class="w">
+
+  </span><span class="p">[</span><span class="n">string</span><span class="p">]</span><span class="nv">$FileList</span><span class="w">   </span><span class="o">=</span><span class="w"> </span><span class="s2">".\filelist.txt"</span><span class="p">,</span><span class="w">
+
+  </span><span class="p">[</span><span class="n">ValidateSet</span><span class="p">(</span><span class="s2">"SSH"</span><span class="p">,</span><span class="s2">"Daemon"</span><span class="p">)]</span><span class="w">
+  </span><span class="p">[</span><span class="n">string</span><span class="p">]</span><span class="nv">$Mode</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"SSH"</span><span class="p">,</span><span class="w">
+
+  </span><span class="p">[</span><span class="n">string</span><span class="p">]</span><span class="nv">$RemoteDir</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"/backup/ibbsbbry/"</span><span class="p">,</span><span class="w">  </span><span class="c"># SSH mode destination</span><span class="w">
+
+  </span><span class="p">[</span><span class="n">int</span><span class="p">]</span><span class="nv">$LocalForwardPort</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">873</span><span class="p">,</span><span class="w">              </span><span class="c"># Daemon mode</span><span class="w">
+  </span><span class="p">[</span><span class="n">int</span><span class="p">]</span><span class="nv">$RemoteRsyncdPort</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1873</span><span class="p">,</span><span class="w">
+  </span><span class="p">[</span><span class="n">string</span><span class="p">]</span><span class="nv">$RsyncModule</span><span class="w">   </span><span class="o">=</span><span class="w"> </span><span class="s2">"backup"</span><span class="p">,</span><span class="w">
+  </span><span class="p">[</span><span class="n">string</span><span class="p">]</span><span class="nv">$ModuleSubdir</span><span class="w">  </span><span class="o">=</span><span class="w"> </span><span class="s2">"ibbsbbry"</span><span class="p">,</span><span class="w">
+
+  </span><span class="p">[</span><span class="n">switch</span><span class="p">]</span><span class="nv">$EnsureKey</span><span class="p">,</span><span class="w">
+  </span><span class="p">[</span><span class="n">string</span><span class="p">]</span><span class="nv">$OldKeyPrefix</span><span class="p">,</span><span class="w">
+  </span><span class="p">[</span><span class="n">switch</span><span class="p">]</span><span class="nv">$EnsureRsyncdConf</span><span class="p">,</span><span class="w">
+  </span><span class="p">[</span><span class="n">switch</span><span class="p">]</span><span class="nv">$Compress</span><span class="p">,</span><span class="w">
+  </span><span class="p">[</span><span class="n">switch</span><span class="p">]</span><span class="nv">$Progress</span><span class="p">,</span><span class="w">
+  </span><span class="p">[</span><span class="n">switch</span><span class="p">]</span><span class="nv">$InsecureHostKey</span><span class="w">
+</span><span class="p">)</span><span class="w">
+
+</span><span class="kr">function</span><span class="w"> </span><span class="nf">Assert-Exe</span><span class="p">(</span><span class="nv">$name</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+  </span><span class="kr">if</span><span class="w"> </span><span class="p">(</span><span class="o">-not</span><span class="w"> </span><span class="p">(</span><span class="n">Get-Command</span><span class="w"> </span><span class="nv">$name</span><span class="w"> </span><span class="nt">-ErrorAction</span><span class="w"> </span><span class="nx">SilentlyContinue</span><span class="p">))</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="kr">throw</span><span class="w"> </span><span class="s2">"Required command '</span><span class="nv">$name</span><span class="s2">' not found in PATH. Install/enable it for your user."</span><span class="w">
+  </span><span class="p">}</span><span class="w">
+</span><span class="p">}</span><span class="w">
+
+</span><span class="kr">function</span><span class="w"> </span><span class="nf">Get-SSHOptions</span><span class="w"> </span><span class="p">{</span><span class="w">
+  </span><span class="kr">if</span><span class="w"> </span><span class="p">(</span><span class="nv">$InsecureHostKey</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="kr">return</span><span class="w"> </span><span class="p">@(</span><span class="s2">"-p"</span><span class="p">,</span><span class="nv">$SshPort</span><span class="p">,</span><span class="s2">"-i"</span><span class="p">,</span><span class="nv">$PrivateKey</span><span class="p">,</span><span class="s2">"-o"</span><span class="p">,</span><span class="s2">"StrictHostKeyChecking=no"</span><span class="p">,</span><span class="s2">"-o"</span><span class="p">,</span><span class="s2">"UserKnownHostsFile=NUL"</span><span class="p">)</span><span class="w">
+  </span><span class="p">}</span><span class="w"> </span><span class="kr">else</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="kr">return</span><span class="w"> </span><span class="p">@(</span><span class="s2">"-p"</span><span class="p">,</span><span class="nv">$SshPort</span><span class="p">,</span><span class="s2">"-i"</span><span class="p">,</span><span class="nv">$PrivateKey</span><span class="p">,</span><span class="s2">"-o"</span><span class="p">,</span><span class="s2">"StrictHostKeyChecking=accept-new"</span><span class="p">)</span><span class="w">
+  </span><span class="p">}</span><span class="w">
+</span><span class="p">}</span><span class="w">
+
+</span><span class="kr">function</span><span class="w"> </span><span class="nf">Invoke-SSHInline</span><span class="p">([</span><span class="n">string</span><span class="p">]</span><span class="nv">$cmd</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+  </span><span class="nv">$opts</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Get-SSHOptions</span><span class="w">
+  </span><span class="o">&amp;</span><span class="w"> </span><span class="nx">ssh</span><span class="w"> </span><span class="err">@</span><span class="nx">opts</span><span class="w"> </span><span class="s2">"</span><span class="nv">$ServerUser</span><span class="s2">@</span><span class="nv">$ServerHost</span><span class="s2">"</span><span class="w"> </span><span class="nv">$cmd</span><span class="w">
+  </span><span class="kr">if</span><span class="w"> </span><span class="p">(</span><span class="nv">$LASTEXITCODE</span><span class="w"> </span><span class="o">-ne</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="kr">throw</span><span class="w"> </span><span class="s2">"SSH command failed: </span><span class="nv">$cmd</span><span class="s2">"</span><span class="w"> </span><span class="p">}</span><span class="w">
+</span><span class="p">}</span><span class="w">
+
+</span><span class="kr">function</span><span class="w"> </span><span class="nf">Start-SSHForward</span><span class="w"> </span><span class="p">{</span><span class="w">
+  </span><span class="nv">$opts</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Get-SSHOptions</span><span class="w">
+  </span><span class="bp">$args</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nv">$opts</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="p">@(</span><span class="s2">"-N"</span><span class="p">,</span><span class="s2">"-L"</span><span class="p">,</span><span class="s2">"</span><span class="nv">$</span><span class="nn">LocalForwardPort</span><span class="p">:</span><span class="nv">localhost</span><span class="s2">:</span><span class="nv">$RemoteRsyncdPort</span><span class="s2">"</span><span class="p">,</span><span class="s2">"</span><span class="nv">$ServerUser</span><span class="s2">@</span><span class="nv">$ServerHost</span><span class="s2">"</span><span class="p">,</span><span class="s2">"-o"</span><span class="p">,</span><span class="s2">"ExitOnForwardFailure=yes"</span><span class="p">,</span><span class="s2">"-o"</span><span class="p">,</span><span class="s2">"ServerAliveInterval=30"</span><span class="p">)</span><span class="w">
+  </span><span class="nv">$p</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Start-Process</span><span class="w"> </span><span class="nt">-PassThru</span><span class="w"> </span><span class="nt">-WindowStyle</span><span class="w"> </span><span class="nx">Minimized</span><span class="w"> </span><span class="nt">-FilePath</span><span class="w"> </span><span class="s2">"ssh"</span><span class="w"> </span><span class="nt">-ArgumentList</span><span class="w"> </span><span class="bp">$args</span><span class="w">
+  </span><span class="n">Write-Host</span><span class="w"> </span><span class="s2">"Started SSH port forward (PID=</span><span class="si">$(</span><span class="nv">$p</span><span class="o">.</span><span class="nf">Id</span><span class="si">)</span><span class="s2">)..."</span><span class="w">
+  </span><span class="nv">$deadline</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="n">Get-Date</span><span class="p">)</span><span class="o">.</span><span class="nf">AddSeconds</span><span class="p">(</span><span class="nx">10</span><span class="p">)</span><span class="w">
+  </span><span class="nx">do</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="n">Start-Sleep</span><span class="w"> </span><span class="nt">-Milliseconds</span><span class="w"> </span><span class="nx">300</span><span class="w">
+    </span><span class="nv">$ok</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Test-NetConnection</span><span class="w"> </span><span class="nt">-ComputerName</span><span class="w"> </span><span class="s2">"127.0.0.1"</span><span class="w"> </span><span class="nt">-Port</span><span class="w"> </span><span class="nv">$LocalForwardPort</span><span class="w"> </span><span class="nt">-InformationLevel</span><span class="w"> </span><span class="nx">Quiet</span><span class="w">
+  </span><span class="p">}</span><span class="w"> </span><span class="kr">until</span><span class="w"> </span><span class="p">(</span><span class="nv">$ok</span><span class="w"> </span><span class="o">-or</span><span class="w"> </span><span class="p">(</span><span class="n">Get-Date</span><span class="p">)</span><span class="w"> </span><span class="o">-gt</span><span class="w"> </span><span class="nv">$deadline</span><span class="p">)</span><span class="w">
+  </span><span class="kr">if</span><span class="w"> </span><span class="p">(</span><span class="o">-not</span><span class="w"> </span><span class="nv">$ok</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="kr">try</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nv">$p</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="n">Stop-Process</span><span class="w"> </span><span class="nt">-Force</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">catch</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">;</span><span class="w"> </span><span class="kr">throw</span><span class="w"> </span><span class="s2">"Local port </span><span class="nv">$LocalForwardPort</span><span class="s2"> did not open."</span><span class="w"> </span><span class="p">}</span><span class="w">
+  </span><span class="kr">return</span><span class="w"> </span><span class="nv">$p</span><span class="w">
+</span><span class="p">}</span><span class="w">
+
+</span><span class="kr">function</span><span class="w"> </span><span class="nf">Stop-ProcessSafe</span><span class="p">(</span><span class="nv">$p</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="kr">if</span><span class="w"> </span><span class="p">(</span><span class="nv">$p</span><span class="w"> </span><span class="o">-and</span><span class="w"> </span><span class="o">!</span><span class="nv">$p</span><span class="o">.</span><span class="nf">HasExited</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nv">$p</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="n">Stop-Process</span><span class="w"> </span><span class="nt">-Force</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span><span class="w">
+
+</span><span class="kr">try</span><span class="w"> </span><span class="p">{</span><span class="w">
+  </span><span class="n">Assert-Exe</span><span class="w"> </span><span class="s2">"ssh"</span><span class="w">
+  </span><span class="n">Assert-Exe</span><span class="w"> </span><span class="s2">"scp"</span><span class="w">
+  </span><span class="n">Assert-Exe</span><span class="w"> </span><span class="s2">"rsync"</span><span class="w">
+
+  </span><span class="kr">if</span><span class="w"> </span><span class="p">(</span><span class="nv">$EnsureKey</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="kr">if</span><span class="w"> </span><span class="p">(</span><span class="o">-not</span><span class="w"> </span><span class="p">(</span><span class="n">Test-Path</span><span class="w"> </span><span class="nv">$PublicKey</span><span class="p">))</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="kr">throw</span><span class="w"> </span><span class="s2">"Public key not found at </span><span class="nv">$PublicKey</span><span class="s2">. Generate one with ssh-keygen."</span><span class="w"> </span><span class="p">}</span><span class="w">
+    </span><span class="n">Write-Host</span><span class="w"> </span><span class="s2">"Appending public key to </span><span class="nv">$ServerUser</span><span class="s2">@</span><span class="nv">$ServerHost</span><span class="s2"> ..."</span><span class="w">
+    </span><span class="nv">$opts</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Get-SSHOptions</span><span class="w">
+    </span><span class="o">&amp;</span><span class="w"> </span><span class="nx">scp</span><span class="w"> </span><span class="s2">"-P"</span><span class="w"> </span><span class="nv">$SshPort</span><span class="w"> </span><span class="nv">$PublicKey</span><span class="w"> </span><span class="s2">"</span><span class="nv">$ServerUser</span><span class="s2">@</span><span class="nv">$ServerHost</span><span class="s2">:~/.ssh/tmp_newkey.pub"</span><span class="w">
+    </span><span class="kr">if</span><span class="w"> </span><span class="p">(</span><span class="nv">$LASTEXITCODE</span><span class="w"> </span><span class="o">-ne</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="kr">throw</span><span class="w"> </span><span class="s2">"scp failed while uploading public key."</span><span class="w"> </span><span class="p">}</span><span class="w">
+    </span><span class="n">Invoke-SSHInline</span><span class="w"> </span><span class="s2">"mkdir -p ~/.ssh &amp;&amp; chmod 700 ~/.ssh &amp;&amp; cat ~/.ssh/tmp_newkey.pub &gt;&gt; ~/.ssh/authorized_keys &amp;&amp; rm ~/.ssh/tmp_newkey.pub &amp;&amp; chmod 600 ~/.ssh/authorized_keys"</span><span class="w">
+    </span><span class="kr">if</span><span class="w"> </span><span class="p">(</span><span class="nv">$OldKeyPrefix</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+      </span><span class="n">Write-Host</span><span class="w"> </span><span class="s2">"Removing lines containing '</span><span class="nv">$OldKeyPrefix</span><span class="s2">' from authorized_keys (backup kept as authorized_keys.bak)..."</span><span class="w">
+      </span><span class="n">Invoke-SSHInline</span><span class="w"> </span><span class="s2">"cp -f ~/.ssh/authorized_keys ~/.ssh/authorized_keys.bak &amp;&amp; grep -v '</span><span class="nv">$OldKeyPrefix</span><span class="s2">' ~/.ssh/authorized_keys.bak &gt; ~/.ssh/authorized_keys &amp;&amp; chmod 600 ~/.ssh/authorized_keys"</span><span class="w">
+    </span><span class="p">}</span><span class="w">
+  </span><span class="p">}</span><span class="w">
+
+  </span><span class="kr">if</span><span class="w"> </span><span class="p">(</span><span class="o">-not</span><span class="w"> </span><span class="p">(</span><span class="n">Test-Path</span><span class="w"> </span><span class="nv">$FileList</span><span class="p">))</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="kr">throw</span><span class="w"> </span><span class="s2">"File list not found: </span><span class="nv">$FileList</span><span class="s2"> (Cygwin-style paths, one per line)."</span><span class="w"> </span><span class="p">}</span><span class="w">
+  </span><span class="nv">$rawLines</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Get-Content</span><span class="w"> </span><span class="nt">-LiteralPath</span><span class="w"> </span><span class="nv">$FileList</span><span class="w">
+  </span><span class="nv">$paths</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kr">foreach</span><span class="w"> </span><span class="p">(</span><span class="nv">$line</span><span class="w"> </span><span class="kr">in</span><span class="w"> </span><span class="nv">$rawLines</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="nv">$t</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nv">$line</span><span class="o">.</span><span class="nf">Trim</span><span class="p">()</span><span class="w">
+    </span><span class="kr">if</span><span class="w"> </span><span class="p">(</span><span class="o">-not</span><span class="w"> </span><span class="nv">$t</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="kr">continue</span><span class="w"> </span><span class="p">}</span><span class="w">
+    </span><span class="kr">if</span><span class="w"> </span><span class="p">(</span><span class="nv">$t</span><span class="o">.</span><span class="nf">StartsWith</span><span class="p">(</span><span class="s2">"#"</span><span class="p">))</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="kr">continue</span><span class="w"> </span><span class="p">}</span><span class="w">
+    </span><span class="c"># Strip surrounding quotes if present</span><span class="w">
+    </span><span class="kr">if</span><span class="w"> </span><span class="p">(</span><span class="nv">$t</span><span class="o">.</span><span class="nf">StartsWith</span><span class="p">(</span><span class="s1">'"'</span><span class="p">)</span><span class="w"> </span><span class="o">-and</span><span class="w"> </span><span class="nv">$t</span><span class="o">.</span><span class="nf">EndsWith</span><span class="p">(</span><span class="s1">'"'</span><span class="p">))</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nv">$t</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nv">$t</span><span class="o">.</span><span class="nf">Trim</span><span class="p">(</span><span class="s1">'"'</span><span class="p">)</span><span class="w"> </span><span class="p">}</span><span class="w">
+    </span><span class="nv">$t</span><span class="w">
+  </span><span class="p">}</span><span class="w">
+  </span><span class="kr">if</span><span class="w"> </span><span class="p">(</span><span class="o">-not</span><span class="w"> </span><span class="nv">$paths</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="kr">throw</span><span class="w"> </span><span class="s2">"No valid paths found in </span><span class="nv">$FileList</span><span class="s2">."</span><span class="w"> </span><span class="p">}</span><span class="w">
+
+  </span><span class="kr">if</span><span class="w"> </span><span class="p">(</span><span class="nv">$Mode</span><span class="w"> </span><span class="o">-eq</span><span class="w"> </span><span class="s2">"SSH"</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="n">Write-Host</span><span class="w"> </span><span class="s2">"Running rsync over SSH to </span><span class="nv">$ServerHost</span><span class="s2">:</span><span class="nv">$RemoteDir</span><span class="s2"> ..."</span><span class="w">
+    </span><span class="nv">$sshCmd</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"ssh "</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="p">(</span><span class="n">Get-SSHOptions</span><span class="w"> </span><span class="o">-join</span><span class="w"> </span><span class="s1">' '</span><span class="p">)</span><span class="w">
+    </span><span class="nv">$rsyncArgs</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">@(</span><span class="s2">"-av"</span><span class="p">)</span><span class="w">
+    </span><span class="kr">if</span><span class="w"> </span><span class="p">(</span><span class="nv">$Compress</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nv">$rsyncArgs</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="s2">"-z"</span><span class="w"> </span><span class="p">}</span><span class="w">
+    </span><span class="kr">if</span><span class="w"> </span><span class="p">(</span><span class="nv">$Progress</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nv">$rsyncArgs</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="s2">"--progress"</span><span class="w"> </span><span class="p">}</span><span class="w">
+    </span><span class="nv">$rsyncArgs</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="p">@(</span><span class="s2">"-e"</span><span class="p">,</span><span class="w"> </span><span class="nv">$sshCmd</span><span class="p">)</span><span class="w">
+
+    </span><span class="kr">foreach</span><span class="w"> </span><span class="p">(</span><span class="nv">$p</span><span class="w"> </span><span class="kr">in</span><span class="w"> </span><span class="nv">$paths</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+      </span><span class="o">&amp;</span><span class="w"> </span><span class="n">rsync</span><span class="w"> </span><span class="err">@</span><span class="nx">rsyncArgs</span><span class="w"> </span><span class="s2">"</span><span class="nv">$p</span><span class="s2">"</span><span class="w"> </span><span class="s2">"</span><span class="nv">$ServerUser</span><span class="s2">@</span><span class="nv">$ServerHost</span><span class="s2">:</span><span class="nv">$RemoteDir</span><span class="s2">"</span><span class="w">
+      </span><span class="kr">if</span><span class="w"> </span><span class="p">(</span><span class="nv">$LASTEXITCODE</span><span class="w"> </span><span class="o">-ne</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="kr">throw</span><span class="w"> </span><span class="s2">"rsync failed for path: </span><span class="nv">$p</span><span class="s2">"</span><span class="w"> </span><span class="p">}</span><span class="w">
+    </span><span class="p">}</span><span class="w">
+    </span><span class="n">Write-Host</span><span class="w"> </span><span class="s2">"All paths synced (SSH mode)."</span><span class="w">
+  </span><span class="p">}</span><span class="w">
+  </span><span class="kr">else</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="n">Write-Host</span><span class="w"> </span><span class="s2">"Daemon mode selected."</span><span class="w">
+    </span><span class="kr">if</span><span class="w"> </span><span class="p">(</span><span class="nv">$EnsureRsyncdConf</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+      </span><span class="n">Write-Host</span><span class="w"> </span><span class="s2">"Ensuring ~/rsyncd.conf exists remotely ..."</span><span class="w">
+      </span><span class="nv">$conf</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="sh">@"
+use chroot = no
+pid file = /home/</span><span class="nv">$ServerUser</span><span class="sh">/rsyncd.pid
+[</span><span class="nv">${RsyncModule}</span><span class="sh">]
+    path = /backup
+    read only = no
+    comment = backup area
+    hosts allow = 127.0.0.1
+    hosts deny  = *
+"@</span><span class="w">
+      </span><span class="nv">$escaped</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nv">$conf</span><span class="w"> </span><span class="o">-replace</span><span class="w"> </span><span class="s2">"</span><span class="se">`r</span><span class="s2">"</span><span class="p">,</span><span class="s2">""</span><span class="w"> </span><span class="o">-replace</span><span class="w"> </span><span class="s2">"</span><span class="se">`n</span><span class="s2">"</span><span class="p">,</span><span class="s2">"</span><span class="se">`n</span><span class="s2">"</span><span class="w">
+      </span><span class="n">Invoke-SSHInline</span><span class="w"> </span><span class="s2">"test -f ~/rsyncd.conf || printf '%s' '</span><span class="nv">$escaped</span><span class="s2">' &gt; ~/rsyncd.conf"</span><span class="w">
+    </span><span class="p">}</span><span class="w">
+
+    </span><span class="n">Write-Host</span><span class="w"> </span><span class="s2">"Starting remote rsync daemon on port </span><span class="nv">$RemoteRsyncdPort</span><span class="s2"> ..."</span><span class="w">
+    </span><span class="n">Invoke-SSHInline</span><span class="w"> </span><span class="s2">"rsync --daemon --port=</span><span class="nv">$RemoteRsyncdPort</span><span class="s2"> --config=\</span><span class="bp">$HOME</span><span class="s2">/rsyncd.conf"</span><span class="w">
+    </span><span class="nv">$forward</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="bp">$null</span><span class="w">
+    </span><span class="kr">try</span><span class="w"> </span><span class="p">{</span><span class="w">
+      </span><span class="nv">$forward</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Start-SSHForward</span><span class="w">
+      </span><span class="nv">$rsyncArgs</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">@(</span><span class="s2">"-av"</span><span class="p">)</span><span class="w">
+      </span><span class="kr">if</span><span class="w"> </span><span class="p">(</span><span class="nv">$Compress</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nv">$rsyncArgs</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="s2">"-z"</span><span class="w"> </span><span class="p">}</span><span class="w">
+      </span><span class="kr">if</span><span class="w"> </span><span class="p">(</span><span class="nv">$Progress</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nv">$rsyncArgs</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="s2">"--progress"</span><span class="w"> </span><span class="p">}</span><span class="w">
+      </span><span class="kr">foreach</span><span class="w"> </span><span class="p">(</span><span class="nv">$p</span><span class="w"> </span><span class="kr">in</span><span class="w"> </span><span class="nv">$paths</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+        </span><span class="o">&amp;</span><span class="w"> </span><span class="n">rsync</span><span class="w"> </span><span class="err">@</span><span class="nx">rsyncArgs</span><span class="w"> </span><span class="s2">"</span><span class="nv">$p</span><span class="s2">"</span><span class="w"> </span><span class="s2">"127.0.0.1::</span><span class="nv">$RsyncModule</span><span class="s2">/</span><span class="nv">$ModuleSubdir</span><span class="s2">"</span><span class="w">
+        </span><span class="kr">if</span><span class="w"> </span><span class="p">(</span><span class="nv">$LASTEXITCODE</span><span class="w"> </span><span class="o">-ne</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="kr">throw</span><span class="w"> </span><span class="s2">"rsync failed for path: </span><span class="nv">$p</span><span class="s2">"</span><span class="w"> </span><span class="p">}</span><span class="w">
+      </span><span class="p">}</span><span class="w">
+      </span><span class="n">Write-Host</span><span class="w"> </span><span class="s2">"All paths synced (Daemon mode)."</span><span class="w">
+    </span><span class="p">}</span><span class="w">
+    </span><span class="kr">finally</span><span class="w"> </span><span class="p">{</span><span class="w">
+      </span><span class="n">Stop-ProcessSafe</span><span class="w"> </span><span class="nv">$forward</span><span class="w">
+      </span><span class="n">Write-Host</span><span class="w"> </span><span class="s2">"Stopping remote rsync daemon..."</span><span class="w">
+      </span><span class="c"># Graceful stop only if pid file exists; avoid brittle pkill</span><span class="w">
+      </span><span class="n">Invoke-SSHInline</span><span class="w"> </span><span class="s2">"if test -f ~/rsyncd.pid; then kill \</span><span class="si">$(</span><span class="n">cat</span><span class="w"> </span><span class="nx">~/rsyncd.pid</span><span class="p">)</span><span class="s2">; else echo 'No pid file; rsyncd stop skipped.'; fi"</span><span class="w">
+    </span><span class="p">}</span><span class="w">
+  </span><span class="p">}</span><span class="w">
+
+  </span><span class="n">Write-Host</span><span class="w"> </span><span class="s2">"Done."</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span><span class="kr">catch</span><span class="w"> </span><span class="p">{</span><span class="w">
+  </span><span class="n">Write-Error</span><span class="w"> </span><span class="bp">$_</span><span class="o">.</span><span class="nf">Exception</span><span class="o">.</span><span class="nf">Message</span><span class="w">
+  </span><span class="nx">exit</span><span class="w"> </span><span class="nx">1</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></section></div></div>
+  <h3 id="usage">
+    
+    
+     <a href="#usage">#</a><a href="#" aria-label="Back to top">Usage</a>
+        
+    
+  </h3>
+      
+
+<p><strong>Prepare keys (once) and append to server:</strong></p>
+
+<div class="language-powershell highlighter-rouge"><div class="highlight"><section><code><span class="n">ssh-keygen</span><span class="w"> </span><span class="nt">-t</span><span class="w"> </span><span class="nx">ed25519</span><span class="w"> </span><span class="nt">-C</span><span class="w"> </span><span class="s2">"you@example.com"</span><span class="w">
+</span><span class="o">.</span><span class="n">\coolice-ssh-rsync.ps1</span><span class="w"> </span><span class="nt">-EnsureKey</span><span class="w"> </span><span class="nt">-ServerHost</span><span class="w"> </span><span class="nx">dc2.myusadc.com</span><span class="w"> </span><span class="nt">-ServerUser</span><span class="w"> </span><span class="nx">ibbsbbry</span><span class="w"> </span><span class="nt">-SshPort</span><span class="w"> </span><span class="nx">22</span><span class="w"> </span><span class="nt">-FileList</span><span class="w"> </span><span class="o">.</span><span class="nx">\filelist.txt</span><span class="w">
+</span></code></section></div></div>
+
+<p><strong><code class="language-plaintext highlighter-rouge">filelist.txt</code> examples (no quotes needed; one per line; Cygwin paths):</strong></p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><section><code>/cygdrive/d/Documents and Settings/501106700/My Documents/project
+/cygdrive/d/Documents and Settings/501106700/My Documents/Outlook
+/cygdrive/c/Program Files/Lotus/Sametime Client/Chat Transcripts
+</code></section></div></div>
+
+<p><strong>Run a sync (SSH mode, with compression &amp; progress):</strong></p>
+
+<div class="language-powershell highlighter-rouge"><div class="highlight"><section><code><span class="o">.</span><span class="n">\coolice-ssh-rsync.ps1</span><span class="w"> </span><span class="nt">-ServerHost</span><span class="w"> </span><span class="nx">dc2.myusadc.com</span><span class="w"> </span><span class="nt">-ServerUser</span><span class="w"> </span><span class="nx">ibbsbbry</span><span class="w"> </span><span class="nt">-SshPort</span><span class="w"> </span><span class="nx">22</span><span class="w"> </span><span class="nt">-FileList</span><span class="w"> </span><span class="o">.</span><span class="nx">\filelist.txt</span><span class="w"> </span><span class="nt">-Mode</span><span class="w"> </span><span class="nx">SSH</span><span class="w"> </span><span class="nt">-Compress</span><span class="w"> </span><span class="nt">-Progress</span><span class="w">
+</span></code></section></div></div>
+
+<p><strong>Daemon+tunnel mode (and create <code class="language-plaintext highlighter-rouge">rsyncd.conf</code> if missing):</strong></p>
+
+<div class="language-powershell highlighter-rouge"><div class="highlight"><section><code><span class="o">.</span><span class="n">\coolice-ssh-rsync.ps1</span><span class="w"> </span><span class="nt">-ServerHost</span><span class="w"> </span><span class="nx">dc2.myusadc.com</span><span class="w"> </span><span class="nt">-ServerUser</span><span class="w"> </span><span class="nx">ibbsbbry</span><span class="w"> </span><span class="nt">-SshPort</span><span class="w"> </span><span class="nx">22</span><span class="w"> </span><span class="nt">-FileList</span><span class="w"> </span><span class="o">.</span><span class="nx">\filelist.txt</span><span class="w"> </span><span class="nt">-Mode</span><span class="w"> </span><span class="nx">Daemon</span><span class="w"> </span><span class="nt">-EnsureRsyncdConf</span><span class="w"> </span><span class="nt">-Compress</span><span class="w"> </span><span class="nt">-Progress</span><span class="w">
+</span></code></section></div></div>
+
+<p><strong>If host-key prompts block automation on older Win10 OpenSSH:</strong></p>
+
+<div class="language-powershell highlighter-rouge"><div class="highlight"><section><code><span class="o">.</span><span class="n">\coolice-ssh-rsync.ps1</span><span class="w"> </span><span class="nt">-ServerHost</span><span class="w"> </span><span class="nx">dc2.myusadc.com</span><span class="w"> </span><span class="nt">-ServerUser</span><span class="w"> </span><span class="nx">ibbsbbry</span><span class="w"> </span><span class="nt">-SshPort</span><span class="w"> </span><span class="nx">22</span><span class="w"> </span><span class="nt">-FileList</span><span class="w"> </span><span class="o">.</span><span class="nx">\filelist.txt</span><span class="w"> </span><span class="nt">-Mode</span><span class="w"> </span><span class="nx">SSH</span><span class="w"> </span><span class="nt">-InsecureHostKey</span><span class="w">
+</span></code></section></div></div><hr />
+  <h2 id="economical-backup-solution-rsync-and-ssh">
+    
+    
+     <a href="#economical-backup-solution-rsync-and-ssh">#</a><a href="#" aria-label="Back to top">Economical backup solution: rsync and ssh</a>
+        
+    
+  </h2>
+      
+
+<p>As all other unix tricks this is also the result of laziness and the need. I wanted to backup data on my windows laptop to a central linux/unix server. I didn’t want all the features of available expensive backup solutions. Just a simple updated copy of my data on a central machine which is backed up to the tape daily. rsync is known for fast incremental transfer and was an obvious choice for the purpose.</p>
+
+<p>We have a unix machine at our workplace which has a directory structure /backup/username allocated for backing up user data. rsync has a client/server architecture, where rsync client talks to an rsync daemon at the server side (This statement may not be completely true. I am not sure and don’t care also. You can refer to rsync manpage for complete discussion over rsync.). rsync client can connect to rsync server directly or through other remote transport programs like rsh, ssh etc. I decided to use ssh for transport for security and simplicity.</p>
+
+<p>rsync daemon requires a configuration file rsyncd.conf. For my use, I have set it up like this:</p>
+
+<p>[manu@amusbocldmon01 ~]$ cat rsyncd.conf
+use chroot = no
+[backup]
+        path = /backup
+        read only = no
+        comment = backup area</p>
+
+<p>This says,</p>
+
+<p>-do no chroot (required because I’ll run it as a non-root user)<br />
+-[backup] specifies a module named backup.<br />
+-/backup is the path to backup module on filesystem</p>
+
+<p>That’s all we need at the server side. We don’t need to keep rsync deamon running on the server. We’ll start rsync daemon from the client using ssh before starting the backup.</p>
+
+<p>At Windows side, we need rsync and some ssh client. rsync is available for windows through cygwin port. You can download cygwin from <a href="http://www.cygwin.com/">http://www.cygwin.com/</a>. While installing cygwin, remember to select rsync. For ssh client, you can either use ssh that comes with cygwin or plink command line tool that comes with putty. Since, I have already set up my putty for password-less authentication using public/private key pair and pageant, I’ll demonstrate this solution using plink. However you can use any other ssh client too. You can download putty and plink from <a href="http://www.chiark.greenend.org.uk/~sgtatham/putty/">http://www.chiark.greenend.org.uk/~sgtatham/putty/.</a> You can find much information about ssh password less authentication on the web. To keep commands short, add rsync and plink to Windows path. Let’s start our backup now.</p>
+
+<p>First, we need to start rsync daemon at the server. It can be started from the client using following command:</p>
+
+<p>plink -v -t -l manu fileserver.local.com rsync –daemon –port=1873 –config=$HOME/rsyncd.conf</p>
+
+<p>where, fileserver.local.com is the central server where we are going to store our data. This logs in user ‘manu’ on fileserver and starts a rsync daemon there at the port 1873. rsync goes to the background and plink returns immediately.</p>
+
+<p>Next we need to setup an ssh transport tunnel using plink:</p>
+
+<p>plink -v -N -L 873:localhost:1873 -l manu fileserver.local.com</p>
+
+<p>This sets up the local port forwarding – forwarding local port 873 to port 1873 on the remote server.</p>
+
+<p>After running this, we have port 873 on our windows box connected to the port 1873 on the fileserver on which rsync daemon is listening. So, now we just need to run rsync on windows machine with localhost as the target server:</p>
+
+<p>rsync -av src 127.0.0.1::backup/manu</p>
+
+<p>This command copies file or dir ‘<code class="language-plaintext highlighter-rouge">src</code>’ incrementally to directory ‘<code class="language-plaintext highlighter-rouge">manu</code>’ inside ‘backup’ module. Since this rsync is the one that comes with cygwin, it understand only cygwin paths for the files. For that reason, ‘src’ needs to be specified in cygwin terms. For example, <code class="language-plaintext highlighter-rouge">D:\project </code>becomes <code class="language-plaintext highlighter-rouge">/cygdrive/d/project</code> in cygwin terms.</p>
+  <h2 id="putting-it-all-in-scripts">
+    
+    
+     <a href="#putting-it-all-in-scripts">#</a><a href="#" aria-label="Back to top">Putting it all in scripts:</a>
+        
+    
+  </h2>
+      
+
+<p>This trick is not much handy, unless you put it in the scripts and make it easy to run. To automate the process, I created 2 small scripts:</p>
+
+<p>plink_rsync.bat: (To start plink for rsync)</p>
+
+<p>REM Start rsync daemon the server
+plink -v -t %* rsync –daemon –port=1873 –config=$HOME/rsyncd.conf
+REM Setup ssh transport tunnel.
+plink -v -N -L 873:localhost:1873 %*</p>
+
+<p>runrsync.bat: (Main script - calls plink_rsync.bat and starts rsync)</p>
+
+<p>REM Start plink_rsync.bat
+START /MIN “PLINK_FOR_RSYNC” plink_rsync.bat -l manu fileserver.local.com
+REM Sleep for 15 seconds to give plink enough time to finish
+sleep 15
+REM Iterate through filenames in filelist.txt and rsync them
+for /F “delims=” %%i in (filelist.txt) do rsync -av %%i 127.0.0.1::backup/manu
+REM Kill plink_rsync.bat window
+TASKKILL /T /F /FI “WINDOWTITLE eq PLINK_FOR_RSYNC *”
+REM Kill remote rsync daemon
+plink -l manu fileserver.local.com pkill rsync</p>
+
+<p>The main script starts <code class="language-plaintext highlighter-rouge">plink_rsync.bat</code> in another window and sleeps for 15 seconds to make sure that connection is set up. Then it runs rsync over the files and directories list in<code class="language-plaintext highlighter-rouge"> filelist.txt</code>. After rsyncing is done, it kills <code class="language-plaintext highlighter-rouge">plink_rsync.bat</code> window and kills rsync daemon on the remote server by running pkill though plink.</p>
+
+<p>filelist.txt contains the list of files and directories that you want to take backup of. For example, my <code class="language-plaintext highlighter-rouge">filelist.txt</code> contains:</p>
+
+<p>filelist.txt:</p>
+
+<p>“/cygdrive/d/Documents and Settings/501106700/My Documents/project”
+“/cygdrive/d/Documents and Settings/501106700/My Documents/Outlook”
+“/cygdrive/c/Program Files/Lotus/Sametime Client/Chat Transcripts”</p>
+
+<p>You can schedule runrsync.bat to run everyday or every week depending on your requirement.</p>
+
+        </div>
+        
+          URL: https://ib.bsb.br/windows-rsync
+        
+      </article>
+      <nav class="post-navigation-combined" aria-label="Post navigation">
+        <!-- Chronological Navigation (always visible at 40vh) -->
+        
+          <div class="nav-arrow chronological prev">
+            <a href="/using-opensuse-ubootgrub-to-dualboot-raspberry-pi/" title="using openSUSE uboot/grub to dualboot raspberry pi" rel="prev">
+              <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAC0AAAAtCAYAAAA6GuKaAAAAAXNSR0IArs4c6QAAAxVJREFUaEPt18FqG1cUBuD/nLkzI42UiVInkFLTCAKhS+9KA+3Kq1L8AAHjhR7AKz+ADV55qUfoqhvThTfdmC4KzTKmYJrELshJW9PIlSeKRpqZe88pUtouihvVRknqMNoMzD1zdPXNrzMM4RJ+6BLuGeWm39RdK6VL6VcIlPEo41HG401loJQupS8mUM7pi7md/6p3UtoHUJzf4vVecZb0e0EQfB7H8b0kSeqqummt/eb1buN83SebNsZ8QkQCYHVpaenu/v7+ra2tLRwdHWF1ddWq6hfM3BCRE2b+FcBHACQAHo1E5v9c+5mIhkR0e3z0VQ8LotuqWlXVw/GRmT8QkdMK89McuAOAAfwoIu8z85yIHBPRKRGN1/IAeDx0rul53hivo6psrf2ejDGfEtFOu92u7O3tBWtra2i322g0GhgOh9je3ka325UPax7fCR0iw+lp4aLxr70aeOmgkChTRY3JGSb73EroERD73uB54WpOgdhwZkXNQNQLiVDzOU1yFymAhu+lqZVopIqISQKmPLFS+atHv3A1q8AVQ+lXP/VHRPQx+b6frKysxMvLy1hfX0ez2USv18PCwgLiOEaSJKhWq/jhwQN8dnIfVOS4dsWHqCJ5YREGjBuNEMfd0eTc9WshBqnFYGhRqxrUIoNuLwMT4eb1Cp6dZshywdW6mZzr9QsEPuPmXIhfno3gnGKuEWCUC14MLKoVb1L72+8Zvj3JOl/udZt/S7darUqn0wlarRZ2d3cxPz+PJ8dPsPP1Doq8kIbL+cawjxBIM8MRFAidpBlRpIbhFc55gM2NF5IIQtVBRlRTZgTWZQ4wzvc8spO1NPM4Gr9Wh1bSDIjU98C5E0PIC8OVSX+Rlz08hl+4/LsML6X/menFxcW7BwcHtzY2NvDw8CE21zf/NdMAHskFMs3MT/EfMg3gsTsr02f8byfTo16v3+v3+//f6fGKgXNp5vT5huZbqH4nH+NvwXH6V5bS041mU1FKz8ZxepdSerrRbCpK6dk4Tu9SSk83mk1FKT0bx+ldSunpRrOpuJTSfwBcuImxpyA7XgAAAABJRU5ErkJggg==" alt="Previous article" width="45" height="45" loading="lazy">
+            </a>
+          </div>
+        
+        
+          <div class="nav-arrow chronological next">
+            <a href="/deploying-flask-applications-on-directadmin/" title="deploying Flask applications on DirectAdmin" rel="next">
+              <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAC0AAAAtCAYAAAA6GuKaAAAAAXNSR0IArs4c6QAAAwdJREFUaEPtl01rG1cUht9z7p070ijKWLVS3I9YULtNMBRn2UIXxZtuvCjedNWfoKVXBvsHeOUfoIUx5AeY0pVXXSR052UxBJSi0kDiRplII83HvadI9CMtOFjCmBjubC7cc8+Zc555eYdLuIEP3cCe4Zu+rq/mSXvSbyHg5eHl4eVxXRrwpD3p+Qh4n56P2+xZnvTszC7MCAAUF0XfOdJa62+IaCeO40GSJA/zPP8RwB9vDjBtWmv9JRE5ImpZawdVpbo58CkAIyJnIrLAzEvOuXNm/h3AfQDOAGdj5z5m5gXn3G9ENCKilckaiDwpiFZEpCoiTyYrM3/knOtXmHs58BkABvCLc+4DZl6cxIjoh4ODA728vIzt7W2sra09PT4+fgTgQES4LMvHZIy5LyI/f/dJvfK6FKMJqAdqmBS2ZgWINY9zJyZ1whUiRJrTfmGjybSxUemwcFEmghqT1UxlUrpQEXD7jRq3NWelEz10okIi1AJOX+U2EgALgUrT0kVnmcKvQ+uazSZvbW2hWq2i3++j3W5jf38f6+vrebvdHovI5pT09+vN7teLYev990K8GpQYjS1u1TQqhnHez6EU4cM7FTw7z5AXDo16ACcyPRsaxp2FEM9ejKd7zUaIYVpiOCpRq2rUIo0XLzMwEZaaFTzvZ8hyh/iWnu69fF1AAoOfFr/A5w8eYDQaIY5jJEmC09NTNBoNdLtd7O3t4ejoCIeHh8k/pL8KUSkCZcg6hCLDjLk2ufYGpRuXAuOMYiosQiDNNEcQILQuzYgi0QxVWKuAMtcqJPdXDaKaMMOUNrOAtoFSVE5jaaY4mtQPS5dmQPS8WkdfGReYgDe/3cTdpbvo9XrY2NhAp9NBq9XKO53Ov6T/r2mlVBeX0DSAMzeHppm5h7doemdvR99buYfd3V2srq4+PTk5+a+mr9CmrqTU3+5Rr9cHg8HgYve4krddbZGb5dOXmf2d+7n4pi9D4LrOeHl40v42fl0a8KQ96fkIeJ+ej9vsWZ707Mzmy/Ck5+M2e9afhmuAz1BhwewAAAAASUVORK5CYII=" alt="Next article" width="45" height="45" loading="lazy">
+            </a>
+          </div>
+        
+            
+            
+              
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+                  
+                  
+              
+              
+              
+              <!-- Navigation block for tag "scratchpad"; default display for the first tag -->
+              <div class="nav-group tags" id="tag-nav-scratchpad" style="display: block;">
+                <div class="nav-arrow tags prev">
+                  
+                    <a href="/combining-if-then-planning-with-gtd/" title="Combining If-Then Planning with GTD" rel="prev">
+                      <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAC0AAAAtCAYAAAA6GuKaAAAAAXNSR0IArs4c6QAAAxVJREFUaEPt18FqG1cUBuD/nLkzI42UiVInkFLTCAKhS+9KA+3Kq1L8AAHjhR7AKz+ADV55qUfoqhvThTfdmC4KzTKmYJrELshJW9PIlSeKRpqZe88pUtouihvVRknqMNoMzD1zdPXNrzMM4RJ+6BLuGeWm39RdK6VL6VcIlPEo41HG401loJQupS8mUM7pi7md/6p3UtoHUJzf4vVecZb0e0EQfB7H8b0kSeqqummt/eb1buN83SebNsZ8QkQCYHVpaenu/v7+ra2tLRwdHWF1ddWq6hfM3BCRE2b+FcBHACQAHo1E5v9c+5mIhkR0e3z0VQ8LotuqWlXVw/GRmT8QkdMK89McuAOAAfwoIu8z85yIHBPRKRGN1/IAeDx0rul53hivo6psrf2ejDGfEtFOu92u7O3tBWtra2i322g0GhgOh9je3ka325UPax7fCR0iw+lp4aLxr70aeOmgkChTRY3JGSb73EroERD73uB54WpOgdhwZkXNQNQLiVDzOU1yFymAhu+lqZVopIqISQKmPLFS+atHv3A1q8AVQ+lXP/VHRPQx+b6frKysxMvLy1hfX0ez2USv18PCwgLiOEaSJKhWq/jhwQN8dnIfVOS4dsWHqCJ5YREGjBuNEMfd0eTc9WshBqnFYGhRqxrUIoNuLwMT4eb1Cp6dZshywdW6mZzr9QsEPuPmXIhfno3gnGKuEWCUC14MLKoVb1L72+8Zvj3JOl/udZt/S7darUqn0wlarRZ2d3cxPz+PJ8dPsPP1Doq8kIbL+cawjxBIM8MRFAidpBlRpIbhFc55gM2NF5IIQtVBRlRTZgTWZQ4wzvc8spO1NPM4Gr9Wh1bSDIjU98C5E0PIC8OVSX+Rlz08hl+4/LsML6X/menFxcW7BwcHtzY2NvDw8CE21zf/NdMAHskFMs3MT/EfMg3gsTsr02f8byfTo16v3+v3+//f6fGKgXNp5vT5huZbqH4nH+NvwXH6V5bS041mU1FKz8ZxepdSerrRbCpK6dk4Tu9SSk83mk1FKT0bx+ldSunpRrOpuJTSfwBcuImxpyA7XgAAAABJRU5ErkJggg==" alt="Previous in Tag" width="45" height="45" loading="lazy">
+                    </a>
+                  
+                </div>
+                <div class="nav-arrow tags next">
+                  
+                    <a href="/using-opensuse-ubootgrub-to-dualboot-raspberry-pi/" title="using openSUSE uboot/grub to dualboot raspberry pi" rel="next">
+                      <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAC0AAAAtCAYAAAA6GuKaAAAAAXNSR0IArs4c6QAAAwdJREFUaEPtl01rG1cUht9z7p070ijKWLVS3I9YULtNMBRn2UIXxZtuvCjedNWfoKVXBvsHeOUfoIUx5AeY0pVXXSR052UxBJSi0kDiRplII83HvadI9CMtOFjCmBjubC7cc8+Zc555eYdLuIEP3cCe4Zu+rq/mSXvSbyHg5eHl4eVxXRrwpD3p+Qh4n56P2+xZnvTszC7MCAAUF0XfOdJa62+IaCeO40GSJA/zPP8RwB9vDjBtWmv9JRE5ImpZawdVpbo58CkAIyJnIrLAzEvOuXNm/h3AfQDOAGdj5z5m5gXn3G9ENCKilckaiDwpiFZEpCoiTyYrM3/knOtXmHs58BkABvCLc+4DZl6cxIjoh4ODA728vIzt7W2sra09PT4+fgTgQES4LMvHZIy5LyI/f/dJvfK6FKMJqAdqmBS2ZgWINY9zJyZ1whUiRJrTfmGjybSxUemwcFEmghqT1UxlUrpQEXD7jRq3NWelEz10okIi1AJOX+U2EgALgUrT0kVnmcKvQ+uazSZvbW2hWq2i3++j3W5jf38f6+vrebvdHovI5pT09+vN7teLYev990K8GpQYjS1u1TQqhnHez6EU4cM7FTw7z5AXDo16ACcyPRsaxp2FEM9ejKd7zUaIYVpiOCpRq2rUIo0XLzMwEZaaFTzvZ8hyh/iWnu69fF1AAoOfFr/A5w8eYDQaIY5jJEmC09NTNBoNdLtd7O3t4ejoCIeHh8k/pL8KUSkCZcg6hCLDjLk2ufYGpRuXAuOMYiosQiDNNEcQILQuzYgi0QxVWKuAMtcqJPdXDaKaMMOUNrOAtoFSVE5jaaY4mtQPS5dmQPS8WkdfGReYgDe/3cTdpbvo9XrY2NhAp9NBq9XKO53Ov6T/r2mlVBeX0DSAMzeHppm5h7doemdvR99buYfd3V2srq4+PTk5+a+mr9CmrqTU3+5Rr9cHg8HgYve4krddbZGb5dOXmf2d+7n4pi9D4LrOeHl40v42fl0a8KQ96fkIeJ+ej9vsWZ707Mzmy/Ck5+M2e9afhmuAz1BhwewAAAAASUVORK5CYII=" alt="Next in Tag" width="45" height="45" loading="lazy">
+                    </a>
+                  
+                </div>
+              </div>
+            
+          
+          <!-- JavaScript to Toggle the Tag-based Navigation -->
+          <script>
+            document.addEventListener("DOMContentLoaded", function(){
+              var tagLinks = document.querySelectorAll('.tag-option');
+              tagLinks.forEach(function(link){
+                link.addEventListener('click', function(event){
+                  event.preventDefault();
+                  // Remove "active" class from all tag options.
+                  tagLinks.forEach(function(el){ el.classList.remove('active'); });
+                  // Add active class to the clicked tag option.
+                  this.classList.add('active');
+                  // Hide all tag navigation blocks.
+                  document.querySelectorAll('.nav-group.tags').forEach(function(block){
+                    block.style.display = 'none';
+                  });
+                  // Show the navigation block corresponding to the selected tag.
+                  var tagSlug = this.getAttribute('data-tag');
+                  var target = document.getElementById('tag-nav-' + tagSlug);
+                  if(target) {
+                    target.style.display = 'block';
+                  }
+                });
+              });
+            });
+          </script>
+      </nav>
+      
+    <div class="comment-box">
+      Ref. 
+      <a href="https://articles.manugarg.com/backup_rsync.html" title="https://articles.manugarg.com/backup_rsync.html">https://articles.manugarg.com/backup_rsync.html</a>
+    </div>
+    
+    </main>
+    <footer id="bottom-of-page" class="site-footer">
+      <div class="footer-content">
+        <!-- Back to top link -->
+        <a href="#" aria-label="Back to top" class="back2top-link">
+          <span class="sronly">Back to top</span>
+        </a>
+    
+        <!-- Liquid Time Calculation and Display -->
+        
+        
+        
+        <a href="https://ib.bsb.br/404" aria-label="404">
+          2025-09-18 23:13:59
+        </a>
+        &#x23;
+    
+        <!-- Tag Selector -->
+        <ul class="tag-selector">
+          
+            
+            
+              <li>
+                <a href="#" class="tag-option active" data-tag="scratchpad">
+                  scratchpad
+                </a>
+              </li>
+            
+          
+        </ul>
+        &hArr;
+    
+        <!-- GitHub Link -->
+        <a href="https://github.com/ib-bsb-br/ib-bsb-br.github.io" aria-label="GitHub">
+          &#8505;
+        </a>
+    
+        <!-- Homepage Link -->
+        <a href="/" aria-label="Homepage">
+          infoBAG
+        </a>
+    
+        <!-- Copy All Code Button -->
+        <button id="copyAllButton" aria-label="Copy all code">
+          &copy;
+        </button>
+      </div>
+    </footer>
+    <style>
+      .back2top-link {
+        display: inline-block;
+        width: 32px;
+        height: 32px;
+        background: url("/assets/Rope_(Old).gif") center center no-repeat;
+        background-size: contain;
+        text-decoration: none;
+        vertical-align: middle;
+      }
+      .sronly {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
+    </style>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Article",
+        "mainEntityOfPage": {
+          "@type": "WebPage",
+          "@id": "https://ib.bsb.br/windows-rsync/"
+        },
+        "headline": "Backing up Windows machines using rsync and ssh",
+        "description": "",
+        "datePublished": "2025-03-23T00:00:00+00:00",
+        "dateModified": "2025-09-19T02:08:02+00:00",
+        "author": {
+          "@type": "Person",
+          "name": "Author"
+        },
+        "publisher": {
+          "@type": "Organization",
+          "name": "infoBAG"
+          
+        }
+        
+      }
+    </script>
+    <script src="/assets/js/prism.js" defer></script>
+    <script src="/assets/js/copy-all-code.js"></script>
+  </body>
+</html>
