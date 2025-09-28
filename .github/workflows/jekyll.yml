@@ -51,8 +51,13 @@ jobs:
           if ! git diff-index --quiet HEAD; then
             git commit -m "Update content [skip ci]"
           fi
-          git pull --no-rebase origin main
-          git push origin main || echo "No changes to push"
+          git fetch origin main
+          if ! git merge --no-edit -s ours origin/main; then
+            git merge --abort || true
+            echo "Unable to merge changes from origin/main even after preferring ours."
+            exit 1
+          fi
+          git push origin HEAD:main || echo "No changes to push"
 
   build-and-deploy:
     name: Build and Deploy Jekyll Site
@@ -225,5 +230,10 @@ jobs:
           if ! git diff-index --quiet HEAD; then
             git commit -m "Update content [skip ci]"
           fi
-          git pull --no-rebase origin main
-          git push origin main || echo "No changes to push"
+          git fetch origin main
+          if ! git merge --no-edit -s ours origin/main; then
+            git merge --abort || true
+            echo "Unable to merge changes from origin/main even after preferring ours."
+            exit 1
+          fi
+          git push origin HEAD:main || echo "No changes to push"
