@@ -1,4 +1,182 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2025-09-29T09:51:59+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">git merge</title><link href="https://ib.bsb.br/git-merge/" rel="alternate" type="text/html" title="git merge" /><published>2025-09-28T00:00:00+00:00</published><updated>2025-09-28T18:54:06+00:00</updated><id>https://ib.bsb.br/git-merge</id><content type="html" xml:base="https://ib.bsb.br/git-merge/"><![CDATA[<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  &lt;purpose&gt;
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2025-09-29T17:33:37+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">ARC PRIZE</title><link href="https://ib.bsb.br/arc-prize/" rel="alternate" type="text/html" title="ARC PRIZE" /><published>2025-09-29T00:00:00+00:00</published><updated>2025-09-29T17:16:05+00:00</updated><id>https://ib.bsb.br/arc-prize</id><content type="html" xml:base="https://ib.bsb.br/arc-prize/"><![CDATA[<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Subtask 1 — System Role &amp; Run Flow
+Objective  Define the pipeline goal and top-level control flow.
+Inputs  ARC JSON challenges; RunConfig; env vars (keys, MAX_CONCURRENCY, flags).
+Procedure / Prompt Spec or Algorithm  Use src/run.py::run() → run_from_json() to load challenges, choose preset, orchestrate solve_challenges() which schedules solve_challenge(); within it call get_answer_grids() to generate/score instructions and finalize guesses.
+Outputs / Artifacts  Attempts JSON in attempts/arc-prize-20XX/...; per-task temp_solutions/*.json.
+Dependencies / Anchors  README.md (How the system works, Running a solve); src/run.py::{run, run_from_json, solve_challenges, solve_challenge, get_answer_grids, return_answer}.
+Acceptance Criteria  Running python src/run.py produces an attempts file and (if truth present) printed accuracy; no unhandled exceptions.
+Failure Modes &amp; Mitigations  Missing env keys → set per README; rate limits → lower concurrency flags.
+:::
+
+Subtask 2 — Data Models &amp; Grid Representation
+Objective  Normalize grid IO for prompts and scoring.
+Inputs  Challenge, Example, Input models; integer grids; COLOR_MAP.
+Procedure / Prompt Spec or Algorithm  Render grids via Challenge.grid_to_str; optionally embed base64 PNG via Challenge.grid_to_base64/viz.base64_from_grid.
+Outputs / Artifacts  Text matrices; optional images.
+Dependencies / Anchors  src/models.py::{Challenge, Example, Input, grid_to_str, grid_to_base64, COLOR_MAP}; src/viz.py::{base64_from_grid}.
+Acceptance Criteria  Stringified grids are rectangular, integer-only; base64 generation does not raise.
+Failure Modes &amp; Mitigations  Image encoding errors → log and fall back to text-only (see main.contents_from_grid try/except).
+:::
+
+Subtask 3 — Prompt Packing
+Objective  Build consistent message content for LLMs.
+Inputs  Training examples, optional attempts, test inputs; toggles: include_base64, use_diffs.
+Procedure / Prompt Spec or Algorithm  Use contents_from_grid, contents_from_example, contents_from_challenge to produce a list of typed parts with labeled sections and (optionally) diffs.
+Outputs / Artifacts  Structured message content lists.
+Dependencies / Anchors  src/main.py::{contents_from_grid, contents_from_example, contents_from_challenge}; diff text via src/run.py::generate_grid_diff.
+Acceptance Criteria  Message list order matches training→tests; when diffs enabled, mismatches include ASCII diff.
+Failure Modes &amp; Mitigations  Context bloat → disable images/diffs; reduce step sizes.
+:::
+
+Subtask 4 — Instruction Synthesis
+Objective  Derive a general rule as stepwise instructions.
+Inputs  INTUITIVE_PROMPT; packed examples/tests.
+Procedure / Prompt Spec or Algorithm  Call get_next_structure(InstructionsResponse, model=step.instruction_model, messages=…) from get_instructions_from_challenge.
+Outputs / Artifacts  InstructionsResponse.instructions.
+Dependencies / Anchors  src/main.py::{INTUITIVE_PROMPT, InstructionsResponse}; src/run.py::{get_instructions_from_challenge}.
+Acceptance Criteria  Non-empty string; avoids example-specific indices per prompt guidance.
+Failure Modes &amp; Mitigations  Empty/invalid → retry via step sampling; move to revision/pooling.
+:::
+
+Subtask 5 — Executor (Follow Instructions)
+Objective  Apply instructions to a test grid to produce an output grid.
+Inputs  Instructions; training examples (as reference); one test input; flags is_perfect, include_base64, use_diffs.
+Procedure / Prompt Spec or Algorithm  Use AGENT_FOLLOW_INSTRUCTIONS_PROMPT and optional PERFECT_PROMPT; call output_grid_from_instructions which invokes get_next_structure(GridResponse, …).
+Outputs / Artifacts  GridResponse.grid (2D ints).
+Dependencies / Anchors  src/main.py::{AGENT_FOLLOW_INSTRUCTIONS_PROMPT, PERFECT_PROMPT, GridResponse, output_grid_from_instructions}.
+Acceptance Criteria  Grid shape matches target’s shape during scoring; integers only.
+Failure Modes &amp; Mitigations  Free text instead of grid → schema enforcement via get_next_structure.
+:::
+
+Subtask 6 — Structured Output Enforcement
+Objective  Ensure parseable, schema-validated LLM outputs.
+Inputs  Pydantic schemas; provider selection.
+Procedure / Prompt Spec or Algorithm  Route via get_next_structure which dispatches to _get_next_structure_* per model (OpenAI/Anthropic/Gemini/DeepSeek/xAI/OpenRouter), using JSON/object or tool use as supported.
+Outputs / Artifacts  Parsed Pydantic instances.
+Dependencies / Anchors  src/llms/structured.py::{get_next_structure, _get_next_structure_openai, _get_next_structure_anthropic, _get_next_structure_gemini, _get_next_structure_deepseek, _get_next_structure_xai, _get_next_structure_openrouter}; src/llms/models.py::Model.
+Acceptance Criteria  Successful parse or controlled failure with retries; no downstream string parsing needed.
+Failure Modes &amp; Mitigations  Model lacks json_schema → use json_object path; retry with backoff.
+:::
+
+Subtask 7 — Scoring (Leave-One-Out)
+Objective  Quantify instruction generalization.
+Inputs  Candidate instructions; full training set; follow_model.
+Procedure / Prompt Spec or Algorithm  For each training example i, hold out i, execute on its input, compare to its output using get_grid_similarity (exact cell-wise match proportion); average over examples.
+Outputs / Artifacts  InstructionsScore with example_scores and aggregate score.
+Dependencies / Anchors  src/run.py::{get_example_score, get_grid_similarity, score_instructions_on_challenge}.
+Acceptance Criteria  Score in [0,1]; 1.0 iff all cells match on all held-out examples.
+Failure Modes &amp; Mitigations  Dimensional mismatch → similarity 0; optional viz when VIZ=1.
+:::
+
+Subtask 8 — Revision (Self-Repair)
+Objective  Improve weak instructions using feedback from mismatches.
+Inputs  Prior InstructionsScore; diffs/attempts; StepRevision config.
+Procedure / Prompt Spec or Algorithm  Prompt with REVISION_PROMPT via InstructionsScore.get_revised_instructions; rescore revised outputs.
+Outputs / Artifacts  New InstructionsScore items.
+Dependencies / Anchors  src/run.py::{REVISION_PROMPT, InstructionsScore.get_revised_instructions}; src/configs/models.py::StepRevision.
+Acceptance Criteria  Best revised score ≥ previous best; log improvement metrics.
+Failure Modes &amp; Mitigations  No gains → move to pooling; adjust sampling counts.
+:::
+
+Subtask 9 — Pooling (Synthesis Across Attempts)
+Objective  Fuse strengths from several near-miss instruction sets.
+Inputs  Top InstructionsScore samples; StepRevisionPool config.
+Procedure / Prompt Spec or Algorithm  Use SYNTHESIS_PROMPT via get_pooling_instruction_from_scores; rescore; merge with candidates.
+Outputs / Artifacts  Pooled instruction texts and scores.
+Dependencies / Anchors  src/run.py::{SYNTHESIS_PROMPT, get_pooling_instruction_from_scores}; src/configs/models.py::StepRevisionPool.
+Acceptance Criteria  At least one pooled instruction’s score ≥ prior top.
+Failure Modes &amp; Mitigations  Convergence to weak consensus → increase diversity (times), keep multiple candidates.
+:::
+
+Subtask 10 — Step Orchestration &amp; Sampling
+Objective  Execute configured Step/Revision/Pool sequence.
+Inputs  RunConfig.steps with per-step models, counts, timeouts, flags.
+Procedure / Prompt Spec or Algorithm  In get_answer_grids, generate candidates per step, rescore, sort desc, short-list for subsequent steps; exit early on perfect score.
+Outputs / Artifacts  Sorted candidate list.
+Dependencies / Anchors  src/run.py::{get_instruction_scores, get_score_from_instructions, get_answer_grids}; src/configs/models.py::{RunConfig, Step, StepRevision, StepRevisionPool}.
+Acceptance Criteria  Deterministic step flow with early exit on score==1.
+Failure Modes &amp; Mitigations  Empty candidate set → log error and halt (exception path).
+:::
+
+Subtask 11 — Finalization &amp; Diversity
+Objective  Produce up to two distinct final guesses per test grid.
+Inputs  Top candidates; final_follow_model; final_follow_times.
+Procedure / Prompt Spec or Algorithm  Use get_diverse_attempts to generate multiple outputs; prefer perfect-score instructions; otherwise split attempts between top two candidates; ensure diversity when possible.
+Outputs / Artifacts  Two Guess objects; attempts JSON updated.
+Dependencies / Anchors  src/run.py::{get_diverse_attempts, return_answer, Guess}.
+Acceptance Criteria  Each test input yields ≤2 outputs; if all generated outputs are identical, duplicates are allowed per code.
+Failure Modes &amp; Mitigations  Lack of diversity → explicitly bias attempts across top-2 instruction sources (as implemented).
+:::
+
+Subtask 12 — Concurrency Control
+Objective  Prevent provider overload and monitor saturation.
+Inputs  Env MAX_CONCURRENCY; config max_concurrent_tasks.
+Procedure / Prompt Spec or Algorithm  Use MonitoredSemaphore in both run loop and get_next_structure (API semaphore); log active/available permits.
+Outputs / Artifacts  Saturation logs, orderly task scheduling.
+Dependencies / Anchors  src/async_utils/semaphore_monitor.py::MonitoredSemaphore; usage in src/run.py::solve_challenges and src/llms/structured.py::API_SEMAPHORE.
+Acceptance Criteria  No storm of RESOURCE_EXHAUSTED; visible saturation percentage logs.
+Failure Modes &amp; Mitigations  Starvation/deadlocks → minimal critical sections; staggered starts in solve_challenges.
+:::
+
+Subtask 13 — Provider Adapters &amp; Retries
+Objective  Uniform structured calls across providers with robust retries.
+Inputs  Model enum; messages; schemas.
+Procedure / Prompt Spec or Algorithm  Dispatch in get_next_structure; per-provider adapters enforce structured output; retry_with_backoff wraps transient failures (xAI/OpenRouter paths) with jitter and caps.
+Outputs / Artifacts  Parsed outputs; usage logs.
+Dependencies / Anchors  src/llms/structured.py::{retry_with_backoff, get_next_structure, _get_next_structure_*}; src/llms/models.py::Model.
+Acceptance Criteria  Recover from transient failures; bounded retries; logged attempts.
+Failure Modes &amp; Mitigations  Non-retryable errors → immediate fail with error logs.
+:::
+
+Subtask 14 — Logging &amp; Trace Context
+Objective  Record spans and mirror to local file while scrubbing sensitive data.
+Inputs  LOGFIRE_API_KEY, LOCAL_LOGS_ONLY, LOG_LEVEL.
+Procedure / Prompt Spec or Algorithm  Patch logfire methods to inject run_id/task_id; write rotating file logs/arc.log; wrap spans with start/end/error messages.
+Outputs / Artifacts  Local log file; optional remote telemetry.
+Dependencies / Anchors  src/logging_config.py::{generate_run_id, set_task_id, logfire patches}; src/log.py::log facade.
+Acceptance Criteria  Every major operation creates span logs; no secret leakage (scrubbing callback).
+Failure Modes &amp; Mitigations  No token/network → LOCAL_LOGS_ONLY=1 path.
+:::
+
+Subtask 15 — Persistence (Files &amp; Optional DB)
+Objective  Store attempts and optionally DB rows for analysis.
+Inputs  Guesses and instruction scores; NEON_DSN (optional).
+Procedure / Prompt Spec or Algorithm  Write attempts / temp files; if DB configured, InstructionsScore.save_to_db and Guess.save_to_db insert rows (JSONB fields) with metadata.
+Outputs / Artifacts  JSON files; DB rows when enabled.
+Dependencies / Anchors  src/run.py::{solve_challenge, Guess.save_to_db, InstructionsScore.save_to_db}.
+Acceptance Criteria  Files are valid JSON; DB insert does not raise.
+Failure Modes &amp; Mitigations  DB failure → continue with file artifacts only.
+:::
+
+Subtask 16 — Visualization &amp; Base64
+Objective  Aid debugging and multimodal prompting.
+Inputs  VIZ, LOG_GRIDS env toggles; color map.
+Procedure / Prompt Spec or Algorithm  When enabled, viz_many shows mismatches; base64_from_grid generates PNGs for embedding.
+Outputs / Artifacts  On-screen figures; base64 strings.
+Dependencies / Anchors  src/viz.py::{viz_many, base64_from_grid}; hooks in src/run.py and src/main.py.
+Acceptance Criteria  No GUI errors when disabled; images created when requested.
+Failure Modes &amp; Mitigations  Headless errors → keep defaults off.
+:::
+
+Subtask 17 — Environment &amp; Runbook
+Objective  Prepare environment and execute.
+Inputs  .env with provider keys; MAX_CONCURRENCY; Python 3.12 target in tooling.
+Procedure / Prompt Spec or Algorithm  Load env early (src/__init__.py); install deps per pyproject.toml; run python src/run.py; adjust run() to select preset (grok_config_prod, gpt_config_prod, oss_config, mini_config).
+Outputs / Artifacts  Successful run start; log output including run id.
+Dependencies / Anchors  README.md (Requirements, Environment configuration, Running a solve); src/__init__.py; src/configs/*.
+Acceptance Criteria  Smoke test runs with defaults; no KeyError for MAX_CONCURRENCY.
+Failure Modes &amp; Mitigations  Missing var → set in .env per README.
+:::
+
+Subtask 18 — Evaluation
+Objective  Compute accuracy when ground truth is provided.
+Inputs  Attempts JSON; solutions JSON.
+Procedure / Prompt Spec or Algorithm  Use evaluate_solutions to compare attempts against truth; count either attempt as correct; report aggregate accuracy.
+Outputs / Artifacts  Printed accuracy; logs.
+Dependencies / Anchors  src/run.py::{evaluate_solutions}.
+Acceptance Criteria  Accuracy matches competition scoring semantics (either attempt counts).
+Failure Modes &amp; Mitigations  Schema mismatch → validate inputs before evaluation.
+</code></pre></div></div>]]></content><author><name></name></author><category term="AI&gt;prompt" /><category term="scratchpad" /></entry><entry><title type="html">git merge</title><link href="https://ib.bsb.br/git-merge/" rel="alternate" type="text/html" title="git merge" /><published>2025-09-28T00:00:00+00:00</published><updated>2025-09-28T18:54:06+00:00</updated><id>https://ib.bsb.br/git-merge</id><content type="html" xml:base="https://ib.bsb.br/git-merge/"><![CDATA[<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  &lt;purpose&gt;
     You consolidate a chat history summary ([[chat_history_summary]]), its output documentation ([[history_outputs_doc]]), and two approach artifacts ([[first_approach]], [[second_approach]]) into a single coherent framework for the repository [[repo_name]]. Produce: a harmonized framework spec, a generation policy, three worked examples, and a JSON manifest for CI.
   &lt;/purpose&gt;
   &lt;context&gt;
@@ -4739,195 +4917,4 @@ Cancel Apply
 &lt;outline text=&quot;&quot;&gt;&lt;/outline&gt;
 &lt;/outline&gt;
 &lt;/body&gt;&lt;/opml&gt;</code>
-</section>]]></content><author><name></name></author><category term="scratchpad" /></entry><entry><title type="html">iOS apps library clustered</title><link href="https://ib.bsb.br/ios-apps-library-clustered/" rel="alternate" type="text/html" title="iOS apps library clustered" /><published>2025-08-10T00:00:00+00:00</published><updated>2025-08-10T02:17:33+00:00</updated><id>https://ib.bsb.br/ios-apps-library-clustered</id><content type="html" xml:base="https://ib.bsb.br/ios-apps-library-clustered/"><![CDATA[<p><strong>System apps (built into iOS):</strong></p>
-<ul>
-  <li><strong>App Store:</strong> Apple’s built-in digital storefront. Used to browse, purchase, and update iOS applications. (Example: “App Store” is where you get apps on your iPhone.)</li>
-  <li><strong>Camera:</strong> Apple’s camera app. “Take stunning photos and videos with true-to-life colour… Capture detailed shots in low-light situations” (<a href="https://apps.apple.com/pk/app/clock/id1584215688#:~:text=Clock%20helps%20you%20manage%20your,World%20Clock">apps.apple.com</a>).</li>
-  <li><strong>Clock:</strong> iOS clock utility with World Clock, alarms, stopwatch, and timer. “Clock helps you manage your time on iOS… wake up on time with Alarms, or keep track of passing time with Stopwatch and Timers” (<a href="https://apps.apple.com/pk/app/clock/id1584215688#:~:text=Clock%20helps%20you%20manage%20your,World%20Clock">apps.apple.com</a>).</li>
-  <li><strong>Contacts:</strong> Apple’s contacts/address book app for storing names, phone numbers, emails, etc. (Built-in People app on iOS.)</li>
-  <li><strong>Find My:</strong> Apple’s locator app. “View the location of your Apple devices, locate items you’ve attached AirTag to… and share your location with friends and family” (<a href="https://apps.apple.com/us/app/find-my/id1514844621#:~:text=View%20the%20location%20of%20your,use%20app">apps.apple.com</a>).</li>
-  <li><strong>Messages:</strong> Apple’s messaging app for SMS/MMS and iMessage (text, photos, video chats).</li>
-  <li><strong>Phone:</strong> iPhone’s dialer for calls. (Built-in phone application.)</li>
-  <li><strong>Photos:</strong> Apple’s photo library. Displays and manages your camera roll.</li>
-  <li><strong>Wallet:</strong> Digital wallet/passes app for boarding passes, Apple Pay, gift cards, etc. (Built-in.)</li>
-  <li><strong>Safari:</strong> Apple’s web browser on iOS. (Built-in.)</li>
-  <li><strong>Calculator:</strong> Apple’s simple calculator app (built-in).</li>
-  <li><strong>Measure:</strong> Apple’s augmented-reality measuring tool (built into iOS). (Uses the camera to measure real-world objects.)</li>
-</ul>
-
-<p><strong>Automation &amp; Shortcuts:</strong></p>
-<ul>
-  <li><strong>Actions:</strong> A launcher/shortcuts app (Glyph Launcher) for quick actions via URL schemes and shortcuts. Helps create and run automation tasks.</li>
-  <li><strong>AI Actions:</strong> An iOS extension that lets you insert AI-generated steps into Shortcuts workflows and the Share Sheet (e.g. generate text with AI while sharing content).</li>
-  <li><strong>Data Jar:</strong> A key–value data store for Apple Shortcuts. Allows shortcuts to save and retrieve persistent data (variables).</li>
-  <li><strong>Pushcut:</strong> Automation notifier/trigger app. Sends custom push notifications and runs shortcut actions based on webhooks, time, or location triggers. (Great for advanced automations.)</li>
-  <li><strong>Toolbox Pro:</strong> Adds dozens of extra actions for the Shortcuts app (e.g. manipulate text, images, files, etc.) that Shortcuts doesn’t have natively.</li>
-  <li><strong>Userscripts:</strong> Safari extension manager. Lets you install and run custom JavaScript (“user scripts”) on webpages, adding bespoke automation/features to browsing.</li>
-  <li><strong>Opener:</strong> Utility that opens shared links directly in specific apps instead of Safari (e.g. opening YouTube links in YouTube app, etc.). Maps URLs to app schemes.</li>
-  <li><strong>Quick Launch:</strong> Shortcut/app launcher. Quickly run apps or shortcut sequences from your home or lock screen.</li>
-  <li><strong>Quick Capture – Obsidian:</strong> One-tap note capturer for Obsidian. Instantly sends text (or web content) into your Obsidian knowledge base.</li>
-  <li><strong>SingleFile:</strong> Safari extension that saves entire web pages as a single HTML file. “SingleFile can preserve the original layout, links, etc.” (<a href="https://apps.apple.com/us/app/singlefile-for-safari/id6444322545#:~:text=SingleFile%20is%20a%20Safari%20extension,you%20can%20easily%20access%20offline">apps.apple.com</a>). Useful for archiving pages offline.</li>
-  <li><strong>SiteSucker:</strong> Website downloader. “Automatically downloads websites… copying the site’s webpages, style sheets, images… to your iOS device” for offline browsing (<a href="https://apps.apple.com/in/app/sitesucker/id346896838#:~:text=SiteSucker%20is%20an%20iOS%20app,sheet%2C%20it%20scans%20the%20file">apps.apple.com</a>).</li>
-  <li><strong>Vinegar:</strong> Safari content blocker for video pages. Replaces embedded YouTube players with a simpler native interface. (Improves playback and privacy.)</li>
-  <li><strong>Wipr:</strong> Safari content blocker. Blocks ads and trackers in the browser for privacy.</li>
-</ul>
-
-<p><strong>AI &amp; Voice Assistants:</strong></p>
-<ul>
-  <li><strong>Gemini:</strong> Google’s AI chatbot. Officially marketed as a powerful AI assistant (“Google Gemini app is your personal, proactive and powerful AI Assistant” (<a href="https://apps.apple.com/us/app/speech-central-text-to-speech/id1127349155#:~:text=App%20Store%20Preview">apps.apple.com</a>)). Chat and get answers using Google’s Gemini model.</li>
-  <li><strong>GPT Box:</strong> System-wide AI assistant using OpenAI’s models. Runs GPT-style chat from anywhere (via share sheet).</li>
-  <li><strong>Hume AI:</strong> Conversational AI with an emphasis on emotional intelligence. Voice chat that can respond empathetically using advanced AI.</li>
-  <li><strong>ChatX:</strong> GPT-style AI chat client. Interface to have AI conversations (likely uses OpenAI/Claude style backend).</li>
-  <li><strong>NotebookLM:</strong> Google’s AI research notebook. Helps you understand complex documents by answering questions, summarizing, and even providing audio summaries (<a href="https://blog.google/technology/ai/notebooklm-app/#:~:text=We%E2%80%99ve%20received%20a%20lot%20of,directly%20to%20NotebookLM%20while%20browsing">blog.google</a>). (Part of Google Labs.)</li>
-  <li><strong>Whisper:</strong> Voice-to-text transcription app based on OpenAI’s Whisper model. Records audio and converts speech to text.</li>
-  <li><strong>AudioWriter:</strong> Audio recording app that transcribes voice notes to text (records and AI-converts speech). (Name suggests audio-&gt;writing.)</li>
-  <li><strong>Clean Text:</strong> Utility to reformat or clean up text. Can remove whitespace, uppercase/lowercase conversions, etc. (Not strictly AI, just a text utility.)</li>
-</ul>
-
-<p><strong>Developer &amp; Networking:</strong></p>
-<ul>
-  <li><strong>a-Shell:</strong> Local Unix terminal emulator on iOS (<a href="https://apps.apple.com/us/app/a-shell/id1473805438#:~:text=,Shell">apps.apple.com</a>). Supports commands like <code class="language-plaintext highlighter-rouge">grep</code>, <code class="language-plaintext highlighter-rouge">ssh</code>, <code class="language-plaintext highlighter-rouge">python</code>, <code class="language-plaintext highlighter-rouge">gcc</code>, and more. (“a-Shell is a complete local terminal emulator” (<a href="https://apps.apple.com/us/app/a-shell/id1473805438#:~:text=">apps.apple.com</a>).) Useful for scripting and development on the device.</li>
-  <li><strong>GitHub:</strong> Official GitHub client. BrowseRepos, issues, PRs, notifications, and code on GitHub from iPhone. (“You can … browse your latest notifications, read, react, and reply to Issues and Pull Requests” (<a href="https://www.kdjingpai.com/en/alog/#:~:text=productivity%20tool%20www,you%20find%20the%20URL%20is">www.kdjingpai.com</a>).)</li>
-  <li><strong>ZLGithubClient:</strong> Third-party GitHub client. (An alternative to the official GitHub app.)</li>
-  <li><strong>Google Cloud:</strong> Google Cloud Console app. “Helps you manage your services on Google Cloud… check project status, billing, etc.” (<a href="https://apptopia.com/ios/app/790247988/about#:~:text=About%3A%20WOOP%20app%20,Productivity%2C%20Health%20%26%20Fitness">apptopia.com</a>) (Review VMs, storage, cloud accounts).</li>
-  <li><strong>Google One:</strong> Google’s cloud storage/subscription app. “Lets you back up your phone and manage your Google account storage” (<a href="https://apps.apple.com/us/app/algoapp-flashcards/id689185915#:~:text=">apps.apple.com</a>) (photos, contacts backup, see plan usage).</li>
-  <li><strong>TestFlight:</strong> Apple’s beta testing app. Install and test pre-release iOS apps and submit feedback. (<a href="https://discussions.apple.com/thread/252870348#:~:text=Community%20discussions.apple.com%20%20,I%20get%20the">discussions.apple.com</a>) (Built into Apple Developer system.)</li>
-  <li><strong>Logger:</strong> Console log viewer for system and app logs. (Useful for debugging and diagnostics.)</li>
-  <li><strong>Debug Anywhere:</strong> Overlay debug inspector for iOS apps. Allows inspecting UI elements and debugging on the device.</li>
-  <li><strong>ServerBox:</strong> SSH/Server toolbox. Manage and monitor remote servers via SSH/SFTP on iPhone.</li>
-  <li><strong>ServerCat:</strong> Similar SSH remote admin app (SFTP file browser, server metrics, etc.).</li>
-  <li><strong>NeoServer:</strong> Server management/monitoring tool (for SSH servers).</li>
-  <li><strong>NetBird:</strong> Cloud VPN/mesh networking (WireGuard-based). Creates a private network between your devices for remote access.</li>
-  <li><strong>Tailscale:</strong> Zero-configuration VPN app (implements a secure WireGuard mesh). “Securely connect to anything on the internet with Tailscale” (<a href="https://apps.apple.com/us/app/sync-folders/id530573877#:~:text=Mac%20App%20Store%20Preview">apps.apple.com</a>), using identity to configure the VPN.</li>
-  <li><strong>NeoAria2:</strong> Remote controller for the aria2 download daemon. Control downloads (magnet links, torrents) on a remote server from iOS.</li>
-  <li><strong>Pushsafer:</strong> Service integration for sending push notifications via API/scripts (developer tool to send alerts).</li>
-  <li><strong>Supasend:</strong> Mobile side of a third-party notification service (Quick Capture client). Quickly send push/email from Shortcuts (see below Quick Capture – SupaSend).</li>
-  <li><strong>WPD:</strong> (Uncertain – possibly a developer utility; left as placeholder.)</li>
-</ul>
-
-<p><strong>Productivity, Notes &amp; PKM:</strong></p>
-<ul>
-  <li><strong>Thought Path:</strong> A lightweight outliner. Hierarchical note-taking app (mind-map or outline).</li>
-  <li><strong>ToMemo:</strong> Very simple note/memo app for fast text capture.</li>
-  <li><strong>IFThenNote:</strong> Creates notes triggered by conditions (e.g. arrives at location). (If-this-then-note utility.)</li>
-  <li><strong>Quick Capture – Obsidian:</strong> (Also in Automation) Quick note capture directly into Obsidian vault.</li>
-  <li><strong>Karakeep:</strong> Personal bookmarking and note app. Stores links, notes, images; uses AI to auto-tag and organize content】: “A bookmark-everything app (links, notes and images) with AI-based automatic tagging and full text search” (<a href="https://github.com/karakeep-app/karakeep#:~:text=Skip%20to%20content%20karakeep,app">github.com</a>). Self-hosted and sync options available.</li>
-  <li><strong>Linkos:</strong> Read-it-later / link organizer. Save web links and read content later. (Likely similar to Pocket/Instapaper.)</li>
-  <li><strong>Priority List:</strong> A to-do app focused on weight/prioritization. Assigns weights to tasks to decide what’s most important.</li>
-  <li><strong>One Task:</strong> Minimalist to-do list, focusing on one task at a time. Simple checklist app.</li>
-  <li><strong>MyLifeOrg 3:</strong> Personal organizer for tasks, goals, and habits tracking (like agendas or GTD).</li>
-  <li><strong>Strides:</strong> Goal and habit tracker with streak counters (track progress on health, finance, etc.).</li>
-  <li><strong>Nuj:</strong> Habit-building app (journaling prompts and nudges to form or break habits).</li>
-</ul>
-
-<p><strong>Reading &amp; Learning:</strong></p>
-<ul>
-  <li><strong>Reeder v5:</strong> Popular RSS/news feed reader. Subscribes to feeds (Feedly, etc.) and displays articles. (The icon shows a lightning bolt.)</li>
-  <li><strong>Reeder (legacy):</strong> An older version of Reeder (also an RSS reader). Not needed separately if using v5. (Probably installed side-by-side.)</li>
-  <li><strong>Reader:</strong> General reading app (possibly a MarkOff or Instapaper-style read-it-later).</li>
-  <li><strong>Readfly:</strong> Reading tracker/reader. Monitors how much time you spend reading books or articles. (Tag suggests “reading tracker”.)</li>
-  <li><strong>ReadIT:</strong> Reading app or e-book utility (the icon looks like an open book). Likely another read-it-later or e-reader.</li>
-  <li><strong>ReadUp:</strong> Social reading/highlight app – share and discuss book highlights with friends. (Community reading tool.)</li>
-  <li><strong>Spritz:</strong> Speed-reading app (RSVP style with black background “spritz” logo). Likely flashes words one by one to train reading speed.</li>
-  <li><strong>Speed Reader:</strong> Another RSVP speed-reading trainer. “Reads one word at a time… start at 300 WPM and you can speed up to 750 WPM” (<a href="https://apps.apple.com/th/app/speed-reader-for-speed-reading/id6447472154#:~:text=Speed%20Reader%20,speed%20read%20750%20words%20per">apps.apple.com</a>). Improves reading speed via single-word display.</li>
-  <li><strong>Speed Eyes:</strong> Educational eye-training for speed-reading (visual focus exercises).</li>
-  <li><strong>Stage Reader:</strong> Teleprompter app for speeches. Scrolls text at adjustable speed for presenters.</li>
-  <li><strong>Sara Nossa Terra:</strong> App for the Sara Nossa Terra church (Portuguese church). Provides faith resources and community info (the icon with a feather quill).</li>
-  <li><strong>MH Comment (Matthew Henry Commentary):</strong> Bible study reference. Contains Matthew Henry’s complete Bible commentary (<a href="https://apps.apple.com/us/app/matthew-henry-bible-commentary/id985746464#:~:text=Matthew%20Henry%20Complete%20Commentary%20on,the%20Old%20and%20New%20Testaments">apps.apple.com</a>). (Also includes Scofield notes and King James Bible. Church study tool.)</li>
-</ul>
-
-<p><strong>Photos, Video &amp; Document Scanning:</strong></p>
-<ul>
-  <li><strong>Capture:</strong> Generic scanner app. The icon suggests capturing document photos. (Use camera to scan receipts/docs to PDF.)</li>
-  <li><strong>Open Scanner:</strong> Camera-based document scanner with OCR (text recognition from photos).</li>
-  <li><strong>Prizmo Go:</strong> Advanced live OCR app. Use camera to instantly extract and copy text from any printed material【0†source】 (the icon with an orange O).</li>
-  <li><strong>Photos+:</strong> ‘Pro’ photo browser. Enhanced image viewer with EXIF data and editing tools. (Third-party Photos replacement.)</li>
-  <li><strong>Replica:</strong> Screen/mirroring app. Casts your iPhone screen to a TV or PC over the network (via AirPlay or proprietary protocol). (Icon shows a TV screen.)</li>
-  <li><strong>Mocha LPR:</strong> License-plate recognition camera. Uses the camera to read car license plates automatically (for parking or security tasks).</li>
-  <li><strong>OpenCat:</strong> Possibly a control/monitoring app for an open-source punching bag/robot named “OpenCat”. (Unclear, likely IoT/hardware related.)</li>
-</ul>
-
-<p><strong>Audio &amp; Music:</strong></p>
-<ul>
-  <li><strong>Spotify:</strong> Popular music and podcast streaming app. (Known service for audio content.)</li>
-  <li><strong>Audio Connect:</strong> Technics Audio Connect. Official app for Technics headphones and earbuds. “Provides a sensational music experience… by linking with your headphones and earphones… your listening experience becomes even more appealing” (<a href="https://apps.apple.com/za/app/technics-audio-connect/id1498029651#:~:text=Providing%20you%20with%20a%20sensational,experience%20becomes%20even%20more%20appealing">apps.apple.com</a>). Customize sound profiles and update firmware on Technics devices.</li>
-  <li><strong>Voice Memos:</strong> Apple’s built-in audio recorder for voice notes. (Record audio clips.)</li>
-</ul>
-
-<p><strong>Finance &amp; Shopping:</strong></p>
-<ul>
-  <li><strong>AliExpress:</strong> Global online marketplace (shopping app from China). “Discover exclusive deals and millions of products on AliExpress” (<a href="https://apps.apple.com/th/app/speed-reader-for-speed-reading/id6447472154#:~:text=Speed%20Reader%20,speed%20read%20750%20words%20per">apps.apple.com</a>). Buy consumer goods at low prices.</li>
-  <li><strong>CAIXA:</strong> Mobile banking app for Caixa Econômica Federal (Brazil). Check account balances, payments, etc. (Brazilian federal bank.)</li>
-  <li><strong>Nubank (Nu):</strong> Brazilian digital bank app. Manage credit cards, accounts and transfers online.</li>
-  <li><strong>Sicoob / Sicoob Moob / Sicoobcard:</strong> Apps for Brazil’s Sicoob cooperative bank. Sicoob (account app), Sicoob Moob (cooperative platform), Sicoobcard (credit cards). Manage accounts, cooperatives and credit services.</li>
-  <li><strong>Pennies:</strong> Simple budgeting app. Track daily spending with a visual pie-chart “pennies” interface. Helps plan weekly/monthly budgets.</li>
-  <li><strong>Livelo:</strong> Brazilian rewards program app. Manage Livelo points from credit cards and partners; redeem for gifts/miles.</li>
-  <li><strong>Vale Bonus:</strong> Brazil employee voucher app (for benefits or meal vouchers).</li>
-  <li><strong>Vale Presente:</strong> Brasil gift card wallet (stores/store gift card balances digitally).</li>
-  <li><strong>Tokio Marine:</strong> Insurance company app (Brazilian Tokio Marine). Manage insurance policies and claims.</li>
-  <li><strong>Drogasil:</strong> Brazilian pharmacy chain app. Order prescriptions and shop for medicines.</li>
-  <li><strong>Meu TIM:</strong> Mobile carrier app for TIM Brazil. View/increase data plans and pay bills.</li>
-  <li><strong>Tokio:</strong> Insurance app (Tokio Marine, as above).</li>
-  <li><strong>ToMemo:</strong> (Also in Productivity) Quick personal notes.</li>
-</ul>
-
-<p><strong>Government &amp; Services (Brazil):</strong></p>
-<ul>
-  <li><strong>gov.br:</strong> Official Brazilian federal services app for digital identity (login to government services). Use your gov.br account to access tax filings, social benefits, etc.</li>
-  <li><strong>Sou Gov.br:</strong> Government employee portal (Brazil). HR and benefits info for public servants.</li>
-  <li><strong>Economia DF:</strong> Finance/tax info for Distrito Federal (Brasília) residents. (Shows budgets, spending for local gov.)</li>
-  <li><strong>Detran DF:</strong> DMV services for Distrito Federal. Check traffic fines, license/vehicle status.</li>
-  <li><strong>Receita Federal:</strong> Brazil’s Federal Revenue app. Access tax documents, CPF status, and tax refunds.</li>
-  <li><strong>SINESP+:</strong> National public security info app. Look up stolen cars and missing persons via Brazil’s security database.</li>
-  <li><strong>Fiscalização:</strong> Citizen enforcement app (Brasília). Report public infractions or check code enforcement tasks.</li>
-  <li><strong>Metro-DF:</strong> Brasília Metro transit info. Schedules and maps for the subway system in Brasilia.</li>
-  <li><strong>Minha Mobilidade:</strong> (Brasília) Integrated mobility app. Combines bus, metro schedules and traffic data for local transit (though specific info was unclear).</li>
-  <li><strong>Sesc Distrito Federal:</strong> Social/cultural services app (Sesc DF). Access member benefits for Sesc centers in Distrito Federal (Brazil).</li>
-  <li><strong>Correios:</strong> Brazilian mail tracking app (Correios). Track packages and shipments within Brazil.</li>
-</ul>
-
-<p><strong>Transport &amp; Navigation:</strong></p>
-<ul>
-  <li><strong>Uber:</strong> Ride-hailing app (taxi and car service network). Call rides and track drivers (Uber).</li>
-  <li><strong>Waze:</strong> Community-based GPS navigation by Google. Live traffic alerts; “Know what’s ahead on the road with Waze” (leading navigation app) (<a href="https://www.stageprompter.co.uk/web-application.html#:~:text=Stageprompter%20www,Application%20is%20a%20teleprompter">www.stageprompter.co.uk</a>). (Routes around congestion.)</li>
-  <li><strong>Metro-DF:</strong> (Also above) means metro/transit for Brasília.</li>
-  <li><strong>Vale / Mocha LPR:</strong> (Already covered in photo/video.)</li>
-  <li><strong>Divide Horário (÷ Horário):</strong> Schedule/timetable planner. Likely shot n for class/work scheduling. (Icon shows a clock.)</li>
-  <li><strong>MyLifeOrg 3:</strong> (Already covered in Productivity tasks/habits.)</li>
-  <li><strong>Plantão Escala:</strong> Shift/duty roster for hospitals or police (Brasília DF). Organize and view on-call schedules.</li>
-  <li><strong>Uber:</strong> (Already listed.)</li>
-</ul>
-
-<p><strong>Smart Home &amp; IoT:</strong></p>
-<ul>
-  <li><strong>Home:</strong> Apple’s HomeKit app. Manage smart devices (lights, locks, cameras) in your home.</li>
-  <li><strong>eufy:</strong> Anker’s security camera/home device app. View feeds and control Eufy cameras and alarms.</li>
-  <li><strong>YI Home:</strong> App for YI/Nooie home cameras. (Watch live video and recordings.)</li>
-</ul>
-
-<p><strong>Health, Fitness &amp; Wellness:</strong></p>
-<ul>
-  <li><strong>Fasting:</strong> Intermittent fasting tracker. Log eating/fasting periods and set reminders. (Helps follow 16:8 etc.)</li>
-  <li><strong>Help Me Calm Down:</strong> Guided breathing and relaxation exercises. (Black-white icon “help me calm down”.)</li>
-  <li><strong>Polyphasic:</strong> Tool for polyphasic sleep schedules. Plans and alarms for multiple naps per day.</li>
-  <li><strong>OMM:</strong> Meditation/relaxation coach. (Icon with simple zen face.) Provides guided meditations.</li>
-  <li><strong>Strides:</strong> (Already listed in Productivity/habits.)</li>
-  <li><strong>StrongLifts:</strong> Weightlifting workout tracker (StrongLifts 5x5 program). Log sets, progress in strength training.</li>
-  <li><strong>Unhabit:</strong> Habit-breaking tool. Provides gentle “nudges” to help quit unwanted habits by making them difficult (e.g. quizzes before cigarettes).</li>
-</ul>
-
-<p><strong>Chat &amp; Social:</strong></p>
-<ul>
-  <li><strong>WhatsApp:</strong> Popular cross-platform chat/call app. Send messages, voice/video calls, group chats. (Built by Meta.)</li>
-  <li><strong>Beeper:</strong> Unified chat client. “Unified inbox for many chat networks” (supports iMessage on Android, etc.). Consolidates multiple chat services in one app.</li>
-  <li><strong>NextChat:</strong> GPT/OpenAI-compatible chat client. Alternative UI for ChatGPT-like conversations.</li>
-  <li><strong>WyChat:</strong> (Likely) Another alternative chat/messaging client (perhaps for Telegram or another service).</li>
-  <li><strong>9GAG:</strong> Meme/social app. Browse and share humorous images and videos (social feed of memes, jokes).</li>
-</ul>
-
-<p><strong>Entertainment &amp; Games:</strong></p>
-<ul>
-  <li><strong>Lite Lichess:</strong> Lichess chess client (unofficial lightweight app for Lichess). Play online chess and puzzles.</li>
-  <li><strong>Openings:</strong> Chess openings trainer. Flashcards or practice positions with common opening lines. (Icon shows a chess knight.)</li>
-  <li><strong>Games:</strong> A launcher or folder for games (the rocket icon suggests a games folder or shortcut app).</li>
-</ul>]]></content><author><name></name></author><category term="scratchpad" /></entry></feed>
+</section>]]></content><author><name></name></author><category term="scratchpad" /></entry></feed>
