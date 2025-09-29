@@ -51,7 +51,11 @@ jobs:
           if ! git diff-index --quiet HEAD; then
             git commit -m "Update content [skip ci]"
           fi
+          git fetch origin main
           if ! git merge --no-edit -X ours origin/main; then
+            git merge --abort || true
+            echo "Unable to merge changes from origin/main even after preferring ours."
+            exit 1
           fi
           git push origin HEAD:main || echo "No changes to push"
 
@@ -86,10 +90,10 @@ jobs:
             ${{ runner.os }}-pip-
 
       - name: Install Python Dependencies If Needed
+        if: steps.cache-pip.outputs.cache-hit != 'true'
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-        if: steps.cache-pip.outputs.cache-hit != 'true'
 
       - name: Install Additional Python Packages
         run: pip install requests icalendar datetime pyyaml
@@ -174,10 +178,10 @@ jobs:
             ${{ runner.os }}-pip-
 
       - name: Install Python Dependencies
+        if: steps.cache-pip.outputs.cache-hit != 'true'
         run: |
           python -m pip install --upgrade pip
           pip install requests icalendar datetime pyyaml
-        if: steps.cache-pip.outputs.cache-hit != 'true'
 
       - name: Initialize Spaced-Inbox Database
         run: |
@@ -211,9 +215,9 @@ jobs:
         run: pip install matplotlib
 
       - name: Run Spaced Inbox Script
-        run: python script.py --no-review
         env:
           TERM: xterm
+        run: python script.py --no-review
 
       - name: Run Review Load Visualizer
         run: python review_load.py data.db
@@ -227,7 +231,7 @@ jobs:
             git commit -m "Update content [skip ci]"
           fi
           git fetch origin main
-          if ! git merge --no-edit -s ours origin/main; then
+          if ! git merge --no-edit -X ours origin/main; then
             git merge --abort || true
             echo "Unable to merge changes from origin/main even after preferring ours."
             exit 1
