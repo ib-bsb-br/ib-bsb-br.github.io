@@ -378,17 +378,17 @@ class GingkoWebsocketClient:
         """
         url = "wss://app.gingkowriter.com/ws"  # Fixed URL
         cookies = (
-            "connect.sid=s%3AXkJFI98eqQGZr1RAGBIfYsYBVr-Uut3U.1km8qszBYRbt4y8Pt%2FrfFiJYiJxOanDTVmG5M1neBO8; "
-            "_lr_uf_-jtqjrc=75363195-2f23-4367-a280-285f990f7e05; "
-            "_BEAMER_USER_ID_mYJLRImY38547=25ddf751-0c59-4586-802b-363c9ae86222; "
-            "_BEAMER_FIRST_VISIT_mYJLRImY38547=2024-10-12T23:25:51.320Z; "
-            "__stripe_mid=cf6d738b-2f4f-4056-80c1-1c9c71add535b51abb; "
-            "_BEAMER_LAST_POST_SHOWN_mYJLRImY38547=null; "
-            "_BEAMER_DATE_mYJLRImY38547=2024-11-02T18:12:51.544Z; "
-            "_BEAMER_FILTER_BY_URL_mYJLRImY38547=false; "
-            "__stripe_sid=ff6a432e-a911-4aec-b705-f4d2ee20b821a790e3; "
-            "_lr_tabs_-jtqjrc%2Fgingko-writer-production={%22sessionID%22:4%2C%22recordingID%22:%225-30ccf034-7be8-4a09-818c-d0bb25704c75%22%2C%22lastActivity%22:1730633141817%2C%22hasActivity%22:true}; "
-            "_lr_hb_-jtqjrc%2Fgingko-writer-production={%22heartbeat%22:1730633141818}"
+            "connect.sid=placeholder; "
+            "_lr_uf_-jtqjrc=placeholder; "
+            "_BEAMER_USER_ID_mYJLRImY38547=placeholder; "
+            "_BEAMER_FIRST_VISIT_mYJLRImY38547=placeholder; "
+            "__stripe_mid=placeholder; "
+            "_BEAMER_LAST_POST_SHOWN_mYJLRImY38547=placeholder; "
+            "_BEAMER_DATE_mYJLRImY38547=placeholder; "
+            "_BEAMER_FILTER_BY_URL_mYJLRImY38547=placeholder; "
+            "__stripe_sid=placeholder; "
+            "_lr_tabs_-jtqjrc%2Fgingko-writer-production=placeholder}; "
+            "_lr_hb_-jtqjrc%2Fgingko-writer-production=placeholder}"
         )
         tree_id = "6oj4Rzb"  # As per your 'rt:join' message
         user_id = "h9ogoeh2o2u7"  # As per your 'rt:join' message
