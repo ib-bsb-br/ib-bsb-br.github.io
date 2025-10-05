@@ -9,6 +9,10 @@ slug: gingko-websocket
 title: 'Gingko Python WebSocket script'
 ---
 
+bibref https://app.gingkowriter.com/database-download.html
+
+`https://app.gingkowriter.com/database-download.html`
+
 A Python WebSocket client script was successfully developed to enable programmatic interaction with the Gingko Writer application. The project began with the goal of establishing a stable connection to `wss://app.gingkowriter.com/ws`, managing authentication through cookies, and handling various message types such as `'rt:join'`, `'trees'`, and `'user'`.  An initial script provided basic connection logic, logging, and message exchange capabilities.
 The development process then encountered challenges related to using the established connection for specific tasks, like creating cards. This practical application focus required deeper investigation into message formatting, asynchronous handling of user input alongside incoming messages, and the implementation of a structured request mechanism.  The project required guidance on adding an interactive command interface, concurrent processing, improved logging, and robust error handling to ensure maintainability and extensibility.
 A revised Python script was subsequently developed. This version incorporated credentials and authentication details from browser Developer Tools, ensuring proper formatting of the `'rt:join'` message with the correct `tr`, `uid`, and `m` parameters.  The script's message handling was enhanced to process messages like `'rt:joinOk'` (join confirmation) and `'pushOk'` (push acknowledgment).  Securing credentials through environment variables and using valid, up-to-date system cookies was emphasized.
