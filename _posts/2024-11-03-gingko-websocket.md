@@ -1,15 +1,17 @@
 ---
-tags: [scripts>cloud, scratchpad]
+tags:
+- scripts>cloud
+- scratchpad
 info: aberto.
 date: 2024-11-03
 type: post
 layout: post
 published: true
 slug: gingko-websocket
-title: 'Gingko Python WebSocket script'
+title: Gingko Python WebSocket script
+comment: https://app.gingkowriter.com/database-download.html
 ---
 
-bibref https://app.gingkowriter.com/database-download.html
 
 `https://app.gingkowriter.com/database-download.html`
 
