@@ -1,14 +1,16 @@
 ---
-tags: [scratchpad]
+tags:
+- scratchpad
 info: aberto.
 date: 2025-10-05
 type: post
 layout: post
 published: true
 slug: fireworks-ai-whisper-api
-title: 'Fireworks AI - Whisper API'
+title: Fireworks AI - Whisper API
+comment: https://fireworks.ai/models/fireworks/whisper-v3-turbo
 ---
-bibref https://fireworks.ai/models/fireworks/whisper-v3-turbo
+
 
 Whisper V3 Turbo API & Playground | Fireworks AI
 
