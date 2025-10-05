@@ -1,14 +1,14 @@
 ---
-
-tags: [scripts>cloud]
+tags: [scripts>cloud, scratchpad]
 info: aberto.
 date: 2024-11-03
 type: post
 layout: post
 published: true
-slug: gingko-python-websocket-script
+slug: gingko-websocket
 title: 'Gingko Python WebSocket script'
 ---
+
 A Python WebSocket client script was successfully developed to enable programmatic interaction with the Gingko Writer application. The project began with the goal of establishing a stable connection to `wss://app.gingkowriter.com/ws`, managing authentication through cookies, and handling various message types such as `'rt:join'`, `'trees'`, and `'user'`.  An initial script provided basic connection logic, logging, and message exchange capabilities.
 The development process then encountered challenges related to using the established connection for specific tasks, like creating cards. This practical application focus required deeper investigation into message formatting, asynchronous handling of user input alongside incoming messages, and the implementation of a structured request mechanism.  The project required guidance on adding an interactive command interface, concurrent processing, improved logging, and robust error handling to ensure maintainability and extensibility.
 A revised Python script was subsequently developed. This version incorporated credentials and authentication details from browser Developer Tools, ensuring proper formatting of the `'rt:join'` message with the correct `tr`, `uid`, and `m` parameters.  The script's message handling was enhanced to process messages like `'rt:joinOk'` (join confirmation) and `'pushOk'` (push acknowledgment).  Securing credentials through environment variables and using valid, up-to-date system cookies was emphasized.
@@ -16,9 +16,7 @@ Initial testing revealed, via execution logs, that the `'rt:joinOk'` message was
 Throughout the project, issues with authentication parameter accuracy, session checkpoints, and real-time message exchange were addressed. Key milestones included accurate formatting of the `'rt:join'` message and correct interpretation of server acknowledgments. These achievements transformed the initial script into a functional tool for interacting with the Gingko Writer service.
 The collaborative effort resulted in a robust Python WebSocket client capable of securely connecting to the Gingko Writer server and performing operations like creating structured card hierarchies. This was accomplished by meticulously resolving authentication problems, improving message handling, and ensuring adaptability through enhanced logging and error management. This foundation supports future extensions, such as adding interactive features or integrating more message types, increasing the script's utility for programmatically managing Gingko Writer documents.
 
-{% raw %}
-
-{% codeblock python %}
+```python
 import asyncio
 import json
 import logging
@@ -411,6 +409,4 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
-{% endcodeblock %}
-
-{% endraw %}
+```
