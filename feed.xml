@@ -1,4 +1,540 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2025-10-07T20:09:35+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">b3 - SELL</title><link href="https://ib.bsb.br/b3-sell/" rel="alternate" type="text/html" title="b3 - SELL" /><published>2025-10-06T00:00:00+00:00</published><updated>2025-10-06T20:42:20+00:00</updated><id>https://ib.bsb.br/b3-sell</id><content type="html" xml:base="https://ib.bsb.br/b3-sell/"><![CDATA[<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>You are an AI portfolio sell-scenario planner for B3/BOVESPA. Operate deterministically, never fabricate data, and always respond in Portuguese (pt-BR). Timezone: America/Sao_Paulo.
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2025-10-07T20:24:00+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">auto xrandr for two monitors bash script</title><link href="https://ib.bsb.br/auto-xrandr-for-two-monitors-bash-script/" rel="alternate" type="text/html" title="auto xrandr for two monitors bash script" /><published>2025-10-07T00:00:00+00:00</published><updated>2025-10-07T20:19:32+00:00</updated><id>https://ib.bsb.br/auto-xrandr-for-two-monitors-bash-script</id><content type="html" xml:base="https://ib.bsb.br/auto-xrandr-for-two-monitors-bash-script/"><![CDATA[<section class="code-block-container" role="group" aria-label="Bash Code Block" data-filename="bash_code_block.sh" data-code="#!/usr/bin/env bash
+#
+# monitor-setup-refactored-fixed.sh
+#
+# Purpose: Robust interactive multi-monitor configuration with visual verification overlay
+#          Designed for Debian 11 (ARM64), Alacritty terminal, ratpoison WM, X11 session.
+#
+# Key reliability fixes to prevent post-overlay &quot;freeze&quot;:
+#   - Tkinter overlay closes from GUI thread using root.after(); no threading.Timer.
+#   - Hard timeout guard around overlay (coreutils `timeout`) so we always proceed.
+#   - Prompts and input read/write via /dev/tty to bypass pipe buffering and focus quirks.
+#   - No layout churn during testing: only target output&#39;s mode changes until final apply.
+#   - Line-buffered logging to file via tee; prompts go directly to TTY for immediate display.
+#
+# Requirements: bash, xrandr, python3, python3-tk, coreutils (timeout), awk, grep, sed.
+# Usage: Run in an X11 terminal. Answer y/n/q per prompt after each 5s overlay.
+# Autostart: Optional (~/.config/autostart). Set TARGET_USER and INSTALL_AUTOSTART as needed.
+
+set -Eeuo pipefail
+
+LOGF=${LOGF:-/tmp/monitor-setup.log}
+# Log to file; prompts will go to /dev/tty, not to this pipe
+exec &gt; &gt;(tee -a &quot;$LOGF&quot;) 2&gt;&amp;1
+
+# ---------------- Utilities ----------------
+log() { printf &#39;[%(%F %T)T] %s\n&#39; -1 &quot;$*&quot;; }
+fail() { log &quot;ERROR: $*&quot;; exit 1; }
+need() { command -v &quot;$1&quot; &gt;/dev/null 2&gt;&amp;1 || fail &quot;$1 not found&quot;; }
+
+# ---------------- Requirements ----------------
+need xrandr
+need python3
+python3 - &lt;&lt;&#39;PY&#39; 2&gt;/dev/null || fail &quot;python3-tk not available. Install python3-tk.&quot;
+import tkinter  # noqa
+PY
+need timeout
+
+# ---------------- Config ----------------
+TARGET_USER=${TARGET_USER:-linaro}
+INSTALL_AUTOSTART=${INSTALL_AUTOSTART:-1}
+DISPLAY=${DISPLAY:-:0}
+export DISPLAY
+
+# XAUTHORITY so we can talk to the right X server (works under sudo as well)
+if [[ $(id -u) -eq 0 ]]; then
+  TARGET_HOME=$(getent passwd &quot;$TARGET_USER&quot; | cut -d: -f6 || true)
+  [[ -z &quot;${TARGET_HOME:-}&quot; ]] &amp;&amp; TARGET_HOME=&quot;/home/$TARGET_USER&quot;
+  if [[ -f &quot;$TARGET_HOME/.Xauthority&quot; ]]; then
+    export XAUTHORITY=&quot;$TARGET_HOME/.Xauthority&quot;
+  elif [[ -f &quot;/root/.Xauthority&quot; ]]; then
+    export XAUTHORITY=&quot;/root/.Xauthority&quot;
+  fi
+else
+  export XAUTHORITY=&quot;${XAUTHORITY:-$HOME/.Xauthority}&quot;
+fi
+
+# Ensure we can read prompts from a controlling terminal
+if [[ ! -t 0 ]] &amp;&amp; [[ -r /dev/tty ]]; then
+  exec &lt;/dev/tty
+fi
+
+# ---------------- Wait for X ----------------
+for _ in {1..15}; do xrandr &gt;/dev/null 2&gt;&amp;1 &amp;&amp; break || sleep 1; done
+xrandr &gt;/dev/null 2&gt;&amp;1 || fail &quot;X server not ready on $DISPLAY&quot;
+
+# ---------------- Globals ----------------
+SAFEMODES=(
+  1920x1080 1680x1050 1600x900 1440x900 1366x768 1280x1024 1280x960
+  1280x800 1280x720 1024x768 800x600
+)
+
+declare -A FINAL_MODE WIDTH HEIGHT
+
+# ---------------- Helpers ----------------
+get_outputs() { xrandr --query | awk &#39;/ connected/{print $1}&#39;; }
+
+sort_outputs() {
+  local -a outs; mapfile -t outs &lt; &lt;(get_outputs)
+  ((${#outs[@]})) || return 1
+  local prefs=(HDMI DP DVI eDP VGA)
+  for p in &quot;${prefs[@]}&quot;; do for o in &quot;${outs[@]}&quot;; do [[ $o == ${p}* ]] &amp;&amp; echo &quot;$o&quot;; done; done
+  for o in &quot;${outs[@]}&quot;; do
+    local hit=0; for p in &quot;${prefs[@]}&quot;; do [[ $o == ${p}* ]] &amp;&amp; { hit=1; break; }; done
+    ((hit==0)) &amp;&amp; echo &quot;$o&quot;
+  done
+}
+
+get_modes_for_output() {
+  local out=&quot;$1&quot;
+  xrandr --query | awk -v o=&quot;$out&quot; &#39;
+    $1==o {in=1; next}
+    /^[A-Z]/ {in=0}
+    in &amp;&amp; $1 ~ /^[0-9]+x[0-9]+/ {print $1}
+  &#39; | awk &#39;!seen[$0]++&#39;
+}
+
+pick_testlist() {
+  # stdin: available modes; stdout: up to 3 modes
+  mapfile -t avail
+  ((${#avail[@]})) || return 1
+  local -a picked=()
+  for safe in &quot;${SAFEMODES[@]}&quot;; do
+    for m in &quot;${avail[@]}&quot;; do [[ $m == &quot;$safe&quot; ]] &amp;&amp; { picked+=(&quot;$m&quot;); break; }; done
+    ((${#picked[@]}&gt;=3)) &amp;&amp; break
+  done
+  if ((${#picked[@]})); then printf &#39;%s\n&#39; &quot;${picked[@]}&quot;; return 0; fi
+  # else: top-3 by area
+  printf &#39;%s\n&#39; &quot;${avail[@]}&quot; | awk -Fx &#39;{print $1*$2, $0}&#39; | sort -nr | awk &#39;{print $2}&#39; | head -n3
+}
+
+current_geometry() {
+  local out=&quot;$1&quot;
+  xrandr --query | awk -v o=&quot;$out&quot; &#39;
+    $1==o { if (match($0, /[0-9]+x[0-9]+\+[0-9]+\+[0-9]+/)) { print substr($0, RSTART, RLENGTH) } }
+  &#39;
+}
+
+show_rectangle() {
+  local W=&quot;$1&quot; H=&quot;$2&quot; X=&quot;$3&quot; Y=&quot;$4&quot;
+  log &quot;   displaying overlay ${W}x${H}+${X}+${Y} for 5s&quot;
+  timeout 7s python3 - &quot;$W&quot; &quot;$H&quot; &quot;$X&quot; &quot;$Y&quot; &lt;&lt;&#39;PY&#39;
+import sys, tkinter as t
+W,H,X,Y = map(int, sys.argv[1:])
+root = t.Tk()
+root.overrideredirect(True)
+root.geometry(f&quot;{W}x{H}+{X}+{Y}&quot;)
+frame = t.Frame(root, width=W, height=H, highlightbackground=&#39;red&#39;, highlightthickness=8)
+frame.pack()
+root.attributes(&#39;-topmost&#39;, True)
+root.after(5000, root.quit)
+root.mainloop()
+try:
+    root.destroy()
+except Exception:
+    pass
+PY
+  local code=$?
+  if (( code != 0 )); then log &quot;   [WARN] overlay exited non-zero ($code); continuing&quot;; fi
+}
+
+ask_ynq() {
+  # Prompt to /dev/tty; read one char from /dev/tty; returns 0=y,1=n,2=q
+  local prompt=&quot;$1&quot; ch
+  while true; do
+    printf &quot;%s&quot; &quot;$prompt&quot; &gt; /dev/tty
+    IFS= read -r -n1 ch &lt; /dev/tty || ch=&quot;&quot;
+    printf &quot;\n&quot; &gt; /dev/tty
+    case &quot;$ch&quot; in
+      y|Y) return 0;;
+      n|N) return 1;;
+      q|Q) return 2;;
+      *) prompt=&quot;Please type y (accept), n (next), or q (quit): &quot;;;
+    esac
+  done
+}
+
+# ---------------- Main ----------------
+log &quot;Starting interactive monitor configuration...&quot;
+
+mapfile -t outputs &lt; &lt;(get_outputs)
+((${#outputs[@]})) || fail &quot;No connected monitors detected&quot;
+
+mapfile -t sorted &lt; &lt;(sort_outputs)
+
+for out in &quot;${sorted[@]}&quot;; do
+  log &quot;======== Configuring $out ========&quot;
+  mapfile -t avail &lt; &lt;(get_modes_for_output &quot;$out&quot;)
+  if ((${#avail[@]}==0)); then log &quot;No modes found for $out, skipping&quot;; continue; fi
+
+  mapfile -t testlist &lt; &lt;(printf &#39;%s\n&#39; &quot;${avail[@]}&quot; | pick_testlist)
+  if ((${#testlist[@]}==0)); then log &quot;No usable candidates for $out, skipping&quot;; continue; fi
+
+  sel=&quot;&quot;; sel_w=0; sel_h=0
+
+  for mode in &quot;${testlist[@]}&quot;; do
+    [[ -z &quot;$mode&quot; ]] &amp;&amp; continue
+    log &quot;---&gt; Trying $mode for $out&quot;
+    if ! xrandr --output &quot;$out&quot; --mode &quot;$mode&quot;; then log &quot;    Could not apply $mode&quot;; continue; fi
+    sleep 0.2
+
+    geom=$(current_geometry &quot;$out&quot; || true)
+    if [[ ! $geom =~ ^([0-9]+)x([0-9]+)\+([0-9]+)\+([0-9]+)$ ]]; then
+      log &quot;    Could not parse geometry; skipping&quot;
+      continue
+    fi
+    W=${BASH_REMATCH[1]}; H=${BASH_REMATCH[2]}; X=${BASH_REMATCH[3]}; Y=${BASH_REMATCH[4]}
+
+    show_rectangle &quot;$W&quot; &quot;$H&quot; &quot;$X&quot; &quot;$Y&quot;
+
+    ask_ynq &quot;Was the red rectangle fully enclosed on $out at $mode? [y=accept / n=next / q=quit] &quot;; rc=$?
+    case &quot;$rc&quot; in
+      0) sel=&quot;$mode&quot;; sel_w=$W; sel_h=$H; break ;;
+      1) ;;  # try next
+      2) log &quot;User aborted&quot;; exit 1 ;;
+    esac
+  done
+
+  if [[ -z &quot;$sel&quot; ]]; then
+    log &quot;!! No accepted mode for $out. Falling back to ${testlist[0]}&quot;
+    mode=&quot;${testlist[0]}&quot;
+    if xrandr --output &quot;$out&quot; --mode &quot;$mode&quot;; then
+      sleep 0.2
+      geom=$(current_geometry &quot;$out&quot; || true)
+      if [[ $geom =~ ^([0-9]+)x([0-9]+)\+([0-9]+)\+([0-9]+)$ ]]; then
+        sel_w=${BASH_REMATCH[1]}; sel_h=${BASH_REMATCH[2]}; sel=&quot;$mode&quot;
+      else
+        log &quot;!! Could not determine geometry for fallback; skipping monitor&quot;
+        continue
+      fi
+    else
+      log &quot;!! Fallback apply failed; skipping monitor&quot;
+      continue
+    fi
+  fi
+
+  FINAL_MODE[&quot;$out&quot;]=&quot;$sel&quot;
+  WIDTH[&quot;$out&quot;]=$sel_w
+  HEIGHT[&quot;$out&quot;]=$sel_h
+
+done
+
+# ---------------- Final apply ----------------
+log &quot;Applying selected monitor configuration...&quot;
+
+pos=0
+primary_out=&quot;${sorted[0]}&quot;; maxarea=0
+
+for out in &quot;${sorted[@]}&quot;; do
+  mode=&quot;${FINAL_MODE[$out]:-}&quot;
+  if [[ -z &quot;$mode&quot; ]]; then log &quot;Skipping $out (no selected mode)&quot;; continue; fi
+  xrandr --output &quot;$out&quot; --mode &quot;$mode&quot; --pos &quot;${pos}x0&quot;
+  area=$(( WIDTH[$out] * HEIGHT[$out] ))
+  if (( area &gt; maxarea )); then maxarea=$area; primary_out=&quot;$out&quot;; fi
+  pos=$(( pos + WIDTH[$out] ))
+  sleep 0.1
+done
+
+xrandr --output &quot;$primary_out&quot; --primary || true
+log &quot;[SUCCESS] Configuration complete. Primary: $primary_out&quot;
+
+# ---------------- Autostart (optional) ----------------
+if (( INSTALL_AUTOSTART )); then
+  TARGET_HOME=${TARGET_HOME:-$(getent passwd &quot;$TARGET_USER&quot; | cut -d: -f6 || echo &quot;/home/$TARGET_USER&quot;)}
+  AUTOSTART_DIR=&quot;$TARGET_HOME/.config/autostart&quot;
+  SCRIPT_PATH=&quot;$TARGET_HOME/monitor-setup-refactored-fixed.sh&quot;
+  AUTOSTART_FILE=&quot;$AUTOSTART_DIR/monitor-setup-refactored-fixed.desktop&quot;
+
+  mkdir -p &quot;$AUTOSTART_DIR&quot;
+  cp -- &quot;$0&quot; &quot;$SCRIPT_PATH&quot; || true
+  chmod +x &quot;$SCRIPT_PATH&quot;
+  if [[ $(id -u) -eq 0 ]]; then chown -R &quot;$TARGET_USER:$TARGET_USER&quot; &quot;$TARGET_HOME/.config&quot; &quot;$SCRIPT_PATH&quot; || true; fi
+
+  cat &gt; &quot;$AUTOSTART_FILE&quot; &lt;&lt;EOF
+[Desktop Entry]
+Type=Application
+Exec=bash &quot;$SCRIPT_PATH&quot;
+Hidden=false
+NoDisplay=false
+X-GNOME-Autostart-enabled=true
+Name=Auto Monitor Setup
+Comment=Autoconfigure monitors layout interactively at login
+EOF
+  chmod 644 &quot;$AUTOSTART_FILE&quot;
+  if [[ $(id -u) -eq 0 ]]; then chown &quot;$TARGET_USER:$TARGET_USER&quot; &quot;$AUTOSTART_FILE&quot; || true; fi
+  log &quot;[INFO] Autostart installed at $AUTOSTART_FILE for user $TARGET_USER&quot;
+fi
+
+exit 0" data-download-link="" data-download-label="Download Bash">
+  <code class="language-bash">#!/usr/bin/env bash
+#
+# monitor-setup-refactored-fixed.sh
+#
+# Purpose: Robust interactive multi-monitor configuration with visual verification overlay
+#          Designed for Debian 11 (ARM64), Alacritty terminal, ratpoison WM, X11 session.
+#
+# Key reliability fixes to prevent post-overlay &quot;freeze&quot;:
+#   - Tkinter overlay closes from GUI thread using root.after(); no threading.Timer.
+#   - Hard timeout guard around overlay (coreutils `timeout`) so we always proceed.
+#   - Prompts and input read/write via /dev/tty to bypass pipe buffering and focus quirks.
+#   - No layout churn during testing: only target output&#39;s mode changes until final apply.
+#   - Line-buffered logging to file via tee; prompts go directly to TTY for immediate display.
+#
+# Requirements: bash, xrandr, python3, python3-tk, coreutils (timeout), awk, grep, sed.
+# Usage: Run in an X11 terminal. Answer y/n/q per prompt after each 5s overlay.
+# Autostart: Optional (~/.config/autostart). Set TARGET_USER and INSTALL_AUTOSTART as needed.
+
+set -Eeuo pipefail
+
+LOGF=${LOGF:-/tmp/monitor-setup.log}
+# Log to file; prompts will go to /dev/tty, not to this pipe
+exec &gt; &gt;(tee -a &quot;$LOGF&quot;) 2&gt;&amp;1
+
+# ---------------- Utilities ----------------
+log() { printf &#39;[%(%F %T)T] %s\n&#39; -1 &quot;$*&quot;; }
+fail() { log &quot;ERROR: $*&quot;; exit 1; }
+need() { command -v &quot;$1&quot; &gt;/dev/null 2&gt;&amp;1 || fail &quot;$1 not found&quot;; }
+
+# ---------------- Requirements ----------------
+need xrandr
+need python3
+python3 - &lt;&lt;&#39;PY&#39; 2&gt;/dev/null || fail &quot;python3-tk not available. Install python3-tk.&quot;
+import tkinter  # noqa
+PY
+need timeout
+
+# ---------------- Config ----------------
+TARGET_USER=${TARGET_USER:-linaro}
+INSTALL_AUTOSTART=${INSTALL_AUTOSTART:-1}
+DISPLAY=${DISPLAY:-:0}
+export DISPLAY
+
+# XAUTHORITY so we can talk to the right X server (works under sudo as well)
+if [[ $(id -u) -eq 0 ]]; then
+  TARGET_HOME=$(getent passwd &quot;$TARGET_USER&quot; | cut -d: -f6 || true)
+  [[ -z &quot;${TARGET_HOME:-}&quot; ]] &amp;&amp; TARGET_HOME=&quot;/home/$TARGET_USER&quot;
+  if [[ -f &quot;$TARGET_HOME/.Xauthority&quot; ]]; then
+    export XAUTHORITY=&quot;$TARGET_HOME/.Xauthority&quot;
+  elif [[ -f &quot;/root/.Xauthority&quot; ]]; then
+    export XAUTHORITY=&quot;/root/.Xauthority&quot;
+  fi
+else
+  export XAUTHORITY=&quot;${XAUTHORITY:-$HOME/.Xauthority}&quot;
+fi
+
+# Ensure we can read prompts from a controlling terminal
+if [[ ! -t 0 ]] &amp;&amp; [[ -r /dev/tty ]]; then
+  exec &lt;/dev/tty
+fi
+
+# ---------------- Wait for X ----------------
+for _ in {1..15}; do xrandr &gt;/dev/null 2&gt;&amp;1 &amp;&amp; break || sleep 1; done
+xrandr &gt;/dev/null 2&gt;&amp;1 || fail &quot;X server not ready on $DISPLAY&quot;
+
+# ---------------- Globals ----------------
+SAFEMODES=(
+  1920x1080 1680x1050 1600x900 1440x900 1366x768 1280x1024 1280x960
+  1280x800 1280x720 1024x768 800x600
+)
+
+declare -A FINAL_MODE WIDTH HEIGHT
+
+# ---------------- Helpers ----------------
+get_outputs() { xrandr --query | awk &#39;/ connected/{print $1}&#39;; }
+
+sort_outputs() {
+  local -a outs; mapfile -t outs &lt; &lt;(get_outputs)
+  ((${#outs[@]})) || return 1
+  local prefs=(HDMI DP DVI eDP VGA)
+  for p in &quot;${prefs[@]}&quot;; do for o in &quot;${outs[@]}&quot;; do [[ $o == ${p}* ]] &amp;&amp; echo &quot;$o&quot;; done; done
+  for o in &quot;${outs[@]}&quot;; do
+    local hit=0; for p in &quot;${prefs[@]}&quot;; do [[ $o == ${p}* ]] &amp;&amp; { hit=1; break; }; done
+    ((hit==0)) &amp;&amp; echo &quot;$o&quot;
+  done
+}
+
+get_modes_for_output() {
+  local out=&quot;$1&quot;
+  xrandr --query | awk -v o=&quot;$out&quot; &#39;
+    $1==o {in=1; next}
+    /^[A-Z]/ {in=0}
+    in &amp;&amp; $1 ~ /^[0-9]+x[0-9]+/ {print $1}
+  &#39; | awk &#39;!seen[$0]++&#39;
+}
+
+pick_testlist() {
+  # stdin: available modes; stdout: up to 3 modes
+  mapfile -t avail
+  ((${#avail[@]})) || return 1
+  local -a picked=()
+  for safe in &quot;${SAFEMODES[@]}&quot;; do
+    for m in &quot;${avail[@]}&quot;; do [[ $m == &quot;$safe&quot; ]] &amp;&amp; { picked+=(&quot;$m&quot;); break; }; done
+    ((${#picked[@]}&gt;=3)) &amp;&amp; break
+  done
+  if ((${#picked[@]})); then printf &#39;%s\n&#39; &quot;${picked[@]}&quot;; return 0; fi
+  # else: top-3 by area
+  printf &#39;%s\n&#39; &quot;${avail[@]}&quot; | awk -Fx &#39;{print $1*$2, $0}&#39; | sort -nr | awk &#39;{print $2}&#39; | head -n3
+}
+
+current_geometry() {
+  local out=&quot;$1&quot;
+  xrandr --query | awk -v o=&quot;$out&quot; &#39;
+    $1==o { if (match($0, /[0-9]+x[0-9]+\+[0-9]+\+[0-9]+/)) { print substr($0, RSTART, RLENGTH) } }
+  &#39;
+}
+
+show_rectangle() {
+  local W=&quot;$1&quot; H=&quot;$2&quot; X=&quot;$3&quot; Y=&quot;$4&quot;
+  log &quot;   displaying overlay ${W}x${H}+${X}+${Y} for 5s&quot;
+  timeout 7s python3 - &quot;$W&quot; &quot;$H&quot; &quot;$X&quot; &quot;$Y&quot; &lt;&lt;&#39;PY&#39;
+import sys, tkinter as t
+W,H,X,Y = map(int, sys.argv[1:])
+root = t.Tk()
+root.overrideredirect(True)
+root.geometry(f&quot;{W}x{H}+{X}+{Y}&quot;)
+frame = t.Frame(root, width=W, height=H, highlightbackground=&#39;red&#39;, highlightthickness=8)
+frame.pack()
+root.attributes(&#39;-topmost&#39;, True)
+root.after(5000, root.quit)
+root.mainloop()
+try:
+    root.destroy()
+except Exception:
+    pass
+PY
+  local code=$?
+  if (( code != 0 )); then log &quot;   [WARN] overlay exited non-zero ($code); continuing&quot;; fi
+}
+
+ask_ynq() {
+  # Prompt to /dev/tty; read one char from /dev/tty; returns 0=y,1=n,2=q
+  local prompt=&quot;$1&quot; ch
+  while true; do
+    printf &quot;%s&quot; &quot;$prompt&quot; &gt; /dev/tty
+    IFS= read -r -n1 ch &lt; /dev/tty || ch=&quot;&quot;
+    printf &quot;\n&quot; &gt; /dev/tty
+    case &quot;$ch&quot; in
+      y|Y) return 0;;
+      n|N) return 1;;
+      q|Q) return 2;;
+      *) prompt=&quot;Please type y (accept), n (next), or q (quit): &quot;;;
+    esac
+  done
+}
+
+# ---------------- Main ----------------
+log &quot;Starting interactive monitor configuration...&quot;
+
+mapfile -t outputs &lt; &lt;(get_outputs)
+((${#outputs[@]})) || fail &quot;No connected monitors detected&quot;
+
+mapfile -t sorted &lt; &lt;(sort_outputs)
+
+for out in &quot;${sorted[@]}&quot;; do
+  log &quot;======== Configuring $out ========&quot;
+  mapfile -t avail &lt; &lt;(get_modes_for_output &quot;$out&quot;)
+  if ((${#avail[@]}==0)); then log &quot;No modes found for $out, skipping&quot;; continue; fi
+
+  mapfile -t testlist &lt; &lt;(printf &#39;%s\n&#39; &quot;${avail[@]}&quot; | pick_testlist)
+  if ((${#testlist[@]}==0)); then log &quot;No usable candidates for $out, skipping&quot;; continue; fi
+
+  sel=&quot;&quot;; sel_w=0; sel_h=0
+
+  for mode in &quot;${testlist[@]}&quot;; do
+    [[ -z &quot;$mode&quot; ]] &amp;&amp; continue
+    log &quot;---&gt; Trying $mode for $out&quot;
+    if ! xrandr --output &quot;$out&quot; --mode &quot;$mode&quot;; then log &quot;    Could not apply $mode&quot;; continue; fi
+    sleep 0.2
+
+    geom=$(current_geometry &quot;$out&quot; || true)
+    if [[ ! $geom =~ ^([0-9]+)x([0-9]+)\+([0-9]+)\+([0-9]+)$ ]]; then
+      log &quot;    Could not parse geometry; skipping&quot;
+      continue
+    fi
+    W=${BASH_REMATCH[1]}; H=${BASH_REMATCH[2]}; X=${BASH_REMATCH[3]}; Y=${BASH_REMATCH[4]}
+
+    show_rectangle &quot;$W&quot; &quot;$H&quot; &quot;$X&quot; &quot;$Y&quot;
+
+    ask_ynq &quot;Was the red rectangle fully enclosed on $out at $mode? [y=accept / n=next / q=quit] &quot;; rc=$?
+    case &quot;$rc&quot; in
+      0) sel=&quot;$mode&quot;; sel_w=$W; sel_h=$H; break ;;
+      1) ;;  # try next
+      2) log &quot;User aborted&quot;; exit 1 ;;
+    esac
+  done
+
+  if [[ -z &quot;$sel&quot; ]]; then
+    log &quot;!! No accepted mode for $out. Falling back to ${testlist[0]}&quot;
+    mode=&quot;${testlist[0]}&quot;
+    if xrandr --output &quot;$out&quot; --mode &quot;$mode&quot;; then
+      sleep 0.2
+      geom=$(current_geometry &quot;$out&quot; || true)
+      if [[ $geom =~ ^([0-9]+)x([0-9]+)\+([0-9]+)\+([0-9]+)$ ]]; then
+        sel_w=${BASH_REMATCH[1]}; sel_h=${BASH_REMATCH[2]}; sel=&quot;$mode&quot;
+      else
+        log &quot;!! Could not determine geometry for fallback; skipping monitor&quot;
+        continue
+      fi
+    else
+      log &quot;!! Fallback apply failed; skipping monitor&quot;
+      continue
+    fi
+  fi
+
+  FINAL_MODE[&quot;$out&quot;]=&quot;$sel&quot;
+  WIDTH[&quot;$out&quot;]=$sel_w
+  HEIGHT[&quot;$out&quot;]=$sel_h
+
+done
+
+# ---------------- Final apply ----------------
+log &quot;Applying selected monitor configuration...&quot;
+
+pos=0
+primary_out=&quot;${sorted[0]}&quot;; maxarea=0
+
+for out in &quot;${sorted[@]}&quot;; do
+  mode=&quot;${FINAL_MODE[$out]:-}&quot;
+  if [[ -z &quot;$mode&quot; ]]; then log &quot;Skipping $out (no selected mode)&quot;; continue; fi
+  xrandr --output &quot;$out&quot; --mode &quot;$mode&quot; --pos &quot;${pos}x0&quot;
+  area=$(( WIDTH[$out] * HEIGHT[$out] ))
+  if (( area &gt; maxarea )); then maxarea=$area; primary_out=&quot;$out&quot;; fi
+  pos=$(( pos + WIDTH[$out] ))
+  sleep 0.1
+done
+
+xrandr --output &quot;$primary_out&quot; --primary || true
+log &quot;[SUCCESS] Configuration complete. Primary: $primary_out&quot;
+
+# ---------------- Autostart (optional) ----------------
+if (( INSTALL_AUTOSTART )); then
+  TARGET_HOME=${TARGET_HOME:-$(getent passwd &quot;$TARGET_USER&quot; | cut -d: -f6 || echo &quot;/home/$TARGET_USER&quot;)}
+  AUTOSTART_DIR=&quot;$TARGET_HOME/.config/autostart&quot;
+  SCRIPT_PATH=&quot;$TARGET_HOME/monitor-setup-refactored-fixed.sh&quot;
+  AUTOSTART_FILE=&quot;$AUTOSTART_DIR/monitor-setup-refactored-fixed.desktop&quot;
+
+  mkdir -p &quot;$AUTOSTART_DIR&quot;
+  cp -- &quot;$0&quot; &quot;$SCRIPT_PATH&quot; || true
+  chmod +x &quot;$SCRIPT_PATH&quot;
+  if [[ $(id -u) -eq 0 ]]; then chown -R &quot;$TARGET_USER:$TARGET_USER&quot; &quot;$TARGET_HOME/.config&quot; &quot;$SCRIPT_PATH&quot; || true; fi
+
+  cat &gt; &quot;$AUTOSTART_FILE&quot; &lt;&lt;EOF
+[Desktop Entry]
+Type=Application
+Exec=bash &quot;$SCRIPT_PATH&quot;
+Hidden=false
+NoDisplay=false
+X-GNOME-Autostart-enabled=true
+Name=Auto Monitor Setup
+Comment=Autoconfigure monitors layout interactively at login
+EOF
+  chmod 644 &quot;$AUTOSTART_FILE&quot;
+  if [[ $(id -u) -eq 0 ]]; then chown &quot;$TARGET_USER:$TARGET_USER&quot; &quot;$AUTOSTART_FILE&quot; || true; fi
+  log &quot;[INFO] Autostart installed at $AUTOSTART_FILE for user $TARGET_USER&quot;
+fi
+
+exit 0</code>
+</section>]]></content><author><name></name></author><category term="scratchpad" /></entry><entry><title type="html">b3 - SELL</title><link href="https://ib.bsb.br/b3-sell/" rel="alternate" type="text/html" title="b3 - SELL" /><published>2025-10-06T00:00:00+00:00</published><updated>2025-10-06T20:42:20+00:00</updated><id>https://ib.bsb.br/b3-sell</id><content type="html" xml:base="https://ib.bsb.br/b3-sell/"><![CDATA[<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>You are an AI portfolio sell-scenario planner for B3/BOVESPA. Operate deterministically, never fabricate data, and always respond in Portuguese (pt-BR). Timezone: America/Sao_Paulo.
 
 GOAL
 - Receber entradas mínimas do usuário e gerar DOIS cenários de venda que, cada um, somem ≥ target_brl em receita bruta:
@@ -4064,91 +4600,4 @@ find <span class="s2">"</span><span class="nv">$BASEDIR</span><span class="s2">"
 <span class="c"># -----------------------</span>
 log <span class="s2">"Completed successfully."</span>
 <span class="nb">exit </span>0
-</code></pre></div></div>]]></content><author><name></name></author><category term="scratchpad" /></entry><entry><title type="html">coolice writable tree</title><link href="https://ib.bsb.br/coolice-writable-tree/" rel="alternate" type="text/html" title="coolice writable tree" /><published>2025-09-14T00:00:00+00:00</published><updated>2025-09-15T11:00:13+00:00</updated><id>https://ib.bsb.br/coolice-writable-tree</id><content type="html" xml:base="https://ib.bsb.br/coolice-writable-tree/"><![CDATA[<section class="code-block-container" role="group" aria-label=" Code Block" data-filename="_code_block.txt" data-code="find /home/ibbsbbry -type f -writable -print -o -type d -writable -executable -print | curl -fsS -F &#39;file=@-;filename=ibbsbbry-writable.txt&#39; https://x0.at/" data-download-link="" data-download-label="Download ">
-  <code class="language-">find /home/ibbsbbry -type f -writable -print -o -type d -writable -executable -print | curl -fsS -F &#39;file=@-;filename=ibbsbbry-writable.txt&#39; https://x0.at/</code>
-</section>
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>/home/ibbsbbry
-/home/ibbsbbry/.redis
-/home/ibbsbbry/.cagefs
-/home/ibbsbbry/.cagefs/var
-/home/ibbsbbry/.cagefs/var/run
-/home/ibbsbbry/.cagefs/var/run/cagefs
-/home/ibbsbbry/.cagefs/var/run/cagefs/utmp
-/home/ibbsbbry/.cagefs/opt
-/home/ibbsbbry/.cagefs/opt/alt
-/home/ibbsbbry/.cagefs/opt/alt/php53
-/home/ibbsbbry/.cagefs/opt/alt/php53/link
-/home/ibbsbbry/.cagefs/opt/alt/php73
-/home/ibbsbbry/.cagefs/opt/alt/php73/link
-/home/ibbsbbry/.cagefs/opt/alt/php83
-/home/ibbsbbry/.cagefs/opt/alt/php83/link
-/home/ibbsbbry/.cagefs/opt/alt/php44
-/home/ibbsbbry/.cagefs/opt/alt/php44/link
-/home/ibbsbbry/.cagefs/opt/alt/php51
-/home/ibbsbbry/.cagefs/opt/alt/php51/link
-/home/ibbsbbry/.cagefs/opt/alt/php55
-/home/ibbsbbry/.cagefs/opt/alt/php55/link
-/home/ibbsbbry/.cagefs/opt/alt/php70
-/home/ibbsbbry/.cagefs/opt/alt/php70/link
-/home/ibbsbbry/.cagefs/opt/alt/php54
-/home/ibbsbbry/.cagefs/opt/alt/php54/link
-/home/ibbsbbry/.cagefs/opt/alt/php56
-/home/ibbsbbry/.cagefs/opt/alt/php56/link
-/home/ibbsbbry/.cagefs/opt/alt/php74
-/home/ibbsbbry/.cagefs/opt/alt/php74/link
-/home/ibbsbbry/.cagefs/opt/alt/php80
-/home/ibbsbbry/.cagefs/opt/alt/php80/link
-/home/ibbsbbry/.cagefs/opt/alt/php52
-/home/ibbsbbry/.cagefs/opt/alt/php52/link
-/home/ibbsbbry/.cagefs/opt/alt/php84
-/home/ibbsbbry/.cagefs/opt/alt/php84/link
-/home/ibbsbbry/.cagefs/opt/alt/php81
-/home/ibbsbbry/.cagefs/opt/alt/php81/link
-/home/ibbsbbry/.cagefs/opt/alt/php82
-/home/ibbsbbry/.cagefs/opt/alt/php82/link
-/home/ibbsbbry/.cagefs/opt/alt/php72
-/home/ibbsbbry/.cagefs/opt/alt/php72/link
-/home/ibbsbbry/.cagefs/opt/alt/php71
-/home/ibbsbbry/.cagefs/opt/alt/php71/link
-/home/ibbsbbry/.cagefs/tmp
-/home/ibbsbbry/domains
-/home/ibbsbbry/domains/memor.ia.br
-/home/ibbsbbry/domains/memor.ia.br/awstats
-/home/ibbsbbry/domains/memor.ia.br/awstats/.data
-/home/ibbsbbry/domains/cut.ia.br
-/home/ibbsbbry/domains/cut.ia.br/awstats
-/home/ibbsbbry/domains/cut.ia.br/awstats/.data
-/home/ibbsbbry/domains/arcreformas.com.br
-/home/ibbsbbry/domains/arcreformas.com.br/public_html
-/home/ibbsbbry/domains/arcreformas.com.br/public_html/wallabag
-/home/ibbsbbry/domains/arcreformas.com.br/public_html/wallabag/web
-/home/ibbsbbry/domains/arcreformas.com.br/public_html/wallabag/web/bundles
-/home/ibbsbbry/domains/arcreformas.com.br/awstats
-/home/ibbsbbry/domains/arcreformas.com.br/awstats/.data
-/home/ibbsbbry/virtualenv
-/home/ibbsbbry/virtualenv/bin
-/home/ibbsbbry/virtualenv/include
-/home/ibbsbbry/virtualenv/lib
-/home/ibbsbbry/virtualenv/lib/python3.6
-/home/ibbsbbry/virtualenv/python_apps
-/home/ibbsbbry/virtualenv/python_apps/my_wsgi_test
-/home/ibbsbbry/virtualenv/python_apps/my_wsgi_test/3.7
-/home/ibbsbbry/virtualenv/python_apps/my_wsgi_test/3.7/bin
-/home/ibbsbbry/virtualenv/python_apps/my_asgi_test
-/home/ibbsbbry/virtualenv/python_apps/my_asgi_test/3.11
-/home/ibbsbbry/virtualenv/python_apps/my_asgi_test/3.11/bin
-/home/ibbsbbry/virtualenv/python_apps/my_asgi_test/3.8
-/home/ibbsbbry/virtualenv/python_apps/my_asgi_test/3.8/bin
-/home/ibbsbbry/trim_and_fixperms.sh
-/home/ibbsbbry/.bash_history
-/home/ibbsbbry/.local
-/home/ibbsbbry/.local/bin
-/home/ibbsbbry/.local/share
-/home/ibbsbbry/.local/share/pipx
-/home/ibbsbbry/.local/share/pipx/venvs
-/home/ibbsbbry/.local/share/pipx/venvs/datasette
-/home/ibbsbbry/.local/share/pipx/venvs/datasette/bin
-/home/ibbsbbry/.local/share/pipx/shared
-/home/ibbsbbry/.local/share/pipx/shared/bin
 </code></pre></div></div>]]></content><author><name></name></author><category term="scratchpad" /></entry></feed>
