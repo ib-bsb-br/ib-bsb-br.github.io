@@ -358,44 +358,74 @@ This section covers the download and setup of the necessary files and scripts in
 #### **Step 1.3: Create and Run the PowerShell Batch File Generator**
 
 1. Open Notepad or another plain text editor.  
-2. Copy and paste the entire PowerShell script below into the editor.  
-   \# Define paths relative to the user's profile.  
-   $basePath \= "$env:USERPROFILE\\Documents\\WindowsHotkeys"  
-   $virtualDesktopPath \= Join-Path \-Path $basePath \-ChildPath "Tools\\VirtualDesktop\\VirtualDesktop.exe"  
-   $outputFolder \= Join-Path \-Path $basePath \-ChildPath "QuickAccess"
+2. Copy and paste the entire PowerShell script below into the editor.
 
-   \# Check if the VirtualDesktop executable exists.  
-   if (-not (Test-Path \-Path $virtualDesktopPath)) {  
-       Write-Error "VirtualDesktop.exe not found at '$virtualDesktopPath'. Please check the path."  
-       return  
-   }
+```ps1
+#requires -Version 5.1
+[CmdletBinding()]
+param(
+    [string]$BasePath = "$env:USERPROFILE\Documents\WindowsHotkeys",
+    [string]$ExePath = "C:\Tools\VirtualDesktop\VirtualDesktop11.exe",
+    [string]$OutputSubfolder = "QuickAccess",
+    [int]$Count = 9
+)
 
-   \# Generate batch files 1.bat through 9.bat.  
-   for ($i \= 1; $i \-le 9; $i++) {  
-       \# Desktop numbers are 0-indexed, so we subtract 1\.  
-       $desktopNumber \= $i \- 1  
-       $batchFilePath \= Join-Path \-Path $outputFolder \-ChildPath "$i.bat"
+# Resolve executable path (prefer explicit ExePath, then fallback under BasePath)
+$virtualDesktopPath = $ExePath
+if (-not (Test-Path -LiteralPath $virtualDesktopPath -PathType Leaf)) {
+    $virtualDesktopPath = Join-Path -Path $BasePath -ChildPath "Tools\VirtualDesktop\VirtualDesktop.exe"
+}
 
-       \# Content of the batch file.  
-       $batchContent \= "@echo off\`n\`"$virtualDesktopPath\`" /Switch:$desktopNumber"
+# Ensure output directory exists
+$outputFolder = Join-Path -Path $BasePath -ChildPath $OutputSubfolder
+New-Item -ItemType Directory -Path $outputFolder -Force | Out-Null
 
-       try {  
-           Set-Content \-Path $batchFilePath \-Value $batchContent \-Encoding Ascii  
-           Write-Host "Successfully created $batchFilePath"  
-       }  
-       catch {  
-           Write-Error "Failed to create $batchFilePath. Error: $\_"  
-       }  
-   }
+# Validate executable exists
+if (-not (Test-Path -LiteralPath $virtualDesktopPath -PathType Leaf)) {
+    Write-Error "VirtualDesktop executable not found at '$ExePath' or '$BasePath\Tools\VirtualDesktop\VirtualDesktop.exe'."
+    exit 1
+}
 
-   Write-Host "Batch file generation complete."
+# Generate batch files 1..$Count
+for ($i = 1; $i -le $Count; $i++) {
+    # Desktop numbers are 0-indexed
+    $desktopNumber = $i - 1
+    $batchFilePath = Join-Path -Path $outputFolder -ChildPath "$i.bat"
 
-3. Save the file as GenerateBatchFiles.ps1 inside the Documents\\WindowsHotkeys\\Scripts folder.  
-4. Open PowerShell by pressing Win \+ X and selecting **Windows PowerShell**.  
-5. Run the following command. This command navigates to your script folder and runs the script, bypassing the default security policy that normally blocks local scripts.  
+    # Use a double-quoted here-string to avoid escaping issues
+    $batchContent = @"
+@echo off
+"$virtualDesktopPath" /Switch:$desktopNumber
+"@
+
+    $attempt = 0
+    while ($true) {
+        try {
+            # CRLF is written by default on Windows; ASCII suits .bat files
+            Set-Content -LiteralPath $batchFilePath -Value $batchContent -Encoding ASCII -Force
+            Write-Host "Successfully created $batchFilePath"
+            break
+        }
+        catch {
+            $attempt++
+            if ($attempt -ge 3) {
+                Write-Error "Failed to create $batchFilePath. Error: $($_.Exception.Message)"
+                break
+            }
+            Start-Sleep -Milliseconds 250
+        }
+    }
+}
+
+Write-Host "Batch file generation complete."
+```
+
+4. Save the file as GenerateBatchFiles.ps1 inside the Documents\\WindowsHotkeys\\Scripts folder.  
+5. Open PowerShell by pressing Win \+ X and selecting **Windows PowerShell**.  
+6. Run the following command. This command navigates to your script folder and runs the script, bypassing the default security policy that normally blocks local scripts.  
    Set-Location "$env:USERPROFILE\\Documents\\WindowsHotkeys\\Scripts"; powershell \-ExecutionPolicy Bypass \-File .\\GenerateBatchFiles.ps1
 
-6. Press Enter. Verify that the script output says it successfully created 1.bat through 9.bat.
+7. Press Enter. Verify that the script output says it successfully created 1.bat through 9.bat.
 
 ### **Part 2: Create Hotkeys with AutoHotkey**
 
