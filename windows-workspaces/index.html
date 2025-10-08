@@ -69,8 +69,8 @@
         
           <span class="post-updated">
             ↣
-            <time datetime="2025-09-02T10:23:09+00:00">
-              02 Sep 2025
+            <time datetime="2025-10-08T17:10:01+00:00">
+              08 Oct 2025
             </time>
           </span>
         
@@ -94,11 +94,11 @@
         <div class="page-stats mt-3" role="status" aria-label="Page statistics">
       
       <span class="badge bg-primary">
-        17202 characters
+        18013 characters
       </span>
         <span class="separator mx-2" aria-hidden="true">•</span>
         <span class="badge bg-primary">
-        2010 words
+        2084 words
       </span>
       </div>
         <div class="action-buttons d-flex flex-wrap gap-2">
@@ -696,39 +696,69 @@ exit
 
 <ol>
   <li>Open Notepad or another plain text editor.</li>
-  <li>
-    <p>Copy and paste the entire PowerShell script below into the editor.<br />
-# Define paths relative to the user’s profile.<br />
-$basePath = “$env:USERPROFILE\Documents\WindowsHotkeys”<br />
-$virtualDesktopPath = Join-Path -Path $basePath -ChildPath “Tools\VirtualDesktop\VirtualDesktop.exe”<br />
-$outputFolder = Join-Path -Path $basePath -ChildPath “QuickAccess”</p>
+  <li>Copy and paste the entire PowerShell script below into the editor.</li>
+</ol>
 
-    <p># Check if the VirtualDesktop executable exists.<br />
-if (-not (Test-Path -Path $virtualDesktopPath)) {<br />
-    Write-Error “VirtualDesktop.exe not found at ‘$virtualDesktopPath’. Please check the path.”<br />
-    return<br />
-}</p>
+<pre><code class="language-ps1">#requires -Version 5.1
+[CmdletBinding()]
+param(
+    [string]$BasePath = "$env:USERPROFILE\Documents\WindowsHotkeys",
+    [string]$ExePath = "C:\Tools\VirtualDesktop\VirtualDesktop11.exe",
+    [string]$OutputSubfolder = "QuickAccess",
+    [int]$Count = 9
+)
 
-    <p># Generate batch files 1.bat through 9.bat.<br />
-for ($i = 1; $i -le 9; $i++) {<br />
-    # Desktop numbers are 0-indexed, so we subtract 1.<br />
-    $desktopNumber = $i - 1<br />
-    $batchFilePath = Join-Path -Path $outputFolder -ChildPath “$i.bat”</p>
+# Resolve executable path (prefer explicit ExePath, then fallback under BasePath)
+$virtualDesktopPath = $ExePath
+if (-not (Test-Path -LiteralPath $virtualDesktopPath -PathType Leaf)) {
+    $virtualDesktopPath = Join-Path -Path $BasePath -ChildPath "Tools\VirtualDesktop\VirtualDesktop.exe"
+}
 
-    <div class="language-plaintext highlighter-rouge"><div class="highlight"><section><code>\# Content of the batch file.  
-$batchContent \= "@echo off\`n\`"$virtualDesktopPath\`" /Switch:$desktopNumber"
+# Ensure output directory exists
+$outputFolder = Join-Path -Path $BasePath -ChildPath $OutputSubfolder
+New-Item -ItemType Directory -Path $outputFolder -Force | Out-Null
 
-try {  
-    Set-Content \-Path $batchFilePath \-Value $batchContent \-Encoding Ascii  
-    Write-Host "Successfully created $batchFilePath"  
-}  
-catch {  
-    Write-Error "Failed to create $batchFilePath. Error: $\_"  
-}   }
-</code></section></div>    </div>
+# Validate executable exists
+if (-not (Test-Path -LiteralPath $virtualDesktopPath -PathType Leaf)) {
+    Write-Error "VirtualDesktop executable not found at '$ExePath' or '$BasePath\Tools\VirtualDesktop\VirtualDesktop.exe'."
+    exit 1
+}
 
-    <p>Write-Host “Batch file generation complete.”</p>
-  </li>
+# Generate batch files 1..$Count
+for ($i = 1; $i -le $Count; $i++) {
+    # Desktop numbers are 0-indexed
+    $desktopNumber = $i - 1
+    $batchFilePath = Join-Path -Path $outputFolder -ChildPath "$i.bat"
+
+    # Use a double-quoted here-string to avoid escaping issues
+    $batchContent = @"
+@echo off
+"$virtualDesktopPath" /Switch:$desktopNumber
+"@
+
+    $attempt = 0
+    while ($true) {
+        try {
+            # CRLF is written by default on Windows; ASCII suits .bat files
+            Set-Content -LiteralPath $batchFilePath -Value $batchContent -Encoding ASCII -Force
+            Write-Host "Successfully created $batchFilePath"
+            break
+        }
+        catch {
+            $attempt++
+            if ($attempt -ge 3) {
+                Write-Error "Failed to create $batchFilePath. Error: $($_.Exception.Message)"
+                break
+            }
+            Start-Sleep -Milliseconds 250
+        }
+    }
+}
+
+Write-Host "Batch file generation complete."
+</code></section>
+
+<ol>
   <li>Save the file as GenerateBatchFiles.ps1 inside the Documents\WindowsHotkeys\Scripts folder.</li>
   <li>Open PowerShell by pressing Win + X and selecting <strong>Windows PowerShell</strong>.</li>
   <li>
@@ -1058,7 +1088,7 @@ Press Win + R to open the Run dialog.</p>
         
         
         <a href="https://ib.bsb.br/404" aria-label="404">
-          2025-10-08 12:57:42
+          2025-10-08 14:14:31
         </a>
         &#x23;
     
@@ -1135,7 +1165,7 @@ Press Win + R to open the Run dialog.</p>
         "headline": "Windows 11: Switch Workspaces via VirtualDesktop Module with custom shortcuts",
         "description": "",
         "datePublished": "2025-01-18T00:00:00+00:00",
-        "dateModified": "2025-09-02T10:23:09+00:00",
+        "dateModified": "2025-10-08T17:10:01+00:00",
         "author": {
           "@type": "Person",
           "name": "Author"
