@@ -5,8 +5,8 @@ date: 2025-09-28
 type: post
 layout: post
 published: true
-slug: git-merge
-title: 'git merge'
+slug: gh-blueprint
+title: 'GitHub Repository Blueprinting'
 ---
 ```
   <purpose>
