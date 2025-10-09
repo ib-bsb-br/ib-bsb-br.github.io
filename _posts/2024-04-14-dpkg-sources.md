@@ -8,9 +8,10 @@ layout: post
 ---
 
 {% codeblock %}
-deb https://mirrors.ustc.edu.cn/debian oldoldstable-proposed-updates main contrib non-free non-free-firmware
-deb https://mirrors.ustc.edu.cn/debian oldoldstable-updates main contrib non-free non-free-firmware
-deb https://mirrors.ustc.edu.cn/debian oldoldstable main contrib non-free
+deb https://mirrors.ustc.edu.cn/debian bullseye main contrib non-free
+deb https://mirrors.ustc.edu.cn/debian bullseye-updates main contrib non-free non-free-firmware
+deb https://mirrors.ustc.edu.cn/debian bullseye-proposed-updates main contrib non-free non-free-firmware
+deb https://mirrors.ustc.edu.cn/debian-security bullseye-security main contrib non-free non-free-firmware
 {% endcodeblock %}
 
 ***
