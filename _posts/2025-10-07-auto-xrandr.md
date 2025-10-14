@@ -5,13 +5,191 @@ date: 2025-10-07
 type: post
 layout: post
 published: true
-slug: autoxrandr
-title: 'auto xrandr for two monitors bash script'
+slug: auto-xrandr
+title: 'auto xrandr for multi-monitor setup'
 ---
+
+# documentation
+
+## A. Tests-First Verification
+
+### A1. Test Matrix
+
+| ID                  | Behavior                     | Trigger/Command                               | Expectation                              | Exit |
+| ------------------- | ---------------------------- | --------------------------------------------- | ---------------------------------------- | ---- |
+| T-HELP              | Help prints header block     | `pwsh -File ./pwsh_monitor_working.ps1 -Help` | Usage text includes OPTIONS & EXIT CODES | 0    |
+| T-HEADLESS          | Headless detection           | Unset `DISPLAY` + break `xrandr`              | Error then exit                          | 20   |
+| T-MISS-DEP          | Missing dep and `-NoInstall` | Remove `xrandr` from PATH                     | Named missing dep; fail fast             | 2    |
+| T-AUTOINSTALL       | Auto-install needs root      | `-AutoInstall` as non-root                    | Error “requires root”                    | 2    |
+| T-INTERACTIVE       | Interactive selection        | ≥2 monitors                                   | Overlay confirm; accepted mode           | 0    |
+| T-APPLY-SAVED       | Non-interactive apply        | Valid JSON config                             | One-line summary JSON                    | 0    |
+| T-APPLY-NOCONFIG    | Missing config               | `-ApplySavedLayout` w/ nonexistent file       | Warning                                  | 23   |
+| T-JSON-ERROR        | Malformed JSON               | Bad config file                               | Error                                    | 24   |
+| T-INVALID-CONFIG    | Empty/invalid object         | Corrupt config                                | Error                                    | 22   |
+| T-FINAL-APPLY-ERROR | xrandr fails on final        | Mock nonzero exit                             | Warning                                  | 1    |
+| T-PRIMARY           | Largest area → primary       | Mixed resolutions                             | `--primary` set                          | 0    |
+
+### A2. Pester Samples
+
+**tests/Docs.Tests.ps1**
+
+```powershell
+Describe 'Documentation coverage' {
+  It 'Help text exists and includes sections' {
+    $out = pwsh -NoLogo -NoProfile -File ./pwsh_monitor_working.ps1 -Help
+    $out | Should -Match 'OPTIONS'
+    $out | Should -Match 'EXIT CODES'
+  }
+  It 'JSON summary schema on success' {
+    $cfg = '{"HDMI-1":"1920x1080"}'
+    $tmp = New-TemporaryFile
+    Set-Content -Path $tmp -Value $cfg -Encoding UTF8
+    $json = pwsh -NoLogo -NoProfile -File ./pwsh_monitor_working.ps1 -ApplySavedLayout -ConfigPath $tmp
+    Remove-Item $tmp -Force
+    $obj = $json | ConvertFrom-Json
+    $obj.ok | Should -BeTrue
+    $obj.mode | Should -Be 'apply-saved'
+    $obj | Get-Member -Name primary,order,chosen,configFile | Should -Not -BeNullOrEmpty
+  }
+}
+```
+
+**tests/XrandrParsing.Tests.ps1**
+
+```powershell
+Describe 'xrandr parsing' {
+  It 'Parses connected outputs' {
+    Mock Get-XrandrLines { @('HDMI-1 connected primary 1920x1080+0+0', 'DP-1 connected 2560x1440+1920+0') }
+    (Get-ConnectedOutputs) | Should -Be @('HDMI-1','DP-1')
+  }
+  It 'Extracts modes for an output' {
+    Mock Get-XrandrLines { @(
+      'HDMI-1 connected', '  1920x1080 60.00*+', '  1280x720 60.00',
+      'DP-1 connected',   '  2560x1440 59.95*', '  1920x1080 60.00'
+    ) }
+    (Get-OutputModes 'HDMI-1') | Should -Contain '1920x1080'
+  }
+  It 'Verifies geometry match' {
+    Mock Get-CurrentGeometry { [pscustomobject]@{W=1920;H=1080;X=0;Y=0} }
+    (Verify-OutputGeometry 'HDMI-1' '1920x1080') | Should -BeTrue
+  }
+}
+```
+
+**tests/ExitCodes.Tests.ps1**
+
+```powershell
+Describe 'Exit codes' {
+  It '-ApplySavedLayout missing file => 23' {
+    $p = Start-Process pwsh -ArgumentList '-File','./pwsh_monitor_working.ps1','-ApplySavedLayout','-ConfigPath','/nope.json' -PassThru -Wait
+    $p.ExitCode | Should -Be 23
+  }
+}
+```
+
+## B. Background & Scope
+
+* **Problem:** Multi-monitor setup is error-prone across WMs and distros.
+* **Goal:** Interactive discovery + verification; persisted JSON; non-interactive reapply; machine-parseable success.
+* **Scope:** X11 `xrandr` only; Wayland not supported.
+
+## C. Supported Environments
+
+* Debian/Ubuntu(+derivatives), Fedora/RHEL/CentOS, openSUSE, Arch-based; WM/terminal agnostic.
+* Requires `xrandr`, `python3` with `tkinter`, and PowerShell 7+.
+
+## D. Feature/Request Status Matrix
+
+| Request                  | Status      | Implementation Notes                                                 |
+| ------------------------ | ----------- | -------------------------------------------------------------------- |
+| `-ConfigPath` override   | Implemented | Default `$HOME/.config/pwsh-monitor-layout.json`; used in both paths |
+| `-Help`                  | Implemented | `Show-Help` extracts header `<# ... #>` and exits 0                  |
+| One-line success JSON    | Implemented | Both interactive and apply-saved paths emit schema                   |
+| Portability auto-install | Implemented | PM detection + root requirement                                      |
+| `-NoInstall` fast-fail   | Implemented | Throws if missing dep; exit 2                                        |
+| Headless explicit exit   | Implemented | `Assert-XSessionOrExit` → exit 20                                    |
+| Autostart `.desktop`     | Implemented | Writes to `~/.config/autostart/` with proper Exec                    |
+
+## E. Usage
+
+* **Interactive:** `pwsh -File ./pwsh_monitor_working.ps1`
+* **Auto-install (root):** `sudo pwsh -File ./pwsh_monitor_working.ps1 -AutoInstall`
+* **Apply saved:** `pwsh -File ./pwsh_monitor_working.ps1 -ApplySavedLayout [-ConfigPath <file>]`
+* **Help:** `pwsh -File ./pwsh_monitor_working.ps1 -Help`
+
+## F. Dependencies & Authority
+
+* Ensured via `Ensure-Dep`; PMs: `apt`, `dnf`, `zypper`, `pacman`. Root required for auto-install.
+* When root, sets `XAUTHORITY` to target user; defaults `DISPLAY` to `:0` if unset.
+
+## G. Design & Key Functions
+
+* Parsing/validation (`Get-ConnectedOutputs`, `Get-OutputModes`, `Get-CurrentGeometry`, `Verify-OutputGeometry`).
+* Application (`Apply-Layout` with cumulative width positioning; `--primary` set by area heuristic).
+* Overlay (`Show-OverlayTk`) for visual confirmation.
+* Persistence/autostart and summary emission.
+
+## H. Data Model & Files
+
+* **Config JSON (ordered mapping):**
+
+```json
+{
+  "HDMI-1": "1920x1080",
+  "DP-1": "2560x1440"
+}
+```
+
+* **Success Summary (stdout, single line):**
+
+```json
+{"ok":true,"mode":"interactive","primary":"HDMI-1","order":["HDMI-1","DP-1"],"chosen":{"HDMI-1":"1920x1080","DP-1":"2560x1440"},"configFile":"/home/user/.config/pwsh-monitor-layout.json"}
+```
+
+* **Transcripts:** `/tmp/pwsh_monitor_working-YYYYMMDD-HHMMSS.log` (fallback `$HOME/...`).
+* **Autostart:** `~/.config/autostart/pwsh_monitor_working.desktop`.
+
+## I. Error Handling & Exit Codes
+
+| Code | Meaning                               | Typical Source                         | Remedy                                         |
+| ---: | ------------------------------------- | -------------------------------------- | ---------------------------------------------- |
+|    0 | Success                               | Normal completion                      | —                                              |
+|    1 | General/user abort/final apply failed | `Prompt-YNQ` quit; `Apply-Layout` fail | Retry with `-DebugMode` or adjust modes        |
+|    2 | Missing dep / install failure         | `Ensure-Dep`/`Install-Dep`             | Install packages or use `-AutoInstall` as root |
+|   20 | Headless / no X11                     | `Assert-XSessionOrExit`                | Start X11; ensure `xrandr` works               |
+|   21 | No connected monitors                 | `Get-ConnectedOutputs`                 | Check hardware/cables                          |
+|   22 | Invalid/empty config                  | Apply-saved path                       | Fix JSON                                       |
+|   23 | Config file not found                 | Apply-saved path                       | Provide correct `-ConfigPath`                  |
+|   24 | JSON parse error                      | Apply-saved path                       | Fix JSON syntax                                |
+|   25 | Permission/ownership error            | Autostart/config setup                 | Correct ownership and perms                    |
+
+## J. Deployment & Autostart
+
+* First run interactively to generate JSON; confirm overlay; verify autostart `.desktop`.
+* For login issues, inspect latest transcript under `/tmp`.
+
+## K. Troubleshooting
+
+* **Overlay missing:** Install `python3-tk`/`tk`; some WMs may block undecorated topmost windows.
+* **Apply-saved fails:** Outputs may be renamed (docks/GPUs); re-run interactive flow to refresh JSON.
+* **Headless (20):** Ensure `DISPLAY` and functioning X server.
+
+## L. Versioning
+
+* **v0.1 (2025-10-14):** Initial structured docs and tests-first plan.
+
+## M. Causality Links (Why → How Validated)
+
+* **Correct ordering:** User selection + overlay → Pester interactive smoke + manual confirmation.
+* **Accurate geometry:** Compare `Get-CurrentGeometry` against selected mode → Pester unit test for verifier.
+* **Reproducibility:** Persist ordered mapping; non-interactive apply → schema test; exit-code tests.
+* **Robust setup:** Auto-install with PM detection; guarded by root → negative test for non-root.
+* **Headless clarity:** Explicit exit 20 → smoke test with unset `DISPLAY`.
+
 {% codeblock bash %}
 #!/usr/bin/env pwsh
 <# 
-pwsh-monitor-setup.ps1 — Interactive + non-interactive multi-monitor configurator for X11 (Linux)
+pwsh_monitor_working.ps1 — Interactive + non-interactive multi-monitor configurator for X11 (Linux)
 
 TARGET: Debian/Ubuntu/Derivatives, Fedora/RHEL/CentOS, openSUSE, Arch-based (pwsh, xrandr)
 WM/TERM agnostic (works with ratpoison/Alacritty etc.)
@@ -32,19 +210,19 @@ NEW/REQUESTED IMPROVEMENTS
 
 USAGE (examples)
   # First run (interactive):
-  pwsh -File ./pwsh-monitor-setup.ps1
+  pwsh -File ./pwsh_monitor_working.ps1
 
   # Auto-install missing deps (root required):
-  sudo pwsh -File ./pwsh-monitor-setup.ps1 -AutoInstall
+  sudo pwsh -File ./pwsh_monitor_working.ps1 -AutoInstall
 
   # Save config to a specific path:
-  pwsh -File ./pwsh-monitor-setup.ps1 -ConfigPath "$HOME/.config/my-monitor-layout.json"
+  pwsh -File ./pwsh_monitor_working.ps1 -ConfigPath "$HOME/.config/my-monitor-layout.json"
 
   # Non-interactive apply of saved layout (good for autostart):
-  pwsh -File ./pwsh-monitor-setup.ps1 -ApplySavedLayout
+  pwsh -File ./pwsh_monitor_working.ps1 -ApplySavedLayout
 
   # Print help:
-  pwsh -File ./pwsh-monitor-setup.ps1 -Help
+  pwsh -File ./pwsh_monitor_working.ps1 -Help
 
 OPTIONS
   -DebugMode             Verbose logging during execution.
@@ -53,7 +231,7 @@ OPTIONS
   -ApplySavedLayout      Apply saved layout from the config JSON and exit.
   -OverlaySeconds <int>  Seconds to keep the red overlay visible when testing (default: 5).
   -TargetUser <string>   Login user for ownership of autostart/config when run as root (default: SUDO_USER/USER/linaro).
-  -ScriptInstallPath     Path to place a self-copy used by autostart (default: $HOME/pwsh-monitor-setup.ps1).
+  -ScriptInstallPath     Path to place a self-copy used by autostart (default: $HOME/pwsh_monitor_working.ps1).
   -ConfigPath            Override config JSON path (default: $HOME/.config/pwsh-monitor-layout.json).
   -Help                  Show this help and exit.
 
@@ -83,7 +261,7 @@ param(
     [switch] $Help,
     [int]    $OverlaySeconds = 5,
     [string] $TargetUser = ($env:SUDO_USER ?? $env:USER ?? 'linaro'),
-    [string] $ScriptInstallPath = "$HOME/pwsh-monitor-setup.ps1",
+    [string] $ScriptInstallPath = "$HOME/pwsh_monitor_working.ps1",
     [string] $ConfigPath
 )
 
@@ -94,9 +272,9 @@ if ($DebugMode) { $VerbosePreference = 'Continue' }
 function Stop-TranscriptSafe { try { Stop-Transcript | Out-Null } catch {} }
 
 # Transcript
-$tsFile = "/tmp/pwsh-monitor-setup-$(Get-Date -Format 'yyyyMMdd-HHmmss').log"
+$tsFile = "/tmp/pwsh_monitor_working-$(Get-Date -Format 'yyyyMMdd-HHmmss').log"
 try { Start-Transcript -Path $tsFile -Force | Out-Null } catch {
-    $tsFile = Join-Path $HOME "pwsh-monitor-setup-$(Get-Date -Format 'yyyyMMdd-HHmmss').log"
+    $tsFile = Join-Path $HOME "pwsh_monitor_working-$(Get-Date -Format 'yyyyMMdd-HHmmss').log"
     try { Start-Transcript -Path $tsFile -Force | Out-Null } catch {}
 }
 Write-Verbose "Transcript: $tsFile"
@@ -536,7 +714,7 @@ try {
         if ($root) { & chown "${TargetUser}:${TargetUser}" $ScriptInstallPath }
         & chmod +x $ScriptInstallPath
     }
-    $desktopFile = Join-Path $autoDir 'pwsh-monitor-setup.desktop'
+    $desktopFile = Join-Path $autoDir 'pwsh_monitor_working.desktop'
     $execLine = "pwsh -File $ScriptInstallPath -ApplySavedLayout -ConfigPath `"$ConfigPath`""
 @"
 [Desktop Entry]
