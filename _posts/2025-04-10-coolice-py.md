@@ -5,7 +5,7 @@ date: 2025-04-10
 type: post
 layout: post
 published: true
-slug: coolice
+slug: coolice-py
 title: 'CooliceHost WSGI/ASGI Python Environment'
 ---
 
