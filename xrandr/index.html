@@ -67,8 +67,8 @@
         
           <span class="post-updated">
             ↣
-            <time datetime="2025-10-19T02:36:18+00:00">
-              19 Oct 2025
+            <time datetime="2025-10-22T22:38:44+00:00">
+              22 Oct 2025
             </time>
           </span>
         
@@ -90,11 +90,11 @@
         <div class="page-stats mt-3" role="status" aria-label="Page statistics">
       
       <span class="badge bg-primary">
-        57836 characters
+        62413 characters
       </span>
         <span class="separator mx-2" aria-hidden="true">•</span>
         <span class="badge bg-primary">
-        6403 words
+        6968 words
       </span>
       </div>
         <div class="action-buttons d-flex flex-wrap gap-2">
@@ -128,7 +128,7 @@
       <article class="post-wrapper">
         <div class="post-content-body">
           
-<ul><li><a href="#why-use-autorandr"><strong>Why Use autorandr?</strong></a></li><li><a href="#prerequisites-raspberry-pi-4b-specific"><strong>Prerequisites (Raspberry Pi 4B Specific)</strong></a></li><li><a href="#installation-on-opensuse-tumbleweed"><strong>Installation on openSUSE Tumbleweed</strong></a></li><li><a href="#basic-configuration-creating-and-managing-profiles"><strong>Basic Configuration: Creating and Managing Profiles</strong></a></li><li><a href="#applying-configurations"><strong>Applying Configurations</strong></a></li><li><a href="#automation"><strong>Automation</strong></a></li></ul>
+<ul><li><a href="#why-use-autorandr"><strong>Why Use autorandr?</strong></a></li><li><a href="#prerequisites-raspberry-pi-4b-specific"><strong>Prerequisites (Raspberry Pi 4B Specific)</strong></a></li><li><a href="#installation-on-opensuse-tumbleweed"><strong>Installation on openSUSE Tumbleweed</strong></a></li><li><a href="#basic-configuration-creating-and-managing-profiles"><strong>Basic Configuration: Creating and Managing Profiles</strong></a></li><li><a href="#applying-configurations"><strong>Applying Configurations</strong></a></li><li><a href="#custom_xrandr_script_pathrootmy_custom_display_configsh">CUSTOM_XRANDR_SCRIPT_PATH=”/root/my_custom_display_config.sh”</a></li><li><a href="#automation"><strong>Automation</strong></a></li></ul>
           <table>
   <thead>
     <tr>
@@ -471,6 +471,180 @@ autorandr --change</p>
     <p>Behind the scenes, autorandr --change performs several steps: it detects all connected displays and their properties (like EDID, which is data that allows a display to communicate its capabilities to the graphics card), compares this information against the data stored in each of your saved profiles, calculates a “match score” for each profile based on how well it fits the current hardware, and then automatically executes the xrandr commands stored within the highest-scoring profile (if the score exceeds a certain threshold). If no profile matches well enough, it might load the designated default profile or leave the configuration unchanged, depending on your setup.</p>
   </li>
 </ul>
+  <h3 id="custom_xrandr_script_pathrootmy_custom_display_configsh">
+    
+    
+     <a href="#custom_xrandr_script_pathrootmy_custom_display_configsh">#</a><a href="#" aria-label="Back to top">CUSTOM_XRANDR_SCRIPT_PATH=”/root/my_custom_display_config.sh”</a>
+        
+    
+  </h3>
+      
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><section><code><span class="c">#!/bin/bash</span>
+<span class="c"># Xrandr dual-monitor setup (expanded, refactored)</span>
+<span class="c"># HDMI-1 → 800x600@60 (primary)</span>
+<span class="c"># DP-1   → 640x480@60 (right of HDMI-1)</span>
+<span class="c"># Modelines and outputs are fixed based on provided logs. No placeholders.</span>
+
+<span class="nb">set</span> <span class="nt">-Eeuo</span> pipefail
+
+<span class="c"># --------------------------</span>
+<span class="c"># Utilities / Logging</span>
+<span class="c"># --------------------------</span>
+log<span class="o">()</span>  <span class="o">{</span> <span class="nb">printf</span> <span class="s1">'[INFO ] %s\n'</span> <span class="s2">"</span><span class="nv">$*</span><span class="s2">"</span><span class="p">;</span> <span class="o">}</span>
+warn<span class="o">()</span> <span class="o">{</span> <span class="nb">printf</span> <span class="s1">'[WARN ] %s\n'</span> <span class="s2">"</span><span class="nv">$*</span><span class="s2">"</span> <span class="o">&gt;</span>&amp;2<span class="p">;</span> <span class="o">}</span>
+err<span class="o">()</span>  <span class="o">{</span> <span class="nb">printf</span> <span class="s1">'[ERROR] %s\n'</span> <span class="s2">"</span><span class="nv">$*</span><span class="s2">"</span> <span class="o">&gt;</span>&amp;2<span class="p">;</span> <span class="o">}</span>
+
+<span class="c"># If DRY_RUN=1 is set in the environment, print commands instead of executing them.</span>
+: <span class="s2">"</span><span class="k">${</span><span class="nv">DRY_RUN</span>:<span class="p">=0</span><span class="k">}</span><span class="s2">"</span>
+run<span class="o">()</span> <span class="o">{</span>
+  <span class="k">if</span> <span class="o">[[</span> <span class="s2">"</span><span class="nv">$DRY_RUN</span><span class="s2">"</span> <span class="o">==</span> <span class="s2">"1"</span> <span class="o">]]</span><span class="p">;</span> <span class="k">then
+    </span><span class="nb">printf</span> <span class="s1">'[DRYRUN] %s\n'</span> <span class="s2">"</span><span class="nv">$*</span><span class="s2">"</span>
+    <span class="k">return </span>0
+  <span class="k">fi
+  </span><span class="nb">eval</span> <span class="s2">"</span><span class="nv">$@</span><span class="s2">"</span>
+<span class="o">}</span>
+
+<span class="c"># --------------------------</span>
+<span class="c"># Pre-flight checks</span>
+<span class="c"># --------------------------</span>
+<span class="k">if</span> <span class="o">!</span> <span class="nb">command</span> <span class="nt">-v</span> xrandr <span class="o">&gt;</span>/dev/null 2&gt;&amp;1<span class="p">;</span> <span class="k">then
+  </span>err <span class="s1">'xrandr not found'</span>
+  <span class="nb">exit </span>127
+<span class="k">fi</span>
+
+<span class="c"># --------------------------</span>
+<span class="c"># Fixed configuration from logs</span>
+<span class="c"># --------------------------</span>
+<span class="nv">OUTPUT_1_NAME</span><span class="o">=</span><span class="s2">"HDMI-1"</span>
+<span class="nv">MODE_1_NAME</span><span class="o">=</span><span class="s2">"800x600_60.00"</span>
+<span class="nv">MODELINE_1_PARAMS</span><span class="o">=</span><span class="s2">"38.25  800 832 912 1024  600 603 607 624 -hsync +vsync"</span>
+
+<span class="nv">OUTPUT_2_NAME</span><span class="o">=</span><span class="s2">"DP-1"</span>
+<span class="nv">MODE_2_NAME</span><span class="o">=</span><span class="s2">"640x480_60.00"</span>
+<span class="nv">MODELINE_2_PARAMS</span><span class="o">=</span><span class="s2">"23.75  640 664 720 800  480 483 487 500 -hsync +vsync"</span>
+
+<span class="c"># --------------------------</span>
+<span class="c"># Helpers for xrandr state</span>
+<span class="c"># --------------------------</span>
+connected<span class="o">()</span> <span class="o">{</span>
+  xrandr | <span class="nb">grep</span> <span class="nt">-q</span> <span class="s2">"^</span><span class="nv">$1</span><span class="se">\s</span><span class="s2">*connected"</span>
+<span class="o">}</span>
+
+mode_defined<span class="o">()</span> <span class="o">{</span>
+  <span class="nb">local </span><span class="nv">name</span><span class="o">=</span><span class="s2">"</span><span class="nv">$1</span><span class="s2">"</span>
+  <span class="c"># A mode is "defined" if it appears anywhere in xrandr --query output</span>
+  xrandr <span class="nt">--query</span> | <span class="nb">awk</span> <span class="s1">'{print $1}'</span> | <span class="nb">grep</span> <span class="nt">-Fxq</span> <span class="s2">"</span><span class="nv">$name</span><span class="s2">"</span>
+<span class="o">}</span>
+
+output_has_mode<span class="o">()</span> <span class="o">{</span>
+  <span class="nb">local </span><span class="nv">out</span><span class="o">=</span><span class="s2">"</span><span class="nv">$1</span><span class="s2">"</span> <span class="nv">name</span><span class="o">=</span><span class="s2">"</span><span class="nv">$2</span><span class="s2">"</span>
+  <span class="c"># Extract the block for this output and list the mode names, then search for ours.</span>
+  xrandr <span class="nt">--query</span> | <span class="nb">awk</span> <span class="nt">-v</span> <span class="nv">o</span><span class="o">=</span><span class="s2">"</span><span class="nv">$out</span><span class="s2">"</span> <span class="s1">'
+    $1==o {on=1; next}
+    on &amp;&amp; NF==0 {on=0}
+    on &amp;&amp; $1!~/^\t/ &amp;&amp; $2=="connected" {on=0}
+    on {print $1}
+  '</span> | <span class="nb">sed</span> <span class="s1">'s/^[[:space:]]*//'</span> | <span class="nb">grep</span> <span class="nt">-Fxq</span> <span class="s2">"</span><span class="nv">$name</span><span class="s2">"</span> 2&gt;/dev/null
+<span class="o">}</span>
+
+active_geom<span class="o">()</span> <span class="o">{</span>
+  <span class="c"># Prints WxH for given output if connected; empty otherwise</span>
+  <span class="nb">local </span><span class="nv">out</span><span class="o">=</span><span class="s2">"</span><span class="nv">$1</span><span class="s2">"</span>
+  xrandr <span class="nt">--query</span> | <span class="nb">awk</span> <span class="nt">-v</span> <span class="nv">o</span><span class="o">=</span><span class="s2">"</span><span class="nv">$out</span><span class="s2">"</span> <span class="s1">'$1==o &amp;&amp; $2=="connected" {
+    match($0, /[0-9]+x[0-9]+\+[0-9]+\+[0-9]+/);
+    if (RSTART) { s=substr($0,RSTART,RLENGTH); sub(/\+.*/, "", s); print s; }
+  }'</span>
+<span class="o">}</span>
+
+<span class="c"># --------------------------</span>
+<span class="c"># Capture pre-state for reversible changes</span>
+<span class="c"># --------------------------</span>
+<span class="nv">PRESTATE_CMD</span><span class="o">=()</span>
+<span class="k">for </span>out <span class="k">in</span> <span class="s2">"</span><span class="nv">$OUTPUT_1_NAME</span><span class="s2">"</span> <span class="s2">"</span><span class="nv">$OUTPUT_2_NAME</span><span class="s2">"</span><span class="p">;</span> <span class="k">do
+  if </span>connected <span class="s2">"</span><span class="nv">$out</span><span class="s2">"</span><span class="p">;</span> <span class="k">then</span>
+    <span class="c"># Best-effort revert uses preferred mode and auto placement for each output.</span>
+    PRESTATE_CMD+<span class="o">=(</span><span class="nt">--output</span> <span class="s2">"</span><span class="nv">$out</span><span class="s2">"</span> <span class="nt">--auto</span><span class="o">)</span>
+  <span class="k">fi
+done
+
+</span>revert<span class="o">()</span> <span class="o">{</span>
+  <span class="k">if</span> <span class="o">((</span><span class="k">${#</span><span class="nv">PRESTATE_CMD</span><span class="p">[@]</span><span class="k">}</span><span class="o">))</span><span class="p">;</span> <span class="k">then
+    </span>warn <span class="s2">"Reverting to auto configuration"</span>
+    run xrandr <span class="s2">"</span><span class="k">${</span><span class="nv">PRESTATE_CMD</span><span class="p">[@]</span><span class="k">}</span><span class="s2">"</span> <span class="o">||</span> warn <span class="s2">"Revert failed"</span>
+  <span class="k">fi</span>
+<span class="o">}</span>
+
+<span class="nb">trap</span> <span class="s1">'err "Failure occurred"; revert'</span> ERR
+
+<span class="c"># --------------------------</span>
+<span class="c"># Ensure modes exist and are assigned to outputs</span>
+<span class="c"># --------------------------</span>
+ensure_mode_defined<span class="o">()</span> <span class="o">{</span>
+  <span class="nb">local </span><span class="nv">name</span><span class="o">=</span><span class="s2">"</span><span class="nv">$1</span><span class="s2">"</span><span class="p">;</span> <span class="nb">shift
+  </span><span class="k">if </span>mode_defined <span class="s2">"</span><span class="nv">$name</span><span class="s2">"</span><span class="p">;</span> <span class="k">then
+    </span>log <span class="s2">"Mode present: </span><span class="nv">$name</span><span class="s2">"</span>
+  <span class="k">else
+    </span>log <span class="s2">"Defining mode: </span><span class="nv">$name</span><span class="s2">"</span>
+    run xrandr <span class="nt">--newmode</span> <span class="s2">"</span><span class="nv">$name</span><span class="s2">"</span> <span class="s2">"</span><span class="nv">$@</span><span class="s2">"</span>
+  <span class="k">fi</span>
+<span class="o">}</span>
+
+ensure_output_has_mode<span class="o">()</span> <span class="o">{</span>
+  <span class="nb">local </span><span class="nv">out</span><span class="o">=</span><span class="s2">"</span><span class="nv">$1</span><span class="s2">"</span> <span class="nv">name</span><span class="o">=</span><span class="s2">"</span><span class="nv">$2</span><span class="s2">"</span>
+  <span class="k">if </span>output_has_mode <span class="s2">"</span><span class="nv">$out</span><span class="s2">"</span> <span class="s2">"</span><span class="nv">$name</span><span class="s2">"</span><span class="p">;</span> <span class="k">then
+    </span>log <span class="s2">"Output </span><span class="nv">$out</span><span class="s2"> already has mode </span><span class="nv">$name</span><span class="s2">"</span>
+  <span class="k">else
+    </span>log <span class="s2">"Adding mode </span><span class="nv">$name</span><span class="s2"> to </span><span class="nv">$out</span><span class="s2">"</span>
+    run xrandr <span class="nt">--addmode</span> <span class="s2">"</span><span class="nv">$out</span><span class="s2">"</span> <span class="s2">"</span><span class="nv">$name</span><span class="s2">"</span>
+  <span class="k">fi</span>
+<span class="o">}</span>
+
+<span class="c"># Validate outputs are connected before modifying</span>
+<span class="k">for </span>out <span class="k">in</span> <span class="s2">"</span><span class="nv">$OUTPUT_1_NAME</span><span class="s2">"</span> <span class="s2">"</span><span class="nv">$OUTPUT_2_NAME</span><span class="s2">"</span><span class="p">;</span> <span class="k">do
+  if</span> <span class="o">!</span> connected <span class="s2">"</span><span class="nv">$out</span><span class="s2">"</span><span class="p">;</span> <span class="k">then
+    </span>err <span class="s2">"Output not connected: </span><span class="nv">$out</span><span class="s2">"</span>
+    <span class="nb">exit </span>2
+  <span class="k">fi
+done</span>
+
+<span class="c"># Define modes idempotently</span>
+ensure_mode_defined <span class="s2">"</span><span class="nv">$MODE_1_NAME</span><span class="s2">"</span> <span class="nv">$MODELINE_1_PARAMS</span>
+ensure_mode_defined <span class="s2">"</span><span class="nv">$MODE_2_NAME</span><span class="s2">"</span> <span class="nv">$MODELINE_2_PARAMS</span>
+
+<span class="c"># Assign modes to each output</span>
+ensure_output_has_mode <span class="s2">"</span><span class="nv">$OUTPUT_1_NAME</span><span class="s2">"</span> <span class="s2">"</span><span class="nv">$MODE_1_NAME</span><span class="s2">"</span>
+ensure_output_has_mode <span class="s2">"</span><span class="nv">$OUTPUT_2_NAME</span><span class="s2">"</span> <span class="s2">"</span><span class="nv">$MODE_2_NAME</span><span class="s2">"</span>
+
+<span class="c"># --------------------------</span>
+<span class="c"># Apply requested layout</span>
+<span class="c"># --------------------------</span>
+<span class="nv">LAYOUT_CMD</span><span class="o">=(</span>
+  <span class="nt">--output</span> <span class="s2">"</span><span class="nv">$OUTPUT_1_NAME</span><span class="s2">"</span> <span class="nt">--mode</span> <span class="s2">"</span><span class="nv">$MODE_1_NAME</span><span class="s2">"</span> <span class="nt">--primary</span>
+  <span class="nt">--output</span> <span class="s2">"</span><span class="nv">$OUTPUT_2_NAME</span><span class="s2">"</span> <span class="nt">--mode</span> <span class="s2">"</span><span class="nv">$MODE_2_NAME</span><span class="s2">"</span> <span class="nt">--right-of</span> <span class="s2">"</span><span class="nv">$OUTPUT_1_NAME</span><span class="s2">"</span>
+<span class="o">)</span>
+
+log <span class="s2">"Applying layout"</span>
+run xrandr <span class="s2">"</span><span class="k">${</span><span class="nv">LAYOUT_CMD</span><span class="p">[@]</span><span class="k">}</span><span class="s2">"</span>
+
+<span class="c"># --------------------------</span>
+<span class="c"># Post-apply verification</span>
+<span class="c"># --------------------------</span>
+<span class="nv">geom1</span><span class="o">=</span><span class="si">$(</span>active_geom <span class="s2">"</span><span class="nv">$OUTPUT_1_NAME</span><span class="s2">"</span><span class="si">)</span>
+<span class="nv">geom2</span><span class="o">=</span><span class="si">$(</span>active_geom <span class="s2">"</span><span class="nv">$OUTPUT_2_NAME</span><span class="s2">"</span><span class="si">)</span>
+
+<span class="k">if</span> <span class="o">[[</span> <span class="s2">"</span><span class="nv">$geom1</span><span class="s2">"</span> <span class="o">!=</span> <span class="s2">"800x600"</span> <span class="o">]]</span><span class="p">;</span> <span class="k">then
+  </span>err <span class="s2">"Post-check failed: </span><span class="nv">$OUTPUT_1_NAME</span><span class="s2"> geometry is '</span><span class="nv">$geom1</span><span class="s2">' (expected 800x600)"</span>
+  revert<span class="p">;</span> <span class="nb">exit </span>3
+<span class="k">fi
+if</span> <span class="o">[[</span> <span class="s2">"</span><span class="nv">$geom2</span><span class="s2">"</span> <span class="o">!=</span> <span class="s2">"640x480"</span> <span class="o">]]</span><span class="p">;</span> <span class="k">then
+  </span>err <span class="s2">"Post-check failed: </span><span class="nv">$OUTPUT_2_NAME</span><span class="s2"> geometry is '</span><span class="nv">$geom2</span><span class="s2">' (expected 640x480)"</span>
+  revert<span class="p">;</span> <span class="nb">exit </span>4
+<span class="k">fi
+
+</span>log <span class="s2">"Configuration successful: </span><span class="nv">$OUTPUT_1_NAME</span><span class="s2">=</span><span class="nv">$geom1</span><span class="s2"> (primary), </span><span class="nv">$OUTPUT_2_NAME</span><span class="s2">=</span><span class="nv">$geom2</span><span class="s2"> (right)"</span>
+<span class="nb">exit </span>0
+</code></section></div></div>
   <h3 id="automation">
     
     
@@ -2438,7 +2612,7 @@ exit 0</code>
         
         
         <a href="https://ib.bsb.br/404" aria-label="404">
-          2025-10-21 17:38:54
+          2025-10-22 19:44:20
         </a>
         &#x23;
     
@@ -2506,7 +2680,7 @@ exit 0</code>
         "headline": "autorandr and bash script to collect and setup monitor data for xrandr",
         "description": "",
         "datePublished": "2025-04-03T00:00:00+00:00",
-        "dateModified": "2025-10-19T02:36:18+00:00",
+        "dateModified": "2025-10-22T22:38:44+00:00",
         "author": {
           "@type": "Person",
           "name": "Author"
