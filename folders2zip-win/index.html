@@ -1,0 +1,1259 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>
+      
+        folders2zip as non-admin Windows user - infoBAG
+      
+    </title>
+    <meta name="title" content="folders2zip as non-admin Windows user - infoBAG" />
+    <meta name="description" content="">
+    <meta property="og:type" content="article">
+    <meta property="og:url" content="https://ib.bsb.br/folders2zip-win/">
+    <meta property="og:title" content="folders2zip as non-admin Windows user - infoBAG">
+    <meta property="og:description" content="">
+    <meta property="og:image" content="/favicon.ico">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:url" content="https://ib.bsb.br/folders2zip-win/">
+    <meta name="twitter:title" content="folders2zip as non-admin Windows user - infoBAG">
+    <meta name="twitter:description" content="">
+    <meta name="twitter:image" content="/favicon.ico">
+    <link rel="canonical" href="https://ib.bsb.br/folders2zip-win/">
+    <link rel="alternate" type="application/rss+xml" title="infoBAG" href="https://ib.bsb.br/rss.xml">
+    
+      <meta name="keywords" content="[scripts&gt;powershell]">
+      
+        <meta property="article:tag" content="[scripts&gt;powershell]">
+      
+    
+    <link rel="icon" href="/favicon.ico" type="image/x-icon">
+    <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon">
+    
+    <link rel="stylesheet" href="/style.css">
+  </head>
+  <body class="post-content-body">
+    <header class="header-container">
+      <nav aria-label="Main navigation" class="header-content">
+        <a href="/" aria-label="Home">
+          <img src="/favicon.ico" alt="Home" class="favicon search-link" width="32" height="32" loading="lazy">
+        </a>
+        <a href="/tags" aria-label="Tags">
+          <img src="/assets/Label.gif" alt="Tags" class="favicon search-link" width="32" height="32" loading="lazy">
+        </a>
+        <a href="/send" aria-label="send">
+          <img src="/assets/rot.gif" alt="send" class="favicon search-link" width="32" height="32" loading="lazy">
+        </a> 
+        <a href="/created" aria-label="archive created">
+          <img src="/assets/Loose_Stone_Pile.gif" alt="archive created" class="favicon search-link" width="32" height="32" loading="lazy">
+        </a>
+        <a href="/events" aria-label="Events">
+          <img src="/assets/Paralyse_Rune.gif" alt="Events" class="favicon search-link" width="32" height="32" loading="lazy">
+        </a>
+        <a href="/modified" aria-label="archive modified">
+          <img src="/assets/Hole_(Rock).gif" alt="archive modified" class="favicon search-link" width="32" height="32" loading="lazy">
+        </a>
+    </nav>
+      <h5 class="post-title">
+        <a href="#bottom-of-page" aria-label="Go to bottom">
+          folders2zip as non-admin Windows user
+        </a>
+      </h5>
+      <div class="post-meta">
+        <time datetime="2025-10-24T00:00:00+00:00" class="post-date">
+          24 Oct 2025
+        </time>
+        
+          <span class="post-updated">
+            ↣
+            <time datetime="2025-10-25T02:54:35+00:00">
+              25 Oct 2025
+            </time>
+          </span>
+        
+        
+          <p class="post-slug">
+            Slug: <a href="https://ib.bsb.br/folders2zip-win" class="tag">folders2zip-win</a>
+          </p>
+        
+        
+          <p class="post-tags">
+            Tags:
+            
+              <a href="https://ib.bsb.br/tags/#scripts-powershell" class="tag">[scripts>powershell]</a>
+            
+          </p>
+        
+      </div>
+      <div class="post-actions">
+        <div class="page-stats mt-3" role="status" aria-label="Page statistics">
+      
+      <span class="badge bg-primary">
+        18909 characters
+      </span>
+        <span class="separator mx-2" aria-hidden="true">•</span>
+        <span class="badge bg-primary">
+        1825 words
+      </span>
+      </div>
+        <div class="action-buttons d-flex flex-wrap gap-2">
+          
+            
+              <form action="https://github.com/ib-bsb-br/ib-bsb-br.github.io/edit/main/_posts/2025-10-24-folders2zip-win.md"
+                    method="GET"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="d-inline-block">
+                <button type="submit" class="btn btn-danger" aria-label="Edit page content">
+                  Improve this page
+                </button>
+              </form>
+            
+            <form action="https://github.com/ib-bsb-br/ib-bsb-br.github.io/commits/main/_posts/2025-10-24-folders2zip-win.md"
+                  method="GET"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="d-inline-block">
+              <button type="submit" class="btn btn-danger" aria-label="View page revision history">
+                View revision history
+              </button>
+            </form>
+          
+        </div>
+      </div>
+    </header>
+    <main class="content">
+      <article class="post-wrapper">
+        <div class="post-content-body">
+          
+
+          <section class="code-block-container" role="group" aria-label="Powershell Code Block" data-filename="powershell_code_block.txt" data-code="#requires -Version 5.1
+&lt;#!
+.SYNOPSIS
+  Single-file archive as a non-admin Windows 10 user — create/overwrite/update a .zip of a folder; optional restore.
+
+.DESCRIPTION
+  Creates a single .zip archive of SourceDir with robust handling for invalid file timestamps by clamping
+  to the ZIP spec range (1980-01-01 to 2107-12-31). No admin required. ASCII-only script for PS 5.1.
+  This refactored version:
+    - Sets ZipArchiveEntry.LastWriteTime BEFORE opening the entry stream (required for Create mode)
+    - Prevents temp-file self-inclusion by blocking Create/Overwrite when ArchivePath is under SourceDir
+    - Skips both ArchivePath and its temp path during Create/Overwrite enumeration
+
+.PARAMETER SourceDir
+  Absolute path to the folder to archive recursively.
+
+.PARAMETER ArchivePath
+  Target .zip file path. Default: $env:LOCALAPPDATA\SingleArchive\Out\&lt;Leaf(SourceDir)&gt;.zip
+
+.PARAMETER RestoreDir
+  Destination folder for optional restore/extract. Default: $env:LOCALAPPDATA\SingleArchive\Restored\&lt;Leaf(SourceDir)&gt;
+
+.PARAMETER Mode
+  Create    - Create new .zip; if it exists, prompt (or -Force) to use a timestamped name.
+  Overwrite - Replace existing .zip atomically.
+  Update    - Open or create .zip and add/replace entries that changed (does not delete removed files).
+
+.PARAMETER VerifyOnly
+  Compute and display stats (source, archive) without writing.
+
+.PARAMETER DoRestore
+  After archive step, extract the .zip to RestoreDir.
+
+.PARAMETER Force
+  Skip confirmations for overwrites and existing destination handling.
+
+.PARAMETER DryRun
+  Simulate actions; do not write.
+
+.EXAMPLE
+  .\SingleFile-Archive.ps1 -SourceDir &quot;C:\Data\Docs&quot; -Mode Create -Verbose
+
+.EXAMPLE
+  .\SingleFile-Archive.ps1 -SourceDir &quot;C:\Data\Docs&quot; -Mode Update -DoRestore -Force -Verbose
+
+.NOTES
+  Compress-Archive may fail on out-of-range timestamps. This script uses a .NET ZipArchive pipeline that clamps
+  timestamps and avoids that failure for Create/Overwrite/Update. It also guards against self-inclusion when the
+  archive destination resides under the source tree.
+#&gt;
+
+[CmdletBinding()]
+param(
+  [Parameter(Mandatory=$true)]
+  [ValidateScript({ Test-Path $_ -PathType Container })]
+  [string]$SourceDir,
+
+  [string]$ArchivePath,
+
+  [string]$RestoreDir,
+
+  [ValidateSet(&#39;Create&#39;,&#39;Overwrite&#39;,&#39;Update&#39;)]
+  [string]$Mode = &#39;Create&#39;,
+
+  [switch]$VerifyOnly,
+  [switch]$DoRestore,
+  [switch]$Force,
+  [switch]$DryRun
+)
+
+Set-StrictMode -Version Latest
+$ErrorActionPreference = &#39;Stop&#39;
+
+# ---------------------------- Helpers -----------------------------------------
+
+function Write-Step { param([string]$Message) Write-Host (&quot;[+] {0}&quot; -f $Message) }
+function Write-Sub  { param([string]$Message) Write-Host (&quot;    - {0}&quot; -f $Message) }
+
+function Confirm-Action {
+  param([Parameter(Mandatory=$true)][string]$Prompt,[switch]$DefaultNo)
+  if ($Force) { return $true }
+  $def = if ($DefaultNo) {&#39;N&#39;} else {&#39;Y&#39;}
+  $choices = if ($DefaultNo) {&#39;[y/N]&#39;} else {&#39;[Y/n]&#39;}
+  while ($true) {
+    $resp = Read-Host &quot;$Prompt $choices&quot;
+    if ([string]::IsNullOrWhiteSpace($resp)) { $resp = $def }
+    switch ($resp.ToUpperInvariant()) {
+      &#39;Y&#39; { return $true }
+      &#39;N&#39; { return $false }
+      default { Write-Host &#39;Please answer Y or N.&#39; }
+    }
+  }
+}
+
+function New-Timestamp { (Get-Date).ToString(&#39;yyyyMMdd_HHmmss&#39;) }
+
+function Ensure-Dir {
+  param([Parameter(Mandatory=$true)][string]$Path)
+  if (-not (Test-Path -LiteralPath $Path -PathType Container)) {
+    Write-Verbose &quot;Ensure-Dir: $Path&quot;
+    New-Item -ItemType Directory -Path $Path -Force | Out-Null
+  }
+}
+
+function Get-FolderStats {
+  [CmdletBinding()]
+  param([Parameter(Mandatory=$true)][string]$Path)
+  Write-Verbose &quot;Get-FolderStats: $Path&quot;
+  $files = Get-ChildItem -LiteralPath $Path -Recurse -File -Force -ErrorAction Stop
+  [pscustomobject]@{
+    Path  = $Path
+    Files = $files.Count
+    Bytes = ($files | Measure-Object -Property Length -Sum).Sum
+  }
+}
+
+function Get-ZipStats {
+  [CmdletBinding()]
+  param([Parameter(Mandatory=$true)][string]$ZipPath)
+  if (-not (Test-Path -LiteralPath $ZipPath -PathType Leaf)) {
+    return [pscustomobject]@{ Path=$ZipPath; Exists=$false; Entries=0; UncompressedBytes=0; CompressedBytes=0; SizeOnDisk=0 }
+  }
+  Add-Type -AssemblyName System.IO.Compression.FileSystem -ErrorAction Stop
+  $fileInfo = Get-Item -LiteralPath $ZipPath -ErrorAction Stop
+  $zip = [System.IO.Compression.ZipFile]::OpenRead($ZipPath)
+  try {
+    $entries = $zip.Entries
+    $uc = 0L; $cc = 0L
+    foreach ($e in $entries) {
+      $uc += [int64]$e.Length
+      if ($e.CompressedLength -is [long]) { $cc += [int64]$e.CompressedLength }
+    }
+    return [pscustomobject]@{
+      Path              = $ZipPath
+      Exists            = $true
+      Entries           = $entries.Count
+      UncompressedBytes = $uc
+      CompressedBytes   = $cc
+      SizeOnDisk        = $fileInfo.Length
+    }
+  } finally { $zip.Dispose() }
+}
+
+function Get-FreeSpaceForPath {
+  param([Parameter(Mandatory=$true)][string]$TargetPath)
+  $parent = Split-Path -Path $TargetPath -Parent
+  if (-not $parent) { $parent = $env:TEMP }
+  Ensure-Dir $parent
+  $driveRoot = (Split-Path -Path (Resolve-Path -LiteralPath $parent) -Qualifier)
+  $di = New-Object System.IO.DriveInfo ($driveRoot.TrimEnd(&#39;\&#39;))
+  return $di.AvailableFreeSpace
+}
+
+function Ensure-ZipAssemblies {
+  Add-Type -AssemblyName System.IO.Compression -ErrorAction Stop
+  Add-Type -AssemblyName System.IO.Compression.FileSystem -ErrorAction Stop
+}
+
+function Get-RelativePath {
+  param([Parameter(Mandatory=$true)][string]$BaseDir,[Parameter(Mandatory=$true)][string]$FullName)
+  $base = (Resolve-Path -LiteralPath $BaseDir).Path.TrimEnd(&#39;\\&#39;)
+  $rel = $FullName.Substring($base.Length).TrimStart(&#39;\\&#39;)
+  return ($rel -replace &#39;\\&#39;,&#39;/&#39;)
+}
+
+function Clamp-ZipTimestamp {
+  param([Parameter(Mandatory=$true)][datetime]$DateUtc)
+  # ZIP spec range: 1980-01-01 .. 2107-12-31
+  $min = [datetime]::Parse(&#39;1980-01-01T00:00:00Z&#39;)
+  $max = [datetime]::Parse(&#39;2107-12-31T23:59:59Z&#39;)
+  $utc = $DateUtc.ToUniversalTime()
+  if ($utc -lt $min) { $utc = $min }
+  if ($utc -gt $max) { $utc = $max }
+  return [datetimeoffset]$utc
+}
+
+function Get-AbsolutePath {
+  param([Parameter(Mandatory=$true)][string]$Path)
+  if ([System.IO.Path]::IsPathRooted($Path)) { return [System.IO.Path]::GetFullPath($Path) }
+  $base = (Get-Location).Path
+  return [System.IO.Path]::GetFullPath((Join-Path $base $Path))
+}
+
+function Test-IsSubPath {
+  param([Parameter(Mandatory=$true)][string]$Child,[Parameter(Mandatory=$true)][string]$Parent)
+  $p = $Parent.TrimEnd(&#39;\\&#39;) + &#39;\\&#39;
+  $c = $Child.TrimEnd(&#39;\\&#39;)
+  return $c.StartsWith($p, [System.StringComparison]::OrdinalIgnoreCase)
+}
+
+function Add-EntryFromFile {
+  param(
+    [Parameter(Mandatory=$true)][System.IO.Compression.ZipArchive]$Zip,
+    [Parameter(Mandatory=$true)][string]$EntryName,
+    [Parameter(Mandatory=$true)][string]$FilePath
+  )
+  # Create the entry object first
+  $entry = $Zip.CreateEntry($EntryName, [System.IO.Compression.CompressionLevel]::Optimal)
+
+  # FIX: Set timestamp BEFORE opening the entry stream (required for Create mode)
+  $fi = Get-Item -LiteralPath $FilePath -ErrorAction SilentlyContinue
+  if ($fi) {
+    $entry.LastWriteTime = Clamp-ZipTimestamp -DateUtc $fi.LastWriteTimeUtc
+  } else {
+    $entry.LastWriteTime = Clamp-ZipTimestamp -DateUtc ([datetime]::UtcNow)
+  }
+
+  # Now open streams and copy data
+  $inStream  = $null
+  $outStream = $null
+  try {
+    $inStream  = [System.IO.File]::Open($FilePath, [System.IO.FileMode]::Open, [System.IO.FileAccess]::Read, [System.IO.FileShare]::Read)
+    $outStream = $entry.Open()
+    $inStream.CopyTo($outStream)
+  } finally {
+    if ($outStream) { $outStream.Dispose() }
+    if ($inStream)  { $inStream.Dispose() }
+  }
+}
+
+function New-ZipFromDirectory {
+  param(
+    [Parameter(Mandatory=$true)][string]$SourceDir,
+    [Parameter(Mandatory=$true)][string]$ArchivePath,
+    [string[]]$SkipPaths,
+    [switch]$DryRun
+  )
+  if ($DryRun) {
+    Write-Sub (&quot;DryRun: would create zip from {0} -&gt; {1}&quot; -f $SourceDir, $ArchivePath)
+    return
+  }
+  Ensure-ZipAssemblies
+  $tmp = &quot;$ArchivePath.tmp.$(New-Timestamp)&quot;
+  if (Test-Path -LiteralPath $tmp -PathType Leaf) { Remove-Item -LiteralPath $tmp -Force }
+
+  # Build skip set (ArchivePath and its temp)
+  $skipSet = New-Object &#39;System.Collections.Generic.HashSet[string]&#39; ([System.StringComparer]::OrdinalIgnoreCase)
+  if ($SkipPaths) { foreach ($sp in $SkipPaths) { if ($sp) { [void]$skipSet.Add($sp) } } }
+  [void]$skipSet.Add($ArchivePath)
+  [void]$skipSet.Add($tmp)
+
+  $fs = $null
+  $zip = $null
+  try {
+    $fs  = [System.IO.File]::Open($tmp, [System.IO.FileMode]::Create, [System.IO.FileAccess]::ReadWrite, [System.IO.FileShare]::None)
+    $zip = New-Object System.IO.Compression.ZipArchive($fs, [System.IO.Compression.ZipArchiveMode]::Create, $false)
+    $files = Get-ChildItem -LiteralPath $SourceDir -Recurse -File -Force
+    foreach ($f in $files) {
+      if ($skipSet.Contains($f.FullName)) { continue }
+      $entryName = Get-RelativePath -BaseDir $SourceDir -FullName $f.FullName
+      Add-EntryFromFile -Zip $zip -EntryName $entryName -FilePath $f.FullName
+    }
+  } finally {
+    if ($zip) { $zip.Dispose() }
+    if ($fs)  { $fs.Dispose() }
+  }
+  if (Test-Path -LiteralPath $ArchivePath -PathType Leaf) {
+    Remove-Item -LiteralPath $ArchivePath -Force -ErrorAction Stop
+  }
+  Move-Item -LiteralPath $tmp -Destination $ArchivePath -Force
+}
+
+function Update-ZipFromDirectory {
+  param(
+    [Parameter(Mandatory=$true)][string]$SourceDir,
+    [Parameter(Mandatory=$true)][string]$ArchivePath,
+    [switch]$DryRun
+  )
+  if (-not (Test-Path -LiteralPath $ArchivePath -PathType Leaf)) {
+    Write-Sub &quot;Archive does not exist; creating new.&quot;
+    New-ZipFromDirectory -SourceDir $SourceDir -ArchivePath $ArchivePath -DryRun:$DryRun
+    return
+  }
+  if ($DryRun) {
+    Write-Sub (&quot;DryRun: would open zip for update: {0}&quot; -f $ArchivePath)
+    return
+  }
+  Ensure-ZipAssemblies
+  $fs  = [System.IO.File]::Open($ArchivePath, [System.IO.FileMode]::Open, [System.IO.FileAccess]::ReadWrite, [System.IO.FileShare]::None)
+  $zip = New-Object System.IO.Compression.ZipArchive($fs, [System.IO.Compression.ZipArchiveMode]::Update, $false)
+  try {
+    # Build a lookup of existing entries (case-insensitive)
+    $map = @{}
+    foreach ($e in $zip.Entries) { $map[$e.FullName.ToLowerInvariant()] = $e }
+    $added = 0; $replaced = 0; $skipped = 0
+    $files = Get-ChildItem -LiteralPath $SourceDir -Recurse -File -Force
+    foreach ($f in $files) {
+      if ($f.FullName -ieq $ArchivePath) { continue }
+      $rel = Get-RelativePath -BaseDir $SourceDir -FullName $f.FullName
+      $key = $rel.ToLowerInvariant()
+      if ($map.ContainsKey($key)) {
+        $existing = $map[$key]
+        # Compare length and timestamp (ZIP timestamp granularity ~2 seconds)
+        $needsReplace = $true
+        try {
+          $zipTime = $existing.LastWriteTime.UtcDateTime
+          $fileTime = $f.LastWriteTimeUtc
+          $lenDiff = ($existing.Length -ne $f.Length)
+          $timeDiff = [math]::Abs((New-TimeSpan -Start $zipTime -End $fileTime).TotalSeconds) -gt 2
+          $needsReplace = ($lenDiff -or $timeDiff)
+        } catch { $needsReplace = $true }
+        if ($needsReplace) {
+          $existing.Delete()
+          Add-EntryFromFile -Zip $zip -EntryName $rel -FilePath $f.FullName
+          $replaced++
+        } else {
+          $skipped++
+        }
+      } else {
+        Add-EntryFromFile -Zip $zip -EntryName $rel -FilePath $f.FullName
+        $added++
+      }
+    }
+    Write-Sub (&quot;Update summary: added={0}, replaced={1}, skipped={2}&quot; -f $added, $replaced, $skipped)
+  } finally {
+    if ($zip) { $zip.Dispose() }
+    if ($fs)  { $fs.Dispose() }
+  }
+}
+
+function Invoke-Expand {
+  param(
+    [Parameter(Mandatory=$true)][string]$ArchivePath,
+    [Parameter(Mandatory=$true)][string]$RestoreDir
+  )
+  Ensure-ZipAssemblies
+  [System.IO.Compression.ZipFile]::ExtractToDirectory($ArchivePath, $RestoreDir)
+}
+
+# ---------------------------- Defaults ----------------------------------------
+
+$resolvedSource = (Resolve-Path -LiteralPath $SourceDir).Path
+$sourceLeaf = Split-Path -Path $resolvedSource -Leaf
+
+if (-not $ArchivePath) {
+  $defaultOut = Join-Path $env:LOCALAPPDATA &#39;SingleArchive\Out&#39;
+  Ensure-Dir $defaultOut
+  $ArchivePath = Join-Path $defaultOut ($sourceLeaf + &#39;.zip&#39;)
+} else {
+  Ensure-Dir (Split-Path -Path $ArchivePath -Parent)
+}
+
+if (-not $RestoreDir) {
+  $RestoreDir = Join-Path (Join-Path $env:LOCALAPPDATA &#39;SingleArchive\Restored&#39;) $sourceLeaf
+} else {
+  Ensure-Dir (Split-Path -Path $RestoreDir -Parent)
+}
+
+$resolvedArchive = Get-AbsolutePath -Path $ArchivePath
+
+# ---------------------------- Preflight ---------------------------------------
+
+Write-Step &quot;Environment&quot;
+Write-Sub  (&quot;UserMode: {0}&quot; -f [Environment]::UserName)
+Write-Sub  (&quot;SourceDir:  {0}&quot; -f $resolvedSource)
+Write-Sub  (&quot;ArchivePath: {0}&quot; -f $resolvedArchive)
+Write-Sub  (&quot;RestoreDir:  {0}&quot; -f $RestoreDir)
+Write-Sub  (&quot;Mode:        {0}&quot; -f $Mode)
+Write-Sub  (&quot;VerifyOnly:  {0}&quot; -f ($(if($VerifyOnly){&#39;Yes&#39;}else{&#39;No&#39;})))
+Write-Sub  (&quot;DryRun:      {0}&quot; -f ($(if($DryRun){&#39;Yes&#39;}else{&#39;No&#39;})))
+
+$srcStats = Get-FolderStats -Path $resolvedSource
+(&quot;{0} files; {1:N0} bytes - Source&quot; -f $srcStats.Files, $srcStats.Bytes) | Write-Host
+
+$existingZip = Get-ZipStats -ZipPath $resolvedArchive
+if ($existingZip.Exists) {
+  (&quot;{0} entries; {1:N0} bytes on disk - Existing Archive&quot; -f $existingZip.Entries, $existingZip.SizeOnDisk) | Write-Host
+}
+
+if ($VerifyOnly) {
+  Write-Step &quot;Verify-only mode - no writes will occur&quot;
+  return
+}
+
+# Guard: prevent Create/Overwrite when archive path is under source (self-inclusion risk via temp file)
+if (($Mode -eq &#39;Create&#39; -or $Mode -eq &#39;Overwrite&#39;) -and (Test-IsSubPath -Child $resolvedArchive -Parent $resolvedSource)) {
+  throw &quot;Unsafe configuration: ArchivePath resides under SourceDir for mode &#39;$Mode&#39;. Place the archive outside the source tree.&quot;
+}
+
+# Free space heuristic
+try {
+  $free = Get-FreeSpaceForPath -TargetPath $resolvedArchive
+  Write-Sub (&quot;Free space on target volume: {0:N0} bytes&quot; -f $free)
+  $needed = if ($Mode -eq &#39;Update&#39; -and $existingZip.Exists) {
+    [int64]([Math]::Max($srcStats.Bytes * 0.2, $existingZip.SizeOnDisk * 0.1))
+  } else {
+    [int64]$srcStats.Bytes
+  }
+  if ($free -lt $needed) {
+    throw (&quot;Insufficient free space. Needed approx {0:N0} bytes, Available {1:N0} bytes&quot; -f $needed, $free)
+  }
+} catch { throw &quot;Free space check failed. $_&quot; }
+
+# ---------------------------- Mode-specific confirms --------------------------
+
+switch ($Mode) {
+  &#39;Create&#39; {
+    if (Test-Path -LiteralPath $resolvedArchive -PathType Leaf) {
+      $ts = New-Timestamp
+      $altPath = Join-Path (Split-Path -Path $resolvedArchive -Parent) (&quot;{0}_{1}.zip&quot; -f [IO.Path]::GetFileNameWithoutExtension($resolvedArchive), $ts)
+      if (-not (Confirm-Action -Prompt &quot;Archive exists. Create a new timestamped archive instead?`n  $altPath&quot;)) {
+        throw &quot;User declined to proceed in Create mode with existing archive.&quot;
+      }
+      $resolvedArchive = $altPath
+      $ArchivePath = $altPath
+    }
+  }
+  &#39;Overwrite&#39; {
+    if ((Test-Path -LiteralPath $resolvedArchive -PathType Leaf) -and -not (Confirm-Action -Prompt &quot;Overwrite will DELETE existing archive. Proceed?&quot;)) {
+      throw &quot;User declined overwrite.&quot;
+    }
+  }
+  &#39;Update&#39; {
+    $null = $null
+  }
+}
+
+# ---------------------------- Archive -----------------------------------------
+
+Write-Step &quot;Archiving&quot;
+Write-Sub  (&quot;Operation: {0}&quot; -f $Mode)
+Write-Sub  (&quot;Target:    {0}&quot; -f $resolvedArchive)
+
+try {
+  switch ($Mode) {
+    &#39;Create&#39;   {
+      New-ZipFromDirectory -SourceDir $resolvedSource -ArchivePath $resolvedArchive -SkipPaths @($resolvedArchive) -DryRun:$DryRun
+    }
+    &#39;Overwrite&#39;{
+      New-ZipFromDirectory -SourceDir $resolvedSource -ArchivePath $resolvedArchive -SkipPaths @($resolvedArchive) -DryRun:$DryRun
+    }
+    &#39;Update&#39;   {
+      Update-ZipFromDirectory -SourceDir $resolvedSource -ArchivePath $resolvedArchive -DryRun:$DryRun
+    }
+  }
+} catch { throw &quot;Archive step failed. $_&quot; }
+
+# ---------------------------- Post-archive verification -----------------------
+
+Write-Step &quot;Verifying archive&quot;
+try {
+  if (-not $DryRun) {
+    $zipStats = Get-ZipStats -ZipPath $resolvedArchive
+    if (-not $zipStats.Exists) { throw &quot;Archive not found after operation.&quot; }
+    (&quot;{0} entries; {1:N0} bytes on disk - Archive&quot; -f $zipStats.Entries, $zipStats.SizeOnDisk) | Write-Host
+  } else {
+    Write-Sub &quot;DryRun: verification skipped (no archive written)&quot;
+  }
+} catch { throw &quot;Verification failed. $_&quot; }
+
+# ---------------------------- Optional restore --------------------------------
+
+if ($DoRestore -and -not $DryRun) {
+  Write-Step &quot;Restore (extract)&quot;
+  $existsAndHasContent = (Test-Path -LiteralPath $RestoreDir -PathType Container) -and ((Get-ChildItem -LiteralPath $RestoreDir -Force | Measure-Object).Count -gt 0)
+  if ($existsAndHasContent) {
+    if (-not (Confirm-Action -Prompt &quot;RestoreDir has existing content. Move aside as a timestamped backup?&quot; -DefaultNo)) {
+      throw &quot;User declined to touch existing RestoreDir.&quot;
+    }
+    $backup = &quot;$RestoreDir.__backup__$(New-Timestamp)&quot;
+    Write-Sub (&quot;Renaming existing RestoreDir to &#39;{0}&#39;&quot; -f $backup)
+    Rename-Item -LiteralPath $RestoreDir -NewName (Split-Path -Path $backup -Leaf) -ErrorAction Stop
+  }
+  Ensure-Dir $RestoreDir
+  try {
+    Invoke-Expand -ArchivePath $resolvedArchive -RestoreDir $RestoreDir
+    $restStats = Get-FolderStats -Path $RestoreDir
+    (&quot;{0} files; {1:N0} bytes - Restored&quot; -f $restStats.Files, $restStats.Bytes) | Write-Host
+  } catch { throw &quot;Restore failed. $_&quot; }
+} elseif ($DoRestore -and $DryRun) {
+  Write-Step &quot;DryRun: would extract archive to &#39;$RestoreDir&#39;&quot;
+}
+
+# ---------------------------- Done --------------------------------------------
+
+Write-Step &quot;Done&quot;
+Write-Sub  (&quot;Archive at: {0}&quot; -f $resolvedArchive)
+if ($DoRestore -and -not $DryRun) { Write-Sub (&quot;Restored to: {0}&quot; -f $RestoreDir) }
+Write-Sub  &quot;Re-run with -Mode Update for incremental refresh; use Overwrite to fully regenerate.&quot;" data-download-link="" data-download-label="Download Powershell">
+  <code class="language-powershell">#requires -Version 5.1
+&lt;#!
+.SYNOPSIS
+  Single-file archive as a non-admin Windows 10 user — create/overwrite/update a .zip of a folder; optional restore.
+
+.DESCRIPTION
+  Creates a single .zip archive of SourceDir with robust handling for invalid file timestamps by clamping
+  to the ZIP spec range (1980-01-01 to 2107-12-31). No admin required. ASCII-only script for PS 5.1.
+  This refactored version:
+    - Sets ZipArchiveEntry.LastWriteTime BEFORE opening the entry stream (required for Create mode)
+    - Prevents temp-file self-inclusion by blocking Create/Overwrite when ArchivePath is under SourceDir
+    - Skips both ArchivePath and its temp path during Create/Overwrite enumeration
+
+.PARAMETER SourceDir
+  Absolute path to the folder to archive recursively.
+
+.PARAMETER ArchivePath
+  Target .zip file path. Default: $env:LOCALAPPDATA\SingleArchive\Out\&lt;Leaf(SourceDir)&gt;.zip
+
+.PARAMETER RestoreDir
+  Destination folder for optional restore/extract. Default: $env:LOCALAPPDATA\SingleArchive\Restored\&lt;Leaf(SourceDir)&gt;
+
+.PARAMETER Mode
+  Create    - Create new .zip; if it exists, prompt (or -Force) to use a timestamped name.
+  Overwrite - Replace existing .zip atomically.
+  Update    - Open or create .zip and add/replace entries that changed (does not delete removed files).
+
+.PARAMETER VerifyOnly
+  Compute and display stats (source, archive) without writing.
+
+.PARAMETER DoRestore
+  After archive step, extract the .zip to RestoreDir.
+
+.PARAMETER Force
+  Skip confirmations for overwrites and existing destination handling.
+
+.PARAMETER DryRun
+  Simulate actions; do not write.
+
+.EXAMPLE
+  .\SingleFile-Archive.ps1 -SourceDir &quot;C:\Data\Docs&quot; -Mode Create -Verbose
+
+.EXAMPLE
+  .\SingleFile-Archive.ps1 -SourceDir &quot;C:\Data\Docs&quot; -Mode Update -DoRestore -Force -Verbose
+
+.NOTES
+  Compress-Archive may fail on out-of-range timestamps. This script uses a .NET ZipArchive pipeline that clamps
+  timestamps and avoids that failure for Create/Overwrite/Update. It also guards against self-inclusion when the
+  archive destination resides under the source tree.
+#&gt;
+
+[CmdletBinding()]
+param(
+  [Parameter(Mandatory=$true)]
+  [ValidateScript({ Test-Path $_ -PathType Container })]
+  [string]$SourceDir,
+
+  [string]$ArchivePath,
+
+  [string]$RestoreDir,
+
+  [ValidateSet(&#39;Create&#39;,&#39;Overwrite&#39;,&#39;Update&#39;)]
+  [string]$Mode = &#39;Create&#39;,
+
+  [switch]$VerifyOnly,
+  [switch]$DoRestore,
+  [switch]$Force,
+  [switch]$DryRun
+)
+
+Set-StrictMode -Version Latest
+$ErrorActionPreference = &#39;Stop&#39;
+
+# ---------------------------- Helpers -----------------------------------------
+
+function Write-Step { param([string]$Message) Write-Host (&quot;[+] {0}&quot; -f $Message) }
+function Write-Sub  { param([string]$Message) Write-Host (&quot;    - {0}&quot; -f $Message) }
+
+function Confirm-Action {
+  param([Parameter(Mandatory=$true)][string]$Prompt,[switch]$DefaultNo)
+  if ($Force) { return $true }
+  $def = if ($DefaultNo) {&#39;N&#39;} else {&#39;Y&#39;}
+  $choices = if ($DefaultNo) {&#39;[y/N]&#39;} else {&#39;[Y/n]&#39;}
+  while ($true) {
+    $resp = Read-Host &quot;$Prompt $choices&quot;
+    if ([string]::IsNullOrWhiteSpace($resp)) { $resp = $def }
+    switch ($resp.ToUpperInvariant()) {
+      &#39;Y&#39; { return $true }
+      &#39;N&#39; { return $false }
+      default { Write-Host &#39;Please answer Y or N.&#39; }
+    }
+  }
+}
+
+function New-Timestamp { (Get-Date).ToString(&#39;yyyyMMdd_HHmmss&#39;) }
+
+function Ensure-Dir {
+  param([Parameter(Mandatory=$true)][string]$Path)
+  if (-not (Test-Path -LiteralPath $Path -PathType Container)) {
+    Write-Verbose &quot;Ensure-Dir: $Path&quot;
+    New-Item -ItemType Directory -Path $Path -Force | Out-Null
+  }
+}
+
+function Get-FolderStats {
+  [CmdletBinding()]
+  param([Parameter(Mandatory=$true)][string]$Path)
+  Write-Verbose &quot;Get-FolderStats: $Path&quot;
+  $files = Get-ChildItem -LiteralPath $Path -Recurse -File -Force -ErrorAction Stop
+  [pscustomobject]@{
+    Path  = $Path
+    Files = $files.Count
+    Bytes = ($files | Measure-Object -Property Length -Sum).Sum
+  }
+}
+
+function Get-ZipStats {
+  [CmdletBinding()]
+  param([Parameter(Mandatory=$true)][string]$ZipPath)
+  if (-not (Test-Path -LiteralPath $ZipPath -PathType Leaf)) {
+    return [pscustomobject]@{ Path=$ZipPath; Exists=$false; Entries=0; UncompressedBytes=0; CompressedBytes=0; SizeOnDisk=0 }
+  }
+  Add-Type -AssemblyName System.IO.Compression.FileSystem -ErrorAction Stop
+  $fileInfo = Get-Item -LiteralPath $ZipPath -ErrorAction Stop
+  $zip = [System.IO.Compression.ZipFile]::OpenRead($ZipPath)
+  try {
+    $entries = $zip.Entries
+    $uc = 0L; $cc = 0L
+    foreach ($e in $entries) {
+      $uc += [int64]$e.Length
+      if ($e.CompressedLength -is [long]) { $cc += [int64]$e.CompressedLength }
+    }
+    return [pscustomobject]@{
+      Path              = $ZipPath
+      Exists            = $true
+      Entries           = $entries.Count
+      UncompressedBytes = $uc
+      CompressedBytes   = $cc
+      SizeOnDisk        = $fileInfo.Length
+    }
+  } finally { $zip.Dispose() }
+}
+
+function Get-FreeSpaceForPath {
+  param([Parameter(Mandatory=$true)][string]$TargetPath)
+  $parent = Split-Path -Path $TargetPath -Parent
+  if (-not $parent) { $parent = $env:TEMP }
+  Ensure-Dir $parent
+  $driveRoot = (Split-Path -Path (Resolve-Path -LiteralPath $parent) -Qualifier)
+  $di = New-Object System.IO.DriveInfo ($driveRoot.TrimEnd(&#39;\&#39;))
+  return $di.AvailableFreeSpace
+}
+
+function Ensure-ZipAssemblies {
+  Add-Type -AssemblyName System.IO.Compression -ErrorAction Stop
+  Add-Type -AssemblyName System.IO.Compression.FileSystem -ErrorAction Stop
+}
+
+function Get-RelativePath {
+  param([Parameter(Mandatory=$true)][string]$BaseDir,[Parameter(Mandatory=$true)][string]$FullName)
+  $base = (Resolve-Path -LiteralPath $BaseDir).Path.TrimEnd(&#39;\\&#39;)
+  $rel = $FullName.Substring($base.Length).TrimStart(&#39;\\&#39;)
+  return ($rel -replace &#39;\\&#39;,&#39;/&#39;)
+}
+
+function Clamp-ZipTimestamp {
+  param([Parameter(Mandatory=$true)][datetime]$DateUtc)
+  # ZIP spec range: 1980-01-01 .. 2107-12-31
+  $min = [datetime]::Parse(&#39;1980-01-01T00:00:00Z&#39;)
+  $max = [datetime]::Parse(&#39;2107-12-31T23:59:59Z&#39;)
+  $utc = $DateUtc.ToUniversalTime()
+  if ($utc -lt $min) { $utc = $min }
+  if ($utc -gt $max) { $utc = $max }
+  return [datetimeoffset]$utc
+}
+
+function Get-AbsolutePath {
+  param([Parameter(Mandatory=$true)][string]$Path)
+  if ([System.IO.Path]::IsPathRooted($Path)) { return [System.IO.Path]::GetFullPath($Path) }
+  $base = (Get-Location).Path
+  return [System.IO.Path]::GetFullPath((Join-Path $base $Path))
+}
+
+function Test-IsSubPath {
+  param([Parameter(Mandatory=$true)][string]$Child,[Parameter(Mandatory=$true)][string]$Parent)
+  $p = $Parent.TrimEnd(&#39;\\&#39;) + &#39;\\&#39;
+  $c = $Child.TrimEnd(&#39;\\&#39;)
+  return $c.StartsWith($p, [System.StringComparison]::OrdinalIgnoreCase)
+}
+
+function Add-EntryFromFile {
+  param(
+    [Parameter(Mandatory=$true)][System.IO.Compression.ZipArchive]$Zip,
+    [Parameter(Mandatory=$true)][string]$EntryName,
+    [Parameter(Mandatory=$true)][string]$FilePath
+  )
+  # Create the entry object first
+  $entry = $Zip.CreateEntry($EntryName, [System.IO.Compression.CompressionLevel]::Optimal)
+
+  # FIX: Set timestamp BEFORE opening the entry stream (required for Create mode)
+  $fi = Get-Item -LiteralPath $FilePath -ErrorAction SilentlyContinue
+  if ($fi) {
+    $entry.LastWriteTime = Clamp-ZipTimestamp -DateUtc $fi.LastWriteTimeUtc
+  } else {
+    $entry.LastWriteTime = Clamp-ZipTimestamp -DateUtc ([datetime]::UtcNow)
+  }
+
+  # Now open streams and copy data
+  $inStream  = $null
+  $outStream = $null
+  try {
+    $inStream  = [System.IO.File]::Open($FilePath, [System.IO.FileMode]::Open, [System.IO.FileAccess]::Read, [System.IO.FileShare]::Read)
+    $outStream = $entry.Open()
+    $inStream.CopyTo($outStream)
+  } finally {
+    if ($outStream) { $outStream.Dispose() }
+    if ($inStream)  { $inStream.Dispose() }
+  }
+}
+
+function New-ZipFromDirectory {
+  param(
+    [Parameter(Mandatory=$true)][string]$SourceDir,
+    [Parameter(Mandatory=$true)][string]$ArchivePath,
+    [string[]]$SkipPaths,
+    [switch]$DryRun
+  )
+  if ($DryRun) {
+    Write-Sub (&quot;DryRun: would create zip from {0} -&gt; {1}&quot; -f $SourceDir, $ArchivePath)
+    return
+  }
+  Ensure-ZipAssemblies
+  $tmp = &quot;$ArchivePath.tmp.$(New-Timestamp)&quot;
+  if (Test-Path -LiteralPath $tmp -PathType Leaf) { Remove-Item -LiteralPath $tmp -Force }
+
+  # Build skip set (ArchivePath and its temp)
+  $skipSet = New-Object &#39;System.Collections.Generic.HashSet[string]&#39; ([System.StringComparer]::OrdinalIgnoreCase)
+  if ($SkipPaths) { foreach ($sp in $SkipPaths) { if ($sp) { [void]$skipSet.Add($sp) } } }
+  [void]$skipSet.Add($ArchivePath)
+  [void]$skipSet.Add($tmp)
+
+  $fs = $null
+  $zip = $null
+  try {
+    $fs  = [System.IO.File]::Open($tmp, [System.IO.FileMode]::Create, [System.IO.FileAccess]::ReadWrite, [System.IO.FileShare]::None)
+    $zip = New-Object System.IO.Compression.ZipArchive($fs, [System.IO.Compression.ZipArchiveMode]::Create, $false)
+    $files = Get-ChildItem -LiteralPath $SourceDir -Recurse -File -Force
+    foreach ($f in $files) {
+      if ($skipSet.Contains($f.FullName)) { continue }
+      $entryName = Get-RelativePath -BaseDir $SourceDir -FullName $f.FullName
+      Add-EntryFromFile -Zip $zip -EntryName $entryName -FilePath $f.FullName
+    }
+  } finally {
+    if ($zip) { $zip.Dispose() }
+    if ($fs)  { $fs.Dispose() }
+  }
+  if (Test-Path -LiteralPath $ArchivePath -PathType Leaf) {
+    Remove-Item -LiteralPath $ArchivePath -Force -ErrorAction Stop
+  }
+  Move-Item -LiteralPath $tmp -Destination $ArchivePath -Force
+}
+
+function Update-ZipFromDirectory {
+  param(
+    [Parameter(Mandatory=$true)][string]$SourceDir,
+    [Parameter(Mandatory=$true)][string]$ArchivePath,
+    [switch]$DryRun
+  )
+  if (-not (Test-Path -LiteralPath $ArchivePath -PathType Leaf)) {
+    Write-Sub &quot;Archive does not exist; creating new.&quot;
+    New-ZipFromDirectory -SourceDir $SourceDir -ArchivePath $ArchivePath -DryRun:$DryRun
+    return
+  }
+  if ($DryRun) {
+    Write-Sub (&quot;DryRun: would open zip for update: {0}&quot; -f $ArchivePath)
+    return
+  }
+  Ensure-ZipAssemblies
+  $fs  = [System.IO.File]::Open($ArchivePath, [System.IO.FileMode]::Open, [System.IO.FileAccess]::ReadWrite, [System.IO.FileShare]::None)
+  $zip = New-Object System.IO.Compression.ZipArchive($fs, [System.IO.Compression.ZipArchiveMode]::Update, $false)
+  try {
+    # Build a lookup of existing entries (case-insensitive)
+    $map = @{}
+    foreach ($e in $zip.Entries) { $map[$e.FullName.ToLowerInvariant()] = $e }
+    $added = 0; $replaced = 0; $skipped = 0
+    $files = Get-ChildItem -LiteralPath $SourceDir -Recurse -File -Force
+    foreach ($f in $files) {
+      if ($f.FullName -ieq $ArchivePath) { continue }
+      $rel = Get-RelativePath -BaseDir $SourceDir -FullName $f.FullName
+      $key = $rel.ToLowerInvariant()
+      if ($map.ContainsKey($key)) {
+        $existing = $map[$key]
+        # Compare length and timestamp (ZIP timestamp granularity ~2 seconds)
+        $needsReplace = $true
+        try {
+          $zipTime = $existing.LastWriteTime.UtcDateTime
+          $fileTime = $f.LastWriteTimeUtc
+          $lenDiff = ($existing.Length -ne $f.Length)
+          $timeDiff = [math]::Abs((New-TimeSpan -Start $zipTime -End $fileTime).TotalSeconds) -gt 2
+          $needsReplace = ($lenDiff -or $timeDiff)
+        } catch { $needsReplace = $true }
+        if ($needsReplace) {
+          $existing.Delete()
+          Add-EntryFromFile -Zip $zip -EntryName $rel -FilePath $f.FullName
+          $replaced++
+        } else {
+          $skipped++
+        }
+      } else {
+        Add-EntryFromFile -Zip $zip -EntryName $rel -FilePath $f.FullName
+        $added++
+      }
+    }
+    Write-Sub (&quot;Update summary: added={0}, replaced={1}, skipped={2}&quot; -f $added, $replaced, $skipped)
+  } finally {
+    if ($zip) { $zip.Dispose() }
+    if ($fs)  { $fs.Dispose() }
+  }
+}
+
+function Invoke-Expand {
+  param(
+    [Parameter(Mandatory=$true)][string]$ArchivePath,
+    [Parameter(Mandatory=$true)][string]$RestoreDir
+  )
+  Ensure-ZipAssemblies
+  [System.IO.Compression.ZipFile]::ExtractToDirectory($ArchivePath, $RestoreDir)
+}
+
+# ---------------------------- Defaults ----------------------------------------
+
+$resolvedSource = (Resolve-Path -LiteralPath $SourceDir).Path
+$sourceLeaf = Split-Path -Path $resolvedSource -Leaf
+
+if (-not $ArchivePath) {
+  $defaultOut = Join-Path $env:LOCALAPPDATA &#39;SingleArchive\Out&#39;
+  Ensure-Dir $defaultOut
+  $ArchivePath = Join-Path $defaultOut ($sourceLeaf + &#39;.zip&#39;)
+} else {
+  Ensure-Dir (Split-Path -Path $ArchivePath -Parent)
+}
+
+if (-not $RestoreDir) {
+  $RestoreDir = Join-Path (Join-Path $env:LOCALAPPDATA &#39;SingleArchive\Restored&#39;) $sourceLeaf
+} else {
+  Ensure-Dir (Split-Path -Path $RestoreDir -Parent)
+}
+
+$resolvedArchive = Get-AbsolutePath -Path $ArchivePath
+
+# ---------------------------- Preflight ---------------------------------------
+
+Write-Step &quot;Environment&quot;
+Write-Sub  (&quot;UserMode: {0}&quot; -f [Environment]::UserName)
+Write-Sub  (&quot;SourceDir:  {0}&quot; -f $resolvedSource)
+Write-Sub  (&quot;ArchivePath: {0}&quot; -f $resolvedArchive)
+Write-Sub  (&quot;RestoreDir:  {0}&quot; -f $RestoreDir)
+Write-Sub  (&quot;Mode:        {0}&quot; -f $Mode)
+Write-Sub  (&quot;VerifyOnly:  {0}&quot; -f ($(if($VerifyOnly){&#39;Yes&#39;}else{&#39;No&#39;})))
+Write-Sub  (&quot;DryRun:      {0}&quot; -f ($(if($DryRun){&#39;Yes&#39;}else{&#39;No&#39;})))
+
+$srcStats = Get-FolderStats -Path $resolvedSource
+(&quot;{0} files; {1:N0} bytes - Source&quot; -f $srcStats.Files, $srcStats.Bytes) | Write-Host
+
+$existingZip = Get-ZipStats -ZipPath $resolvedArchive
+if ($existingZip.Exists) {
+  (&quot;{0} entries; {1:N0} bytes on disk - Existing Archive&quot; -f $existingZip.Entries, $existingZip.SizeOnDisk) | Write-Host
+}
+
+if ($VerifyOnly) {
+  Write-Step &quot;Verify-only mode - no writes will occur&quot;
+  return
+}
+
+# Guard: prevent Create/Overwrite when archive path is under source (self-inclusion risk via temp file)
+if (($Mode -eq &#39;Create&#39; -or $Mode -eq &#39;Overwrite&#39;) -and (Test-IsSubPath -Child $resolvedArchive -Parent $resolvedSource)) {
+  throw &quot;Unsafe configuration: ArchivePath resides under SourceDir for mode &#39;$Mode&#39;. Place the archive outside the source tree.&quot;
+}
+
+# Free space heuristic
+try {
+  $free = Get-FreeSpaceForPath -TargetPath $resolvedArchive
+  Write-Sub (&quot;Free space on target volume: {0:N0} bytes&quot; -f $free)
+  $needed = if ($Mode -eq &#39;Update&#39; -and $existingZip.Exists) {
+    [int64]([Math]::Max($srcStats.Bytes * 0.2, $existingZip.SizeOnDisk * 0.1))
+  } else {
+    [int64]$srcStats.Bytes
+  }
+  if ($free -lt $needed) {
+    throw (&quot;Insufficient free space. Needed approx {0:N0} bytes, Available {1:N0} bytes&quot; -f $needed, $free)
+  }
+} catch { throw &quot;Free space check failed. $_&quot; }
+
+# ---------------------------- Mode-specific confirms --------------------------
+
+switch ($Mode) {
+  &#39;Create&#39; {
+    if (Test-Path -LiteralPath $resolvedArchive -PathType Leaf) {
+      $ts = New-Timestamp
+      $altPath = Join-Path (Split-Path -Path $resolvedArchive -Parent) (&quot;{0}_{1}.zip&quot; -f [IO.Path]::GetFileNameWithoutExtension($resolvedArchive), $ts)
+      if (-not (Confirm-Action -Prompt &quot;Archive exists. Create a new timestamped archive instead?`n  $altPath&quot;)) {
+        throw &quot;User declined to proceed in Create mode with existing archive.&quot;
+      }
+      $resolvedArchive = $altPath
+      $ArchivePath = $altPath
+    }
+  }
+  &#39;Overwrite&#39; {
+    if ((Test-Path -LiteralPath $resolvedArchive -PathType Leaf) -and -not (Confirm-Action -Prompt &quot;Overwrite will DELETE existing archive. Proceed?&quot;)) {
+      throw &quot;User declined overwrite.&quot;
+    }
+  }
+  &#39;Update&#39; {
+    $null = $null
+  }
+}
+
+# ---------------------------- Archive -----------------------------------------
+
+Write-Step &quot;Archiving&quot;
+Write-Sub  (&quot;Operation: {0}&quot; -f $Mode)
+Write-Sub  (&quot;Target:    {0}&quot; -f $resolvedArchive)
+
+try {
+  switch ($Mode) {
+    &#39;Create&#39;   {
+      New-ZipFromDirectory -SourceDir $resolvedSource -ArchivePath $resolvedArchive -SkipPaths @($resolvedArchive) -DryRun:$DryRun
+    }
+    &#39;Overwrite&#39;{
+      New-ZipFromDirectory -SourceDir $resolvedSource -ArchivePath $resolvedArchive -SkipPaths @($resolvedArchive) -DryRun:$DryRun
+    }
+    &#39;Update&#39;   {
+      Update-ZipFromDirectory -SourceDir $resolvedSource -ArchivePath $resolvedArchive -DryRun:$DryRun
+    }
+  }
+} catch { throw &quot;Archive step failed. $_&quot; }
+
+# ---------------------------- Post-archive verification -----------------------
+
+Write-Step &quot;Verifying archive&quot;
+try {
+  if (-not $DryRun) {
+    $zipStats = Get-ZipStats -ZipPath $resolvedArchive
+    if (-not $zipStats.Exists) { throw &quot;Archive not found after operation.&quot; }
+    (&quot;{0} entries; {1:N0} bytes on disk - Archive&quot; -f $zipStats.Entries, $zipStats.SizeOnDisk) | Write-Host
+  } else {
+    Write-Sub &quot;DryRun: verification skipped (no archive written)&quot;
+  }
+} catch { throw &quot;Verification failed. $_&quot; }
+
+# ---------------------------- Optional restore --------------------------------
+
+if ($DoRestore -and -not $DryRun) {
+  Write-Step &quot;Restore (extract)&quot;
+  $existsAndHasContent = (Test-Path -LiteralPath $RestoreDir -PathType Container) -and ((Get-ChildItem -LiteralPath $RestoreDir -Force | Measure-Object).Count -gt 0)
+  if ($existsAndHasContent) {
+    if (-not (Confirm-Action -Prompt &quot;RestoreDir has existing content. Move aside as a timestamped backup?&quot; -DefaultNo)) {
+      throw &quot;User declined to touch existing RestoreDir.&quot;
+    }
+    $backup = &quot;$RestoreDir.__backup__$(New-Timestamp)&quot;
+    Write-Sub (&quot;Renaming existing RestoreDir to &#39;{0}&#39;&quot; -f $backup)
+    Rename-Item -LiteralPath $RestoreDir -NewName (Split-Path -Path $backup -Leaf) -ErrorAction Stop
+  }
+  Ensure-Dir $RestoreDir
+  try {
+    Invoke-Expand -ArchivePath $resolvedArchive -RestoreDir $RestoreDir
+    $restStats = Get-FolderStats -Path $RestoreDir
+    (&quot;{0} files; {1:N0} bytes - Restored&quot; -f $restStats.Files, $restStats.Bytes) | Write-Host
+  } catch { throw &quot;Restore failed. $_&quot; }
+} elseif ($DoRestore -and $DryRun) {
+  Write-Step &quot;DryRun: would extract archive to &#39;$RestoreDir&#39;&quot;
+}
+
+# ---------------------------- Done --------------------------------------------
+
+Write-Step &quot;Done&quot;
+Write-Sub  (&quot;Archive at: {0}&quot; -f $resolvedArchive)
+if ($DoRestore -and -not $DryRun) { Write-Sub (&quot;Restored to: {0}&quot; -f $RestoreDir) }
+Write-Sub  &quot;Re-run with -Mode Update for incremental refresh; use Overwrite to fully regenerate.&quot;</code>
+</section>
+
+        </div>
+        
+          URL: https://ib.bsb.br/folders2zip-win
+        
+      </article>
+      <nav class="post-navigation-combined" aria-label="Post navigation">
+        <!-- Chronological Navigation (always visible at 40vh) -->
+        
+          <div class="nav-arrow chronological prev">
+            <a href="/tutorial-converter2pwsh/" title="tutorial converter2pwsh" rel="prev">
+              <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAC0AAAAtCAYAAAA6GuKaAAAAAXNSR0IArs4c6QAAAxVJREFUaEPt18FqG1cUBuD/nLkzI42UiVInkFLTCAKhS+9KA+3Kq1L8AAHjhR7AKz+ADV55qUfoqhvThTfdmC4KzTKmYJrELshJW9PIlSeKRpqZe88pUtouihvVRknqMNoMzD1zdPXNrzMM4RJ+6BLuGeWm39RdK6VL6VcIlPEo41HG401loJQupS8mUM7pi7md/6p3UtoHUJzf4vVecZb0e0EQfB7H8b0kSeqqummt/eb1buN83SebNsZ8QkQCYHVpaenu/v7+ra2tLRwdHWF1ddWq6hfM3BCRE2b+FcBHACQAHo1E5v9c+5mIhkR0e3z0VQ8LotuqWlXVw/GRmT8QkdMK89McuAOAAfwoIu8z85yIHBPRKRGN1/IAeDx0rul53hivo6psrf2ejDGfEtFOu92u7O3tBWtra2i322g0GhgOh9je3ka325UPax7fCR0iw+lp4aLxr70aeOmgkChTRY3JGSb73EroERD73uB54WpOgdhwZkXNQNQLiVDzOU1yFymAhu+lqZVopIqISQKmPLFS+atHv3A1q8AVQ+lXP/VHRPQx+b6frKysxMvLy1hfX0ez2USv18PCwgLiOEaSJKhWq/jhwQN8dnIfVOS4dsWHqCJ5YREGjBuNEMfd0eTc9WshBqnFYGhRqxrUIoNuLwMT4eb1Cp6dZshywdW6mZzr9QsEPuPmXIhfno3gnGKuEWCUC14MLKoVb1L72+8Zvj3JOl/udZt/S7darUqn0wlarRZ2d3cxPz+PJ8dPsPP1Doq8kIbL+cawjxBIM8MRFAidpBlRpIbhFc55gM2NF5IIQtVBRlRTZgTWZQ4wzvc8spO1NPM4Gr9Wh1bSDIjU98C5E0PIC8OVSX+Rlz08hl+4/LsML6X/menFxcW7BwcHtzY2NvDw8CE21zf/NdMAHskFMs3MT/EfMg3gsTsr02f8byfTo16v3+v3+//f6fGKgXNp5vT5huZbqH4nH+NvwXH6V5bS041mU1FKz8ZxepdSerrRbCpK6dk4Tu9SSk83mk1FKT0bx+ldSunpRrOpuJTSfwBcuImxpyA7XgAAAABJRU5ErkJggg==" alt="Previous article" width="45" height="45" loading="lazy">
+            </a>
+          </div>
+        
+        
+            
+            
+              
+              
+                
+                  
+                  
+              
+              
+              
+              <!-- Navigation block for tag "[scripts>powershell]"; default display for the first tag -->
+              <div class="nav-group tags" id="tag-nav-scripts-powershell" style="display: block;">
+                <div class="nav-arrow tags prev">
+                  
+                    <a href="/folders2zip-win/" title="folders2zip as non-admin Windows user" rel="prev">
+                      <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAC0AAAAtCAYAAAA6GuKaAAAAAXNSR0IArs4c6QAAAxVJREFUaEPt18FqG1cUBuD/nLkzI42UiVInkFLTCAKhS+9KA+3Kq1L8AAHjhR7AKz+ADV55qUfoqhvThTfdmC4KzTKmYJrELshJW9PIlSeKRpqZe88pUtouihvVRknqMNoMzD1zdPXNrzMM4RJ+6BLuGeWm39RdK6VL6VcIlPEo41HG401loJQupS8mUM7pi7md/6p3UtoHUJzf4vVecZb0e0EQfB7H8b0kSeqqummt/eb1buN83SebNsZ8QkQCYHVpaenu/v7+ra2tLRwdHWF1ddWq6hfM3BCRE2b+FcBHACQAHo1E5v9c+5mIhkR0e3z0VQ8LotuqWlXVw/GRmT8QkdMK89McuAOAAfwoIu8z85yIHBPRKRGN1/IAeDx0rul53hivo6psrf2ejDGfEtFOu92u7O3tBWtra2i322g0GhgOh9je3ka325UPax7fCR0iw+lp4aLxr70aeOmgkChTRY3JGSb73EroERD73uB54WpOgdhwZkXNQNQLiVDzOU1yFymAhu+lqZVopIqISQKmPLFS+atHv3A1q8AVQ+lXP/VHRPQx+b6frKysxMvLy1hfX0ez2USv18PCwgLiOEaSJKhWq/jhwQN8dnIfVOS4dsWHqCJ5YREGjBuNEMfd0eTc9WshBqnFYGhRqxrUIoNuLwMT4eb1Cp6dZshywdW6mZzr9QsEPuPmXIhfno3gnGKuEWCUC14MLKoVb1L72+8Zvj3JOl/udZt/S7darUqn0wlarRZ2d3cxPz+PJ8dPsPP1Doq8kIbL+cawjxBIM8MRFAidpBlRpIbhFc55gM2NF5IIQtVBRlRTZgTWZQ4wzvc8spO1NPM4Gr9Wh1bSDIjU98C5E0PIC8OVSX+Rlz08hl+4/LsML6X/menFxcW7BwcHtzY2NvDw8CE21zf/NdMAHskFMs3MT/EfMg3gsTsr02f8byfTo16v3+v3+//f6fGKgXNp5vT5huZbqH4nH+NvwXH6V5bS041mU1FKz8ZxepdSerrRbCpK6dk4Tu9SSk83mk1FKT0bx+ldSunpRrOpuJTSfwBcuImxpyA7XgAAAABJRU5ErkJggg==" alt="Previous in Tag" width="45" height="45" loading="lazy">
+                    </a>
+                  
+                </div>
+                <div class="nav-arrow tags next">
+                  
+                    <a href="javascript:void(0)" class="disabled" aria-disabled="true" title="No next in tag">
+                      <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAC0AAAAtCAYAAAA6GuKaAAAAAXNSR0IArs4c6QAAAxVJREFUaEPt18FqG1cUBuD/nLkzI42UiVInkFLTCAKhS+9KA+3Kq1L8AAHjhR7AKz+ADV55qUfoqhvThTfdmC4KzTKmYJrELshJW9PIlSeKRpqZe88pUtouihvVRknqMNoMzD1zdPXNrzMM4RJ+6BLuGeWm39RdK6VL6VcIlPEo41HG401loJQupS8mUM7pi7md/6p3UtoHUJzf4vVecZb0e0EQfB7H8b0kSeqqummt/eb1buN83SebNsZ8QkQCYHVpaenu/v7+ra2tLRwdHWF1ddWq6hfM3BCRE2b+FcBHACQAHo1E5v9c+5mIhkR0e3z0VQ8LotuqWlXVw/GRmT8QkdMK89McuAOAAfwoIu8z85yIHBPRKRGN1/IAeDx0rul53hivo6psrf2ejDGfEtFOu92u7O3tBWtra2i322g0GhgOh9je3ka325UPax7fCR0iw+lp4aLxr70aeOmgkChTRY3JGSb73EroERD73uB54WpOgdhwZkXNQNQLiVDzOU1yFymAhu+lqZVopIqISQKmPLFS+atHv3A1q8AVQ+lXP/VHRPQx+b6frKysxMvLy1hfX0ez2USv18PCwgLiOEaSJKhWq/jhwQN8dnIfVOS4dsWHqCJ5YREGjBuNEMfd0eTc9WshBqnFYGhRqxrUIoNuLwMT4eb1Cp6dZshywdW6mZzr9QsEPuPmXIhfno3gnGKuEWCUC14MLKoVb1L72+8Zvj3JOl/udZt/S7darUqn0wlarRZ2d3cxPz+PJ8dPsPP1Doq8kIbL+cawjxBIM8MRFAidpBlRpIbhFc55gM2NF5IIQtVBRlRTZgTWZQ4wzvc8spO1NPM4Gr9Wh1bSDIjU98C5E0PIC8OVSX+Rlz08hl+4/LsML6X/menFxcW7BwcHtzY2NvDw8CE21zf/NdMAHskFMs3MT/EfMg3gsTsr02f8byfTo16v3+v3+//f6fGKgXNp5vT5huZbqH4nH+NvwXH6V5bS041mU1FKz8ZxepdSerrRbCpK6dk4Tu9SSk83mk1FKT0bx+ldSunpRrOpuJTSfwBcuImxpyA7XgAAAABJRU5ErkJggg==" alt="No next in Tag" width="45" height="45" loading="lazy">
+                    </a>
+                  
+                </div>
+              </div>
+            
+          
+          <!-- JavaScript to Toggle the Tag-based Navigation -->
+          <script>
+            document.addEventListener("DOMContentLoaded", function(){
+              var tagLinks = document.querySelectorAll('.tag-option');
+              tagLinks.forEach(function(link){
+                link.addEventListener('click', function(event){
+                  event.preventDefault();
+                  // Remove "active" class from all tag options.
+                  tagLinks.forEach(function(el){ el.classList.remove('active'); });
+                  // Add active class to the clicked tag option.
+                  this.classList.add('active');
+                  // Hide all tag navigation blocks.
+                  document.querySelectorAll('.nav-group.tags').forEach(function(block){
+                    block.style.display = 'none';
+                  });
+                  // Show the navigation block corresponding to the selected tag.
+                  var tagSlug = this.getAttribute('data-tag');
+                  var target = document.getElementById('tag-nav-' + tagSlug);
+                  if(target) {
+                    target.style.display = 'block';
+                  }
+                });
+              });
+            });
+          </script>
+      </nav>
+      
+    </main>
+    <footer id="bottom-of-page" class="site-footer">
+      <div class="footer-content">
+        <!-- Back to top link -->
+        <a href="#" aria-label="Back to top" class="back2top-link">
+          <span class="sronly">Back to top</span>
+        </a>
+    
+        <!-- Liquid Time Calculation and Display -->
+        
+        
+        
+        <a href="https://ib.bsb.br/404" aria-label="404">
+          2025-10-24 23:59:26
+        </a>
+        &#x23;
+    
+        <!-- Tag Selector -->
+        <ul class="tag-selector">
+          
+            
+            
+              <li>
+                <a href="#" class="tag-option active" data-tag="scripts-powershell">
+                  [scripts>powershell]
+                </a>
+              </li>
+            
+          
+        </ul>
+        &hArr;
+    
+        <!-- GitHub Link -->
+        <a href="https://github.com/ib-bsb-br/ib-bsb-br.github.io" aria-label="GitHub">
+          &#8505;
+        </a>
+    
+        <!-- Homepage Link -->
+        <a href="/" aria-label="Homepage">
+          infoBAG
+        </a>
+    
+        <!-- Copy All Code Button -->
+        <button id="copyAllButton" aria-label="Copy all code">
+          &copy;
+        </button>
+      </div>
+    </footer>
+    <style>
+      .back2top-link {
+        display: inline-block;
+        width: 32px;
+        height: 32px;
+        background: url("/assets/Rope_(Old).gif") center center no-repeat;
+        background-size: contain;
+        text-decoration: none;
+        vertical-align: middle;
+      }
+      .sronly {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
+    </style>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Article",
+        "mainEntityOfPage": {
+          "@type": "WebPage",
+          "@id": "https://ib.bsb.br/folders2zip-win/"
+        },
+        "headline": "folders2zip as non-admin Windows user",
+        "description": "",
+        "datePublished": "2025-10-24T00:00:00+00:00",
+        "dateModified": "2025-10-25T02:54:35+00:00",
+        "author": {
+          "@type": "Person",
+          "name": "Author"
+        },
+        "publisher": {
+          "@type": "Organization",
+          "name": "infoBAG"
+          
+        }
+        
+      }
+    </script>
+    <script src="/assets/js/prism.js" defer></script>
+    <script src="/assets/js/copy-all-code.js"></script>
+  </body>
+</html>

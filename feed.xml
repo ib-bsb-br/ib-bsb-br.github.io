@@ -1,4 +1,962 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2025-10-22T22:44:20+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">tutorial converter2powershell</title><link href="https://ib.bsb.br/tutorial-converter2powershell/" rel="alternate" type="text/html" title="tutorial converter2powershell" /><published>2025-10-17T00:00:00+00:00</published><updated>2025-10-17T10:25:57+00:00</updated><id>https://ib.bsb.br/tutorial-converter2powershell</id><content type="html" xml:base="https://ib.bsb.br/tutorial-converter2powershell/"><![CDATA[<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  &lt;purpose&gt;You are an expert non-admin Windows PowerShell 5.1 script developer for Windows 10 x64. Convert the narrative setup described in the input field named `tutorial_content` into a single user-mode PowerShell 5.1 script runnable from the user’s home directory, with robust error handling, idempotency, progress logging, and explicit confirmations for risky actions.&lt;/purpose&gt;
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2025-10-25T02:59:26+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">folders2zip as non-admin Windows user</title><link href="https://ib.bsb.br/folders2zip-win/" rel="alternate" type="text/html" title="folders2zip as non-admin Windows user" /><published>2025-10-24T00:00:00+00:00</published><updated>2025-10-25T02:54:35+00:00</updated><id>https://ib.bsb.br/folders2zip-win</id><content type="html" xml:base="https://ib.bsb.br/folders2zip-win/"><![CDATA[<section class="code-block-container" role="group" aria-label="Powershell Code Block" data-filename="powershell_code_block.txt" data-code="#requires -Version 5.1
+&lt;#!
+.SYNOPSIS
+  Single-file archive as a non-admin Windows 10 user — create/overwrite/update a .zip of a folder; optional restore.
+
+.DESCRIPTION
+  Creates a single .zip archive of SourceDir with robust handling for invalid file timestamps by clamping
+  to the ZIP spec range (1980-01-01 to 2107-12-31). No admin required. ASCII-only script for PS 5.1.
+  This refactored version:
+    - Sets ZipArchiveEntry.LastWriteTime BEFORE opening the entry stream (required for Create mode)
+    - Prevents temp-file self-inclusion by blocking Create/Overwrite when ArchivePath is under SourceDir
+    - Skips both ArchivePath and its temp path during Create/Overwrite enumeration
+
+.PARAMETER SourceDir
+  Absolute path to the folder to archive recursively.
+
+.PARAMETER ArchivePath
+  Target .zip file path. Default: $env:LOCALAPPDATA\SingleArchive\Out\&lt;Leaf(SourceDir)&gt;.zip
+
+.PARAMETER RestoreDir
+  Destination folder for optional restore/extract. Default: $env:LOCALAPPDATA\SingleArchive\Restored\&lt;Leaf(SourceDir)&gt;
+
+.PARAMETER Mode
+  Create    - Create new .zip; if it exists, prompt (or -Force) to use a timestamped name.
+  Overwrite - Replace existing .zip atomically.
+  Update    - Open or create .zip and add/replace entries that changed (does not delete removed files).
+
+.PARAMETER VerifyOnly
+  Compute and display stats (source, archive) without writing.
+
+.PARAMETER DoRestore
+  After archive step, extract the .zip to RestoreDir.
+
+.PARAMETER Force
+  Skip confirmations for overwrites and existing destination handling.
+
+.PARAMETER DryRun
+  Simulate actions; do not write.
+
+.EXAMPLE
+  .\SingleFile-Archive.ps1 -SourceDir &quot;C:\Data\Docs&quot; -Mode Create -Verbose
+
+.EXAMPLE
+  .\SingleFile-Archive.ps1 -SourceDir &quot;C:\Data\Docs&quot; -Mode Update -DoRestore -Force -Verbose
+
+.NOTES
+  Compress-Archive may fail on out-of-range timestamps. This script uses a .NET ZipArchive pipeline that clamps
+  timestamps and avoids that failure for Create/Overwrite/Update. It also guards against self-inclusion when the
+  archive destination resides under the source tree.
+#&gt;
+
+[CmdletBinding()]
+param(
+  [Parameter(Mandatory=$true)]
+  [ValidateScript({ Test-Path $_ -PathType Container })]
+  [string]$SourceDir,
+
+  [string]$ArchivePath,
+
+  [string]$RestoreDir,
+
+  [ValidateSet(&#39;Create&#39;,&#39;Overwrite&#39;,&#39;Update&#39;)]
+  [string]$Mode = &#39;Create&#39;,
+
+  [switch]$VerifyOnly,
+  [switch]$DoRestore,
+  [switch]$Force,
+  [switch]$DryRun
+)
+
+Set-StrictMode -Version Latest
+$ErrorActionPreference = &#39;Stop&#39;
+
+# ---------------------------- Helpers -----------------------------------------
+
+function Write-Step { param([string]$Message) Write-Host (&quot;[+] {0}&quot; -f $Message) }
+function Write-Sub  { param([string]$Message) Write-Host (&quot;    - {0}&quot; -f $Message) }
+
+function Confirm-Action {
+  param([Parameter(Mandatory=$true)][string]$Prompt,[switch]$DefaultNo)
+  if ($Force) { return $true }
+  $def = if ($DefaultNo) {&#39;N&#39;} else {&#39;Y&#39;}
+  $choices = if ($DefaultNo) {&#39;[y/N]&#39;} else {&#39;[Y/n]&#39;}
+  while ($true) {
+    $resp = Read-Host &quot;$Prompt $choices&quot;
+    if ([string]::IsNullOrWhiteSpace($resp)) { $resp = $def }
+    switch ($resp.ToUpperInvariant()) {
+      &#39;Y&#39; { return $true }
+      &#39;N&#39; { return $false }
+      default { Write-Host &#39;Please answer Y or N.&#39; }
+    }
+  }
+}
+
+function New-Timestamp { (Get-Date).ToString(&#39;yyyyMMdd_HHmmss&#39;) }
+
+function Ensure-Dir {
+  param([Parameter(Mandatory=$true)][string]$Path)
+  if (-not (Test-Path -LiteralPath $Path -PathType Container)) {
+    Write-Verbose &quot;Ensure-Dir: $Path&quot;
+    New-Item -ItemType Directory -Path $Path -Force | Out-Null
+  }
+}
+
+function Get-FolderStats {
+  [CmdletBinding()]
+  param([Parameter(Mandatory=$true)][string]$Path)
+  Write-Verbose &quot;Get-FolderStats: $Path&quot;
+  $files = Get-ChildItem -LiteralPath $Path -Recurse -File -Force -ErrorAction Stop
+  [pscustomobject]@{
+    Path  = $Path
+    Files = $files.Count
+    Bytes = ($files | Measure-Object -Property Length -Sum).Sum
+  }
+}
+
+function Get-ZipStats {
+  [CmdletBinding()]
+  param([Parameter(Mandatory=$true)][string]$ZipPath)
+  if (-not (Test-Path -LiteralPath $ZipPath -PathType Leaf)) {
+    return [pscustomobject]@{ Path=$ZipPath; Exists=$false; Entries=0; UncompressedBytes=0; CompressedBytes=0; SizeOnDisk=0 }
+  }
+  Add-Type -AssemblyName System.IO.Compression.FileSystem -ErrorAction Stop
+  $fileInfo = Get-Item -LiteralPath $ZipPath -ErrorAction Stop
+  $zip = [System.IO.Compression.ZipFile]::OpenRead($ZipPath)
+  try {
+    $entries = $zip.Entries
+    $uc = 0L; $cc = 0L
+    foreach ($e in $entries) {
+      $uc += [int64]$e.Length
+      if ($e.CompressedLength -is [long]) { $cc += [int64]$e.CompressedLength }
+    }
+    return [pscustomobject]@{
+      Path              = $ZipPath
+      Exists            = $true
+      Entries           = $entries.Count
+      UncompressedBytes = $uc
+      CompressedBytes   = $cc
+      SizeOnDisk        = $fileInfo.Length
+    }
+  } finally { $zip.Dispose() }
+}
+
+function Get-FreeSpaceForPath {
+  param([Parameter(Mandatory=$true)][string]$TargetPath)
+  $parent = Split-Path -Path $TargetPath -Parent
+  if (-not $parent) { $parent = $env:TEMP }
+  Ensure-Dir $parent
+  $driveRoot = (Split-Path -Path (Resolve-Path -LiteralPath $parent) -Qualifier)
+  $di = New-Object System.IO.DriveInfo ($driveRoot.TrimEnd(&#39;\&#39;))
+  return $di.AvailableFreeSpace
+}
+
+function Ensure-ZipAssemblies {
+  Add-Type -AssemblyName System.IO.Compression -ErrorAction Stop
+  Add-Type -AssemblyName System.IO.Compression.FileSystem -ErrorAction Stop
+}
+
+function Get-RelativePath {
+  param([Parameter(Mandatory=$true)][string]$BaseDir,[Parameter(Mandatory=$true)][string]$FullName)
+  $base = (Resolve-Path -LiteralPath $BaseDir).Path.TrimEnd(&#39;\\&#39;)
+  $rel = $FullName.Substring($base.Length).TrimStart(&#39;\\&#39;)
+  return ($rel -replace &#39;\\&#39;,&#39;/&#39;)
+}
+
+function Clamp-ZipTimestamp {
+  param([Parameter(Mandatory=$true)][datetime]$DateUtc)
+  # ZIP spec range: 1980-01-01 .. 2107-12-31
+  $min = [datetime]::Parse(&#39;1980-01-01T00:00:00Z&#39;)
+  $max = [datetime]::Parse(&#39;2107-12-31T23:59:59Z&#39;)
+  $utc = $DateUtc.ToUniversalTime()
+  if ($utc -lt $min) { $utc = $min }
+  if ($utc -gt $max) { $utc = $max }
+  return [datetimeoffset]$utc
+}
+
+function Get-AbsolutePath {
+  param([Parameter(Mandatory=$true)][string]$Path)
+  if ([System.IO.Path]::IsPathRooted($Path)) { return [System.IO.Path]::GetFullPath($Path) }
+  $base = (Get-Location).Path
+  return [System.IO.Path]::GetFullPath((Join-Path $base $Path))
+}
+
+function Test-IsSubPath {
+  param([Parameter(Mandatory=$true)][string]$Child,[Parameter(Mandatory=$true)][string]$Parent)
+  $p = $Parent.TrimEnd(&#39;\\&#39;) + &#39;\\&#39;
+  $c = $Child.TrimEnd(&#39;\\&#39;)
+  return $c.StartsWith($p, [System.StringComparison]::OrdinalIgnoreCase)
+}
+
+function Add-EntryFromFile {
+  param(
+    [Parameter(Mandatory=$true)][System.IO.Compression.ZipArchive]$Zip,
+    [Parameter(Mandatory=$true)][string]$EntryName,
+    [Parameter(Mandatory=$true)][string]$FilePath
+  )
+  # Create the entry object first
+  $entry = $Zip.CreateEntry($EntryName, [System.IO.Compression.CompressionLevel]::Optimal)
+
+  # FIX: Set timestamp BEFORE opening the entry stream (required for Create mode)
+  $fi = Get-Item -LiteralPath $FilePath -ErrorAction SilentlyContinue
+  if ($fi) {
+    $entry.LastWriteTime = Clamp-ZipTimestamp -DateUtc $fi.LastWriteTimeUtc
+  } else {
+    $entry.LastWriteTime = Clamp-ZipTimestamp -DateUtc ([datetime]::UtcNow)
+  }
+
+  # Now open streams and copy data
+  $inStream  = $null
+  $outStream = $null
+  try {
+    $inStream  = [System.IO.File]::Open($FilePath, [System.IO.FileMode]::Open, [System.IO.FileAccess]::Read, [System.IO.FileShare]::Read)
+    $outStream = $entry.Open()
+    $inStream.CopyTo($outStream)
+  } finally {
+    if ($outStream) { $outStream.Dispose() }
+    if ($inStream)  { $inStream.Dispose() }
+  }
+}
+
+function New-ZipFromDirectory {
+  param(
+    [Parameter(Mandatory=$true)][string]$SourceDir,
+    [Parameter(Mandatory=$true)][string]$ArchivePath,
+    [string[]]$SkipPaths,
+    [switch]$DryRun
+  )
+  if ($DryRun) {
+    Write-Sub (&quot;DryRun: would create zip from {0} -&gt; {1}&quot; -f $SourceDir, $ArchivePath)
+    return
+  }
+  Ensure-ZipAssemblies
+  $tmp = &quot;$ArchivePath.tmp.$(New-Timestamp)&quot;
+  if (Test-Path -LiteralPath $tmp -PathType Leaf) { Remove-Item -LiteralPath $tmp -Force }
+
+  # Build skip set (ArchivePath and its temp)
+  $skipSet = New-Object &#39;System.Collections.Generic.HashSet[string]&#39; ([System.StringComparer]::OrdinalIgnoreCase)
+  if ($SkipPaths) { foreach ($sp in $SkipPaths) { if ($sp) { [void]$skipSet.Add($sp) } } }
+  [void]$skipSet.Add($ArchivePath)
+  [void]$skipSet.Add($tmp)
+
+  $fs = $null
+  $zip = $null
+  try {
+    $fs  = [System.IO.File]::Open($tmp, [System.IO.FileMode]::Create, [System.IO.FileAccess]::ReadWrite, [System.IO.FileShare]::None)
+    $zip = New-Object System.IO.Compression.ZipArchive($fs, [System.IO.Compression.ZipArchiveMode]::Create, $false)
+    $files = Get-ChildItem -LiteralPath $SourceDir -Recurse -File -Force
+    foreach ($f in $files) {
+      if ($skipSet.Contains($f.FullName)) { continue }
+      $entryName = Get-RelativePath -BaseDir $SourceDir -FullName $f.FullName
+      Add-EntryFromFile -Zip $zip -EntryName $entryName -FilePath $f.FullName
+    }
+  } finally {
+    if ($zip) { $zip.Dispose() }
+    if ($fs)  { $fs.Dispose() }
+  }
+  if (Test-Path -LiteralPath $ArchivePath -PathType Leaf) {
+    Remove-Item -LiteralPath $ArchivePath -Force -ErrorAction Stop
+  }
+  Move-Item -LiteralPath $tmp -Destination $ArchivePath -Force
+}
+
+function Update-ZipFromDirectory {
+  param(
+    [Parameter(Mandatory=$true)][string]$SourceDir,
+    [Parameter(Mandatory=$true)][string]$ArchivePath,
+    [switch]$DryRun
+  )
+  if (-not (Test-Path -LiteralPath $ArchivePath -PathType Leaf)) {
+    Write-Sub &quot;Archive does not exist; creating new.&quot;
+    New-ZipFromDirectory -SourceDir $SourceDir -ArchivePath $ArchivePath -DryRun:$DryRun
+    return
+  }
+  if ($DryRun) {
+    Write-Sub (&quot;DryRun: would open zip for update: {0}&quot; -f $ArchivePath)
+    return
+  }
+  Ensure-ZipAssemblies
+  $fs  = [System.IO.File]::Open($ArchivePath, [System.IO.FileMode]::Open, [System.IO.FileAccess]::ReadWrite, [System.IO.FileShare]::None)
+  $zip = New-Object System.IO.Compression.ZipArchive($fs, [System.IO.Compression.ZipArchiveMode]::Update, $false)
+  try {
+    # Build a lookup of existing entries (case-insensitive)
+    $map = @{}
+    foreach ($e in $zip.Entries) { $map[$e.FullName.ToLowerInvariant()] = $e }
+    $added = 0; $replaced = 0; $skipped = 0
+    $files = Get-ChildItem -LiteralPath $SourceDir -Recurse -File -Force
+    foreach ($f in $files) {
+      if ($f.FullName -ieq $ArchivePath) { continue }
+      $rel = Get-RelativePath -BaseDir $SourceDir -FullName $f.FullName
+      $key = $rel.ToLowerInvariant()
+      if ($map.ContainsKey($key)) {
+        $existing = $map[$key]
+        # Compare length and timestamp (ZIP timestamp granularity ~2 seconds)
+        $needsReplace = $true
+        try {
+          $zipTime = $existing.LastWriteTime.UtcDateTime
+          $fileTime = $f.LastWriteTimeUtc
+          $lenDiff = ($existing.Length -ne $f.Length)
+          $timeDiff = [math]::Abs((New-TimeSpan -Start $zipTime -End $fileTime).TotalSeconds) -gt 2
+          $needsReplace = ($lenDiff -or $timeDiff)
+        } catch { $needsReplace = $true }
+        if ($needsReplace) {
+          $existing.Delete()
+          Add-EntryFromFile -Zip $zip -EntryName $rel -FilePath $f.FullName
+          $replaced++
+        } else {
+          $skipped++
+        }
+      } else {
+        Add-EntryFromFile -Zip $zip -EntryName $rel -FilePath $f.FullName
+        $added++
+      }
+    }
+    Write-Sub (&quot;Update summary: added={0}, replaced={1}, skipped={2}&quot; -f $added, $replaced, $skipped)
+  } finally {
+    if ($zip) { $zip.Dispose() }
+    if ($fs)  { $fs.Dispose() }
+  }
+}
+
+function Invoke-Expand {
+  param(
+    [Parameter(Mandatory=$true)][string]$ArchivePath,
+    [Parameter(Mandatory=$true)][string]$RestoreDir
+  )
+  Ensure-ZipAssemblies
+  [System.IO.Compression.ZipFile]::ExtractToDirectory($ArchivePath, $RestoreDir)
+}
+
+# ---------------------------- Defaults ----------------------------------------
+
+$resolvedSource = (Resolve-Path -LiteralPath $SourceDir).Path
+$sourceLeaf = Split-Path -Path $resolvedSource -Leaf
+
+if (-not $ArchivePath) {
+  $defaultOut = Join-Path $env:LOCALAPPDATA &#39;SingleArchive\Out&#39;
+  Ensure-Dir $defaultOut
+  $ArchivePath = Join-Path $defaultOut ($sourceLeaf + &#39;.zip&#39;)
+} else {
+  Ensure-Dir (Split-Path -Path $ArchivePath -Parent)
+}
+
+if (-not $RestoreDir) {
+  $RestoreDir = Join-Path (Join-Path $env:LOCALAPPDATA &#39;SingleArchive\Restored&#39;) $sourceLeaf
+} else {
+  Ensure-Dir (Split-Path -Path $RestoreDir -Parent)
+}
+
+$resolvedArchive = Get-AbsolutePath -Path $ArchivePath
+
+# ---------------------------- Preflight ---------------------------------------
+
+Write-Step &quot;Environment&quot;
+Write-Sub  (&quot;UserMode: {0}&quot; -f [Environment]::UserName)
+Write-Sub  (&quot;SourceDir:  {0}&quot; -f $resolvedSource)
+Write-Sub  (&quot;ArchivePath: {0}&quot; -f $resolvedArchive)
+Write-Sub  (&quot;RestoreDir:  {0}&quot; -f $RestoreDir)
+Write-Sub  (&quot;Mode:        {0}&quot; -f $Mode)
+Write-Sub  (&quot;VerifyOnly:  {0}&quot; -f ($(if($VerifyOnly){&#39;Yes&#39;}else{&#39;No&#39;})))
+Write-Sub  (&quot;DryRun:      {0}&quot; -f ($(if($DryRun){&#39;Yes&#39;}else{&#39;No&#39;})))
+
+$srcStats = Get-FolderStats -Path $resolvedSource
+(&quot;{0} files; {1:N0} bytes - Source&quot; -f $srcStats.Files, $srcStats.Bytes) | Write-Host
+
+$existingZip = Get-ZipStats -ZipPath $resolvedArchive
+if ($existingZip.Exists) {
+  (&quot;{0} entries; {1:N0} bytes on disk - Existing Archive&quot; -f $existingZip.Entries, $existingZip.SizeOnDisk) | Write-Host
+}
+
+if ($VerifyOnly) {
+  Write-Step &quot;Verify-only mode - no writes will occur&quot;
+  return
+}
+
+# Guard: prevent Create/Overwrite when archive path is under source (self-inclusion risk via temp file)
+if (($Mode -eq &#39;Create&#39; -or $Mode -eq &#39;Overwrite&#39;) -and (Test-IsSubPath -Child $resolvedArchive -Parent $resolvedSource)) {
+  throw &quot;Unsafe configuration: ArchivePath resides under SourceDir for mode &#39;$Mode&#39;. Place the archive outside the source tree.&quot;
+}
+
+# Free space heuristic
+try {
+  $free = Get-FreeSpaceForPath -TargetPath $resolvedArchive
+  Write-Sub (&quot;Free space on target volume: {0:N0} bytes&quot; -f $free)
+  $needed = if ($Mode -eq &#39;Update&#39; -and $existingZip.Exists) {
+    [int64]([Math]::Max($srcStats.Bytes * 0.2, $existingZip.SizeOnDisk * 0.1))
+  } else {
+    [int64]$srcStats.Bytes
+  }
+  if ($free -lt $needed) {
+    throw (&quot;Insufficient free space. Needed approx {0:N0} bytes, Available {1:N0} bytes&quot; -f $needed, $free)
+  }
+} catch { throw &quot;Free space check failed. $_&quot; }
+
+# ---------------------------- Mode-specific confirms --------------------------
+
+switch ($Mode) {
+  &#39;Create&#39; {
+    if (Test-Path -LiteralPath $resolvedArchive -PathType Leaf) {
+      $ts = New-Timestamp
+      $altPath = Join-Path (Split-Path -Path $resolvedArchive -Parent) (&quot;{0}_{1}.zip&quot; -f [IO.Path]::GetFileNameWithoutExtension($resolvedArchive), $ts)
+      if (-not (Confirm-Action -Prompt &quot;Archive exists. Create a new timestamped archive instead?`n  $altPath&quot;)) {
+        throw &quot;User declined to proceed in Create mode with existing archive.&quot;
+      }
+      $resolvedArchive = $altPath
+      $ArchivePath = $altPath
+    }
+  }
+  &#39;Overwrite&#39; {
+    if ((Test-Path -LiteralPath $resolvedArchive -PathType Leaf) -and -not (Confirm-Action -Prompt &quot;Overwrite will DELETE existing archive. Proceed?&quot;)) {
+      throw &quot;User declined overwrite.&quot;
+    }
+  }
+  &#39;Update&#39; {
+    $null = $null
+  }
+}
+
+# ---------------------------- Archive -----------------------------------------
+
+Write-Step &quot;Archiving&quot;
+Write-Sub  (&quot;Operation: {0}&quot; -f $Mode)
+Write-Sub  (&quot;Target:    {0}&quot; -f $resolvedArchive)
+
+try {
+  switch ($Mode) {
+    &#39;Create&#39;   {
+      New-ZipFromDirectory -SourceDir $resolvedSource -ArchivePath $resolvedArchive -SkipPaths @($resolvedArchive) -DryRun:$DryRun
+    }
+    &#39;Overwrite&#39;{
+      New-ZipFromDirectory -SourceDir $resolvedSource -ArchivePath $resolvedArchive -SkipPaths @($resolvedArchive) -DryRun:$DryRun
+    }
+    &#39;Update&#39;   {
+      Update-ZipFromDirectory -SourceDir $resolvedSource -ArchivePath $resolvedArchive -DryRun:$DryRun
+    }
+  }
+} catch { throw &quot;Archive step failed. $_&quot; }
+
+# ---------------------------- Post-archive verification -----------------------
+
+Write-Step &quot;Verifying archive&quot;
+try {
+  if (-not $DryRun) {
+    $zipStats = Get-ZipStats -ZipPath $resolvedArchive
+    if (-not $zipStats.Exists) { throw &quot;Archive not found after operation.&quot; }
+    (&quot;{0} entries; {1:N0} bytes on disk - Archive&quot; -f $zipStats.Entries, $zipStats.SizeOnDisk) | Write-Host
+  } else {
+    Write-Sub &quot;DryRun: verification skipped (no archive written)&quot;
+  }
+} catch { throw &quot;Verification failed. $_&quot; }
+
+# ---------------------------- Optional restore --------------------------------
+
+if ($DoRestore -and -not $DryRun) {
+  Write-Step &quot;Restore (extract)&quot;
+  $existsAndHasContent = (Test-Path -LiteralPath $RestoreDir -PathType Container) -and ((Get-ChildItem -LiteralPath $RestoreDir -Force | Measure-Object).Count -gt 0)
+  if ($existsAndHasContent) {
+    if (-not (Confirm-Action -Prompt &quot;RestoreDir has existing content. Move aside as a timestamped backup?&quot; -DefaultNo)) {
+      throw &quot;User declined to touch existing RestoreDir.&quot;
+    }
+    $backup = &quot;$RestoreDir.__backup__$(New-Timestamp)&quot;
+    Write-Sub (&quot;Renaming existing RestoreDir to &#39;{0}&#39;&quot; -f $backup)
+    Rename-Item -LiteralPath $RestoreDir -NewName (Split-Path -Path $backup -Leaf) -ErrorAction Stop
+  }
+  Ensure-Dir $RestoreDir
+  try {
+    Invoke-Expand -ArchivePath $resolvedArchive -RestoreDir $RestoreDir
+    $restStats = Get-FolderStats -Path $RestoreDir
+    (&quot;{0} files; {1:N0} bytes - Restored&quot; -f $restStats.Files, $restStats.Bytes) | Write-Host
+  } catch { throw &quot;Restore failed. $_&quot; }
+} elseif ($DoRestore -and $DryRun) {
+  Write-Step &quot;DryRun: would extract archive to &#39;$RestoreDir&#39;&quot;
+}
+
+# ---------------------------- Done --------------------------------------------
+
+Write-Step &quot;Done&quot;
+Write-Sub  (&quot;Archive at: {0}&quot; -f $resolvedArchive)
+if ($DoRestore -and -not $DryRun) { Write-Sub (&quot;Restored to: {0}&quot; -f $RestoreDir) }
+Write-Sub  &quot;Re-run with -Mode Update for incremental refresh; use Overwrite to fully regenerate.&quot;" data-download-link="" data-download-label="Download Powershell">
+  <code class="language-powershell">#requires -Version 5.1
+&lt;#!
+.SYNOPSIS
+  Single-file archive as a non-admin Windows 10 user — create/overwrite/update a .zip of a folder; optional restore.
+
+.DESCRIPTION
+  Creates a single .zip archive of SourceDir with robust handling for invalid file timestamps by clamping
+  to the ZIP spec range (1980-01-01 to 2107-12-31). No admin required. ASCII-only script for PS 5.1.
+  This refactored version:
+    - Sets ZipArchiveEntry.LastWriteTime BEFORE opening the entry stream (required for Create mode)
+    - Prevents temp-file self-inclusion by blocking Create/Overwrite when ArchivePath is under SourceDir
+    - Skips both ArchivePath and its temp path during Create/Overwrite enumeration
+
+.PARAMETER SourceDir
+  Absolute path to the folder to archive recursively.
+
+.PARAMETER ArchivePath
+  Target .zip file path. Default: $env:LOCALAPPDATA\SingleArchive\Out\&lt;Leaf(SourceDir)&gt;.zip
+
+.PARAMETER RestoreDir
+  Destination folder for optional restore/extract. Default: $env:LOCALAPPDATA\SingleArchive\Restored\&lt;Leaf(SourceDir)&gt;
+
+.PARAMETER Mode
+  Create    - Create new .zip; if it exists, prompt (or -Force) to use a timestamped name.
+  Overwrite - Replace existing .zip atomically.
+  Update    - Open or create .zip and add/replace entries that changed (does not delete removed files).
+
+.PARAMETER VerifyOnly
+  Compute and display stats (source, archive) without writing.
+
+.PARAMETER DoRestore
+  After archive step, extract the .zip to RestoreDir.
+
+.PARAMETER Force
+  Skip confirmations for overwrites and existing destination handling.
+
+.PARAMETER DryRun
+  Simulate actions; do not write.
+
+.EXAMPLE
+  .\SingleFile-Archive.ps1 -SourceDir &quot;C:\Data\Docs&quot; -Mode Create -Verbose
+
+.EXAMPLE
+  .\SingleFile-Archive.ps1 -SourceDir &quot;C:\Data\Docs&quot; -Mode Update -DoRestore -Force -Verbose
+
+.NOTES
+  Compress-Archive may fail on out-of-range timestamps. This script uses a .NET ZipArchive pipeline that clamps
+  timestamps and avoids that failure for Create/Overwrite/Update. It also guards against self-inclusion when the
+  archive destination resides under the source tree.
+#&gt;
+
+[CmdletBinding()]
+param(
+  [Parameter(Mandatory=$true)]
+  [ValidateScript({ Test-Path $_ -PathType Container })]
+  [string]$SourceDir,
+
+  [string]$ArchivePath,
+
+  [string]$RestoreDir,
+
+  [ValidateSet(&#39;Create&#39;,&#39;Overwrite&#39;,&#39;Update&#39;)]
+  [string]$Mode = &#39;Create&#39;,
+
+  [switch]$VerifyOnly,
+  [switch]$DoRestore,
+  [switch]$Force,
+  [switch]$DryRun
+)
+
+Set-StrictMode -Version Latest
+$ErrorActionPreference = &#39;Stop&#39;
+
+# ---------------------------- Helpers -----------------------------------------
+
+function Write-Step { param([string]$Message) Write-Host (&quot;[+] {0}&quot; -f $Message) }
+function Write-Sub  { param([string]$Message) Write-Host (&quot;    - {0}&quot; -f $Message) }
+
+function Confirm-Action {
+  param([Parameter(Mandatory=$true)][string]$Prompt,[switch]$DefaultNo)
+  if ($Force) { return $true }
+  $def = if ($DefaultNo) {&#39;N&#39;} else {&#39;Y&#39;}
+  $choices = if ($DefaultNo) {&#39;[y/N]&#39;} else {&#39;[Y/n]&#39;}
+  while ($true) {
+    $resp = Read-Host &quot;$Prompt $choices&quot;
+    if ([string]::IsNullOrWhiteSpace($resp)) { $resp = $def }
+    switch ($resp.ToUpperInvariant()) {
+      &#39;Y&#39; { return $true }
+      &#39;N&#39; { return $false }
+      default { Write-Host &#39;Please answer Y or N.&#39; }
+    }
+  }
+}
+
+function New-Timestamp { (Get-Date).ToString(&#39;yyyyMMdd_HHmmss&#39;) }
+
+function Ensure-Dir {
+  param([Parameter(Mandatory=$true)][string]$Path)
+  if (-not (Test-Path -LiteralPath $Path -PathType Container)) {
+    Write-Verbose &quot;Ensure-Dir: $Path&quot;
+    New-Item -ItemType Directory -Path $Path -Force | Out-Null
+  }
+}
+
+function Get-FolderStats {
+  [CmdletBinding()]
+  param([Parameter(Mandatory=$true)][string]$Path)
+  Write-Verbose &quot;Get-FolderStats: $Path&quot;
+  $files = Get-ChildItem -LiteralPath $Path -Recurse -File -Force -ErrorAction Stop
+  [pscustomobject]@{
+    Path  = $Path
+    Files = $files.Count
+    Bytes = ($files | Measure-Object -Property Length -Sum).Sum
+  }
+}
+
+function Get-ZipStats {
+  [CmdletBinding()]
+  param([Parameter(Mandatory=$true)][string]$ZipPath)
+  if (-not (Test-Path -LiteralPath $ZipPath -PathType Leaf)) {
+    return [pscustomobject]@{ Path=$ZipPath; Exists=$false; Entries=0; UncompressedBytes=0; CompressedBytes=0; SizeOnDisk=0 }
+  }
+  Add-Type -AssemblyName System.IO.Compression.FileSystem -ErrorAction Stop
+  $fileInfo = Get-Item -LiteralPath $ZipPath -ErrorAction Stop
+  $zip = [System.IO.Compression.ZipFile]::OpenRead($ZipPath)
+  try {
+    $entries = $zip.Entries
+    $uc = 0L; $cc = 0L
+    foreach ($e in $entries) {
+      $uc += [int64]$e.Length
+      if ($e.CompressedLength -is [long]) { $cc += [int64]$e.CompressedLength }
+    }
+    return [pscustomobject]@{
+      Path              = $ZipPath
+      Exists            = $true
+      Entries           = $entries.Count
+      UncompressedBytes = $uc
+      CompressedBytes   = $cc
+      SizeOnDisk        = $fileInfo.Length
+    }
+  } finally { $zip.Dispose() }
+}
+
+function Get-FreeSpaceForPath {
+  param([Parameter(Mandatory=$true)][string]$TargetPath)
+  $parent = Split-Path -Path $TargetPath -Parent
+  if (-not $parent) { $parent = $env:TEMP }
+  Ensure-Dir $parent
+  $driveRoot = (Split-Path -Path (Resolve-Path -LiteralPath $parent) -Qualifier)
+  $di = New-Object System.IO.DriveInfo ($driveRoot.TrimEnd(&#39;\&#39;))
+  return $di.AvailableFreeSpace
+}
+
+function Ensure-ZipAssemblies {
+  Add-Type -AssemblyName System.IO.Compression -ErrorAction Stop
+  Add-Type -AssemblyName System.IO.Compression.FileSystem -ErrorAction Stop
+}
+
+function Get-RelativePath {
+  param([Parameter(Mandatory=$true)][string]$BaseDir,[Parameter(Mandatory=$true)][string]$FullName)
+  $base = (Resolve-Path -LiteralPath $BaseDir).Path.TrimEnd(&#39;\\&#39;)
+  $rel = $FullName.Substring($base.Length).TrimStart(&#39;\\&#39;)
+  return ($rel -replace &#39;\\&#39;,&#39;/&#39;)
+}
+
+function Clamp-ZipTimestamp {
+  param([Parameter(Mandatory=$true)][datetime]$DateUtc)
+  # ZIP spec range: 1980-01-01 .. 2107-12-31
+  $min = [datetime]::Parse(&#39;1980-01-01T00:00:00Z&#39;)
+  $max = [datetime]::Parse(&#39;2107-12-31T23:59:59Z&#39;)
+  $utc = $DateUtc.ToUniversalTime()
+  if ($utc -lt $min) { $utc = $min }
+  if ($utc -gt $max) { $utc = $max }
+  return [datetimeoffset]$utc
+}
+
+function Get-AbsolutePath {
+  param([Parameter(Mandatory=$true)][string]$Path)
+  if ([System.IO.Path]::IsPathRooted($Path)) { return [System.IO.Path]::GetFullPath($Path) }
+  $base = (Get-Location).Path
+  return [System.IO.Path]::GetFullPath((Join-Path $base $Path))
+}
+
+function Test-IsSubPath {
+  param([Parameter(Mandatory=$true)][string]$Child,[Parameter(Mandatory=$true)][string]$Parent)
+  $p = $Parent.TrimEnd(&#39;\\&#39;) + &#39;\\&#39;
+  $c = $Child.TrimEnd(&#39;\\&#39;)
+  return $c.StartsWith($p, [System.StringComparison]::OrdinalIgnoreCase)
+}
+
+function Add-EntryFromFile {
+  param(
+    [Parameter(Mandatory=$true)][System.IO.Compression.ZipArchive]$Zip,
+    [Parameter(Mandatory=$true)][string]$EntryName,
+    [Parameter(Mandatory=$true)][string]$FilePath
+  )
+  # Create the entry object first
+  $entry = $Zip.CreateEntry($EntryName, [System.IO.Compression.CompressionLevel]::Optimal)
+
+  # FIX: Set timestamp BEFORE opening the entry stream (required for Create mode)
+  $fi = Get-Item -LiteralPath $FilePath -ErrorAction SilentlyContinue
+  if ($fi) {
+    $entry.LastWriteTime = Clamp-ZipTimestamp -DateUtc $fi.LastWriteTimeUtc
+  } else {
+    $entry.LastWriteTime = Clamp-ZipTimestamp -DateUtc ([datetime]::UtcNow)
+  }
+
+  # Now open streams and copy data
+  $inStream  = $null
+  $outStream = $null
+  try {
+    $inStream  = [System.IO.File]::Open($FilePath, [System.IO.FileMode]::Open, [System.IO.FileAccess]::Read, [System.IO.FileShare]::Read)
+    $outStream = $entry.Open()
+    $inStream.CopyTo($outStream)
+  } finally {
+    if ($outStream) { $outStream.Dispose() }
+    if ($inStream)  { $inStream.Dispose() }
+  }
+}
+
+function New-ZipFromDirectory {
+  param(
+    [Parameter(Mandatory=$true)][string]$SourceDir,
+    [Parameter(Mandatory=$true)][string]$ArchivePath,
+    [string[]]$SkipPaths,
+    [switch]$DryRun
+  )
+  if ($DryRun) {
+    Write-Sub (&quot;DryRun: would create zip from {0} -&gt; {1}&quot; -f $SourceDir, $ArchivePath)
+    return
+  }
+  Ensure-ZipAssemblies
+  $tmp = &quot;$ArchivePath.tmp.$(New-Timestamp)&quot;
+  if (Test-Path -LiteralPath $tmp -PathType Leaf) { Remove-Item -LiteralPath $tmp -Force }
+
+  # Build skip set (ArchivePath and its temp)
+  $skipSet = New-Object &#39;System.Collections.Generic.HashSet[string]&#39; ([System.StringComparer]::OrdinalIgnoreCase)
+  if ($SkipPaths) { foreach ($sp in $SkipPaths) { if ($sp) { [void]$skipSet.Add($sp) } } }
+  [void]$skipSet.Add($ArchivePath)
+  [void]$skipSet.Add($tmp)
+
+  $fs = $null
+  $zip = $null
+  try {
+    $fs  = [System.IO.File]::Open($tmp, [System.IO.FileMode]::Create, [System.IO.FileAccess]::ReadWrite, [System.IO.FileShare]::None)
+    $zip = New-Object System.IO.Compression.ZipArchive($fs, [System.IO.Compression.ZipArchiveMode]::Create, $false)
+    $files = Get-ChildItem -LiteralPath $SourceDir -Recurse -File -Force
+    foreach ($f in $files) {
+      if ($skipSet.Contains($f.FullName)) { continue }
+      $entryName = Get-RelativePath -BaseDir $SourceDir -FullName $f.FullName
+      Add-EntryFromFile -Zip $zip -EntryName $entryName -FilePath $f.FullName
+    }
+  } finally {
+    if ($zip) { $zip.Dispose() }
+    if ($fs)  { $fs.Dispose() }
+  }
+  if (Test-Path -LiteralPath $ArchivePath -PathType Leaf) {
+    Remove-Item -LiteralPath $ArchivePath -Force -ErrorAction Stop
+  }
+  Move-Item -LiteralPath $tmp -Destination $ArchivePath -Force
+}
+
+function Update-ZipFromDirectory {
+  param(
+    [Parameter(Mandatory=$true)][string]$SourceDir,
+    [Parameter(Mandatory=$true)][string]$ArchivePath,
+    [switch]$DryRun
+  )
+  if (-not (Test-Path -LiteralPath $ArchivePath -PathType Leaf)) {
+    Write-Sub &quot;Archive does not exist; creating new.&quot;
+    New-ZipFromDirectory -SourceDir $SourceDir -ArchivePath $ArchivePath -DryRun:$DryRun
+    return
+  }
+  if ($DryRun) {
+    Write-Sub (&quot;DryRun: would open zip for update: {0}&quot; -f $ArchivePath)
+    return
+  }
+  Ensure-ZipAssemblies
+  $fs  = [System.IO.File]::Open($ArchivePath, [System.IO.FileMode]::Open, [System.IO.FileAccess]::ReadWrite, [System.IO.FileShare]::None)
+  $zip = New-Object System.IO.Compression.ZipArchive($fs, [System.IO.Compression.ZipArchiveMode]::Update, $false)
+  try {
+    # Build a lookup of existing entries (case-insensitive)
+    $map = @{}
+    foreach ($e in $zip.Entries) { $map[$e.FullName.ToLowerInvariant()] = $e }
+    $added = 0; $replaced = 0; $skipped = 0
+    $files = Get-ChildItem -LiteralPath $SourceDir -Recurse -File -Force
+    foreach ($f in $files) {
+      if ($f.FullName -ieq $ArchivePath) { continue }
+      $rel = Get-RelativePath -BaseDir $SourceDir -FullName $f.FullName
+      $key = $rel.ToLowerInvariant()
+      if ($map.ContainsKey($key)) {
+        $existing = $map[$key]
+        # Compare length and timestamp (ZIP timestamp granularity ~2 seconds)
+        $needsReplace = $true
+        try {
+          $zipTime = $existing.LastWriteTime.UtcDateTime
+          $fileTime = $f.LastWriteTimeUtc
+          $lenDiff = ($existing.Length -ne $f.Length)
+          $timeDiff = [math]::Abs((New-TimeSpan -Start $zipTime -End $fileTime).TotalSeconds) -gt 2
+          $needsReplace = ($lenDiff -or $timeDiff)
+        } catch { $needsReplace = $true }
+        if ($needsReplace) {
+          $existing.Delete()
+          Add-EntryFromFile -Zip $zip -EntryName $rel -FilePath $f.FullName
+          $replaced++
+        } else {
+          $skipped++
+        }
+      } else {
+        Add-EntryFromFile -Zip $zip -EntryName $rel -FilePath $f.FullName
+        $added++
+      }
+    }
+    Write-Sub (&quot;Update summary: added={0}, replaced={1}, skipped={2}&quot; -f $added, $replaced, $skipped)
+  } finally {
+    if ($zip) { $zip.Dispose() }
+    if ($fs)  { $fs.Dispose() }
+  }
+}
+
+function Invoke-Expand {
+  param(
+    [Parameter(Mandatory=$true)][string]$ArchivePath,
+    [Parameter(Mandatory=$true)][string]$RestoreDir
+  )
+  Ensure-ZipAssemblies
+  [System.IO.Compression.ZipFile]::ExtractToDirectory($ArchivePath, $RestoreDir)
+}
+
+# ---------------------------- Defaults ----------------------------------------
+
+$resolvedSource = (Resolve-Path -LiteralPath $SourceDir).Path
+$sourceLeaf = Split-Path -Path $resolvedSource -Leaf
+
+if (-not $ArchivePath) {
+  $defaultOut = Join-Path $env:LOCALAPPDATA &#39;SingleArchive\Out&#39;
+  Ensure-Dir $defaultOut
+  $ArchivePath = Join-Path $defaultOut ($sourceLeaf + &#39;.zip&#39;)
+} else {
+  Ensure-Dir (Split-Path -Path $ArchivePath -Parent)
+}
+
+if (-not $RestoreDir) {
+  $RestoreDir = Join-Path (Join-Path $env:LOCALAPPDATA &#39;SingleArchive\Restored&#39;) $sourceLeaf
+} else {
+  Ensure-Dir (Split-Path -Path $RestoreDir -Parent)
+}
+
+$resolvedArchive = Get-AbsolutePath -Path $ArchivePath
+
+# ---------------------------- Preflight ---------------------------------------
+
+Write-Step &quot;Environment&quot;
+Write-Sub  (&quot;UserMode: {0}&quot; -f [Environment]::UserName)
+Write-Sub  (&quot;SourceDir:  {0}&quot; -f $resolvedSource)
+Write-Sub  (&quot;ArchivePath: {0}&quot; -f $resolvedArchive)
+Write-Sub  (&quot;RestoreDir:  {0}&quot; -f $RestoreDir)
+Write-Sub  (&quot;Mode:        {0}&quot; -f $Mode)
+Write-Sub  (&quot;VerifyOnly:  {0}&quot; -f ($(if($VerifyOnly){&#39;Yes&#39;}else{&#39;No&#39;})))
+Write-Sub  (&quot;DryRun:      {0}&quot; -f ($(if($DryRun){&#39;Yes&#39;}else{&#39;No&#39;})))
+
+$srcStats = Get-FolderStats -Path $resolvedSource
+(&quot;{0} files; {1:N0} bytes - Source&quot; -f $srcStats.Files, $srcStats.Bytes) | Write-Host
+
+$existingZip = Get-ZipStats -ZipPath $resolvedArchive
+if ($existingZip.Exists) {
+  (&quot;{0} entries; {1:N0} bytes on disk - Existing Archive&quot; -f $existingZip.Entries, $existingZip.SizeOnDisk) | Write-Host
+}
+
+if ($VerifyOnly) {
+  Write-Step &quot;Verify-only mode - no writes will occur&quot;
+  return
+}
+
+# Guard: prevent Create/Overwrite when archive path is under source (self-inclusion risk via temp file)
+if (($Mode -eq &#39;Create&#39; -or $Mode -eq &#39;Overwrite&#39;) -and (Test-IsSubPath -Child $resolvedArchive -Parent $resolvedSource)) {
+  throw &quot;Unsafe configuration: ArchivePath resides under SourceDir for mode &#39;$Mode&#39;. Place the archive outside the source tree.&quot;
+}
+
+# Free space heuristic
+try {
+  $free = Get-FreeSpaceForPath -TargetPath $resolvedArchive
+  Write-Sub (&quot;Free space on target volume: {0:N0} bytes&quot; -f $free)
+  $needed = if ($Mode -eq &#39;Update&#39; -and $existingZip.Exists) {
+    [int64]([Math]::Max($srcStats.Bytes * 0.2, $existingZip.SizeOnDisk * 0.1))
+  } else {
+    [int64]$srcStats.Bytes
+  }
+  if ($free -lt $needed) {
+    throw (&quot;Insufficient free space. Needed approx {0:N0} bytes, Available {1:N0} bytes&quot; -f $needed, $free)
+  }
+} catch { throw &quot;Free space check failed. $_&quot; }
+
+# ---------------------------- Mode-specific confirms --------------------------
+
+switch ($Mode) {
+  &#39;Create&#39; {
+    if (Test-Path -LiteralPath $resolvedArchive -PathType Leaf) {
+      $ts = New-Timestamp
+      $altPath = Join-Path (Split-Path -Path $resolvedArchive -Parent) (&quot;{0}_{1}.zip&quot; -f [IO.Path]::GetFileNameWithoutExtension($resolvedArchive), $ts)
+      if (-not (Confirm-Action -Prompt &quot;Archive exists. Create a new timestamped archive instead?`n  $altPath&quot;)) {
+        throw &quot;User declined to proceed in Create mode with existing archive.&quot;
+      }
+      $resolvedArchive = $altPath
+      $ArchivePath = $altPath
+    }
+  }
+  &#39;Overwrite&#39; {
+    if ((Test-Path -LiteralPath $resolvedArchive -PathType Leaf) -and -not (Confirm-Action -Prompt &quot;Overwrite will DELETE existing archive. Proceed?&quot;)) {
+      throw &quot;User declined overwrite.&quot;
+    }
+  }
+  &#39;Update&#39; {
+    $null = $null
+  }
+}
+
+# ---------------------------- Archive -----------------------------------------
+
+Write-Step &quot;Archiving&quot;
+Write-Sub  (&quot;Operation: {0}&quot; -f $Mode)
+Write-Sub  (&quot;Target:    {0}&quot; -f $resolvedArchive)
+
+try {
+  switch ($Mode) {
+    &#39;Create&#39;   {
+      New-ZipFromDirectory -SourceDir $resolvedSource -ArchivePath $resolvedArchive -SkipPaths @($resolvedArchive) -DryRun:$DryRun
+    }
+    &#39;Overwrite&#39;{
+      New-ZipFromDirectory -SourceDir $resolvedSource -ArchivePath $resolvedArchive -SkipPaths @($resolvedArchive) -DryRun:$DryRun
+    }
+    &#39;Update&#39;   {
+      Update-ZipFromDirectory -SourceDir $resolvedSource -ArchivePath $resolvedArchive -DryRun:$DryRun
+    }
+  }
+} catch { throw &quot;Archive step failed. $_&quot; }
+
+# ---------------------------- Post-archive verification -----------------------
+
+Write-Step &quot;Verifying archive&quot;
+try {
+  if (-not $DryRun) {
+    $zipStats = Get-ZipStats -ZipPath $resolvedArchive
+    if (-not $zipStats.Exists) { throw &quot;Archive not found after operation.&quot; }
+    (&quot;{0} entries; {1:N0} bytes on disk - Archive&quot; -f $zipStats.Entries, $zipStats.SizeOnDisk) | Write-Host
+  } else {
+    Write-Sub &quot;DryRun: verification skipped (no archive written)&quot;
+  }
+} catch { throw &quot;Verification failed. $_&quot; }
+
+# ---------------------------- Optional restore --------------------------------
+
+if ($DoRestore -and -not $DryRun) {
+  Write-Step &quot;Restore (extract)&quot;
+  $existsAndHasContent = (Test-Path -LiteralPath $RestoreDir -PathType Container) -and ((Get-ChildItem -LiteralPath $RestoreDir -Force | Measure-Object).Count -gt 0)
+  if ($existsAndHasContent) {
+    if (-not (Confirm-Action -Prompt &quot;RestoreDir has existing content. Move aside as a timestamped backup?&quot; -DefaultNo)) {
+      throw &quot;User declined to touch existing RestoreDir.&quot;
+    }
+    $backup = &quot;$RestoreDir.__backup__$(New-Timestamp)&quot;
+    Write-Sub (&quot;Renaming existing RestoreDir to &#39;{0}&#39;&quot; -f $backup)
+    Rename-Item -LiteralPath $RestoreDir -NewName (Split-Path -Path $backup -Leaf) -ErrorAction Stop
+  }
+  Ensure-Dir $RestoreDir
+  try {
+    Invoke-Expand -ArchivePath $resolvedArchive -RestoreDir $RestoreDir
+    $restStats = Get-FolderStats -Path $RestoreDir
+    (&quot;{0} files; {1:N0} bytes - Restored&quot; -f $restStats.Files, $restStats.Bytes) | Write-Host
+  } catch { throw &quot;Restore failed. $_&quot; }
+} elseif ($DoRestore -and $DryRun) {
+  Write-Step &quot;DryRun: would extract archive to &#39;$RestoreDir&#39;&quot;
+}
+
+# ---------------------------- Done --------------------------------------------
+
+Write-Step &quot;Done&quot;
+Write-Sub  (&quot;Archive at: {0}&quot; -f $resolvedArchive)
+if ($DoRestore -and -not $DryRun) { Write-Sub (&quot;Restored to: {0}&quot; -f $RestoreDir) }
+Write-Sub  &quot;Re-run with -Mode Update for incremental refresh; use Overwrite to fully regenerate.&quot;</code>
+</section>]]></content><author><name></name></author><category term="[scripts&gt;powershell]" /></entry><entry><title type="html">tutorial converter2powershell</title><link href="https://ib.bsb.br/tutorial-converter2powershell/" rel="alternate" type="text/html" title="tutorial converter2powershell" /><published>2025-10-17T00:00:00+00:00</published><updated>2025-10-17T10:25:57+00:00</updated><id>https://ib.bsb.br/tutorial-converter2powershell</id><content type="html" xml:base="https://ib.bsb.br/tutorial-converter2powershell/"><![CDATA[<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  &lt;purpose&gt;You are an expert non-admin Windows PowerShell 5.1 script developer for Windows 10 x64. Convert the narrative setup described in the input field named `tutorial_content` into a single user-mode PowerShell 5.1 script runnable from the user’s home directory, with robust error handling, idempotency, progress logging, and explicit confirmations for risky actions.&lt;/purpose&gt;
 
   &lt;context&gt;
     &lt;system_environment&gt;
@@ -4256,182 +5214,4 @@ The response includes the status of the batch job and, if completed, the final r
 
 <p>Note: Notice how I explicitly provided a path to my test. This is entirely optional. You can just run pytest-3 and it will run the whole test suite: this method is just faster. Notice also how the coverage ratio is very low: this is normal; we are testing, after all, only one plugin here. The only branches left to test in the code is the other possible error (“no link in the feed”) and to test the “catchup” mode. You can see this in the actual test_plugins.py file distributed with this documentation.</p>
 
-<p>Note: If you discover a bug associated with a single feed, you can use the betamax session and the feed2exec.model. Feed.parse() function to manually parse a feed and fire your plugin. This is how email functionality is tested: see the feed2exec.tests.test_plugins.test_email() function for an example.</p>]]></content><author><name></name></author><category term="scratchpad" /></entry><entry><title type="html">ARC PRIZE</title><link href="https://ib.bsb.br/arc-prize/" rel="alternate" type="text/html" title="ARC PRIZE" /><published>2025-09-29T00:00:00+00:00</published><updated>2025-09-29T17:16:05+00:00</updated><id>https://ib.bsb.br/arc-prize</id><content type="html" xml:base="https://ib.bsb.br/arc-prize/"><![CDATA[<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Subtask 1 — System Role &amp; Run Flow
-Objective  Define the pipeline goal and top-level control flow.
-Inputs  ARC JSON challenges; RunConfig; env vars (keys, MAX_CONCURRENCY, flags).
-Procedure / Prompt Spec or Algorithm  Use src/run.py::run() → run_from_json() to load challenges, choose preset, orchestrate solve_challenges() which schedules solve_challenge(); within it call get_answer_grids() to generate/score instructions and finalize guesses.
-Outputs / Artifacts  Attempts JSON in attempts/arc-prize-20XX/...; per-task temp_solutions/*.json.
-Dependencies / Anchors  README.md (How the system works, Running a solve); src/run.py::{run, run_from_json, solve_challenges, solve_challenge, get_answer_grids, return_answer}.
-Acceptance Criteria  Running python src/run.py produces an attempts file and (if truth present) printed accuracy; no unhandled exceptions.
-Failure Modes &amp; Mitigations  Missing env keys → set per README; rate limits → lower concurrency flags.
-:::
-
-Subtask 2 — Data Models &amp; Grid Representation
-Objective  Normalize grid IO for prompts and scoring.
-Inputs  Challenge, Example, Input models; integer grids; COLOR_MAP.
-Procedure / Prompt Spec or Algorithm  Render grids via Challenge.grid_to_str; optionally embed base64 PNG via Challenge.grid_to_base64/viz.base64_from_grid.
-Outputs / Artifacts  Text matrices; optional images.
-Dependencies / Anchors  src/models.py::{Challenge, Example, Input, grid_to_str, grid_to_base64, COLOR_MAP}; src/viz.py::{base64_from_grid}.
-Acceptance Criteria  Stringified grids are rectangular, integer-only; base64 generation does not raise.
-Failure Modes &amp; Mitigations  Image encoding errors → log and fall back to text-only (see main.contents_from_grid try/except).
-:::
-
-Subtask 3 — Prompt Packing
-Objective  Build consistent message content for LLMs.
-Inputs  Training examples, optional attempts, test inputs; toggles: include_base64, use_diffs.
-Procedure / Prompt Spec or Algorithm  Use contents_from_grid, contents_from_example, contents_from_challenge to produce a list of typed parts with labeled sections and (optionally) diffs.
-Outputs / Artifacts  Structured message content lists.
-Dependencies / Anchors  src/main.py::{contents_from_grid, contents_from_example, contents_from_challenge}; diff text via src/run.py::generate_grid_diff.
-Acceptance Criteria  Message list order matches training→tests; when diffs enabled, mismatches include ASCII diff.
-Failure Modes &amp; Mitigations  Context bloat → disable images/diffs; reduce step sizes.
-:::
-
-Subtask 4 — Instruction Synthesis
-Objective  Derive a general rule as stepwise instructions.
-Inputs  INTUITIVE_PROMPT; packed examples/tests.
-Procedure / Prompt Spec or Algorithm  Call get_next_structure(InstructionsResponse, model=step.instruction_model, messages=…) from get_instructions_from_challenge.
-Outputs / Artifacts  InstructionsResponse.instructions.
-Dependencies / Anchors  src/main.py::{INTUITIVE_PROMPT, InstructionsResponse}; src/run.py::{get_instructions_from_challenge}.
-Acceptance Criteria  Non-empty string; avoids example-specific indices per prompt guidance.
-Failure Modes &amp; Mitigations  Empty/invalid → retry via step sampling; move to revision/pooling.
-:::
-
-Subtask 5 — Executor (Follow Instructions)
-Objective  Apply instructions to a test grid to produce an output grid.
-Inputs  Instructions; training examples (as reference); one test input; flags is_perfect, include_base64, use_diffs.
-Procedure / Prompt Spec or Algorithm  Use AGENT_FOLLOW_INSTRUCTIONS_PROMPT and optional PERFECT_PROMPT; call output_grid_from_instructions which invokes get_next_structure(GridResponse, …).
-Outputs / Artifacts  GridResponse.grid (2D ints).
-Dependencies / Anchors  src/main.py::{AGENT_FOLLOW_INSTRUCTIONS_PROMPT, PERFECT_PROMPT, GridResponse, output_grid_from_instructions}.
-Acceptance Criteria  Grid shape matches target’s shape during scoring; integers only.
-Failure Modes &amp; Mitigations  Free text instead of grid → schema enforcement via get_next_structure.
-:::
-
-Subtask 6 — Structured Output Enforcement
-Objective  Ensure parseable, schema-validated LLM outputs.
-Inputs  Pydantic schemas; provider selection.
-Procedure / Prompt Spec or Algorithm  Route via get_next_structure which dispatches to _get_next_structure_* per model (OpenAI/Anthropic/Gemini/DeepSeek/xAI/OpenRouter), using JSON/object or tool use as supported.
-Outputs / Artifacts  Parsed Pydantic instances.
-Dependencies / Anchors  src/llms/structured.py::{get_next_structure, _get_next_structure_openai, _get_next_structure_anthropic, _get_next_structure_gemini, _get_next_structure_deepseek, _get_next_structure_xai, _get_next_structure_openrouter}; src/llms/models.py::Model.
-Acceptance Criteria  Successful parse or controlled failure with retries; no downstream string parsing needed.
-Failure Modes &amp; Mitigations  Model lacks json_schema → use json_object path; retry with backoff.
-:::
-
-Subtask 7 — Scoring (Leave-One-Out)
-Objective  Quantify instruction generalization.
-Inputs  Candidate instructions; full training set; follow_model.
-Procedure / Prompt Spec or Algorithm  For each training example i, hold out i, execute on its input, compare to its output using get_grid_similarity (exact cell-wise match proportion); average over examples.
-Outputs / Artifacts  InstructionsScore with example_scores and aggregate score.
-Dependencies / Anchors  src/run.py::{get_example_score, get_grid_similarity, score_instructions_on_challenge}.
-Acceptance Criteria  Score in [0,1]; 1.0 iff all cells match on all held-out examples.
-Failure Modes &amp; Mitigations  Dimensional mismatch → similarity 0; optional viz when VIZ=1.
-:::
-
-Subtask 8 — Revision (Self-Repair)
-Objective  Improve weak instructions using feedback from mismatches.
-Inputs  Prior InstructionsScore; diffs/attempts; StepRevision config.
-Procedure / Prompt Spec or Algorithm  Prompt with REVISION_PROMPT via InstructionsScore.get_revised_instructions; rescore revised outputs.
-Outputs / Artifacts  New InstructionsScore items.
-Dependencies / Anchors  src/run.py::{REVISION_PROMPT, InstructionsScore.get_revised_instructions}; src/configs/models.py::StepRevision.
-Acceptance Criteria  Best revised score ≥ previous best; log improvement metrics.
-Failure Modes &amp; Mitigations  No gains → move to pooling; adjust sampling counts.
-:::
-
-Subtask 9 — Pooling (Synthesis Across Attempts)
-Objective  Fuse strengths from several near-miss instruction sets.
-Inputs  Top InstructionsScore samples; StepRevisionPool config.
-Procedure / Prompt Spec or Algorithm  Use SYNTHESIS_PROMPT via get_pooling_instruction_from_scores; rescore; merge with candidates.
-Outputs / Artifacts  Pooled instruction texts and scores.
-Dependencies / Anchors  src/run.py::{SYNTHESIS_PROMPT, get_pooling_instruction_from_scores}; src/configs/models.py::StepRevisionPool.
-Acceptance Criteria  At least one pooled instruction’s score ≥ prior top.
-Failure Modes &amp; Mitigations  Convergence to weak consensus → increase diversity (times), keep multiple candidates.
-:::
-
-Subtask 10 — Step Orchestration &amp; Sampling
-Objective  Execute configured Step/Revision/Pool sequence.
-Inputs  RunConfig.steps with per-step models, counts, timeouts, flags.
-Procedure / Prompt Spec or Algorithm  In get_answer_grids, generate candidates per step, rescore, sort desc, short-list for subsequent steps; exit early on perfect score.
-Outputs / Artifacts  Sorted candidate list.
-Dependencies / Anchors  src/run.py::{get_instruction_scores, get_score_from_instructions, get_answer_grids}; src/configs/models.py::{RunConfig, Step, StepRevision, StepRevisionPool}.
-Acceptance Criteria  Deterministic step flow with early exit on score==1.
-Failure Modes &amp; Mitigations  Empty candidate set → log error and halt (exception path).
-:::
-
-Subtask 11 — Finalization &amp; Diversity
-Objective  Produce up to two distinct final guesses per test grid.
-Inputs  Top candidates; final_follow_model; final_follow_times.
-Procedure / Prompt Spec or Algorithm  Use get_diverse_attempts to generate multiple outputs; prefer perfect-score instructions; otherwise split attempts between top two candidates; ensure diversity when possible.
-Outputs / Artifacts  Two Guess objects; attempts JSON updated.
-Dependencies / Anchors  src/run.py::{get_diverse_attempts, return_answer, Guess}.
-Acceptance Criteria  Each test input yields ≤2 outputs; if all generated outputs are identical, duplicates are allowed per code.
-Failure Modes &amp; Mitigations  Lack of diversity → explicitly bias attempts across top-2 instruction sources (as implemented).
-:::
-
-Subtask 12 — Concurrency Control
-Objective  Prevent provider overload and monitor saturation.
-Inputs  Env MAX_CONCURRENCY; config max_concurrent_tasks.
-Procedure / Prompt Spec or Algorithm  Use MonitoredSemaphore in both run loop and get_next_structure (API semaphore); log active/available permits.
-Outputs / Artifacts  Saturation logs, orderly task scheduling.
-Dependencies / Anchors  src/async_utils/semaphore_monitor.py::MonitoredSemaphore; usage in src/run.py::solve_challenges and src/llms/structured.py::API_SEMAPHORE.
-Acceptance Criteria  No storm of RESOURCE_EXHAUSTED; visible saturation percentage logs.
-Failure Modes &amp; Mitigations  Starvation/deadlocks → minimal critical sections; staggered starts in solve_challenges.
-:::
-
-Subtask 13 — Provider Adapters &amp; Retries
-Objective  Uniform structured calls across providers with robust retries.
-Inputs  Model enum; messages; schemas.
-Procedure / Prompt Spec or Algorithm  Dispatch in get_next_structure; per-provider adapters enforce structured output; retry_with_backoff wraps transient failures (xAI/OpenRouter paths) with jitter and caps.
-Outputs / Artifacts  Parsed outputs; usage logs.
-Dependencies / Anchors  src/llms/structured.py::{retry_with_backoff, get_next_structure, _get_next_structure_*}; src/llms/models.py::Model.
-Acceptance Criteria  Recover from transient failures; bounded retries; logged attempts.
-Failure Modes &amp; Mitigations  Non-retryable errors → immediate fail with error logs.
-:::
-
-Subtask 14 — Logging &amp; Trace Context
-Objective  Record spans and mirror to local file while scrubbing sensitive data.
-Inputs  LOGFIRE_API_KEY, LOCAL_LOGS_ONLY, LOG_LEVEL.
-Procedure / Prompt Spec or Algorithm  Patch logfire methods to inject run_id/task_id; write rotating file logs/arc.log; wrap spans with start/end/error messages.
-Outputs / Artifacts  Local log file; optional remote telemetry.
-Dependencies / Anchors  src/logging_config.py::{generate_run_id, set_task_id, logfire patches}; src/log.py::log facade.
-Acceptance Criteria  Every major operation creates span logs; no secret leakage (scrubbing callback).
-Failure Modes &amp; Mitigations  No token/network → LOCAL_LOGS_ONLY=1 path.
-:::
-
-Subtask 15 — Persistence (Files &amp; Optional DB)
-Objective  Store attempts and optionally DB rows for analysis.
-Inputs  Guesses and instruction scores; NEON_DSN (optional).
-Procedure / Prompt Spec or Algorithm  Write attempts / temp files; if DB configured, InstructionsScore.save_to_db and Guess.save_to_db insert rows (JSONB fields) with metadata.
-Outputs / Artifacts  JSON files; DB rows when enabled.
-Dependencies / Anchors  src/run.py::{solve_challenge, Guess.save_to_db, InstructionsScore.save_to_db}.
-Acceptance Criteria  Files are valid JSON; DB insert does not raise.
-Failure Modes &amp; Mitigations  DB failure → continue with file artifacts only.
-:::
-
-Subtask 16 — Visualization &amp; Base64
-Objective  Aid debugging and multimodal prompting.
-Inputs  VIZ, LOG_GRIDS env toggles; color map.
-Procedure / Prompt Spec or Algorithm  When enabled, viz_many shows mismatches; base64_from_grid generates PNGs for embedding.
-Outputs / Artifacts  On-screen figures; base64 strings.
-Dependencies / Anchors  src/viz.py::{viz_many, base64_from_grid}; hooks in src/run.py and src/main.py.
-Acceptance Criteria  No GUI errors when disabled; images created when requested.
-Failure Modes &amp; Mitigations  Headless errors → keep defaults off.
-:::
-
-Subtask 17 — Environment &amp; Runbook
-Objective  Prepare environment and execute.
-Inputs  .env with provider keys; MAX_CONCURRENCY; Python 3.12 target in tooling.
-Procedure / Prompt Spec or Algorithm  Load env early (src/__init__.py); install deps per pyproject.toml; run python src/run.py; adjust run() to select preset (grok_config_prod, gpt_config_prod, oss_config, mini_config).
-Outputs / Artifacts  Successful run start; log output including run id.
-Dependencies / Anchors  README.md (Requirements, Environment configuration, Running a solve); src/__init__.py; src/configs/*.
-Acceptance Criteria  Smoke test runs with defaults; no KeyError for MAX_CONCURRENCY.
-Failure Modes &amp; Mitigations  Missing var → set in .env per README.
-:::
-
-Subtask 18 — Evaluation
-Objective  Compute accuracy when ground truth is provided.
-Inputs  Attempts JSON; solutions JSON.
-Procedure / Prompt Spec or Algorithm  Use evaluate_solutions to compare attempts against truth; count either attempt as correct; report aggregate accuracy.
-Outputs / Artifacts  Printed accuracy; logs.
-Dependencies / Anchors  src/run.py::{evaluate_solutions}.
-Acceptance Criteria  Accuracy matches competition scoring semantics (either attempt counts).
-Failure Modes &amp; Mitigations  Schema mismatch → validate inputs before evaluation.
-</code></pre></div></div>]]></content><author><name></name></author><category term="AI&gt;prompt" /><category term="scratchpad" /></entry></feed>
+<p>Note: If you discover a bug associated with a single feed, you can use the betamax session and the feed2exec.model. Feed.parse() function to manually parse a feed and fire your plugin. This is how email functionality is tested: see the feed2exec.tests.test_plugins.test_email() function for an example.</p>]]></content><author><name></name></author><category term="scratchpad" /></entry></feed>
