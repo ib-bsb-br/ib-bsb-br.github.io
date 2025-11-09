@@ -505,7 +505,7 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add .
           git commit -m "Initial commit from ZIP archive"
-          git remote add origin "$(echo $REPO_URL | sed "s|https://|https://x-access-token:$TOKEN@|")"
+          git remote add origin "$(echo "$REPO_URL" | sed "s|https://|https://x-access-token:$TOKEN@|")"
           git push -u origin main
       
       - name: Success summary
