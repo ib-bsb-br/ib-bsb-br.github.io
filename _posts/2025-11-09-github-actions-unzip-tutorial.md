@@ -377,7 +377,7 @@ To add additional files (like README, LICENSE) after extraction:
     cd extracted_content
     
     # Add a README explaining the source
-    cat > README.md << 'EOF'
+    cat > README.md << EOF
     # Extracted Content
     
     This repository was automatically created from a ZIP archive.
