@@ -358,11 +358,12 @@ If your ZIP has a root folder (common with GitHub's archive downloads):
     unzip -q archive.zip -d temp_extract
     
     # Check if everything is in a single root directory
-    root_contents=$(ls -A temp_extract | wc -l)
-    if [ "$root_contents" -eq 1 ]; then
-      root_dir=$(ls temp_extract)
-      echo "Flattening nested structure: $root_dir"
-      mv "temp_extract/$root_dir" extracted_content
+    root_contents_count=$(ls -A temp_extract | wc -l)
+    first_item="temp_extract/$(ls -A temp_extract | head -n 1)"
+
+    if [ "$root_contents_count" -eq 1 ] && [ -d "$first_item" ]; then
+      echo "Flattening nested structure from '$first_item'"
+      mv "$first_item" extracted_content
       rm -rf temp_extract
     else
       mv temp_extract extracted_content
