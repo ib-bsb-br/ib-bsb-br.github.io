@@ -6,7 +6,7 @@ type: post
 layout: post
 published: true
 slug: github-actions-unzip-tutorial
-title: 'Tutorial: Using GitHub Actions to Download, Unzip, and Create a New Repository'
+title: 'GitHub Actions to Download, Unzip, and Create a New Repository'
 ---
 # Tutorial: Using GitHub Actions to Download, Unzip, and Create a New Repository
 
