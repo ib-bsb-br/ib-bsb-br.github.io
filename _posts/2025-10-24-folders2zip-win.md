@@ -1,14 +1,10 @@
 ---
-categories: []
 tags:
-  - '[scripts>powershell]'
-comment: 
-info: 
+  - 'scripts>powershell'
 date: '2025-10-24'
 type: post
 layout: post
 published: true
-sha: 
 slug: folders2zip-win
 title: 'folders2zip as non-admin Windows user'
 
