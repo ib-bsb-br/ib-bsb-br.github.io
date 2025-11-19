@@ -45,6 +45,7 @@ This tutorial demonstrates how to create a GitHub Actions workflow that:
 • Be cautious about what content you're making public
 • Review extracted contents before pushing
 
+{% raw %}
 
 ## Part 1: Prerequisites Setup
 
@@ -521,3 +522,5 @@ jobs:
           [View Repository →]($(echo "${{ steps.create-repo.outputs.result }}" | sed 's/.git$//'))
           EOF
 ```
+
+{% endraw %}
