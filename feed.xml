@@ -1,4 +1,905 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2025-10-26T17:43:26+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">DirectAdmin terminal custom commands</title><link href="https://ib.bsb.br/da-term/" rel="alternate" type="text/html" title="DirectAdmin terminal custom commands" /><published>2025-10-25T00:00:00+00:00</published><updated>2025-10-25T19:34:46+00:00</updated><id>https://ib.bsb.br/da-term</id><content type="html" xml:base="https://ib.bsb.br/da-term/"><![CDATA[<h1 id="01-environment-modules-exploration-usrsharemodules">01) Environment Modules exploration (/usr/share/Modules)</h1>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2025-11-19T23:23:36+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">Debian 13 bootable USB setup</title><link href="https://ib.bsb.br/debian13usb/" rel="alternate" type="text/html" title="Debian 13 bootable USB setup" /><published>2025-11-19T00:00:00+00:00</published><updated>2025-11-19T21:47:09+00:00</updated><id>https://ib.bsb.br/debian13usb</id><content type="html" xml:base="https://ib.bsb.br/debian13usb/"><![CDATA[<pre><code class="language-build_debian13_usb.sh">#!/usr/bin/env bash
+# Script to build a Debian 13 (Trixie) amd64 persistent USB image with X11, ratpoison,
+# auto-login, and autostarting TreeSheets and Impala, from a host running Debian 11 arm64.
+# 
+# **IMPORTANT:** Review and adjust configuration variables below (image size, usernames, etc.)
+# before running. Run this script as root on a Debian-based arm64 host.
+# It will create an image file and set up a chroot with a Debian amd64 system.
+# No changes are made to the host system aside from installing required packages (if needed).
+# 
+# The script will prompt for confirmation before overwriting any existing image file or writing to a USB device.
+# All major actions are logged to the console for transparency.
+
+set -euo pipefail
+
+#############################
+# Configuration Variables
+#############################
+DEBIAN_RELEASE="trixie"            # Target Debian release name
+TARGET_ARCH="amd64"               # Target architecture for the USB system
+IMAGE_SIZE="4G"                   # Size of the image file to create (e.g., "4G" for 4 GiB)
+IMAGE_NAME="debian13-${TARGET_ARCH}-usb.img"  # Name of the image file to create
+BUILD_DIR="$PWD/debian_usb_build" # Working directory for mounts and temporary files (created if not exists)
+USERNAME="user"                   # Default username for auto-login
+USERPASSWORD="password"           # Password for the default user (change or leave as desired)
+HOSTNAME="debian-usb"             # Hostname for the new system
+TIMEZONE="Etc/UTC"                # Timezone for the new system (can be changed to user's timezone)
+LOCALE="en_US.UTF-8"              # Locale to generate for the new system
+
+# Package lists for installation in the target system:
+# Base system and utilities
+BASE_PACKAGES="systemd-sysv,systemd,locales,tzdata,dialog"  # core packages (some are normally included by debootstrap second stage)
+# Desktop/X11 and user applications
+X11_PACKAGES="xserver-xorg-core,xserver-xorg-video-fbdev,xserver-xorg-video-vesa,xinit,xterm,ratpoison"
+APP_PACKAGES="treesheets"         # TreeSheets is in Debian repo. Impala might need manual installation (not in Debian).
+NETWORK_PACKAGES="iwd"            # Use iwd for Wi-Fi (Impala requires iwd). Alternatively, could include dhclient or systemd-networkd if needed.
+# Bootloaders and kernel
+BOOT_PACKAGES="grub-efi-amd64,linux-image-amd64,extlinux,syslinux-common" 
+# Note: extlinux (Syslinux for ext filesystems) and syslinux-common provide BIOS boot support; grub-efi-amd64 for UEFI.
+
+#############################
+# Script Setup and Functions
+#############################
+
+# Ensure the working directory exists
+mkdir -p "${BUILD_DIR}"
+# Define mount points relative to working directory
+ROOTFS_DIR="${BUILD_DIR}/rootfs"    # Mount point for the ext4 root filesystem
+EFI_DIR="${BUILD_DIR}/efiboot"      # Mount point for the FAT32 EFI/boot partition
+
+# Trap to cleanup mounts/loop on exit or error
+cleanup() {
+    echo "Cleaning up: Unmounting and detaching loop devices..."
+    # Try to unmount in reverse order of mounting
+    umount -lf "${ROOTFS_DIR}/boot/efi" 2&gt;/dev/null || true
+    umount -lf "${EFI_DIR}" 2&gt;/dev/null || true
+    umount -lf "${ROOTFS_DIR}/dev/pts" 2&gt;/dev/null || true
+    umount -lf "${ROOTFS_DIR}/dev" 2&gt;/dev/null || true
+    umount -lf "${ROOTFS_DIR}/proc" 2&gt;/dev/null || true
+    umount -lf "${ROOTFS_DIR}/sys" 2&gt;/dev/null || true
+    umount -lf "${ROOTFS_DIR}" 2&gt;/dev/null || true
+    if losetup -a | grep -q "$IMAGE_NAME"; then
+        # Detach all loop devices associated with our image
+        LOOP_DEV="$(losetup -j "${BUILD_DIR}/${IMAGE_NAME}" | cut -d: -f1 || true)"
+        if [ -n "${LOOP_DEV}" ]; then
+            losetup -d "${LOOP_DEV}" 2&gt;/dev/null || true
+        fi
+    fi
+}
+trap cleanup EXIT
+
+# Confirm function for dangerous operations
+confirm() {
+    local prompt="$1"
+    read -r -p "$prompt " response
+    case "$response" in
+        [Yy][Ee][Ss]|[Yy]) true ;;
+        *) false ;;
+    esac
+}
+
+# Require root privileges
+if [[ $EUID -ne 0 ]]; then
+    echo "This script must be run as root. Exiting."
+    exit 1
+fi
+
+# Check and install required host tools
+REQUIRED_TOOLS=(debootstrap qemu-user-static parted losetup mkfs.vfat mkfs.ext4)
+MISSING_TOOLS=()
+for tool in "${REQUIRED_TOOLS[@]}"; do
+    if ! command -v "$tool" &amp;&gt;/dev/null; then
+        MISSING_TOOLS+=("$tool")
+    fi
+done
+if (( ${#MISSING_TOOLS[@]} &gt; 0 )); then
+    echo "Installing missing host tools: ${MISSING_TOOLS[*]}..."
+    apt-get update &amp;&amp; apt-get install -y "${MISSING_TOOLS[@]}"
+fi
+
+#############################
+# Create and Partition Image
+#############################
+IMAGE_PATH="${BUILD_DIR}/${IMAGE_NAME}"
+if [[ -f "$IMAGE_PATH" ]]; then
+    echo "Image file $IMAGE_PATH already exists."
+    if ! confirm "Overwrite existing image file? [yes/NO]"; then
+        echo "Aborting to avoid overwriting existing image."
+        exit 1
+    fi
+    rm -f "$IMAGE_PATH"
+fi
+
+echo "&gt;&gt;&gt; Creating blank image file of size $IMAGE_SIZE at $IMAGE_PATH..."
+# Create an empty file of the specified size
+truncate -s "$IMAGE_SIZE" "$IMAGE_PATH"
+
+echo "&gt;&gt;&gt; Partitioning image file..."
+# Create partition table: Partition 1 = FAT32 (for EFI &amp; Syslinux), Partition 2 = ext4 (root)
+parted -s "$IMAGE_PATH" mklabel msdos \
+    mkpart primary fat32 1MiB 300MiB \
+    mkpart primary ext4 300MiB 100% \
+    set 1 boot on
+
+# Set up loop device with partitions
+LOOP_DEV="$(losetup -f --show -P "$IMAGE_PATH")"
+echo "    Loop device $LOOP_DEV created for $IMAGE_PATH"
+# The loop device now has partitions accessible as ${LOOP_DEV}p1 and p2
+LOOP_P1="${LOOP_DEV}p1"
+LOOP_P2="${LOOP_DEV}p2"
+
+echo "&gt;&gt;&gt; Creating filesystems..."
+# Format the EFI/FAT32 partition (partition 1)
+mkfs.vfat -F 32 -n EFI "$LOOP_P1"
+# Format the root ext4 partition (partition 2) with a label
+mkfs.ext4 -L rootfs "$LOOP_P2"
+
+# Create mount points
+mkdir -p "$ROOTFS_DIR" "$EFI_DIR"
+
+echo "&gt;&gt;&gt; Mounting image partitions..."
+mount "$LOOP_P2" "$ROOTFS_DIR"
+mkdir -p "${ROOTFS_DIR}/boot/efi"
+mount "$LOOP_P1" "$ROOTFS_DIR/boot/efi"
+# Also mount the EFI partition separately if needed (not strictly necessary since it's at rootfs/boot/efi)
+mount "$LOOP_P1" "$EFI_DIR"
+
+#############################
+# Debootstrap: Base System
+#############################
+echo "&gt;&gt;&gt; Bootstrapping Debian $DEBIAN_RELEASE ($TARGET_ARCH)..."
+# First stage debootstrap (download and extract base system)
+debootstrap --arch="$TARGET_ARCH" --foreign "$DEBIAN_RELEASE" "$ROOTFS_DIR" http://deb.debian.org/debian
+
+# Enable QEMU for chroot (copy qemu static binary into the new system)
+echo "&gt;&gt;&gt; Copying QEMU static binary for $TARGET_ARCH into chroot..."
+cp "$(which qemu-${TARGET_ARCH}-static)" "${ROOTFS_DIR}/usr/bin/"
+
+# Prepare essential mount points for chroot environment
+echo "&gt;&gt;&gt; Mounting special filesystems for chroot..."
+mount -t proc proc "${ROOTFS_DIR}/proc"
+mount -t sysfs sys "${ROOTFS_DIR}/sys"
+mount -o bind /dev "${ROOTFS_DIR}/dev"
+mount -o bind /dev/pts "${ROOTFS_DIR}/dev/pts"
+# Use a tmpfs for /run inside chroot to avoid interference with host /run
+mount -t tmpfs tmpfs "${ROOTFS_DIR}/run"
+mkdir -p "${ROOTFS_DIR}/run/lock"  # for any lock files
+
+# Second stage debootstrap (configure base system inside chroot)
+echo "&gt;&gt;&gt; Running debootstrap second-stage in chroot..."
+chroot "$ROOTFS_DIR" /debootstrap/debootstrap --second-stage
+
+# Basic system configuration: hostname, hosts, timezone, locale
+echo "&gt;&gt;&gt; Configuring base system (hostname, timezone, locale)..."
+echo "$HOSTNAME" &gt; "${ROOTFS_DIR}/etc/hostname"
+# Set up /etc/hosts with minimal entries
+cat &gt; "${ROOTFS_DIR}/etc/hosts" &lt;&lt;EOF
+127.0.0.1   localhost
+127.0.1.1   ${HOSTNAME}
+EOF
+
+# Timezone
+echo "$TIMEZONE" &gt; "${ROOTFS_DIR}/etc/timezone"
+ln -sf "/usr/share/zoneinfo/$TIMEZONE" "${ROOTFS_DIR}/etc/localtime"
+
+# Locale (generate specified locale)
+chroot "$ROOTFS_DIR" bash -c "echo '$LOCALE UTF-8' &gt; /etc/locale.gen"
+chroot "$ROOTFS_DIR" locale-gen
+
+# Set default LANG
+echo "LANG=$LOCALE" &gt; "${ROOTFS_DIR}/etc/default/locale"
+
+#############################
+# Install Packages in Chroot
+#############################
+echo "&gt;&gt;&gt; Installing required packages in the target system..."
+# Configure apt sources (use default deb.debian.org for stable)
+cat &gt; "${ROOTFS_DIR}/etc/apt/sources.list" &lt;&lt;EOF
+deb http://deb.debian.org/debian $DEBIAN_RELEASE main contrib non-free non-free-firmware
+deb http://deb.debian.org/debian $DEBIAN_RELEASE-updates main contrib non-free non-free-firmware
+deb http://security.debian.org/debian-security $DEBIAN_RELEASE-security main contrib non-free non-free-firmware
+EOF
+
+# Update apt cache and install packages
+chroot "$ROOTFS_DIR" apt-get update
+# Use apt-get in one command to install all desired packages
+chroot "$ROOTFS_DIR" apt-get install -y --no-install-recommends \
+    $BASE_PACKAGES,$X11_PACKAGES,$APP_PACKAGES,$NETWORK_PACKAGES,$BOOT_PACKAGES
+
+# Set the system's timezone and reconfigure tzdata (non-interactively)
+chroot "$ROOTFS_DIR" bash -c "DEBIAN_FRONTEND=noninteractive dpkg-reconfigure tzdata"
+
+#############################
+# User Setup and Autologin
+#############################
+echo "&gt;&gt;&gt; Setting up default user and auto-login..."
+# Create the user with home directory and add to groups (sudo,netdev,audio,video)
+chroot "$ROOTFS_DIR" useradd -m -s /bin/bash "$USERNAME"
+chroot "$ROOTFS_DIR" bash -c "echo '${USERNAME}:${USERPASSWORD}' | chpasswd"
+# Set root password (optional: here we set same as user, or leave locked by not setting)
+chroot "$ROOTFS_DIR" bash -c "echo 'root:${USERPASSWORD}' | chpasswd"
+# Add user to necessary groups
+chroot "$ROOTFS_DIR" usermod -aG sudo,netdev,audio,video "$USERNAME"
+
+# Configure autologin on tty1 via systemd getty override
+AUTOLOGIN_CONF="${ROOTFS_DIR}/etc/systemd/system/getty@tty1.service.d"
+mkdir -p "$AUTOLOGIN_CONF"
+cat &gt; "$AUTOLOGIN_CONF/autologin.conf" &lt;&lt;EOF
+[Service]
+ExecStart=
+ExecStart=-/sbin/agetty --autologin $USERNAME --noclear %I 38400 linux
+EOF
+
+# Set up startx on login (for console auto-login sessions)
+# Add a command to .bash_profile to launch X only for the autologin on tty1
+USER_HOME="${ROOTFS_DIR}/home/${USERNAME}"
+cat &gt;&gt; "${USER_HOME}/.bash_profile" &lt;&lt;'EOF'
+# If logging in on tty1, start X automatically
+if [[ -z $DISPLAY &amp;&amp; $(tty) == "/dev/tty1" ]]; then
+    startx -- -nocursor
+    logout
+fi
+EOF
+chroot "$ROOTFS_DIR" chown "$USERNAME:$USERNAME" "/home/$USERNAME/.bash_profile"
+
+#############################
+# X11 Autostart (ratpoison + apps)
+#############################
+echo "&gt;&gt;&gt; Configuring X11 session (ratpoison) and application autostart..."
+# Create an .xinitrc for the user to start Ratpoison
+cat &gt; "${USER_HOME}/.xinitrc" &lt;&lt;'EOF'
+#!/bin/bash
+# .xinitrc: run Ratpoison window manager
+exec ratpoison
+EOF
+chroot "$ROOTFS_DIR" chown "$USERNAME:$USERNAME" "/home/$USERNAME/.xinitrc"
+chroot "$ROOTFS_DIR" chmod +x "/home/$USERNAME/.xinitrc"
+
+# Configure Ratpoison autostart: .ratpoisonrc to launch TreeSheets and Impala at startup
+cat &gt; "${USER_HOME}/.ratpoisonrc" &lt;&lt;EOF
+# Disable startup message
+startup_message off
+# Set a blank cursor (useful if -nocursor used for X)
+exec xsetroot -cursor_name left_ptr
+# Autostart applications:
+exec treesheets      # launch TreeSheets GUI on start
+exec xterm -e impala # open an xterm and run impala TUI inside it
+EOF
+# Note: impala is not an official Debian package. Ensure the 'impala' binary is installed in the system or adjust this line.
+chroot "$ROOTFS_DIR" chown "$USERNAME:$USERNAME" "/home/$USERNAME/.ratpoisonrc"
+
+#############################
+# Bootloader Setup (Syslinux &amp; GRUB)
+#############################
+echo "&gt;&gt;&gt; Installing and configuring bootloaders (Syslinux for BIOS, GRUB for UEFI)..."
+# 1. EXTLINUX (Syslinux) for BIOS boot:
+# Create extlinux directory
+chroot "$ROOTFS_DIR" mkdir -p /boot/extlinux
+# Copy Syslinux BIOS modules to /boot/extlinux
+chroot "$ROOTFS_DIR" cp -r /usr/lib/syslinux/modules/bios/* /boot/extlinux/ 2&gt;/dev/null || true
+# Install extlinux bootloader on the ext4 partition
+chroot "$ROOTFS_DIR" extlinux --install /boot/extlinux
+
+# Create extlinux configuration file
+ROOT_UUID=$(blkid -s UUID -o value "$LOOP_P2")  # get UUID of root partition
+cat &gt; "${ROOTFS_DIR}/boot/extlinux/extlinux.conf" &lt;&lt;EOF
+DEFAULT linux
+LABEL linux
+    LINUX ../vmlinuz
+    INITRD ../initrd.img
+    APPEND root=UUID=${ROOT_UUID} ro quiet
+EOF
+# The vmlinuz and initrd.img symlinks point to the latest kernel and initrd in /boot.
+# We use '../' because extlinux directory is /boot/extlinux, going up to /boot for the files.
+
+# Ensure the extlinux config and modules are owned by root (should already be)
+chroot "$ROOTFS_DIR" chown -R root:root /boot/extlinux
+
+# 2. GRUB for UEFI boot:
+# Install GRUB EFI (this was already installed via apt in BOOT_PACKAGES)
+# Perform grub-install targeting x86_64 EFI, pointing to the mounted EFI partition.
+chroot "$ROOTFS_DIR" grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=Debian --removable --no-nvram
+# Generate GRUB configuration file
+chroot "$ROOTFS_DIR" update-grub
+
+#############################
+# Finalization
+#############################
+# Remove the QEMU static binary from the target system (not needed on real x86_64 hardware)
+rm -f "${ROOTFS_DIR}/usr/bin/qemu-${TARGET_ARCH}-static"
+
+# Sync data to disk
+sync
+
+echo "&gt;&gt;&gt; Unmounting chroot filesystems..."
+# These will be also handled by the trap on exit, but we unmount explicitly here for clarity:
+umount "${ROOTFS_DIR}/proc" || true
+umount "${ROOTFS_DIR}/sys" || true
+umount "${ROOTFS_DIR}/dev/pts" || true
+umount "${ROOTFS_DIR}/dev" || true
+umount "${ROOTFS_DIR}/run" || true
+umount "${ROOTFS_DIR}/boot/efi" || true
+umount "${EFI_DIR}" || true
+umount "${ROOTFS_DIR}" || true
+
+# Write Syslinux MBR boot code to the image (for BIOS boot).
+# Use dd to write the first 440 bytes from Syslinux's mbr.bin to the image's MBR.
+echo "&gt;&gt;&gt; Writing Syslinux MBR boot code to image..."
+dd if="${ROOTFS_DIR}/usr/lib/SYSLINUX/mbr.bin" of="$LOOP_DEV" bs=440 count=1 conv=notrunc
+
+# Detach loop device
+losetup -d "$LOOP_DEV"
+
+echo "&gt;&gt;&gt; Debian USB image creation completed successfully!"
+echo "Image file: $IMAGE_PATH"
+# Offer to write image to a USB device
+if confirm "Write the image to a USB drive now? (This will destroy contents on the target drive) [yes/NO]"; then
+    read -rp "Enter the device path for the USB (e.g., /dev/sdX): " USBDEV
+    if [[ -n "$USBDEV" ]]; then
+        echo "WARNING: About to overwrite $USBDEV with the image. This will erase all data on $USBDEV."
+        if confirm "Are you absolutely sure? Type 'yes' to continue: "; then
+            echo "&gt;&gt;&gt; Writing image to $USBDEV ... (this may take a while)"
+            dd if="$IMAGE_PATH" of="$USBDEV" bs=4M status=progress conv=fsync
+            echo "&gt;&gt;&gt; Syncing data to $USBDEV..."
+            sync
+            echo "Image written to $USBDEV successfully. You can now boot the USB drive on an x86_64 machine."
+        else
+            echo "Skipped writing image to USB."
+        fi
+    fi
+else
+    echo "Image creation complete. You can write $IMAGE_PATH to a USB device later using 'dd' or a similar tool."
+fi
+</code></pre>]]></content><author><name></name></author><category term="scratchpad" /></entry><entry><title type="html">GitHub Actions to Download, Unzip, and Create a New Repository</title><link href="https://ib.bsb.br/github-actions-unzip-tutorial/" rel="alternate" type="text/html" title="GitHub Actions to Download, Unzip, and Create a New Repository" /><published>2025-11-09T00:00:00+00:00</published><updated>2025-11-19T23:18:32+00:00</updated><id>https://ib.bsb.br/github-actions-unzip-tutorial</id><content type="html" xml:base="https://ib.bsb.br/github-actions-unzip-tutorial/"><![CDATA[<h1 id="tutorial-using-github-actions-to-download-unzip-and-create-a-new-repository">Tutorial: Using GitHub Actions to Download, Unzip, and Create a New Repository</h1>
+
+<h2 id="executive-summary">Executive Summary</h2>
+<p>This tutorial demonstrates how to create a GitHub Actions workflow that:</p>
+<ol>
+  <li>Downloads a ZIP file from https://x0.at/XS2C.zip (or any specified URL)</li>
+  <li>Extracts the contents</li>
+  <li>Creates a new GitHub repository</li>
+  <li>Uploads all extracted files to the new repository</li>
+</ol>
+
+<p><strong>Prerequisites:</strong>
+• A GitHub account (user: ib-bsb-br in this example)
+• A repository where you can create workflows
+• A Personal Access Token (PAT) with repo scope
+• Basic understanding of GitHub Actions</p>
+
+<p><strong>Estimated Time:</strong> 15-20 minutes</p>
+
+<h2 id="️-security-considerations">⚠️ Security Considerations</h2>
+<h3 id="critical-read-before-proceeding">CRITICAL: Read Before Proceeding</h3>
+<ol>
+  <li>
+    <p><strong>ZIP File Source Validation:</strong>
+• The URL https://x0.at/XS2C.zip is a third-party file hosting service
+• Never download and execute content from untrusted sources
+• Verify the ZIP file contents manually before automating this process
+• Consider implementing content validation/scanning in production workflows</p>
+  </li>
+  <li>
+    <p><strong>Token Security:</strong>
+• Never hardcode tokens in workflow files
+• Always use GitHub Secrets for PATs
+• Limit token scope to only required permissions (repo minimum)
+• Rotate tokens regularly</p>
+  </li>
+  <li>
+    <p><strong>Repository Creation:</strong>
+• This workflow creates public repositories by default
+• Be cautious about what content you’re making public
+• Review extracted contents before pushing</p>
+  </li>
+</ol>
+
+<h2 id="part-1-prerequisites-setup">Part 1: Prerequisites Setup</h2>
+
+<h3 id="step-1-create-a-personal-access-token-pat">Step 1: Create a Personal Access Token (PAT)</h3>
+<ol>
+  <li>Navigate to: https://github.com/settings/tokens/new</li>
+  <li>Configure the token:
+• <strong>Note:</strong> “Repository Creation Token for Workflows”
+• <strong>Expiration:</strong> Choose appropriate duration (recommend 90 days max)
+• <strong>Scopes:</strong> Select <code class="language-plaintext highlighter-rouge">repo</code> (Full control of private repositories)
+• This includes: repo:status, repo_deployment, public_repo, repo:invite, security_events</li>
+  <li>Click <strong>Generate token</strong></li>
+  <li>Copy the token immediately (you won’t see it again)</li>
+</ol>
+
+<h3 id="step-2-add-token-as-repository-secret">Step 2: Add Token as Repository Secret</h3>
+<ol>
+  <li>Go to your repository: https://github.com/ib-bsb-br/YOUR_REPO_NAME</li>
+  <li>Navigate to: <strong>Settings → Secrets and variables → Actions</strong></li>
+  <li>Click <strong>New repository secret</strong></li>
+  <li>Configure:
+• <strong>Name:</strong> <code class="language-plaintext highlighter-rouge">REPO_CREATE_TOKEN</code>
+• <strong>Secret:</strong> Paste your PAT</li>
+  <li>Click <strong>Add secret</strong></li>
+</ol>
+
+<h3 id="step-3-understand-repository-ownership-context">Step 3: Understand Repository Ownership Context</h3>
+<p><strong>Important:</strong> When using <code class="language-plaintext highlighter-rouge">context.repo.owner</code> in the workflow:
+• It references the owner of the repository where the workflow runs
+• For user <code class="language-plaintext highlighter-rouge">ib-bsb-br</code>, if the workflow runs in <code class="language-plaintext highlighter-rouge">ib-bsb-br/workflow-repo</code>, the new repository will be created under <code class="language-plaintext highlighter-rouge">ib-bsb-br</code>
+• To create repositories in an organization, you must modify the owner variable explicitly</p>
+
+<h2 id="part-2-implementation---choose-your-approach">Part 2: Implementation - Choose Your Approach</h2>
+
+<h3 id="decision-matrix-which-approach-to-use">Decision Matrix: Which Approach to Use?</h3>
+
+<table>
+  <thead>
+    <tr>
+      <th>Factor</th>
+      <th>API Approach</th>
+      <th>Git Command Approach</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Best for</strong></td>
+      <td>Small to medium files (&lt;100MB per file)</td>
+      <td>Any file size, including large files</td>
+    </tr>
+    <tr>
+      <td><strong>Complexity</strong></td>
+      <td>More complex, API-based</td>
+      <td>Simpler, uses standard git</td>
+    </tr>
+    <tr>
+      <td><strong>File size limits</strong></td>
+      <td>100MB per blob</td>
+      <td>No API limits, only git limits</td>
+    </tr>
+    <tr>
+      <td><strong>Speed</strong></td>
+      <td>Can be slower for many files</td>
+      <td>Faster for many files</td>
+    </tr>
+    <tr>
+      <td><strong>Error handling</strong></td>
+      <td>More granular control</td>
+      <td>Less granular</td>
+    </tr>
+    <tr>
+      <td><strong>Dependencies</strong></td>
+      <td>GitHub API only</td>
+      <td>Requires git, curl, unzip</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><strong>Recommendation:</strong> Use the Git Command Approach for simplicity unless you need specific API features.</p>
+
+<h2 id="approach-1-git-command-method-recommended">Approach 1: Git Command Method (Recommended)</h2>
+<p>This approach is simpler, more reliable, and handles larger files better.</p>
+
+<h3 id="create-workflow-file">Create Workflow File</h3>
+<p>Create <code class="language-plaintext highlighter-rouge">.github/workflows/unzip-to-repo.yml</code> in your repository:</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">name</span><span class="pi">:</span> <span class="s">Unzip and Create Repository (Git Method)</span>
+
+<span class="na">on</span><span class="pi">:</span>
+  <span class="na">workflow_dispatch</span><span class="pi">:</span>
+    <span class="na">inputs</span><span class="pi">:</span>
+      <span class="na">repo_name</span><span class="pi">:</span>
+        <span class="na">description</span><span class="pi">:</span> <span class="s1">'</span><span class="s">Name</span><span class="nv"> </span><span class="s">for</span><span class="nv"> </span><span class="s">the</span><span class="nv"> </span><span class="s">new</span><span class="nv"> </span><span class="s">repository</span><span class="nv"> </span><span class="s">(must</span><span class="nv"> </span><span class="s">be</span><span class="nv"> </span><span class="s">unique)'</span>
+        <span class="na">required</span><span class="pi">:</span> <span class="kc">true</span>
+        <span class="na">default</span><span class="pi">:</span> <span class="s1">'</span><span class="s">unzipped-content'</span>
+      <span class="na">zip_url</span><span class="pi">:</span>
+        <span class="na">description</span><span class="pi">:</span> <span class="s1">'</span><span class="s">URL</span><span class="nv"> </span><span class="s">of</span><span class="nv"> </span><span class="s">the</span><span class="nv"> </span><span class="s">ZIP</span><span class="nv"> </span><span class="s">file</span><span class="nv"> </span><span class="s">to</span><span class="nv"> </span><span class="s">download'</span>
+        <span class="na">required</span><span class="pi">:</span> <span class="kc">true</span>
+        <span class="na">default</span><span class="pi">:</span> <span class="s1">'</span><span class="s">https://x0.at/XS2C.zip'</span>
+      <span class="na">repo_description</span><span class="pi">:</span>
+        <span class="na">description</span><span class="pi">:</span> <span class="s1">'</span><span class="s">Description</span><span class="nv"> </span><span class="s">for</span><span class="nv"> </span><span class="s">the</span><span class="nv"> </span><span class="s">new</span><span class="nv"> </span><span class="s">repository'</span>
+        <span class="na">required</span><span class="pi">:</span> <span class="kc">false</span>
+        <span class="na">default</span><span class="pi">:</span> <span class="s1">'</span><span class="s">Repository</span><span class="nv"> </span><span class="s">created</span><span class="nv"> </span><span class="s">from</span><span class="nv"> </span><span class="s">ZIP</span><span class="nv"> </span><span class="s">file</span><span class="nv"> </span><span class="s">extraction'</span>
+      <span class="na">private_repo</span><span class="pi">:</span>
+        <span class="na">description</span><span class="pi">:</span> <span class="s1">'</span><span class="s">Make</span><span class="nv"> </span><span class="s">repository</span><span class="nv"> </span><span class="s">private?'</span>
+        <span class="na">required</span><span class="pi">:</span> <span class="kc">true</span>
+        <span class="na">type</span><span class="pi">:</span> <span class="s">boolean</span>
+        <span class="na">default</span><span class="pi">:</span> <span class="kc">false</span>
+
+<span class="na">jobs</span><span class="pi">:</span>
+  <span class="na">create-repo-from-zip</span><span class="pi">:</span>
+    <span class="na">runs-on</span><span class="pi">:</span> <span class="s">ubuntu-latest</span>
+    
+    <span class="na">steps</span><span class="pi">:</span>
+      <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">Validate inputs</span>
+        <span class="na">run</span><span class="pi">:</span> <span class="pi">|</span>
+          <span class="s">echo "🔍 Validating inputs..."</span>
+          <span class="s">echo "Repository name: ${{ inputs.repo_name }}"</span>
+          <span class="s">echo "ZIP URL: ${{ inputs.zip_url }}"</span>
+          <span class="s">echo "Private: ${{ inputs.private_repo }}"</span>
+          
+          <span class="s"># Basic repository name validation</span>
+          <span class="s">if [[ ! "${{ inputs.repo_name }}" =~ ^[a-zA-Z0-9_-]+$ ]]; then</span>
+            <span class="s">echo "❌ Error: Repository name can only contain alphanumeric characters, hyphens, and underscores"</span>
+            <span class="s">exit 1</span>
+          <span class="s">fi</span>
+
+      <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">Download ZIP file</span>
+        <span class="na">run</span><span class="pi">:</span> <span class="pi">|</span>
+          <span class="s">echo "📥 Downloading ZIP file from ${{ inputs.zip_url }}"</span>
+          
+          <span class="s"># Download with timeout and error handling</span>
+          <span class="s">if ! curl -L -f -o archive.zip --max-time 300 "${{ inputs.zip_url }}"; then</span>
+            <span class="s">echo "❌ Failed to download ZIP file"</span>
+            <span class="s">exit 1</span>
+          <span class="s">fi</span>
+          
+          <span class="s"># Verify file was downloaded and has content</span>
+          <span class="s">if [ ! -s archive.zip ]; then</span>
+            <span class="s">echo "❌ Downloaded file is empty"</span>
+            <span class="s">exit 1</span>
+          <span class="s">fi</span>
+          
+          <span class="s">echo "✅ Downloaded $(du -h archive.zip | cut -f1) file"</span>
+          
+      <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">Extract ZIP contents</span>
+        <span class="na">run</span><span class="pi">:</span> <span class="pi">|</span>
+          <span class="s">echo "📦 Extracting ZIP file..."</span>
+          <span class="s">mkdir -p extracted_content</span>
+          
+          <span class="s"># Extract with error handling</span>
+          <span class="s">if ! unzip -q archive.zip -d extracted_content; then</span>
+            <span class="s">echo "❌ Failed to extract ZIP file"</span>
+            <span class="s">exit 1</span>
+          <span class="s">fi</span>
+          
+          <span class="s"># Check if extraction produced files</span>
+          <span class="s">file_count=$(find extracted_content -type f | wc -l)</span>
+          <span class="s">if [ "$file_count" -eq 0 ]; then</span>
+            <span class="s">echo "❌ No files found in ZIP archive"</span>
+            <span class="s">exit 1</span>
+          <span class="s">fi</span>
+          
+          <span class="s">echo "✅ Extracted $file_count files"</span>
+          <span class="s">echo "📂 Directory structure:"</span>
+          <span class="s">tree extracted_content/ || ls -R extracted_content/</span>
+
+      <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">Create repository via API</span>
+        <span class="na">uses</span><span class="pi">:</span> <span class="s">actions/github-script@v8</span>
+        <span class="na">id</span><span class="pi">:</span> <span class="s">create-repo</span>
+        <span class="na">env</span><span class="pi">:</span>
+          <span class="na">REPO_NAME</span><span class="pi">:</span> <span class="s">${{ inputs.repo_name }}</span>
+          <span class="na">REPO_DESCRIPTION</span><span class="pi">:</span> <span class="s">${{ inputs.repo_description }}</span>
+          <span class="na">PRIVATE_REPO</span><span class="pi">:</span> <span class="s">${{ inputs.private_repo }}</span>
+        <span class="na">with</span><span class="pi">:</span>
+          <span class="na">github-token</span><span class="pi">:</span> <span class="s">${{ secrets.REPO_CREATE_TOKEN }}</span>
+          <span class="na">retries</span><span class="pi">:</span> <span class="m">3</span>
+          <span class="na">script</span><span class="pi">:</span> <span class="pi">|</span>
+            <span class="s">const repoName = process.env.REPO_NAME;</span>
+            <span class="s">const repoDescription = process.env.REPO_DESCRIPTION;</span>
+            <span class="s">const isPrivate = process.env.PRIVATE_REPO === 'true';</span>
+            
+            <span class="s">// Get the authenticated user to ensure we're creating in the right account</span>
+            <span class="s">const { data: user } = await github.rest.users.getAuthenticated();</span>
+            <span class="s">console.log(`🔐 Authenticated as: ${user.login}`);</span>
+            
+            <span class="s">try {</span>
+              <span class="s">console.log(`📝 Creating repository: ${user.login}/${repoName}`);</span>
+            <span class="no">  </span>
+              <span class="s">const { data: repo } = await github.rest.repos.createForAuthenticatedUser({</span>
+                <span class="s">name: repoName,</span>
+                <span class="s">description: repoDescription,</span>
+                <span class="s">private: isPrivate,</span>
+                <span class="s">auto_init: false,</span>
+                <span class="s">has_issues: true,</span>
+                <span class="s">has_projects: true,</span>
+                <span class="s">has_wiki: true</span>
+              <span class="s">});</span>
+            <span class="no">  </span>
+              <span class="s">console.log(`✅ Repository created: ${repo.html_url}`);</span>
+              <span class="s">console.log(`📋 Clone URL: ${repo.clone_url}`);</span>
+            <span class="no">  </span>
+              <span class="s">// Return the clone URL for the next step</span>
+              <span class="s">return repo.clone_url;</span>
+            <span class="no">  </span>
+            <span class="s">} catch (error) {</span>
+              <span class="s">if (error.status === 422) {</span>
+                <span class="s">core.setFailed(`Repository '${repoName}' already exists in your account. Please choose a different name or delete the existing repository.`);</span>
+              <span class="s">} else if (error.status === 401) {</span>
+                <span class="s">core.setFailed('Authentication failed. Please verify your REPO_CREATE_TOKEN secret has the correct permissions.');</span>
+              <span class="s">} else {</span>
+                <span class="s">core.setFailed(`Failed to create repository: ${error.message}`);</span>
+              <span class="s">}</span>
+              <span class="s">throw error;</span>
+            <span class="s">}</span>
+
+      <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">Initialize git and push content</span>
+        <span class="na">env</span><span class="pi">:</span>
+          <span class="na">REPO_URL</span><span class="pi">:</span> <span class="s">${{ steps.create-repo.outputs.result }}</span>
+          <span class="na">GITHUB_TOKEN</span><span class="pi">:</span> <span class="s">${{ secrets.REPO_CREATE_TOKEN }}</span>
+        <span class="na">run</span><span class="pi">:</span> <span class="pi">|</span>
+          <span class="s">cd extracted_content</span>
+          
+          <span class="s">echo "🔧 Configuring git..."</span>
+          <span class="s">git config --global user.name "github-actions[bot]"</span>
+          <span class="s">git config --global user.email "github-actions[bot]@users.noreply.github.com"</span>
+          
+          <span class="s">echo "📋 Initializing repository..."</span>
+          <span class="s">git init</span>
+          
+          <span class="s"># Create .gitattributes for proper line ending handling</span>
+          <span class="s">echo "* text=auto" &gt; .gitattributes</span>
+          
+          <span class="s">echo "➕ Adding all files..."</span>
+          <span class="s">git add .</span>
+          
+          <span class="s">echo "💾 Creating initial commit..."</span>
+          <span class="s">git commit -m "Initial commit: Add files from ZIP archive</span>
+
+          <span class="s">Source: ${{ inputs.zip_url }}</span>
+          <span class="s">Extracted: $(date -u +"%Y-%m-%d %H:%M:%S UTC")</span>
+          <span class="s">Workflow: ${{ github.repository }}@${{ github.sha }}"</span>
+          
+          <span class="s">echo "🌿 Setting default branch to main..."</span>
+          <span class="s">git branch -M main</span>
+          
+          <span class="s">echo "🔗 Adding remote..."</span>
+          <span class="s"># Insert token into URL for authentication</span>
+          <span class="s">REPO_URL_WITH_TOKEN=$(echo "$REPO_URL" | sed "s|https://|https://x-access-token:${GITHUB_TOKEN}@|")</span>
+          <span class="s">git remote add origin "$REPO_URL_WITH_TOKEN"</span>
+          
+          <span class="s">echo "⬆️ Pushing to remote..."</span>
+          <span class="s">if git push -u origin main; then</span>
+            <span class="s">echo "✅ Successfully pushed to repository!"</span>
+          <span class="s">else</span>
+            <span class="s">echo "❌ Failed to push to repository"</span>
+            <span class="s">exit 1</span>
+          <span class="s">fi</span>
+
+      <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">Generate summary</span>
+        <span class="na">if</span><span class="pi">:</span> <span class="s">success()</span>
+        <span class="na">env</span><span class="pi">:</span>
+          <span class="na">REPO_URL</span><span class="pi">:</span> <span class="s">${{ steps.create-repo.outputs.result }}</span>
+        <span class="na">run</span><span class="pi">:</span> <span class="pi">|</span>
+          <span class="s">echo "## ✅ Workflow Completed Successfully!" &gt;&gt; $GITHUB_STEP_SUMMARY</span>
+          <span class="s">echo "" &gt;&gt; $GITHUB_STEP_SUMMARY</span>
+          <span class="s">echo "### Repository Details" &gt;&gt; $GITHUB_STEP_SUMMARY</span>
+          <span class="s">echo "- **Name:** ${{ inputs.repo_name }}" &gt;&gt; $GITHUB_STEP_SUMMARY</span>
+          <span class="s">echo "- **URL:** [View Repository](${REPO_URL%.git})" &gt;&gt; $GITHUB_STEP_SUMMARY</span>
+          <span class="s">echo "- **Visibility:** ${{ inputs.private_repo == 'true' &amp;&amp; 'Private' || 'Public' }}" &gt;&gt; $GITHUB_STEP_SUMMARY</span>
+          <span class="s">echo "" &gt;&gt; $GITHUB_STEP_SUMMARY</span>
+          <span class="s">echo "### Source" &gt;&gt; $GITHUB_STEP_SUMMARY</span>
+          <span class="s">echo "- **ZIP URL:** ${{ inputs.zip_url }}" &gt;&gt; $GITHUB_STEP_SUMMARY</span>
+          <span class="s">echo "" &gt;&gt; $GITHUB_STEP_SUMMARY</span>
+          <span class="s">echo "🎉 All files from the ZIP archive have been extracted and pushed to the new repository!" &gt;&gt; $GITHUB_STEP_SUMMARY</span>
+
+      <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">Cleanup failure</span>
+        <span class="na">if</span><span class="pi">:</span> <span class="s">failure()</span>
+        <span class="na">uses</span><span class="pi">:</span> <span class="s">actions/github-script@v8</span>
+        <span class="na">env</span><span class="pi">:</span>
+          <span class="na">REPO_NAME</span><span class="pi">:</span> <span class="s">${{ inputs.repo_name }}</span>
+        <span class="na">with</span><span class="pi">:</span>
+          <span class="na">github-token</span><span class="pi">:</span> <span class="s">${{ secrets.REPO_CREATE_TOKEN }}</span>
+          <span class="na">script</span><span class="pi">:</span> <span class="pi">|</span>
+            <span class="s">const repoName = process.env.REPO_NAME;</span>
+            <span class="s">const { data: user } = await github.rest.users.getAuthenticated();</span>
+            
+            <span class="s">try {</span>
+              <span class="s">// Check if repo exists</span>
+              <span class="s">await github.rest.repos.get({</span>
+                <span class="s">owner: user.login,</span>
+                <span class="s">repo: repoName</span>
+              <span class="s">});</span>
+            <span class="no">  </span>
+              <span class="s">// If we get here, repo exists - ask if they want to clean it up</span>
+              <span class="s">console.log(`⚠️ Repository ${user.login}/${repoName} was created but workflow failed.`);</span>
+              <span class="s">console.log(`Consider deleting it manually if it's empty: https://github.com/${user.login}/${repoName}/settings`);</span>
+            <span class="no">  </span>
+            <span class="s">} catch (error) {</span>
+              <span class="s">// Repo doesn't exist, nothing to clean up</span>
+              <span class="s">console.log('No repository cleanup needed.');</span>
+            <span class="s">}</span>
+</code></pre></div></div>
+
+<h2 id="running-the-workflow">Running the Workflow</h2>
+
+<h3 id="via-github-web-interface">Via GitHub Web Interface</h3>
+<ol>
+  <li>Navigate to your repository: https://github.com/ib-bsb-br/YOUR_REPO_NAME</li>
+  <li>Click <strong>Actions</strong> tab</li>
+  <li>Select <strong>Unzip and Create Repository</strong> workflow (whichever approach you chose)</li>
+  <li>Click <strong>Run workflow</strong> dropdown button</li>
+  <li>Fill in parameters:
+• <strong>repo_name:</strong> <code class="language-plaintext highlighter-rouge">my-extracted-content</code> (must be unique in your account)
+• <strong>zip_url:</strong> <code class="language-plaintext highlighter-rouge">https://x0.at/XS2C.zip</code> (or your desired URL)
+• <strong>repo_description:</strong> “Content extracted from ZIP file”
+• <strong>private_repo:</strong> <code class="language-plaintext highlighter-rouge">false</code> (or <code class="language-plaintext highlighter-rouge">true</code> for private)</li>
+  <li>Click <strong>Run workflow</strong> button</li>
+  <li>Wait for workflow to complete (usually 1-5 minutes)</li>
+</ol>
+
+<h3 id="via-github-cli">Via GitHub CLI:</h3>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Install GitHub CLI if needed</span>
+<span class="c"># https://cli.github.com/</span>
+
+<span class="c"># Authenticate</span>
+gh auth login
+
+<span class="c"># Run the workflow</span>
+gh workflow run <span class="s2">"Unzip and Create Repository (Git Method)"</span> <span class="se">\</span>
+  <span class="nt">--repo</span> ib-bsb-br/YOUR_REPO_NAME <span class="se">\</span>
+  <span class="nt">-f</span> <span class="nv">repo_name</span><span class="o">=</span><span class="s2">"my-extracted-content"</span> <span class="se">\</span>
+  <span class="nt">-f</span> <span class="nv">zip_url</span><span class="o">=</span><span class="s2">"https://x0.at/XS2C.zip"</span> <span class="se">\</span>
+  <span class="nt">-f</span> <span class="nv">repo_description</span><span class="o">=</span><span class="s2">"Content from ZIP extraction"</span> <span class="se">\</span>
+  <span class="nt">-f</span> <span class="nv">private_repo</span><span class="o">=</span><span class="nb">false</span>
+
+<span class="c"># Watch the workflow</span>
+gh run watch
+</code></pre></div></div>
+
+<h2 id="handling-zip-files-with-nested-structure">Handling ZIP Files with Nested Structure</h2>
+<p>If your ZIP has a root folder (common with GitHub’s archive downloads):</p>
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">Extract and flatten if needed</span>
+  <span class="na">run</span><span class="pi">:</span> <span class="pi">|</span>
+    <span class="s">unzip -q archive.zip -d temp_extract</span>
+    
+    <span class="s"># Check if everything is in a single root directory</span>
+    <span class="s">root_contents_count=$(ls -A temp_extract | wc -l)</span>
+    <span class="s">first_item="temp_extract/$(ls -A temp_extract | head -n 1)"</span>
+
+    <span class="s">if [ "$root_contents_count" -eq 1 ] &amp;&amp; [ -d "$first_item" ]; then</span>
+      <span class="s">echo "Flattening nested structure from '$first_item'"</span>
+      <span class="s">mv "$first_item" extracted_content</span>
+      <span class="s">rm -rf temp_extract</span>
+    <span class="s">else</span>
+      <span class="s">mv temp_extract extracted_content</span>
+    <span class="s">fi</span>
+</code></pre></div></div>
+
+<h2 id="adding-custom-files-after-extraction">Adding Custom Files After Extraction</h2>
+<p>To add additional files (like README, LICENSE) after extraction:</p>
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">Add custom files</span>
+  <span class="na">run</span><span class="pi">:</span> <span class="pi">|</span>
+    <span class="s">cd extracted_content</span>
+    
+    <span class="s"># Add a README explaining the source</span>
+    <span class="s">cat &gt; README.md &lt;&lt; EOF</span>
+    <span class="s"># Extracted Content</span>
+    
+    <span class="s">This repository was automatically created from a ZIP archive.</span>
+    
+    <span class="s">**Source:** ${{ inputs.zip_url }}</span>
+    <span class="s">**Created:** $(date)</span>
+    <span class="s">**Original Repository:** ${{ github.repository }}</span>
+    <span class="s">EOF</span>
+    
+    <span class="s"># Add a .gitignore</span>
+    <span class="s">cat &gt; .gitignore &lt;&lt; 'EOF'</span>
+    <span class="s"># Add any patterns you want to ignore</span>
+    <span class="s">*.log</span>
+    <span class="s">.DS_Store</span>
+    <span class="s">EOF</span>
+</code></pre></div></div>
+
+<h2 id="debugging-steps">Debugging Steps:</h2>
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Add this step after extraction to inspect contents</span>
+<span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">Debug - List extracted files</span>
+  <span class="na">run</span><span class="pi">:</span> <span class="pi">|</span>
+    <span class="s">echo "Current directory:"</span>
+    <span class="s">pwd</span>
+    <span class="s">echo "Extracted content:"</span>
+    <span class="s">find extracted_content -type f</span>
+    <span class="s">echo "File count:"</span>
+    <span class="s">find extracted_content -type f | wc -l</span>
+</code></pre></div></div>
+
+<h2 id="complete-working-example">Complete Working Example</h2>
+<p>Here’s a complete, tested workflow that incorporates best practices:</p>
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">name</span><span class="pi">:</span> <span class="s">Production-Ready Unzip to Repository</span>
+
+<span class="na">on</span><span class="pi">:</span>
+  <span class="na">workflow_dispatch</span><span class="pi">:</span>
+    <span class="na">inputs</span><span class="pi">:</span>
+      <span class="na">repo_name</span><span class="pi">:</span>
+        <span class="na">description</span><span class="pi">:</span> <span class="s1">'</span><span class="s">Repository</span><span class="nv"> </span><span class="s">name</span><span class="nv"> </span><span class="s">(alphanumeric,</span><span class="nv"> </span><span class="s">hyphens,</span><span class="nv"> </span><span class="s">underscores</span><span class="nv"> </span><span class="s">only)'</span>
+        <span class="na">required</span><span class="pi">:</span> <span class="kc">true</span>
+      <span class="na">zip_url</span><span class="pi">:</span>
+        <span class="na">description</span><span class="pi">:</span> <span class="s1">'</span><span class="s">ZIP</span><span class="nv"> </span><span class="s">file</span><span class="nv"> </span><span class="s">URL</span><span class="nv"> </span><span class="s">(must</span><span class="nv"> </span><span class="s">be</span><span class="nv"> </span><span class="s">direct</span><span class="nv"> </span><span class="s">download</span><span class="nv"> </span><span class="s">link)'</span>
+        <span class="na">required</span><span class="pi">:</span> <span class="kc">true</span>
+        <span class="na">default</span><span class="pi">:</span> <span class="s1">'</span><span class="s">https://x0.at/XS2C.zip'</span>
+      <span class="na">private_repo</span><span class="pi">:</span>
+        <span class="na">description</span><span class="pi">:</span> <span class="s1">'</span><span class="s">Create</span><span class="nv"> </span><span class="s">as</span><span class="nv"> </span><span class="s">private</span><span class="nv"> </span><span class="s">repository?'</span>
+        <span class="na">type</span><span class="pi">:</span> <span class="s">boolean</span>
+        <span class="na">default</span><span class="pi">:</span> <span class="kc">false</span>
+
+<span class="na">jobs</span><span class="pi">:</span>
+  <span class="na">validate-and-create</span><span class="pi">:</span>
+    <span class="na">runs-on</span><span class="pi">:</span> <span class="s">ubuntu-latest</span>
+    <span class="na">timeout-minutes</span><span class="pi">:</span> <span class="m">30</span>
+    
+    <span class="na">outputs</span><span class="pi">:</span>
+      <span class="na">repo_url</span><span class="pi">:</span> <span class="s">${{ steps.create-repo.outputs.result }}</span>
+    
+    <span class="na">steps</span><span class="pi">:</span>
+      <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">Validate repository name</span>
+        <span class="na">run</span><span class="pi">:</span> <span class="pi">|</span>
+          <span class="s">if [[ ! "${{ inputs.repo_name }}" =~ ^[a-zA-Z0-9_-]{1,100}$ ]]; then</span>
+            <span class="s">echo "::error::Invalid repository name. Use only letters, numbers, hyphens, and underscores (1-100 characters)"</span>
+            <span class="s">exit 1</span>
+          <span class="s">fi</span>
+      
+      <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">Download ZIP with retry</span>
+        <span class="na">uses</span><span class="pi">:</span> <span class="s">nick-fields/retry@v2</span>
+        <span class="na">with</span><span class="pi">:</span>
+          <span class="na">timeout_minutes</span><span class="pi">:</span> <span class="m">5</span>
+          <span class="na">max_attempts</span><span class="pi">:</span> <span class="m">3</span>
+          <span class="na">command</span><span class="pi">:</span> <span class="pi">|</span>
+            <span class="s">curl -L -f -o archive.zip "${{ inputs.zip_url }}"</span>
+            <span class="s">if [ ! -s archive.zip ]; then</span>
+              <span class="s">echo "Downloaded file is empty"</span>
+              <span class="s">exit 1</span>
+            <span class="s">fi</span>
+      
+      <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">Extract and validate</span>
+        <span class="na">run</span><span class="pi">:</span> <span class="pi">|</span>
+          <span class="s">mkdir extracted_content</span>
+          <span class="s">if ! unzip -q archive.zip -d extracted_content; then</span>
+            <span class="s">echo "::error::Failed to extract ZIP file. File may be corrupted."</span>
+            <span class="s">exit 1</span>
+          <span class="s">fi</span>
+          
+          <span class="s">file_count=$(find extracted_content -type f | wc -l)</span>
+          <span class="s">if [ "$file_count" -eq 0 ]; then</span>
+            <span class="s">echo "::error::ZIP archive contains no files"</span>
+            <span class="s">exit 1</span>
+          <span class="s">fi</span>
+          
+          <span class="s">echo "FILES_COUNT=$file_count" &gt;&gt; $GITHUB_ENV</span>
+          <span class="s">echo "::notice::Successfully extracted $file_count files"</span>
+      
+      <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">Create repository</span>
+        <span class="na">id</span><span class="pi">:</span> <span class="s">create-repo</span>
+        <span class="na">uses</span><span class="pi">:</span> <span class="s">actions/github-script@v8</span>
+        <span class="na">env</span><span class="pi">:</span>
+          <span class="na">REPO_NAME</span><span class="pi">:</span> <span class="s">${{ inputs.repo_name }}</span>
+          <span class="na">PRIVATE</span><span class="pi">:</span> <span class="s">${{ inputs.private_repo }}</span>
+        <span class="na">with</span><span class="pi">:</span>
+          <span class="na">github-token</span><span class="pi">:</span> <span class="s">${{ secrets.REPO_CREATE_TOKEN }}</span>
+          <span class="na">retries</span><span class="pi">:</span> <span class="m">3</span>
+          <span class="na">script</span><span class="pi">:</span> <span class="pi">|</span>
+            <span class="s">const { data: user } = await github.rest.users.getAuthenticated();</span>
+            <span class="s">const { data: repo } = await github.rest.repos.createForAuthenticatedUser({</span>
+              <span class="s">name: process.env.REPO_NAME,</span>
+              <span class="s">description: `Created from ZIP: ${{ inputs.zip_url }}`,</span>
+              <span class="s">private: process.env.PRIVATE === 'true',</span>
+              <span class="s">auto_init: false</span>
+            <span class="s">});</span>
+            <span class="s">core.notice(`Repository created: ${repo.html_url}`);</span>
+            <span class="s">return repo.clone_url;</span>
+      
+      <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">Push content</span>
+        <span class="na">env</span><span class="pi">:</span>
+          <span class="na">REPO_URL</span><span class="pi">:</span> <span class="s">${{ steps.create-repo.outputs.result }}</span>
+          <span class="na">TOKEN</span><span class="pi">:</span> <span class="s">${{ secrets.REPO_CREATE_TOKEN }}</span>
+        <span class="na">run</span><span class="pi">:</span> <span class="pi">|</span>
+          <span class="s">cd extracted_content</span>
+          <span class="s">git init -b main</span>
+          <span class="s">git config user.name "github-actions[bot]"</span>
+          <span class="s">git config user.email "github-actions[bot]@users.noreply.github.com"</span>
+          <span class="s">git add .</span>
+          <span class="s">git commit -m "Initial commit from ZIP archive"</span>
+          <span class="s">git remote add origin "$(echo "$REPO_URL" | sed "s|https://|https://x-access-token:$TOKEN@|")"</span>
+          <span class="s">git push -u origin main</span>
+      
+      <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">Success summary</span>
+        <span class="na">run</span><span class="pi">:</span> <span class="pi">|</span>
+          <span class="s">cat &gt;&gt; $GITHUB_STEP_SUMMARY &lt;&lt; EOF</span>
+          <span class="s">## ✅ Repository Created Successfully</span>
+          
+          <span class="s">- **Name:** ${{ inputs.repo_name }}</span>
+          <span class="s">- **URL:** $(echo "${{ steps.create-repo.outputs.result }}" | sed 's/.git$//')</span>
+          <span class="s">- **Files:** ${{ env.FILES_COUNT }}</span>
+          <span class="s">- **Visibility:** ${{ inputs.private_repo == 'true' &amp;&amp; 'Private 🔒' || 'Public 🌍' }}</span>
+          
+          <span class="s">[View Repository →]($(echo "${{ steps.create-repo.outputs.result }}" | sed 's/.git$//'))</span>
+          <span class="s">EOF</span>
+</code></pre></div></div>]]></content><author><name></name></author><category term="scratchpad" /></entry><entry><title type="html">DirectAdmin terminal custom commands</title><link href="https://ib.bsb.br/da-term/" rel="alternate" type="text/html" title="DirectAdmin terminal custom commands" /><published>2025-10-25T00:00:00+00:00</published><updated>2025-11-13T21:49:36+00:00</updated><id>https://ib.bsb.br/da-term</id><content type="html" xml:base="https://ib.bsb.br/da-term/"><![CDATA[<h1 id="01-environment-modules-exploration-usrsharemodules">01) Environment Modules exploration (/usr/share/Modules)</h1>
 <p>alias h01_modules_explore=’
   pushd /usr/share/Modules &gt;/dev/null; ls;
     pushd modulefiles &gt;/dev/null; ls;
@@ -310,7 +1211,7 @@
 <p>alias h35_resolvers_quick=’cat /etc/resolv.conf || true’</p>
 
 <h1 id="36-hosts-quick">36) Hosts quick</h1>
-<p>alias h36_hosts_quick=’cat /etc/hosts || true’</p>]]></content><author><name></name></author><category term="[scratchpad]" /></entry><entry><title type="html">folders2zip as non-admin Windows user</title><link href="https://ib.bsb.br/folders2zip-win/" rel="alternate" type="text/html" title="folders2zip as non-admin Windows user" /><published>2025-10-24T00:00:00+00:00</published><updated>2025-10-25T02:54:35+00:00</updated><id>https://ib.bsb.br/folders2zip-win</id><content type="html" xml:base="https://ib.bsb.br/folders2zip-win/"><![CDATA[<section class="code-block-container" role="group" aria-label="Powershell Code Block" data-filename="powershell_code_block.txt" data-code="#requires -Version 5.1
+<p>alias h36_hosts_quick=’cat /etc/hosts || true’</p>]]></content><author><name></name></author><category term="scratchpad" /></entry><entry><title type="html">folders2zip as non-admin Windows user</title><link href="https://ib.bsb.br/folders2zip-win/" rel="alternate" type="text/html" title="folders2zip as non-admin Windows user" /><published>2025-10-24T00:00:00+00:00</published><updated>2025-11-13T21:50:02+00:00</updated><id>https://ib.bsb.br/folders2zip-win</id><content type="html" xml:base="https://ib.bsb.br/folders2zip-win/"><![CDATA[<section class="code-block-container" role="group" aria-label="Powershell Code Block" data-filename="powershell_code_block.txt" data-code="#requires -Version 5.1
 &lt;#!
 .SYNOPSIS
   Single-file archive as a non-admin Windows 10 user — create/overwrite/update a .zip of a folder; optional restore.
@@ -1268,7 +2169,7 @@ Write-Step &quot;Done&quot;
 Write-Sub  (&quot;Archive at: {0}&quot; -f $resolvedArchive)
 if ($DoRestore -and -not $DryRun) { Write-Sub (&quot;Restored to: {0}&quot; -f $RestoreDir) }
 Write-Sub  &quot;Re-run with -Mode Update for incremental refresh; use Overwrite to fully regenerate.&quot;</code>
-</section>]]></content><author><name></name></author><category term="[scripts&gt;powershell]" /></entry><entry><title type="html">tutorial converter2powershell</title><link href="https://ib.bsb.br/tutorial-converter2powershell/" rel="alternate" type="text/html" title="tutorial converter2powershell" /><published>2025-10-17T00:00:00+00:00</published><updated>2025-10-17T10:25:57+00:00</updated><id>https://ib.bsb.br/tutorial-converter2powershell</id><content type="html" xml:base="https://ib.bsb.br/tutorial-converter2powershell/"><![CDATA[<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  &lt;purpose&gt;You are an expert non-admin Windows PowerShell 5.1 script developer for Windows 10 x64. Convert the narrative setup described in the input field named `tutorial_content` into a single user-mode PowerShell 5.1 script runnable from the user’s home directory, with robust error handling, idempotency, progress logging, and explicit confirmations for risky actions.&lt;/purpose&gt;
+</section>]]></content><author><name></name></author><category term="scripts&gt;powershell" /></entry><entry><title type="html">tutorial converter2powershell</title><link href="https://ib.bsb.br/tutorial-converter2powershell/" rel="alternate" type="text/html" title="tutorial converter2powershell" /><published>2025-10-17T00:00:00+00:00</published><updated>2025-10-17T10:25:57+00:00</updated><id>https://ib.bsb.br/tutorial-converter2powershell</id><content type="html" xml:base="https://ib.bsb.br/tutorial-converter2powershell/"><![CDATA[<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  &lt;purpose&gt;You are an expert non-admin Windows PowerShell 5.1 script developer for Windows 10 x64. Convert the narrative setup described in the input field named `tutorial_content` into a single user-mode PowerShell 5.1 script runnable from the user’s home directory, with robust error handling, idempotency, progress logging, and explicit confirmations for risky actions.&lt;/purpose&gt;
 
   &lt;context&gt;
     &lt;system_environment&gt;
@@ -3200,926 +4101,4 @@ COMPORTAMENTO
 - Pedir as entradas mínimas uma única vez se ausentes; caso já fornecidas, prosseguir diretamente.
 - Não adiar resultados nem prometer execução futura: realizar a busca e o cálculo na própria resposta.
 - Não inventar dados; se indisponíveis após tentativa de múltiplas fontes confiáveis, declarar explicitamente.
-</code></pre></div></div>]]></content><author><name></name></author><category term="AI&gt;prompt" /></entry><entry><title type="html">FIFA Two‑Button Controls</title><link href="https://ib.bsb.br/fifa-twobutton-controls/" rel="alternate" type="text/html" title="FIFA Two‑Button Controls" /><published>2025-10-05T00:00:00+00:00</published><updated>2025-10-05T00:39:38+00:00</updated><id>https://ib.bsb.br/fifa-twobutton-controls</id><content type="html" xml:base="https://ib.bsb.br/fifa-twobutton-controls/"><![CDATA[<h3 id="ea-sports-fc-25--twobutton-controls-conceptual-map">EA Sports FC 25 • Two‑Button Controls (Conceptual Map)</h3>
-
-<blockquote>
-  <p>Use <strong>generic names</strong> below; hardware labels differ by platform. Typical equivalence:
-<strong>PASS</strong> ≈ (PlayStation: ✕) / (Xbox: A) | <strong>SHOOT</strong> ≈ (PlayStation: ○) / (Xbox: B)</p>
-</blockquote>
-
-<p><strong>Attack</strong></p>
-
-<ul>
-  <li><strong>Move/Aim:</strong> Left Stick.</li>
-  <li><strong>PASS (tap):</strong> Short ground pass.</li>
-  <li><strong>PASS (hold):</strong> Longer/lofted pass or lead into space (angle with Left Stick).</li>
-  <li><strong>SHOOT (tap/hold):</strong> Shoot on goal. When wide/in crossing zones, <strong>SHOOT</strong> acts as <strong>cross</strong>.</li>
-  <li><strong>Clearance:</strong> Long <strong>SHOOT</strong> from deep.</li>
-</ul>
-
-<p><strong>Defense</strong></p>
-
-<ul>
-  <li><strong>PASS (tap/hold):</strong> Close down/stand tackle (contain then poke).</li>
-  <li><strong>SHOOT (tap):</strong> Slide tackle (last resort).</li>
-  <li><strong>SHOOT (hold):</strong> Big clearance under pressure.</li>
-</ul>
-
-<blockquote>
-  <p>Why this mapping? It preserves the <strong>“stand‑tackle first, slide rarely”</strong> and <strong>“cross/finish with same strike input by context”</strong> ideas, aligning with the source’s conservative, percentage‑play philosophy.</p>
-</blockquote>
-
-<hr />
-
-<h3 id="10second-match-plan-twobutton-edition">10‑Second Match Plan (Two‑Button edition)</h3>
-
-<p>(Adapted from the source’s 10‑second plan while removing advanced inputs. )</p>
-
-<ol>
-  <li><strong>Tempo discipline:</strong> Glide with the Left Stick; add tiny bursts by pushing further, then settle.</li>
-  <li><strong>Pattern out of defense:</strong> <strong>PASS → PASS → (angle) PASS long</strong> up the channel or <strong>SHOOT (cross)</strong> if wide.</li>
-  <li><strong>Around the box:</strong> Aim with Left Stick; <strong>SHOOT</strong> with <strong>2–3 bars</strong>—still the right power discipline idea from the source.</li>
-  <li><strong>Defend first by shape:</strong> Stay goal‑side with Left Stick; <strong>PASS</strong> to contain, <strong>tap PASS</strong> to poke; <strong>SHOOT</strong> slide only if the angle is clean.</li>
-  <li><strong>Wing outlet:</strong> If trapped, funnel the ball wide with <strong>PASS</strong>, then <strong>SHOOT</strong> to cross.</li>
-</ol>
-
-<hr />
-
-<h3 id="onball-microrules-twobutton-friendly">On‑Ball Micro‑Rules (Two‑Button friendly)</h3>
-
-<ul>
-  <li><strong>Change pace:</strong> walk → burst → settle (Left‑Stick pacing). Don’t “turbo everywhere”—a direct carry‑over.</li>
-  <li><strong>One easy fake:</strong> <strong>Left‑Stick feint</strong>—a small lateral touch, then <strong>PASS</strong> or <strong>SHOOT</strong>.</li>
-  <li>
-    <p><strong>Power discipline:</strong></p>
-
-    <ul>
-      <li><strong>Shots:</strong> 2–3 bars.</li>
-      <li><strong>Crosses:</strong> moderate hold on <strong>SHOOT</strong>.</li>
-      <li><strong>Passes:</strong> tap/hold by distance (aim ahead of runners).
-(This restates the source’s power heuristics with two buttons. )</li>
-    </ul>
-  </li>
-</ul>
-
-<hr />
-
-<h3 id="defending-that-works-twobutton-edition">Defending That Works (Two‑Button edition)</h3>
-
-<ul>
-  <li><strong>Shape first:</strong> Mirror attacker with Left Stick; <strong>hold PASS</strong> to contain; add a quick <strong>tap PASS</strong> when the ball leaves their foot. Same sequencing principle as the source.</li>
-  <li><strong>Block the lane:</strong> Stand between passer and runner; take a <strong>diagonal</strong> angle to cut the obvious ball (adapts “kill the through‑ball lane”).</li>
-  <li><strong>Tackle timing:</strong> <strong>Tap PASS</strong> when the touch is loose. <strong>SHOOT</strong> slide only at good angles or as last resort—explicitly lifted from the source’s caution.</li>
-</ul>
-
-<hr />
-
-<h3 id="transitions">Transitions</h3>
-
-<ul>
-  <li><strong>Won it?</strong> First idea: <strong>one‑touch PASS</strong> out of pressure, then a longer <strong>PASS (hold)</strong> into space or a <strong>SHOOT cross</strong> if wide. Mirrors “one touch out → vertical” from the PDF.</li>
-  <li><strong>Lost it?</strong> Protect central space in front of your CBs; contain with <strong>PASS</strong>, don’t drag centre‑backs. (Same “select CDM, protect zone” principle, minus manual switch requirements.)</li>
-</ul>
-
-<hr />
-
-<h3 id="setpiece-quick-wins-twobutton">Set‑Piece Quick Wins (Two‑Button)</h3>
-
-<ul>
-  <li><strong>Corners (right‑footer on left):</strong> <strong>Short PASS</strong>, immediate <strong>return PASS</strong>, then <strong>SHOOT</strong> (cross) to the near‑post run. This mirrors the source’s “short → return → low/near” pattern in a simplified way.</li>
-  <li><strong>Direct Free Kicks (20–25m):</strong> Aim a touch outside far post, <strong>moderate SHOOT</strong>, or <strong>PASS short</strong> if the wall/angle is poor (adapts the source’s guidance minus finesse input).</li>
-  <li><strong>Goal‑kicks/under heavy press:</strong> <strong>PASS</strong> to a full‑back or <strong>SHOOT</strong> long to reset.</li>
-</ul>
-
-<hr />
-
-<h2 id="two-alwayson-tactics-for-muscle-memory">Two “Always‑On” Tactics for Muscle Memory</h2>
-
-<blockquote>
-  <p>The goal is <strong>repeatability</strong>: two simple blueprints you can run all match until they become automatic.</p>
-</blockquote>
-
-<h3 id="a-2pass--strike-2ps--your-breadandbutter-attack-loop">A. <strong>“2‑Pass &amp; Strike” (2PS)</strong> — your bread‑and‑butter attack loop</h3>
-
-<p><strong>When:</strong> Any settled possession in midfield.
-<strong>Loop (four beats):</strong></p>
-
-<ol>
-  <li><strong>Square up</strong>—face forward with Left Stick; don’t over‑dribble.</li>
-  <li><strong>PASS</strong> to the nearest support (turn body to the target first).</li>
-  <li><strong>PASS</strong> again immediately to the next forward option (or back to the first if pressure bites).</li>
-  <li>
-    <p>Now <strong>commit</strong>:</p>
-
-    <ul>
-      <li>If central and 20–25m: <strong>SHOOT</strong> (2–3 bars).</li>
-      <li>If the ball gets wide: <strong>SHOOT</strong> for a cross.
-<strong>Why it works:</strong> It compresses the source’s “look for triangles, power discipline” into a two‑button rhythm—<strong>Pass → Pass → Decide (Shoot/Cross)</strong>.</li>
-    </ul>
-  </li>
-</ol>
-
-<p><strong>Checklist to cue the move</strong></p>
-
-<ul>
-  <li>See a <strong>triangle</strong> (you + two teammates)? Run 2PS.</li>
-  <li>If no lane after 2 passes: recycle and <em>restart</em> 2PS.</li>
-  <li>Don’t take a third dribble—<strong>make the third action a finish or cross</strong>.</li>
-</ul>
-
-<hr />
-
-<h3 id="b-funnel--break-fb--defend-smart-counter-simple">B. <strong>“Funnel &amp; Break” (F&amp;B)</strong> — defend smart, counter simple</h3>
-
-<p><strong>When:</strong> Opponent builds through the middle.
-<strong>Loop (four beats):</strong></p>
-
-<ol>
-  <li><strong>Funnel:</strong> Use Left Stick to sit <strong>goal‑side and slightly to their strong foot</strong>; <strong>hold PASS</strong> to contain—guide them wide.</li>
-  <li><strong>Win it:</strong> Time a <strong>tap PASS</strong> when the touch is away from the foot.</li>
-  <li><strong>First exit:</strong> <strong>Immediate PASS</strong> to a free midfielder or full‑back.</li>
-  <li><strong>Break:</strong> <strong>PASS (hold)</strong> up the channel or <strong>SHOOT cross</strong> early if your wide player is free.
-<strong>Why it works:</strong> It re‑uses the source’s “shape first, kill lanes, one‑touch out then vertical” without advanced defensive inputs.</li>
-</ol>
-
-<p><strong>Checklist to cue the move</strong></p>
-
-<ul>
-  <li>If they face you centrally: <strong>Funnel</strong> (shoulders angled to show outside).</li>
-  <li>If you win it near touchline: <strong>early SHOOT cross</strong>—don’t dribble back inside.</li>
-</ul>
-
-<hr />
-
-<h2 id="short-repeatable-practice-drills">Short, Repeatable Practice Drills</h2>
-
-<blockquote>
-  <p>Total: ~10 minutes to ingrain 2PS and F&amp;B.</p>
-</blockquote>
-
-<ol>
-  <li>
-    <p><strong>2‑Minute Triangle Rondo (solo vs CPU, Amateur):</strong></p>
-
-    <ul>
-      <li>Only <strong>PASS</strong>; every third pass must aim <strong>forward</strong>.</li>
-      <li>Add one <strong>SHOOT</strong> finish every minute from the D with 2–3 bars.
-(Reinforces “triangles + power discipline”.)</li>
-    </ul>
-  </li>
-  <li>
-    <p><strong>3‑Minute Wing Cross Ladder:</strong></p>
-
-    <ul>
-      <li>Receive wide → one touch inside → <strong>SHOOT cross</strong>; finish with near‑post run.</li>
-      <li>Focus on <strong>moderate cross power</strong>; don’t over‑hit.</li>
-    </ul>
-  </li>
-  <li>
-    <p><strong>3‑Minute Contain Drill (Two‑Button version of the source’s “3‑minute jockey drill”):</strong></p>
-
-    <ul>
-      <li><strong>0–1 min:</strong> Left‑Stick mirror only; stay half‑step away, goal‑side.</li>
-      <li><strong>1–2 min:</strong> Add <strong>PASS (hold)</strong> contain, release as you close.</li>
-      <li><strong>2–3 min:</strong> <strong>Tap PASS</strong> at the loose touch; if you miss, reset shape first.
-(Adapts the original drill’s progression.)</li>
-    </ul>
-  </li>
-  <li>
-    <p><strong>2‑Minute Funnel &amp; Break Reps:</strong></p>
-
-    <ul>
-      <li>Start central → guide wide (contain) → win it → <strong>PASS</strong> out → <strong>PASS (hold)</strong> long.</li>
-    </ul>
-  </li>
-</ol>
-
-<hr />
-
-<h2 id="troubleshooting--common-mistakes">Troubleshooting &amp; Common Mistakes</h2>
-
-<ul>
-  <li><strong>Over‑dribbling:</strong> The playbook is <strong>two passes then a decision</strong>. If you hit a third dribble, you’re likely late.</li>
-  <li><strong>Shot power too high:</strong> Cap yourself to <strong>2–3 bars</strong> unless it’s a cut‑back sitter. Source emphasis retained.</li>
-  <li><strong>Sliding early:</strong> If you press <strong>SHOOT</strong> before angling the run, you’ll foul or miss. Slide only on clear angles—same last‑resort warning as the source.</li>
-  <li><strong>Forcing the middle:</strong> If the lane is blocked, <strong>funnel your own attack wide</strong>: PASS to the flank, <strong>SHOOT cross</strong>.</li>
-</ul>
-
-<hr />
-
-<h2 id="optional-helpful-prematch-tweaks">Optional, Helpful Pre‑Match Tweaks</h2>
-
-<ul>
-  <li><strong>Camera:</strong> Tele Broadcast (around Height ≈ 12, Zoom ≈ 5), matching the source’s suggestion for clarity.</li>
-  <li>
-    <p><strong>Simple instructions to favor the patterns:</strong></p>
-
-    <ul>
-      <li>Strikers: <strong>Get In Behind</strong> (creates the forward lane for 2PS).</li>
-      <li>CDM(s): <strong>Stay Back</strong> (keeps the shield for F&amp;B).
-(These are the spirit of the source’s optional notes.)</li>
-    </ul>
-  </li>
-</ul>
-
-<hr />
-
-<h2 id="onepage-summary-printable-text-block">One‑Page Summary (printable text block)</h2>
-
-<p><strong>EA Sports FC 25 — Two‑Button Cheat Card (PASS + SHOOT)</strong></p>
-
-<ul>
-  <li><strong>Plan:</strong> 2PS = <strong>PASS → PASS → SHOOT/CROSS</strong>. F&amp;B = <strong>Contain → Win → PASS Out → Long PASS/Cross</strong>.</li>
-  <li><strong>On ball:</strong> left‑stick pace; triangles; shots <strong>2–3 bars</strong>.</li>
-  <li><strong>Defend:</strong> contain with <strong>PASS</strong>; <strong>tap PASS</strong> to poke; <strong>SHOOT</strong> slide only late/clean.</li>
-  <li><strong>Transitions:</strong> one‑touch <strong>PASS</strong> out; go vertical; wide? <strong>SHOOT cross</strong>.</li>
-  <li><strong>Set pieces:</strong> short <strong>PASS</strong>; return; <strong>SHOOT</strong> (cross) near post.</li>
-  <li><strong>If stuck:</strong> recycle and <strong>restart 2PS</strong>; or switch wide and cross.</li>
-</ul>
-
-<hr />
-
-<h2 id="og4--weaknesses--tradeoffs-explicit">OG4 — Weaknesses / trade‑offs (explicit)</h2>
-
-<ul>
-  <li>Two‑Button removes granular tools (e.g., manual jockey, second‑man press, finesse shots). You trade precision for <strong>simplicity + repetition</strong>. The frameworks above compensate by emphasizing <strong>angles, timing, and power discipline</strong>, all preserved from the source.</li>
-</ul>
-
-<hr />
-
-<h2 id="og5--next-iterations">OG5 — Next iterations</h2>
-
-<p>If you want, I can condense this into a true <strong>single‑page printable</strong> or tailor the drills to your preferred formation. For now, run <strong>2PS</strong> in possession and <strong>F&amp;B</strong> out of possession until they become automatic.</p>]]></content><author><name></name></author><category term="scratchpad" /></entry><entry><title type="html">Fireworks AI - Whisper API</title><link href="https://ib.bsb.br/fireworks-ai-whisper-api/" rel="alternate" type="text/html" title="Fireworks AI - Whisper API" /><published>2025-10-05T00:00:00+00:00</published><updated>2025-10-05T19:23:54+00:00</updated><id>https://ib.bsb.br/fireworks-ai-whisper-api</id><content type="html" xml:base="https://ib.bsb.br/fireworks-ai-whisper-api/"><![CDATA[<table>
-  <tbody>
-    <tr>
-      <td>Whisper V3 Turbo API &amp; Playground</td>
-      <td>Fireworks AI</td>
-    </tr>
-  </tbody>
-</table>
-
-<p>===============</p>
-
-<p><a href="https://fireworks.ai/startup-program">Join the <strong>Fireworks Startups Program</strong> and unlock credits, expert support, and community to scale fast. Join here</a></p>
-
-<p><a href="https://fireworks.ai/"><img src="https://cdn.sanity.io/images/pv37i0yn/production/2095949f01e1cf9cf0841096b67d547d9dbfba2e-215x24.svg" alt="Image 3: Fireworks Logo" /></a></p>
-
-<ul>
-  <li>Platform</li>
-  <li>Models</li>
-  <li>Developers</li>
-  <li><a href="https://fireworks.ai/pricing">Pricing</a></li>
-  <li>Partners</li>
-  <li>Resources</li>
-  <li>Company</li>
-</ul>
-
-<p><a href="https://fireworks.ai/login">Log In</a><a href="https://fireworks.ai/signup">Get Started</a></p>
-
-<p><img src="https://cdn.sanity.io/images/pv37i0yn/production/f549e0e24c286535bc06df0b0310d270183469e8-40x40.svg" alt="Image 4: OpenAi Logo MArk" /></p>
-
-<h1 id="whisper-v3-turbo">Whisper V3 Turbo</h1>
-
-<p>Whisper large-v3-turbo is a finetuned version of a pruned Whisper large-v3. In other words, it’s the exact same model, except that the number of decoding layers have reduced from 32 to 4. As a result, the model is way faster, at the expense of a minor quality degradation.</p>
-
-<p><a href="https://app.fireworks.ai/playground?model=accounts/fireworks/models/whisper-v3-turbo">Try Model</a></p>
-
-<h2 id="fireworks-features">Fireworks Features</h2>
-
-<h3 id="serverless">Serverless</h3>
-
-<p>Immediately run model on pre-configured GPUs and pay-per-token</p>
-
-<p><a href="https://docs.fireworks.ai/getting-started/quickstart">Learn More</a></p>
-
-<h3 id="on-demand-deployment">On-demand Deployment</h3>
-
-<p>On-demand deployments give you dedicated GPUs for Whisper V3 Turbo using Fireworks’ reliable, high-performance system with no rate limits.</p>
-
-<p><a href="https://fireworks.ai/docs/guides/ondemand-deployments">Learn More</a></p>
-
-<h2 id="whisper-v3-turbo-faqs">Whisper V3 Turbo FAQs</h2>
-
-<h3 id="what-is-whisper-v3-turbo-and-who-developed-it">What is Whisper V3 Turbo and who developed it?</h3>
-
-<h3 id="what-applications-and-use-cases-does-whisper-v3-turbo-excel-at">What applications and use-cases does Whisper V3 Turbo excel at?</h3>
-
-<h3 id="what-is-the-maximum-context-length-for-whisper-v3-turbo">What is the maximum context length for Whisper V3 Turbo?</h3>
-
-<h3 id="what-is-the-usable-context-window">What is the usable context window?</h3>
-
-<h3 id="what-are-known-failure-modes-of-whisper-v3-turbo">What are known failure modes of Whisper V3 Turbo?</h3>
-
-<h3 id="how-many-parameters-does-whisper-v3-turbo-have">How many parameters does Whisper V3 Turbo have?</h3>
-
-<h3 id="what-license-governs-commercial-use-of-whisper-v3-turbo">What license governs commercial use of Whisper V3 Turbo?</h3>
-
-<h2 id="info--pricing">Info &amp; Pricing</h2>
-
-<h3 id="provider">Provider</h3>
-
-<p>OpenAI</p>
-
-<h3 id="model-type">Model Type</h3>
-
-<p>Audio</p>
-
-<h3 id="serverless-1">Serverless</h3>
-
-<p>Available</p>
-
-<h3 id="pricing-per-minute">Pricing Per Minute</h3>
-
-<p>$0.0009</p>
-
-<hr />
-
-<p><img src="https://cdn.sanity.io/images/pv37i0yn/production/2095949f01e1cf9cf0841096b67d547d9dbfba2e-215x24.svg" alt="Image 5: Fireworks Logo" /></p>
-
-<h3 id="platform">Platform</h3>
-
-<p><a href="https://fireworks.ai/ai-native">AI Native</a><a href="https://fireworks.ai/enterprise">Enterprise</a><a href="https://fireworks.ai/customers">Customers</a></p>
-
-<h3 id="use-cases">Use Cases</h3>
-
-<p><a href="https://fireworks.ai/usecases/code-assistance">Code Assistance</a><a href="https://fireworks.ai/conversational-ai">Conversational AI</a><a href="https://fireworks.ai/usecases/agentic-systems">Agentic Systems</a><a href="https://fireworks.ai/usecases/search">Search</a><a href="https://fireworks.ai/usecases/multimedia">Multimedia</a><a href="https://fireworks.ai/usecases/enterprise-rag">Enterprise RAG</a></p>
-
-<h3 id="developers">Developers</h3>
-
-<p><a href="https://fireworks.ai/models">Model Library</a><a href="https://docs.fireworks.ai/getting-started/introduction">Docs</a><a href="https://docs.fireworks.ai/tools-sdks/firectl/firectl">CLI</a><a href="https://docs.fireworks.ai/api-reference/introduction">API</a><a href="https://docs.fireworks.ai/updates/changelog">Changelog</a></p>
-
-<h3 id="pricing">Pricing</h3>
-
-<p><a href="https://fireworks.ai/pricing#serverless-pricing">Serverless</a><a href="https://fireworks.ai/pricing#on-demand-pricing">On-Demand</a><a href="https://fireworks.ai/pricing#fine-tuning-pricing">Fine Tuning</a><a href="https://fireworks.ai/contact-reserved">Enterprise</a></p>
-
-<h3 id="partners">Partners</h3>
-
-<p><a href="https://fireworks.ai/partners#cloud-infra">Cloud and Infrastructure</a><a href="https://fireworks.ai/partners#consulting">Consulting and Services</a><a href="https://fireworks.ai/partners#technology">Technology</a><a href="https://fireworks.ai/startup-program">Fireworks for Startups</a></p>
-
-<h3 id="resources">Resources</h3>
-
-<p><a href="https://fireworks.ai/blog">Blog</a><a href="https://demos.fireworks.ai/">Demos</a><a href="https://docs.fireworks.ai/examples/introduction">Cookbooks</a></p>
-
-<h3 id="company">Company</h3>
-
-<p><a href="https://fireworks.ai/team">Leadership</a><a href="https://fireworks.ai/team#investors">Investors</a><a href="https://job-boards.greenhouse.io/fireworksai">Careers</a><a href="https://trust.fireworks.ai/">Trust Center</a></p>
-
-<p>© 2025 Fireworks AI, Inc. All rights reserved.</p>
-
-<p><a href="https://x.com/FireworksAI_HQ"></a><a href="https://www.youtube.com/@fireworksai"></a><a href="https://www.linkedin.com/company/fireworks-ai"></a><a href="https://discord.gg/fireworks"></a></p>
-
-<p>–</p>
-
-<h1 id="transcribe-audio">Transcribe audio</h1>
-
-<p>&lt;CardGroup cols={1}&gt;</p>
-<Card title="Try notebook" icon="rocket" href="https://colab.research.google.com/github/fw-ai/cookbook/blob/main/learn/audio/audio_prerecorded_speech_to_text/audio_prerecorded_speech_to_text.ipynb">
-    Send a sample audio to get a transcription.
-  </Card>
-<p>&lt;/CardGroup&gt;</p>
-
-<h3 id="request">Request</h3>
-
-<h5 id="multi-part-form">(multi-part form)</h5>
-
-<ParamField query="file" type="file | string" required="">
-  The input audio file to transcribe or an URL to the public audio file.
-
-  Max audio file size is 1 GB, there is no limit for audio duration. Common file formats such as mp3, flac, and wav are supported. Note that the audio will be resampled to 16kHz, downmixed to mono, and reformatted to 16-bit signed little-endian format before transcription. Pre-converting the file before sending it to the API can improve runtime performance.
-</ParamField>
-
-<ParamField query="model" type="string" default="whisper-v3" optional="">
-  String name of the ASR model to use. Can be one of `whisper-v3` or `whisper-v3-turbo`. Please use the following serverless endpoints:
-
-  * [https://audio-prod.us-virginia-1.direct.fireworks.ai](https://audio-prod.us-virginia-1.direct.fireworks.ai) (for `whisper-v3`);
-  * [https://audio-turbo.us-virginia-1.direct.fireworks.ai](https://audio-turbo.us-virginia-1.direct.fireworks.ai) (for `whisper-v3-turbo`);
-</ParamField>
-
-<ParamField query="vad_model" type="string" default="silero" optional="">
-  String name of the voice activity detection (VAD) model to use. Can be one of `silero`, or `whisperx-pyannet`.
-</ParamField>
-
-<ParamField query="alignment_model" type="string" default="mms_fa" optional="">
-  String name of the alignment model to use. Currently supported:
-
-  * `mms_fa` optimal accuracy for multilingual speech.
-  * `tdnn_ffn` optimal accuracy for English-only speech.
-  * `gentle` best accuracy for English-only speech (requires a dedicated endpoint, contact us at <a href="mailto:inquiries@fireworks.ai">[inquiries@fireworks.ai](mailto:inquiries@fireworks.ai)</a>).
-</ParamField>
-
-<ParamField query="language" type="string | null" optional="">
-  The target language for transcription. See the [Supported Languages](#supported-languages) section below for a complete list of available languages.
-</ParamField>
-
-<ParamField query="prompt" type="string | null" optional="">
-  The input prompt that the model will use when generating the transcription. Can be used to specify custom words or specify the style of the transcription. E.g. `Um, here's, uh, what was recorded.` will make the model to include the filler words into the transcription.
-</ParamField>
-
-<ParamField query="temperature" type="float | list[float]" default="0">
-  Sampling temperature to use when decoding text tokens during transcription. Alternatively, fallback decoding can be enabled by passing a list of temperatures like `0.0,0.2,0.4,0.6,0.8,1.0`. This can help to improve performance.
-</ParamField>
-
-<ParamField query="response_format" type="string" default="json">
-  The format in which to return the response. Can be one of `json`, `text`, `srt`, `verbose_json`, or `vtt`.
-</ParamField>
-
-<ParamField query="timestamp_granularities" type="string | list[string]" optional="">
-  The timestamp granularities to populate for this transcription. `response_format` must be set `verbose_json` to use timestamp granularities. Either or both of these options are supported. Can be one of `word`, `segment`, or `word,segment`. If not present, defaults to `segment`.
-</ParamField>
-
-<ParamField query="diarize" type="string" optional="">
-  Whether to get speaker diarization for the transcription. Can be one of `true`, or `false`. If not present, defaults to `false`.
-
-  Enabling diarization also requires other fields to hold specific values:
-
-  1. `response_format` must be set `verbose_json`.
-  2. `timestamp_granularities` must include `word` to use diarization.
-</ParamField>
-
-<ParamField query="min_speakers" type="int" optional="">
-  The minimum number of speakers to detect for diarization. `diarize` must be set `true` to use `min_speakers`. If not present, defaults to `1`.
-</ParamField>
-
-<ParamField query="max_speakers" type="int" optional="">
-  The maximum number of speakers to detect for diarization. `diarize` must be set `true` to use `max_speakers`. If not present, defaults to `inf`.
-</ParamField>
-
-<ParamField query="preprocessing" type="string" optional="">
-  Audio preprocessing mode. Currently supported:
-
-  * `none` to skip audio preprocessing.
-  * `dynamic` for arbitrary audio content with variable loudness.
-  * `soft_dynamic` for speech intense recording such as podcasts and voice-overs.
-  * `bass_dynamic` for boosting lower frequencies;
-</ParamField>
-
-<h3 id="response">Response</h3>
-
-<Tabs>
-  <Tab title="json/text/srt/vtt">
-    <ResponseField name="text" type="string" required="" />
-  </Tab>
-
-  <Tab title="verbose_json">
-    <ResponseField name="task" type="string" default="transcribe" required="">
-      The task which was performed. Either `transcribe` or `translate`.
-    </ResponseField>
-
-    <ResponseField name="language" type="string" required="">
-      The language of the transcribed/translated text.
-    </ResponseField>
-
-    <ResponseField name="duration" type="number" required="">
-      The duration of the transcribed/translated audio, in seconds.
-    </ResponseField>
-
-    <ResponseField name="text" type="string" required="">
-      The transcribed/translated text.
-    </ResponseField>
-
-    <ResponseField name="words" type="object[] | null" optional="">
-      Extracted words and their corresponding timestamps.
-
-      <Expandable title="Word properties">
-        <ResponseField name="word" type="string" required="">
-          The text content of the word.
-        </ResponseField>
-
-        <ResponseField name="language" type="string" required="">
-          The language of the word.
-        </ResponseField>
-
-        <ResponseField name="probability" type="number" required="">
-          The probability of the word.
-        </ResponseField>
-
-        <ResponseField name="hallucination_score" type="number" required="">
-          The hallucination score of the word.
-        </ResponseField>
-
-        <ResponseField name="start" type="number" required="">
-          Start time of the word in seconds.
-        </ResponseField>
-
-        <ResponseField name="end" type="number" required="">
-          End time of the word in seconds.
-        </ResponseField>
-
-        <ResponseField name="speaker_id" type="string" optional="">
-          Speaker label for the word.
-        </ResponseField>
-      </Expandable>
-    </ResponseField>
-
-    <ResponseField name="segments" type="object[] | null" optional="">
-      Segments of the transcribed/translated text and their corresponding details.
-
-      <Expandable title="Segment properties (partial)">
-        <ResponseField name="id" type="number" required="">
-          The id of the segment.
-        </ResponseField>
-
-        <ResponseField name="text" type="string" required="">
-          The text content of the segment.
-        </ResponseField>
-
-        <ResponseField name="start" type="number" required="">
-          Start time of the segment in seconds.
-        </ResponseField>
-
-        <ResponseField name="end" type="number" required="">
-          End time of the segment in seconds.
-        </ResponseField>
-
-        <ResponseField name="speaker_id" type="string" optional="">
-          Speaker label for the segment.
-        </ResponseField>
-
-        <ResponseField name="words" type="object[] | null" optional="">
-          Extracted words in the segment.
-        </ResponseField>
-      </Expandable>
-    </ResponseField>
-  </Tab>
-</Tabs>
-
-<RequestExample>
-  ```curl curl
-
-  # Download audio file
-  curl -L -o "audio.flac" "https://tinyurl.com/4997djsh"
-
-  # Make request
-  curl -X POST "https://audio-prod.us-virginia-1.direct.fireworks.ai/v1/audio/transcriptions" \
-  -H "Authorization: <FIREWORKS_API_KEY>" \
-  -F "file=@audio.flac"
-  ```
-
-  ```python fireworks sdk
-  !pip install fireworks-ai requests python-dotenv
-
-  from fireworks.client.audio import AudioInference
-  import requests
-  import os
-  from dotenv import load_dotenv
-  import time
-
-  # Create a .env file with your API key
-  load_dotenv()
-
-
-  # Download audio sample
-  audio = requests.get("https://tinyurl.com/4cb74vas").content
-
-  # Prepare client
-  client = AudioInference(
-      model="whisper-v3",
-      base_url="https://audio-prod.us-virginia-1.direct.fireworks.ai",
-      # Or for the turbo version
-      # model="whisper-v3-turbo",
-      # base_url="https://audio-turbo.us-virginia-1.direct.fireworks.ai",
-      api_key=os.getenv("FIREWORKS_API_KEY"),
-  )
-
-  # Make request
-  start = time.time()
-  r = await client.transcribe_async(audio=audio)
-  print(f"Took: {(time.time() - start):.3f}s. Text: '{r.text}'")
-  ```
-
-  ```python Python (openai sdk)
-  !pip install openai requests python-dotenv
-
-  from openai import OpenAI
-  import os
-  import requests
-  from dotenv import load_dotenv
-
-  load_dotenv()
-
-  client = OpenAI(
-      base_url="https://audio-prod.us-virginia-1.direct.fireworks.ai/v1",
-      api_key=os.getenv("FIREWORKS_API_KEY")
-      )
-  audio_file= requests.get("https://tinyurl.com/4cb74vas").content
-  transcription = client.audio.transcriptions.create(
-      model="whisper-v3",
-      file=audio_file
-  )
-  print(transcription.text)
-  ```
-&lt;/RequestExample&gt;
-
-### Supported Languages
-
-The following languages are supported for transcription:
-
-<Accordion title="Language Code &amp; Name">
-  | Language Code | Language Name       |
-  | ------------- | ------------------- |
-  | en            | English             |
-  | zh            | Chinese             |
-  | de            | German              |
-  | es            | Spanish             |
-  | ru            | Russian             |
-  | ko            | Korean              |
-  | fr            | French              |
-  | ja            | Japanese            |
-  | pt            | Portuguese          |
-  | tr            | Turkish             |
-  | pl            | Polish              |
-  | ca            | Catalan             |
-  | nl            | Dutch               |
-  | ar            | Arabic              |
-  | sv            | Swedish             |
-  | it            | Italian             |
-  | id            | Indonesian          |
-  | hi            | Hindi               |
-  | fi            | Finnish             |
-  | vi            | Vietnamese          |
-  | he            | Hebrew              |
-  | uk            | Ukrainian           |
-  | el            | Greek               |
-  | ms            | Malay               |
-  | cs            | Czech               |
-  | ro            | Romanian            |
-  | da            | Danish              |
-  | hu            | Hungarian           |
-  | ta            | Tamil               |
-  | no            | Norwegian           |
-  | th            | Thai                |
-  | ur            | Urdu                |
-  | hr            | Croatian            |
-  | bg            | Bulgarian           |
-  | lt            | Lithuanian          |
-  | la            | Latin               |
-  | mi            | Maori               |
-  | ml            | Malayalam           |
-  | cy            | Welsh               |
-  | sk            | Slovak              |
-  | te            | Telugu              |
-  | fa            | Persian             |
-  | lv            | Latvian             |
-  | bn            | Bengali             |
-  | sr            | Serbian             |
-  | az            | Azerbaijani         |
-  | sl            | Slovenian           |
-  | kn            | Kannada             |
-  | et            | Estonian            |
-  | mk            | Macedonian          |
-  | br            | Breton              |
-  | eu            | Basque              |
-  | is            | Icelandic           |
-  | hy            | Armenian            |
-  | ne            | Nepali              |
-  | mn            | Mongolian           |
-  | bs            | Bosnian             |
-  | kk            | Kazakh              |
-  | sq            | Albanian            |
-  | sw            | Swahili             |
-  | gl            | Galician            |
-  | mr            | Marathi             |
-  | pa            | Punjabi             |
-  | si            | Sinhala             |
-  | km            | Khmer               |
-  | sn            | Shona               |
-  | yo            | Yoruba              |
-  | so            | Somali              |
-  | af            | Afrikaans           |
-  | oc            | Occitan             |
-  | ka            | Georgian            |
-  | be            | Belarusian          |
-  | tg            | Tajik               |
-  | sd            | Sindhi              |
-  | gu            | Gujarati            |
-  | am            | Amharic             |
-  | yi            | Yiddish             |
-  | lo            | Lao                 |
-  | uz            | Uzbek               |
-  | fo            | Faroese             |
-  | ht            | Haitian Creole      |
-  | ps            | Pashto              |
-  | tk            | Turkmen             |
-  | nn            | Nynorsk             |
-  | mt            | Maltese             |
-  | sa            | Sanskrit            |
-  | lb            | Luxembourgish       |
-  | my            | Myanmar             |
-  | bo            | Tibetan             |
-  | tl            | Tagalog             |
-  | mg            | Malagasy            |
-  | as            | Assamese            |
-  | tt            | Tatar               |
-  | haw           | Hawaiian            |
-  | ln            | Lingala             |
-  | ha            | Hausa               |
-  | ba            | Bashkir             |
-  | jw            | Javanese            |
-  | su            | Sundanese           |
-  | yue           | Cantonese           |
-  | zh-hant       | Traditional Chinese |
-  | zh-hans       | Simplified Chinese  |
-</Accordion>
-
-
---
-
-# Create Batch Request
-
-&lt;CardGroup cols={1}&gt;
-  <Card title="Try notebook" icon="rocket" href="https://colab.research.google.com/github/fw-ai/cookbook/blob/main/learn/batch-api/batch_api.ipynb">
-    Create a batch request for our audio transcription service
-  </Card>
-&lt;/CardGroup&gt;
-
-### Headers
-
-<ParamField header="Authorization" type="string" required="">
-  Your Fireworks API key, e.g. `Authorization=FIREWORKS_API_KEY`. Alternatively, can be provided as a query param.
-</ParamField>
-
-### Path Parameters
-
-<ParamField query="path" type="string" required="">
-  The relative route of the target API operation (e.g. `"v1/audio/transcriptions"`, `"v1/audio/translations"`). This should correspond to a valid route supported by the backend service.
-</ParamField>
-
-### Query Parameters
-
-<ParamField query="endpoint_id" type="string" required="">
-  Identifies the target backend service or model to handle the request. Currently supported:
-
-  * `audio-prod`: [https://audio-prod.us-virginia-1.direct.fireworks.ai](https://audio-prod.us-virginia-1.direct.fireworks.ai)
-  * `audio-turbo`: [https://audio-turbo.us-virginia-1.direct.fireworks.ai](https://audio-turbo.us-virginia-1.direct.fireworks.ai)
-</ParamField>
-
-### Body
-
-Request body fields vary depending on the selected `endpoint_id` and `path`.
-
-The request body must conform to the schema defined by the corresponding synchronous API.\
-For example, transcription requests typically accept fields such as `model`, `diarize`, and `response_format`.\
-Refer to the relevant synchronous API for required fields:
-
-* [Transcribe audio](https://docs.fireworks.ai/api-reference/audio-transcriptions)
-* [Translate audio](https://docs.fireworks.ai/api-reference/audio-translations)
-
-### Response
-
-<Tabs>
-  <Tab title="json">
-    <ResponseField name="status" type="string" required="">
-      The status of the batch request submission.\
-      A value of `"submitted"` indicates the batch request was accepted and queued for processing.
-    </ResponseField>
-
-    <ResponseField name="batch_id" type="string" required="">
-      A unique identifier assigned to the batch job.
-      This ID can be used to check job status or retrieve results later.
-    </ResponseField>
-
-    <ResponseField name="account_id" type="string" required="">
-      The unique identifier of the account associated with the batch job.
-    </ResponseField>
-
-    <ResponseField name="endpoint_id" type="string" required="">
-      The backend service selected to process the request.\
-      This typically matches the `endpoint_id` used during submission.
-    </ResponseField>
-
-    <ResponseField name="message" type="string" optional="">
-      A human-readable message describing the result of the submission.\
-      Typically `"Request submitted successfully"` if accepted.
-    </ResponseField>
-  </Tab>
-</Tabs>
-
-<RequestExample>
-  ```curl curl
-
-  # Download audio file
-  curl -L -o "audio.flac" "https://tinyurl.com/4997djsh"
-
-  # Make request
-  curl -X POST "https://audio-batch.link.fireworks.ai/v1/audio/transcriptions?endpoint_id=audio-prod" \
-  -H "Authorization: <FIREWORKS_API_KEY>" \
-  -F "file=@audio.flac"
-  ```
-
-  ```python python
-  !pip install requests
-
-  import os
-  import requests
-
-  # input API key and download audio
-  api_key = "<FIREWORKS_API_KEY>"
-  audio = requests.get("https://tinyurl.com/4cb74vas").content
-
-  # Prepare request data
-  url = "https://audio-batch.link.fireworks.ai/v1/audio/transcriptions?endpoint_id=audio-prod"
-  headers = {"Authorization": api_key}
-  payload = {
-      "model": "whisper-v3",
-      "response_format": "json"
-  }
-  files = {"file": ("audio.flac", audio, "audio/flac")}
-
-  # Send request
-  response = requests.post(url, headers=headers, data=payload, files=files)
-  print(response.text)
-  ```
-&lt;/RequestExample&gt;
-
-To check the status of your batch request, use the [Check Batch Status](https://docs.fireworks.ai/api-reference/get-batch-status) endpoint with the returned `batch_id`.
-
---
-
-# Check Batch Status
-
-This endpoint allows you to check the current status of a previously submitted batch request, and retrieve the final result if available.
-
-&lt;CardGroup cols={1}&gt;
-  <Card title="Try notebook" icon="rocket" href="https://colab.research.google.com/github/fw-ai/cookbook/blob/main/learn/batch-api/batch_api.ipynb">
-    Check status of your batch request
-  </Card>
-&lt;/CardGroup&gt;
-
-### Headers
-
-<ParamField header="Authorization" type="string" required="">
-  Your Fireworks API key. e.g. `Authorization=FIREWORKS_API_KEY`. Alternatively, can be provided as a query param.
-</ParamField>
-
-### Path Parameters
-
-<ParamField query="account_id" type="string" required="">
-  The identifier of your Fireworks account. Must match the account used when the batch request was submitted.
-</ParamField>
-
-<ParamField query="batch_id" type="string" required="">
-  The unique identifier of the batch job to check.\
-  This should match the `batch_id` returned when the batch request was originally submitted.
-</ParamField>
-
-### Response
-
-The response includes the status of the batch job and, if completed, the final result.
-
-<Tabs>
-  <Tab title="json">
-    <ResponseField name="status" type="string" required="">
-      The status of the batch job at the time of the request.\
-      Possible values include `"completed"` and `"processing"`.
-    </ResponseField>
-
-    <ResponseField name="batch_id" type="string" required="">
-      The unique identifier of the batch job whose status is being retrieved.\
-      This ID matches the one provided in the original request.
-    </ResponseField>
-
-    <ResponseField name="message" type="string" optional="">
-      A human-readable message describing the current state of the batch job.\
-      This field is typically `null` when the job has completed successfully.
-    </ResponseField>
-
-    <ResponseField name="content_type" type="string" optional="">
-      The original content type of the response body.\
-      This value can be used to determine how to parse the string in the `body` field.
-    </ResponseField>
-
-    <ResponseField name="body" type="string" optional="">
-      The serialized result of the batch job, this field is only present when `status` is `"completed"`.\
-      The format of this string depends on the `content_type` field and may vary across endpoints.\
-      Clients should use `content_type` to determine how to parse or interpret the value.
-    </ResponseField>
-  </Tab>
-</Tabs>
-
-<RequestExample>
-  ```curl curl
-  # Make request
-  curl -X GET "https://audio-batch.link.fireworks.ai/v1/accounts/{account_id}/batch_job/{batch_id}" \
-  -H "Authorization: <FIREWORKS_API_KEY>"
-  ```
-
-  ```python python
-  !pip install requests
-
-  import os
-  import requests
-
-  # Input api key and path parameters
-  api_key = "<FIREWORKS_API_KEY>"
-  account_id = "<ACCOUNT_ID>"
-  batch_id = "<BATCH_ID>"
-
-  # Send request
-  url = f"https://audio-batch.link.fireworks.ai/v1/accounts/{account_id}/batch_job/{batch_id}"
-  headers = {"Authorization": api_key}
-
-  response = requests.get(url, headers=headers)
-  print(response.text)
-  ```
-&lt;/RequestExample&gt;
-</BATCH_ID></ACCOUNT_ID></FIREWORKS_API_KEY></FIREWORKS_API_KEY></RequestExample></FIREWORKS_API_KEY></FIREWORKS_API_KEY></RequestExample></FIREWORKS_API_KEY></RequestExample>]]></content><author><name></name></author><category term="scratchpad" /></entry></feed>
+</code></pre></div></div>]]></content><author><name></name></author><category term="AI&gt;prompt" /></entry></feed>
