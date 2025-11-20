@@ -67,8 +67,8 @@
         
           <span class="post-updated">
             ↣
-            <time datetime="2025-05-12T18:04:46+00:00">
-              12 May 2025
+            <time datetime="2025-11-20T01:41:34+00:00">
+              20 Nov 2025
             </time>
           </span>
         
@@ -90,11 +90,11 @@
         <div class="page-stats mt-3" role="status" aria-label="Page statistics">
       
       <span class="badge bg-primary">
-        12004 characters
+        13316 characters
       </span>
         <span class="separator mx-2" aria-hidden="true">•</span>
         <span class="badge bg-primary">
-        1448 words
+        1352 words
       </span>
       </div>
         <div class="action-buttons d-flex flex-wrap gap-2">
@@ -129,316 +129,751 @@
         <div class="post-content-body">
           
 
-          <div class="language-plaintext highlighter-rouge"><div class="highlight"><section><code>#!/bin/bash
+          <section class="code-block-container" role="group" aria-label="Bash Code Block" data-filename="bash_code_block.sh" data-code="#!/usr/bin/env bash
 
 # ==============================================================================
-# Script Name: comprehensive_backup_v2.sh
-# Description: Archives (tar) and compresses (zstd) files from a source
-#              directory to a destination file. Offers configuration for
-#              compression level, progress view (pv), I/O buffering (mbuffer),
-#              and exclusions. Includes pre-checks and basic verification steps.
-# Author:      AI Assistant
-# Version:     2.0
-# Usage:       sudo bash comprehensive_backup_v2.sh
-# Requirements: bash, sudo, tar, zstd, pv, mbuffer, coreutils (du, df, awk, numfmt, stat)
+# Script Name: comprehensive_backup_v3.sh
+# Description: Robust tar+zstd backup with pre-checks, progress (pv), optional
+#              buffering (mbuffer), exclusions, and detailed exit-code handling.
+# Usage:       sudo bash comprehensive_backup_v3.sh
+# Requirements: bash, tar, zstd, du, df, awk, numfmt, stat
+#               Optional: pv, mbuffer, ionice
 # ==============================================================================
 
-# --- Script Setup ---
-# Exit immediately if a command exits with a non-zero status.
-# set -e
-# Treat unset variables as an error when substituting.
-# set -u
-# Cause pipelines to return the exit status of the last command that exited with a non-zero status,
-# or zero if no command exited with a non-zero status.
 set -o pipefail
+umask 077
+IFS=$&#39;\n\t&#39;
 
-# --- Configuration ---
-DEFAULT_SOURCE_DIR="/media/usb0"
-DEFAULT_DEST_DIR="/media/usb5"
-DEFAULT_FILENAME_BASE="backup_usb0"
-DEFAULT_COMPRESSION_LEVEL=9 # Good balance (1-19)
-DEFAULT_USE_PV="y"
-DEFAULT_USE_MBUFFER="y"
-DEFAULT_MBUFFER_SIZE="6G" # e.g., 128M, 256M, 512M, 1G
-DEFAULT_EXCLUDE_PATTERNS=() # Add patterns like: ('./cache/*' '*.tmp')
+# --- Configuration defaults ---
+DEFAULT_SOURCE_DIR=&quot;/media/usb0&quot;
+DEFAULT_DEST_DIR=&quot;/media/usb5&quot;
+DEFAULT_FILENAME_BASE=&quot;backup_usb0&quot;
+DEFAULT_COMPRESSION_LEVEL=9          # 1–19, higher = better compression, slower
+DEFAULT_USE_PV=&quot;y&quot;
+DEFAULT_USE_MBUFFER=&quot;y&quot;
+DEFAULT_MBUFFER_SIZE=&quot;6G&quot;            # e.g., 128M, 512M, 1G, 6G
+DEFAULT_EXCLUDE_PATTERNS=()          # e.g., (&#39;./cache/*&#39; &#39;*.tmp&#39;)
 
-# --- Helper Functions ---
+# --- Helper functions ---
+print_separator() {
+  printf &#39;%0.s-&#39; {1..70}
+  printf &#39;\n&#39;
+}
+
+die() {
+  printf &#39;Error: %s\n&#39; &quot;$*&quot; &gt;&amp;2
+  exit 1
+}
+
+warn() {
+  printf &#39;Warning: %s\n&#39; &quot;$*&quot; &gt;&amp;2
+}
+
+info() {
+  printf &#39;%s\n&#39; &quot;$*&quot;
+}
+
 check_command() {
-  if ! command -v "$1" &amp;&gt; /dev/null; then
-    echo "Error: Required command '$1' not found. Please install it (e.g., using 'sudo apt install $1')." &gt;&amp;2
-    exit 1
+  if ! command -v &quot;$1&quot; &gt;/dev/null 2&gt;&amp;1; then
+    die &quot;Required command &#39;$1&#39; not found. Install it (e.g., &#39;sudo apt install $1&#39;).&quot;
   fi
 }
 
-print_separator() {
-  printf -- '-%.0s' {1..70}; printf '\n'
+read_with_default() {
+  # $1 = prompt, $2 = default
+  local prompt default reply
+  prompt=$1
+  default=$2
+  read -r -p &quot;$prompt&quot; reply
+  if [[ -z $reply ]]; then
+    reply=$default
+  fi
+  printf &#39;%s&#39; &quot;$reply&quot;
 }
 
-# --- Root Check ---
+confirm_yes() {
+  # Prompt user; return 0 if yes, 1 otherwise
+  local prompt reply
+  prompt=$1
+  read -r -p &quot;$prompt&quot; reply
+  reply=${reply:-n}
+  case &quot;${reply,,}&quot; in
+    y|yes) return 0 ;;
+    *)     return 1 ;;
+  esac
+}
+
+# --- Root check ---
 if [[ $EUID -ne 0 ]]; then
-   echo "Error: This script must be run with sudo privileges for accurate size checks and potentially writing to protected locations." &gt;&amp;2
-   exit 1
+  die &quot;This script must be run with sudo/root privileges.&quot;
 fi
 
-# --- Dependency Check ---
+START_TIME=$(date +%s)
+
+on_exit() {
+  local exit_code=$?
+  local end_time elapsed h m s
+  end_time=$(date +%s)
+  elapsed=$((end_time - START_TIME))
+  h=$((elapsed / 3600))
+  m=$(((elapsed % 3600) / 60))
+  s=$((elapsed % 60))
+  print_separator
+  printf &#39;Total runtime: %02d:%02d:%02d (exit code %d)\n&#39; &quot;$h&quot; &quot;$m&quot; &quot;$s&quot; &quot;$exit_code&quot;
+}
+trap on_exit EXIT
+
+# --- Dependency checks ---
 print_separator
-echo "Checking required commands..."
+info &quot;Checking required commands...&quot;
 check_command tar
 check_command zstd
-check_command pv
-check_command mbuffer
 check_command du
 check_command df
 check_command awk
 check_command numfmt
 check_command stat
-echo "All required commands found."
 
-# --- User Input / Configuration Override ---
+# Optional tools checked only if used later
+OPTIONAL_PV_PRESENT=0
+OPTIONAL_MBUFFER_PRESENT=0
+if command -v pv &gt;/dev/null 2&gt;&amp;1; then
+  OPTIONAL_PV_PRESENT=1
+fi
+if command -v mbuffer &gt;/dev/null 2&gt;&amp;1; then
+  OPTIONAL_MBUFFER_PRESENT=1
+fi
+info &quot;Core commands available.&quot;
+
+# --- Interactive configuration ---
 print_separator
-echo "Configure Backup Parameters (Press Enter for defaults):"
+info &quot;Configure backup parameters (press Enter for defaults).&quot;
 
-read -p "Source directory [${DEFAULT_SOURCE_DIR}]: " SOURCE_DIR
-SOURCE_DIR=${SOURCE_DIR:-$DEFAULT_SOURCE_DIR}
+SOURCE_DIR=$(read_with_default &quot;Source directory [${DEFAULT_SOURCE_DIR}]: &quot; &quot;$DEFAULT_SOURCE_DIR&quot;)
+DEST_DIR=$(read_with_default &quot;Destination directory [${DEFAULT_DEST_DIR}]: &quot; &quot;$DEFAULT_DEST_DIR&quot;)
+FILENAME_BASE=$(read_with_default &quot;Base filename for archive [${DEFAULT_FILENAME_BASE}]: &quot; &quot;$DEFAULT_FILENAME_BASE&quot;)
 
-read -p "Destination directory [${DEFAULT_DEST_DIR}]: " DEST_DIR
-DEST_DIR=${DEST_DIR:-$DEFAULT_DEST_DIR}
-
-read -p "Base filename for archive [${DEFAULT_FILENAME_BASE}]: " FILENAME_BASE
-FILENAME_BASE=${FILENAME_BASE:-$DEFAULT_FILENAME_BASE}
-
-read -p "Compression level (1=fastest, 19=best, default=${DEFAULT_COMPRESSION_LEVEL}): " COMPRESSION_LEVEL
-COMPRESSION_LEVEL=${COMPRESSION_LEVEL:-$DEFAULT_COMPRESSION_LEVEL}
-# Basic validation for compression level
-if ! [[ "$COMPRESSION_LEVEL" =~ ^[1-9]$|^1[0-9]$ ]]; then # Regex for 1-19
-  echo "Invalid compression level. Using default: ${DEFAULT_COMPRESSION_LEVEL}"
+COMPRESSION_LEVEL=$(read_with_default &quot;Compression level (1=fast,19=best,default=${DEFAULT_COMPRESSION_LEVEL}): &quot; &quot;$DEFAULT_COMPRESSION_LEVEL&quot;)
+if ! [[ &quot;$COMPRESSION_LEVEL&quot; =~ ^[1-9]$|^1[0-9]$ ]]; then
+  warn &quot;Invalid compression level &#39;$COMPRESSION_LEVEL&#39;; using default ${DEFAULT_COMPRESSION_LEVEL}.&quot;
   COMPRESSION_LEVEL=$DEFAULT_COMPRESSION_LEVEL
 fi
 
-read -p "Use 'pv' for progress monitoring? (Y/n) [${DEFAULT_USE_PV}]: " USE_PV
-USE_PV=${USE_PV:-$DEFAULT_USE_PV}
+USE_PV=$(read_with_default &quot;Use &#39;pv&#39; for progress monitoring? (Y/n) [${DEFAULT_USE_PV}]: &quot; &quot;$DEFAULT_USE_PV&quot;)
+case &quot;${USE_PV,,}&quot; in
+  y|yes) USE_PV=&quot;y&quot; ;;
+  n|no)  USE_PV=&quot;n&quot; ;;
+  *)     USE_PV=&quot;$DEFAULT_USE_PV&quot; ;;
+esac
 
-read -p "Use 'mbuffer' for I/O buffering? (y/N) [${DEFAULT_USE_MBUFFER}]: " USE_MBUFFER
-USE_MBUFFER=${USE_MBUFFER:-$DEFAULT_USE_MBUFFER}
+USE_MBUFFER=$(read_with_default &quot;Use &#39;mbuffer&#39; for I/O buffering? (Y/n) [${DEFAULT_USE_MBUFFER}]: &quot; &quot;$DEFAULT_USE_MBUFFER&quot;)
+case &quot;${USE_MBUFFER,,}&quot; in
+  y|yes) USE_MBUFFER=&quot;y&quot; ;;
+  n|no)  USE_MBUFFER=&quot;n&quot; ;;
+  *)     USE_MBUFFER=&quot;$DEFAULT_USE_MBUFFER&quot; ;;
+esac
+
 MBUFFER_SIZE=$DEFAULT_MBUFFER_SIZE
-if [[ "${USE_MBUFFER,,}" == "y" ]]; then
-  read -p "mbuffer size (e.g., 256M, 1G) [${DEFAULT_MBUFFER_SIZE}]: " MBUFFER_SIZE_INPUT
-  MBUFFER_SIZE=${MBUFFER_SIZE_INPUT:-$DEFAULT_MBUFFER_SIZE}
+if [[ &quot;$USE_MBUFFER&quot; == &quot;y&quot; ]]; then
+  if (( OPTIONAL_MBUFFER_PRESENT == 0 )); then
+    warn &quot;&#39;mbuffer&#39; not found; disabling mbuffer usage.&quot;
+    USE_MBUFFER=&quot;n&quot;
+  else
+    MBUFFER_SIZE=$(read_with_default &quot;mbuffer size (e.g., 256M, 1G) [${DEFAULT_MBUFFER_SIZE}]: &quot; &quot;$DEFAULT_MBUFFER_SIZE&quot;)
+  fi
 fi
 
-# Exclude pattern input
-echo "Enter exclude patterns one by one (relative to source, e.g., './cache/*', '*.tmp'). Press Enter on empty line to finish."
+if [[ &quot;$USE_PV&quot; == &quot;y&quot; &amp;&amp; $OPTIONAL_PV_PRESENT -eq 0 ]]; then
+  warn &quot;&#39;pv&#39; not found; disabling pv usage.&quot;
+  USE_PV=&quot;n&quot;
+fi
+
+# Exclude patterns input
+info &quot;Enter exclude patterns one per line (relative to source, e.g., &#39;./cache/*&#39;, &#39;*.tmp&#39;).&quot;
+info &quot;Press Enter on an empty line to finish.&quot;
 EXCLUDE_PATTERNS=()
-while true; do
-    read -p "Exclude pattern (or Enter to finish): " pattern
-    if [[ -z "$pattern" ]]; then
-        break
-    fi
-    EXCLUDE_PATTERNS+=("$pattern")
+while :; do
+  read -r -p &quot;Exclude pattern (or Enter to finish): &quot; pattern
+  if [[ -z $pattern ]]; then
+    break
+  fi
+  EXCLUDE_PATTERNS+=(&quot;$pattern&quot;)
 done
-if [ ${#EXCLUDE_PATTERNS[@]} -eq 0 ]; then
-    EXCLUDE_PATTERNS=("${DEFAULT_EXCLUDE_PATTERNS[@]}") # Use default if none entered
+if ((${#EXCLUDE_PATTERNS[@]} == 0)); then
+  EXCLUDE_PATTERNS=(&quot;${DEFAULT_EXCLUDE_PATTERNS[@]}&quot;)
 fi
 
-
-# --- Pre-Checks ---
+# --- Pre-checks ---
 print_separator
-echo "Performing Pre-Checks..."
+info &quot;Performing pre-checks...&quot;
 
-# Check directories
-if [ ! -d "$SOURCE_DIR" ]; then
-  echo "Error: Source directory '$SOURCE_DIR' not found or not a directory." &gt;&amp;2
-  exit 1
+# Directory checks
+[[ -d $SOURCE_DIR ]] || die &quot;Source directory &#39;$SOURCE_DIR&#39; does not exist or is not a directory.&quot;
+[[ -d $DEST_DIR ]]   || die &quot;Destination directory &#39;$DEST_DIR&#39; does not exist or is not a directory.&quot;
+
+if ! mountpoint -q &quot;$SOURCE_DIR&quot;; then
+  warn &quot;Source directory &#39;$SOURCE_DIR&#39; is not a dedicated mount point.&quot;
 fi
-if [ ! -d "$DEST_DIR" ]; then
-  echo "Error: Destination directory '$DEST_DIR' not found or not a directory." &gt;&amp;2
-  exit 1
-fi
-# Optional: Check if they are mount points (informational)
-if ! mountpoint -q "$SOURCE_DIR"; then
-    echo "Info: Source directory '$SOURCE_DIR' does not appear to be a distinct mount point."
-fi
-if ! mountpoint -q "$DEST_DIR"; then
-    echo "Info: Destination directory '$DEST_DIR' does not appear to be a distinct mount point."
+if ! mountpoint -q &quot;$DEST_DIR&quot;; then
+  warn &quot;Destination directory &#39;$DEST_DIR&#39; is not a dedicated mount point.&quot;
 fi
 
-# Check source size
-echo "Calculating source size (this may take a while)..."
-SRC_SIZE_BYTES=$(du -sb "$SOURCE_DIR" 2&gt;/dev/null)
-DU_EXIT_CODE=$?
-if [ $DU_EXIT_CODE -ne 0 ] || [ -z "$SRC_SIZE_BYTES" ]; then
-    echo "Error: Could not determine source size (du exit code: $DU_EXIT_CODE). Check permissions for '$SOURCE_DIR'." &gt;&amp;2
-    exit 1
+# Source size
+info &quot;Calculating source size (du -sb)...&quot;
+if ! SRC_SIZE_LINE=$(du -sb -- &quot;$SOURCE_DIR&quot; 2&gt;/dev/null); then
+  die &quot;Could not determine source size with du -sb &#39;$SOURCE_DIR&#39;.&quot;
 fi
-SRC_SIZE_BYTES=$(echo "$SRC_SIZE_BYTES" | awk '{print $1}') # Extract number
-SRC_SIZE_HUMAN=$(numfmt --to=iec $SRC_SIZE_BYTES)
-echo "Source size: ${SRC_SIZE_HUMAN} (${SRC_SIZE_BYTES} bytes)"
+SRC_SIZE_BYTES=$(awk &#39;{print $1}&#39; &lt;&lt;&lt;&quot;$SRC_SIZE_LINE&quot;)
+if [[ -z $SRC_SIZE_BYTES ]]; then
+  die &quot;Failed to parse source size from du output.&quot;
+fi
+SRC_SIZE_HUMAN=$(numfmt --to=iec &quot;$SRC_SIZE_BYTES&quot;)
+info &quot;Source size: ${SRC_SIZE_HUMAN} (${SRC_SIZE_BYTES} bytes)&quot;
 
-# Check if source seems empty
-if [ "$SRC_SIZE_BYTES" -le 4096 ]; then # 4096 is typical size of an empty directory metadata
-    echo "Warning: Source directory size is very small. It might be empty or contain only empty subdirectories."
+if (( SRC_SIZE_BYTES &lt;= 4096 )); then
+  warn &quot;Source directory size is very small; it may be effectively empty.&quot;
 fi
 
-# Check destination space
-DEST_AVAIL_BYTES=$(df --output=avail -B1 "$DEST_DIR" 2&gt;/dev/null | awk 'NR==2{print $1}')
-DF_EXIT_CODE=$?
-if [ $DF_EXIT_CODE -ne 0 ] || [ -z "$DEST_AVAIL_BYTES" ]; then
-    echo "Error: Could not determine destination available space (df exit code: $DF_EXIT_CODE). Check path '$DEST_DIR'." &gt;&amp;2
-    exit 1
+# Destination free space
+if ! DEST_AVAIL_BYTES=$(df --output=avail -B1 -- &quot;$DEST_DIR&quot; 2&gt;/dev/null | awk &#39;NR==2{print $1}&#39;); then
+  die &quot;Could not determine destination available space for &#39;$DEST_DIR&#39;.&quot;
 fi
-DEST_AVAIL_HUMAN=$(numfmt --to=iec $DEST_AVAIL_BYTES)
-echo "Destination available space: ${DEST_AVAIL_HUMAN} (${DEST_AVAIL_BYTES} bytes)"
+if [[ -z $DEST_AVAIL_BYTES ]]; then
+  die &quot;Failed to parse destination available space.&quot;
+fi
+DEST_AVAIL_HUMAN=$(numfmt --to=iec &quot;$DEST_AVAIL_BYTES&quot;)
+info &quot;Destination available space: ${DEST_AVAIL_HUMAN} (${DEST_AVAIL_BYTES} bytes)&quot;
 
-# Space warning
-if [ "$SRC_SIZE_BYTES" -gt "$DEST_AVAIL_BYTES" ]; then
+if (( SRC_SIZE_BYTES &gt; DEST_AVAIL_BYTES )); then
   print_separator
-  echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
-  echo "!!! WARNING: Source size (${SRC_SIZE_HUMAN}) is LARGER than available"
-  echo "!!!          destination space (${DEST_AVAIL_HUMAN})."
-  echo "!!! This operation will ONLY succeed if the data compresses"
-  echo "!!! significantly (below ${DEST_AVAIL_HUMAN}). Consider using a higher"
-  echo "!!! compression level (current: ${COMPRESSION_LEVEL}) or freeing up space."
-  echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
-  print_separator
-elif [ "$DEST_AVAIL_BYTES" -lt "$((SRC_SIZE_BYTES / 2))" ]; then # Heuristic: Warn if available space is less than half the source size
-  echo "Warning: Available destination space (${DEST_AVAIL_HUMAN}) is less than half the source size. Ensure compression is effective."
+  warn &quot;Source size (${SRC_SIZE_HUMAN}) is larger than destination free space (${DEST_AVAIL_HUMAN}).&quot;
+  warn &quot;Backup will only succeed if compression reduces data below available space.&quot;
+elif (( DEST_AVAIL_BYTES &lt; SRC_SIZE_BYTES / 2 )); then
+  warn &quot;Destination free space is less than half the source size; ensure compression is effective.&quot;
 fi
 
-# Construct final destination path and check for collision
+# Destination file path
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-DEST_FILENAME="${FILENAME_BASE}_L${COMPRESSION_LEVEL}_${TIMESTAMP}.tar.zst"
-DEST_FILE_PATH="${DEST_DIR}/${DEST_FILENAME}"
+DEST_FILENAME=&quot;${FILENAME_BASE}_L${COMPRESSION_LEVEL}_${TIMESTAMP}.tar.zst&quot;
+DEST_FILE_PATH=&quot;${DEST_DIR%/}/$DEST_FILENAME&quot;
 
-if [ -e "$DEST_FILE_PATH" ]; then
-    echo "Error: Destination file '$DEST_FILE_PATH' already exists." &gt;&amp;2
-    read -p "Do you want to overwrite it? (y/N): " OVERWRITE_CONFIRM
-    if [[ "${OVERWRITE_CONFIRM,,}" != "y" ]]; then
-        echo "Aborted by user."
-        exit 0
-    fi
-    echo "Overwriting existing file."
+if [[ -e $DEST_FILE_PATH ]]; then
+  if confirm_yes &quot;Destination file &#39;$DEST_FILE_PATH&#39; exists. Overwrite? (y/N): &quot;; then
+    warn &quot;Overwriting existing file.&quot;
+  else
+    info &quot;Aborting.&quot;
+    exit 0
+  fi
 fi
 
-# Final confirmation
+# --- Summary and confirmation ---
 print_separator
-echo "Backup Summary:"
-echo "  Source:      $SOURCE_DIR ($SRC_SIZE_HUMAN)"
-echo "  Destination: $DEST_FILE_PATH"
-echo "  Compression: Level $COMPRESSION_LEVEL"
-echo "  Progress View: ${USE_PV}"
-echo "  IO Buffering: ${USE_MBUFFER} (Size: $MBUFFER_SIZE)"
-if [ ${#EXCLUDE_PATTERNS[@]} -gt 0 ]; then
-    echo "  Exclusions:  ${EXCLUDE_PATTERNS[*]}"
+info &quot;Backup summary:&quot;
+info &quot;  Source:      $SOURCE_DIR ($SRC_SIZE_HUMAN)&quot;
+info &quot;  Destination: $DEST_FILE_PATH&quot;
+info &quot;  Compression: zstd level $COMPRESSION_LEVEL&quot;
+
+PROGRESS_STR=&quot;pv disabled&quot;
+[[ $USE_PV == y ]] &amp;&amp; PROGRESS_STR=&quot;pv enabled&quot;
+BUFFER_STR=&quot;none&quot;
+[[ $USE_MBUFFER == y ]] &amp;&amp; BUFFER_STR=&quot;mbuffer ($MBUFFER_SIZE)&quot;
+
+info &quot;  Progress:    $PROGRESS_STR&quot;
+info &quot;  IO buffer:   $BUFFER_STR&quot;
+
+if ((${#EXCLUDE_PATTERNS[@]} &gt; 0)); then
+  info &quot;  Exclusions:  ${EXCLUDE_PATTERNS[*]}&quot;
 fi
 print_separator
 
-read -p "Do you want to proceed with the backup? (y/N): " CONFIRM_PROCEED
-if [[ "${CONFIRM_PROCEED,,}" != "y" ]]; then
-  echo "Aborted by user."
+if ! confirm_yes &quot;Proceed with backup? (y/N): &quot;; then
+  info &quot;Aborted by user.&quot;
   exit 0
 fi
 
-# --- Build and Execute the Command Pipeline ---
-print_separator
-echo "Building and executing the command pipeline..."
+# Optionally lower priority for the backup process
+if confirm_yes &quot;Lower CPU/IO priority for backup (recommended on busy systems)? (y/N): &quot;; then
+  if command -v ionice &gt;/dev/null 2&gt;&amp;1; then
+    ionice -c3 -p &quot;$$&quot; &gt;/dev/null 2&gt;&amp;1 || warn &quot;ionice failed to adjust I/O priority.&quot;
+  fi
+  renice 10 -p &quot;$$&quot; &gt;/dev/null 2&gt;&amp;1 || true
+fi
 
-# Start with tar command (relative paths within archive)
-TAR_CMD=("tar" "-cf" "-")
-
-# Add exclude patterns
-for pattern in "${EXCLUDE_PATTERNS[@]}"; do
-    TAR_CMD+=("--exclude=${pattern}")
+# --- Build tar command array ---
+TAR_CMD=(tar -cf -)
+for pattern in &quot;${EXCLUDE_PATTERNS[@]}&quot;; do
+  TAR_CMD+=(--exclude=&quot;$pattern&quot;)
 done
+TAR_CMD+=(-C &quot;$SOURCE_DIR&quot; .)
 
-# Specify source directory context and content
-TAR_CMD+=("-C" "$SOURCE_DIR" ".")
-
-# Build the pipeline string array for clarity and execution
-PIPELINE_STAGES=()
-PIPELINE_STAGES+=("$(printf '%q ' "${TAR_CMD[@]}")") # Stage 0: tar
-
-# Add pv if requested
-if [[ "${USE_PV,,}" == "y" ]]; then
-  PIPELINE_STAGES+=("| pv -s $SRC_SIZE_BYTES") # Stage 1: pv
-fi
-
-# Add mbuffer if requested
-if [[ "${USE_MBUFFER,,}" == "y" ]]; then
-  PIPELINE_STAGES+=("| mbuffer -m $MBUFFER_SIZE") # Stage 2 (or 1 if no pv): mbuffer
-fi
-
-# Add zstd command
-PIPELINE_STAGES+=("| zstd -T0 -${COMPRESSION_LEVEL} -o '${DEST_FILE_PATH}'") # Final Stage: zstd
-
-# Combine stages into a single command string for execution
-FULL_PIPELINE_CMD="${PIPELINE_STAGES[*]}"
-
-# Check if running inside screen/tmux
-if [[ -z "$STY" &amp;&amp; -z "$TMUX" ]]; then
-    echo "Warning: Not running inside screen or tmux."
-    echo "For long operations, it's highly recommended to run this script"
-    echo "within a 'screen' or 'tmux' session to prevent interruptions."
-    read -p "Press Enter to continue anyway, or Ctrl+C to stop and restart in screen/tmux."
-fi
-
-echo "Starting backup process... This may take a very long time."
-echo "Executing: ${FULL_PIPELINE_CMD}"
-
-# Execute the pipeline using bash -c
-# Capture PIPESTATUS immediately after execution
-bash -c "$FULL_PIPELINE_CMD"; PIPE_STATUS=("${PIPESTATUS[@]}")
-EXECUTION_EXIT_CODE=$? # Overall exit code (affected by pipefail)
-
-# --- Post-Execution ---
+# --- Execute backup pipeline ---
 print_separator
-echo "Backup process finished."
+PIPE_DESC=&quot;tar | &quot;
+[[ $USE_PV == y ]] &amp;&amp; PIPE_DESC+=&quot;pv | &quot;
+[[ $USE_MBUFFER == y ]] &amp;&amp; PIPE_DESC+=&quot;mbuffer | &quot;
+PIPE_DESC+=&quot;zstd&quot;
+info &quot;Starting backup process...&quot;
+info &quot;Running $PIPE_DESC ...&quot;
+print_separator
 
-# Check exit codes from the pipeline
+PIPE_STATUS=()
+EXECUTION_EXIT_CODE=0
+
+run_pipeline() {
+  if [[ $USE_PV == y &amp;&amp; $USE_MBUFFER == y ]]; then
+    &quot;${TAR_CMD[@]}&quot; \
+      | pv -s &quot;$SRC_SIZE_BYTES&quot; \
+      | mbuffer -m &quot;$MBUFFER_SIZE&quot; \
+      | zstd -T0 &quot;-${COMPRESSION_LEVEL}&quot; -o &quot;$DEST_FILE_PATH&quot;
+  elif [[ $USE_PV == y &amp;&amp; $USE_MBUFFER != y ]]; then
+    &quot;${TAR_CMD[@]}&quot; \
+      | pv -s &quot;$SRC_SIZE_BYTES&quot; \
+      | zstd -T0 &quot;-${COMPRESSION_LEVEL}&quot; -o &quot;$DEST_FILE_PATH&quot;
+  elif [[ $USE_PV != y &amp;&amp; $USE_MBUFFER == y ]]; then
+    &quot;${TAR_CMD[@]}&quot; \
+      | mbuffer -m &quot;$MBUFFER_SIZE&quot; \
+      | zstd -T0 &quot;-${COMPRESSION_LEVEL}&quot; -o &quot;$DEST_FILE_PATH&quot;
+  else
+    &quot;${TAR_CMD[@]}&quot; \
+      | zstd -T0 &quot;-${COMPRESSION_LEVEL}&quot; -o &quot;$DEST_FILE_PATH&quot;
+  fi
+}
+
+run_pipeline
+EXECUTION_EXIT_CODE=$?
+PIPE_STATUS=(&quot;${PIPESTATUS[@]}&quot;)
+
+print_separator
+info &quot;Backup process finished.&quot;
+info &quot;Checking pipeline exit codes: ${PIPE_STATUS[*]:-none}&quot;
+
+STAGE_NAMES=(&quot;tar&quot;)
+if [[ $USE_PV == y ]]; then STAGE_NAMES+=(&quot;pv&quot;); fi
+if [[ $USE_MBUFFER == y ]]; then STAGE_NAMES+=(&quot;mbuffer&quot;); fi
+STAGE_NAMES+=(&quot;zstd&quot;)
+
 FINAL_EXIT_CODE=0
-STAGE_NAMES=("tar") # Start with tar
-if [[ "${USE_PV,,}" == "y" ]]; then STAGE_NAMES+=("pv"); fi
-if [[ "${USE_MBUFFER,,}" == "y" ]]; then STAGE_NAMES+=("mbuffer"); fi
-STAGE_NAMES+=("zstd")
-
-echo "Checking pipeline exit codes: ${PIPE_STATUS[*]}"
-for i in "${!PIPE_STATUS[@]}"; do
-    stage_name=${STAGE_NAMES[$i]:-"unknown_stage_$i"}
-    exit_code=${PIPE_STATUS[$i]}
-    if [ "$exit_code" -ne 0 ]; then
-        echo "Error: Pipeline stage '${stage_name}' failed with exit code $exit_code." &gt;&amp;2
-        FINAL_EXIT_CODE=$exit_code # Report the first non-zero exit code
+for i in &quot;${!PIPE_STATUS[@]}&quot;; do
+  stage_name=${STAGE_NAMES[$i]:-stage_$i}
+  stage_status=${PIPE_STATUS[$i]}
+  if [[ $stage_status -ne 0 ]]; then
+    printf &#39;Error: Stage %s failed with exit code %d\n&#39; &quot;$stage_name&quot; &quot;$stage_status&quot; &gt;&amp;2
+    if [[ $FINAL_EXIT_CODE -eq 0 ]]; then
+      FINAL_EXIT_CODE=$stage_status
     fi
+  fi
 done
 
-# Double check overall exit code if pipefail was active
-if [ "$FINAL_EXIT_CODE" -eq 0 ] &amp;&amp; [ "$EXECUTION_EXIT_CODE" -ne 0 ]; then
-     echo "Warning: Overall pipeline check reported failure (exit code $EXECUTION_EXIT_CODE), but individual stages seemed okay. Check results carefully." &gt;&amp;2
-     # Use the overall code if it indicates failure and individual checks didn't
-     FINAL_EXIT_CODE=$EXECUTION_EXIT_CODE
+if [[ $FINAL_EXIT_CODE -eq 0 &amp;&amp; $EXECUTION_EXIT_CODE -ne 0 ]]; then
+  warn &quot;Overall pipeline exit code is $EXECUTION_EXIT_CODE despite all stages reporting success.&quot;
+  FINAL_EXIT_CODE=$EXECUTION_EXIT_CODE
 fi
 
+if [[ $FINAL_EXIT_CODE -ne 0 ]]; then
+  printf &#39;Backup FAILED (exit code %d). Archive may be incomplete: %s\n&#39; &quot;$FINAL_EXIT_CODE&quot; &quot;$DEST_FILE_PATH&quot; &gt;&amp;2
+  exit &quot;$FINAL_EXIT_CODE&quot;
+fi
 
-if [ "$FINAL_EXIT_CODE" -eq 0 ]; then
-    echo "Pipeline completed successfully (basic check)."
-    COMPRESSED_SIZE_BYTES=$(stat -c%s "$DEST_FILE_PATH" 2&gt;/dev/null)
-    COMPRESSED_SIZE_HUMAN=$(numfmt --to=iec $COMPRESSED_SIZE_BYTES 2&gt;/dev/null || echo "N/A")
-    echo "Archive saved to: ${DEST_FILE_PATH}"
-    echo "Compressed size:  ${COMPRESSED_SIZE_HUMAN} (${COMPRESSED_SIZE_BYTES:-N/A} bytes)"
-    print_separator
-    echo "IMPORTANT: Please verify the integrity of the archive:"
-    echo "1. Test compression: zstd -t '${DEST_FILE_PATH}'"
-    echo "2. List contents (optional, takes time/CPU): tar --list -I zstd -f '${DEST_FILE_PATH}' | less"
-    print_separator
+info &quot;Pipeline completed successfully.&quot;
+
+# --- Post-execution: report size and optional verification ---
+if ! COMPRESSED_SIZE_BYTES=$(stat -c%s -- &quot;$DEST_FILE_PATH&quot; 2&gt;/dev/null); then
+  warn &quot;Could not stat archive &#39;$DEST_FILE_PATH&#39;.&quot;
 else
-    echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" &gt;&amp;2
-    echo "!!! ERRORS DETECTED during the backup process (Exit Code: ${FINAL_EXIT_CODE})." &gt;&amp;2
-    echo "!!! The archive file '${DEST_FILE_PATH}' may be incomplete or corrupt." &gt;&amp;2
-    echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" &gt;&amp;2
-    exit $FINAL_EXIT_CODE
+  COMPRESSED_SIZE_HUMAN=$(numfmt --to=iec &quot;$COMPRESSED_SIZE_BYTES&quot;)
+  info &quot;Archive saved to: $DEST_FILE_PATH&quot;
+  info &quot;Compressed size:  ${COMPRESSED_SIZE_HUMAN} (${COMPRESSED_SIZE_BYTES} bytes)&quot;
 fi
 
-exit 0
-</code></section></div></div>
+print_separator
+info &quot;Verification commands:&quot;
+info &quot;  zstd -t \&quot;$DEST_FILE_PATH\&quot;&quot;
+info &quot;  tar --list -I zstd -f \&quot;$DEST_FILE_PATH\&quot; | less&quot;
+
+if confirm_yes &quot;Run &#39;zstd -t&#39; now to test archive integrity? (y/N): &quot;; then
+  print_separator
+  info &quot;Running: zstd -t \&quot;$DEST_FILE_PATH\&quot;&quot;
+  if zstd -t &quot;$DEST_FILE_PATH&quot;; then
+    info &quot;Integrity test PASSED.&quot;
+  else
+    warn &quot;Integrity test FAILED.&quot;
+  fi
+fi
+
+exit 0" data-download-link="" data-download-label="Download Bash">
+  <code class="language-bash">#!/usr/bin/env bash
+
+# ==============================================================================
+# Script Name: comprehensive_backup_v3.sh
+# Description: Robust tar+zstd backup with pre-checks, progress (pv), optional
+#              buffering (mbuffer), exclusions, and detailed exit-code handling.
+# Usage:       sudo bash comprehensive_backup_v3.sh
+# Requirements: bash, tar, zstd, du, df, awk, numfmt, stat
+#               Optional: pv, mbuffer, ionice
+# ==============================================================================
+
+set -o pipefail
+umask 077
+IFS=$&#39;\n\t&#39;
+
+# --- Configuration defaults ---
+DEFAULT_SOURCE_DIR=&quot;/media/usb0&quot;
+DEFAULT_DEST_DIR=&quot;/media/usb5&quot;
+DEFAULT_FILENAME_BASE=&quot;backup_usb0&quot;
+DEFAULT_COMPRESSION_LEVEL=9          # 1–19, higher = better compression, slower
+DEFAULT_USE_PV=&quot;y&quot;
+DEFAULT_USE_MBUFFER=&quot;y&quot;
+DEFAULT_MBUFFER_SIZE=&quot;6G&quot;            # e.g., 128M, 512M, 1G, 6G
+DEFAULT_EXCLUDE_PATTERNS=()          # e.g., (&#39;./cache/*&#39; &#39;*.tmp&#39;)
+
+# --- Helper functions ---
+print_separator() {
+  printf &#39;%0.s-&#39; {1..70}
+  printf &#39;\n&#39;
+}
+
+die() {
+  printf &#39;Error: %s\n&#39; &quot;$*&quot; &gt;&amp;2
+  exit 1
+}
+
+warn() {
+  printf &#39;Warning: %s\n&#39; &quot;$*&quot; &gt;&amp;2
+}
+
+info() {
+  printf &#39;%s\n&#39; &quot;$*&quot;
+}
+
+check_command() {
+  if ! command -v &quot;$1&quot; &gt;/dev/null 2&gt;&amp;1; then
+    die &quot;Required command &#39;$1&#39; not found. Install it (e.g., &#39;sudo apt install $1&#39;).&quot;
+  fi
+}
+
+read_with_default() {
+  # $1 = prompt, $2 = default
+  local prompt default reply
+  prompt=$1
+  default=$2
+  read -r -p &quot;$prompt&quot; reply
+  if [[ -z $reply ]]; then
+    reply=$default
+  fi
+  printf &#39;%s&#39; &quot;$reply&quot;
+}
+
+confirm_yes() {
+  # Prompt user; return 0 if yes, 1 otherwise
+  local prompt reply
+  prompt=$1
+  read -r -p &quot;$prompt&quot; reply
+  reply=${reply:-n}
+  case &quot;${reply,,}&quot; in
+    y|yes) return 0 ;;
+    *)     return 1 ;;
+  esac
+}
+
+# --- Root check ---
+if [[ $EUID -ne 0 ]]; then
+  die &quot;This script must be run with sudo/root privileges.&quot;
+fi
+
+START_TIME=$(date +%s)
+
+on_exit() {
+  local exit_code=$?
+  local end_time elapsed h m s
+  end_time=$(date +%s)
+  elapsed=$((end_time - START_TIME))
+  h=$((elapsed / 3600))
+  m=$(((elapsed % 3600) / 60))
+  s=$((elapsed % 60))
+  print_separator
+  printf &#39;Total runtime: %02d:%02d:%02d (exit code %d)\n&#39; &quot;$h&quot; &quot;$m&quot; &quot;$s&quot; &quot;$exit_code&quot;
+}
+trap on_exit EXIT
+
+# --- Dependency checks ---
+print_separator
+info &quot;Checking required commands...&quot;
+check_command tar
+check_command zstd
+check_command du
+check_command df
+check_command awk
+check_command numfmt
+check_command stat
+
+# Optional tools checked only if used later
+OPTIONAL_PV_PRESENT=0
+OPTIONAL_MBUFFER_PRESENT=0
+if command -v pv &gt;/dev/null 2&gt;&amp;1; then
+  OPTIONAL_PV_PRESENT=1
+fi
+if command -v mbuffer &gt;/dev/null 2&gt;&amp;1; then
+  OPTIONAL_MBUFFER_PRESENT=1
+fi
+info &quot;Core commands available.&quot;
+
+# --- Interactive configuration ---
+print_separator
+info &quot;Configure backup parameters (press Enter for defaults).&quot;
+
+SOURCE_DIR=$(read_with_default &quot;Source directory [${DEFAULT_SOURCE_DIR}]: &quot; &quot;$DEFAULT_SOURCE_DIR&quot;)
+DEST_DIR=$(read_with_default &quot;Destination directory [${DEFAULT_DEST_DIR}]: &quot; &quot;$DEFAULT_DEST_DIR&quot;)
+FILENAME_BASE=$(read_with_default &quot;Base filename for archive [${DEFAULT_FILENAME_BASE}]: &quot; &quot;$DEFAULT_FILENAME_BASE&quot;)
+
+COMPRESSION_LEVEL=$(read_with_default &quot;Compression level (1=fast,19=best,default=${DEFAULT_COMPRESSION_LEVEL}): &quot; &quot;$DEFAULT_COMPRESSION_LEVEL&quot;)
+if ! [[ &quot;$COMPRESSION_LEVEL&quot; =~ ^[1-9]$|^1[0-9]$ ]]; then
+  warn &quot;Invalid compression level &#39;$COMPRESSION_LEVEL&#39;; using default ${DEFAULT_COMPRESSION_LEVEL}.&quot;
+  COMPRESSION_LEVEL=$DEFAULT_COMPRESSION_LEVEL
+fi
+
+USE_PV=$(read_with_default &quot;Use &#39;pv&#39; for progress monitoring? (Y/n) [${DEFAULT_USE_PV}]: &quot; &quot;$DEFAULT_USE_PV&quot;)
+case &quot;${USE_PV,,}&quot; in
+  y|yes) USE_PV=&quot;y&quot; ;;
+  n|no)  USE_PV=&quot;n&quot; ;;
+  *)     USE_PV=&quot;$DEFAULT_USE_PV&quot; ;;
+esac
+
+USE_MBUFFER=$(read_with_default &quot;Use &#39;mbuffer&#39; for I/O buffering? (Y/n) [${DEFAULT_USE_MBUFFER}]: &quot; &quot;$DEFAULT_USE_MBUFFER&quot;)
+case &quot;${USE_MBUFFER,,}&quot; in
+  y|yes) USE_MBUFFER=&quot;y&quot; ;;
+  n|no)  USE_MBUFFER=&quot;n&quot; ;;
+  *)     USE_MBUFFER=&quot;$DEFAULT_USE_MBUFFER&quot; ;;
+esac
+
+MBUFFER_SIZE=$DEFAULT_MBUFFER_SIZE
+if [[ &quot;$USE_MBUFFER&quot; == &quot;y&quot; ]]; then
+  if (( OPTIONAL_MBUFFER_PRESENT == 0 )); then
+    warn &quot;&#39;mbuffer&#39; not found; disabling mbuffer usage.&quot;
+    USE_MBUFFER=&quot;n&quot;
+  else
+    MBUFFER_SIZE=$(read_with_default &quot;mbuffer size (e.g., 256M, 1G) [${DEFAULT_MBUFFER_SIZE}]: &quot; &quot;$DEFAULT_MBUFFER_SIZE&quot;)
+  fi
+fi
+
+if [[ &quot;$USE_PV&quot; == &quot;y&quot; &amp;&amp; $OPTIONAL_PV_PRESENT -eq 0 ]]; then
+  warn &quot;&#39;pv&#39; not found; disabling pv usage.&quot;
+  USE_PV=&quot;n&quot;
+fi
+
+# Exclude patterns input
+info &quot;Enter exclude patterns one per line (relative to source, e.g., &#39;./cache/*&#39;, &#39;*.tmp&#39;).&quot;
+info &quot;Press Enter on an empty line to finish.&quot;
+EXCLUDE_PATTERNS=()
+while :; do
+  read -r -p &quot;Exclude pattern (or Enter to finish): &quot; pattern
+  if [[ -z $pattern ]]; then
+    break
+  fi
+  EXCLUDE_PATTERNS+=(&quot;$pattern&quot;)
+done
+if ((${#EXCLUDE_PATTERNS[@]} == 0)); then
+  EXCLUDE_PATTERNS=(&quot;${DEFAULT_EXCLUDE_PATTERNS[@]}&quot;)
+fi
+
+# --- Pre-checks ---
+print_separator
+info &quot;Performing pre-checks...&quot;
+
+# Directory checks
+[[ -d $SOURCE_DIR ]] || die &quot;Source directory &#39;$SOURCE_DIR&#39; does not exist or is not a directory.&quot;
+[[ -d $DEST_DIR ]]   || die &quot;Destination directory &#39;$DEST_DIR&#39; does not exist or is not a directory.&quot;
+
+if ! mountpoint -q &quot;$SOURCE_DIR&quot;; then
+  warn &quot;Source directory &#39;$SOURCE_DIR&#39; is not a dedicated mount point.&quot;
+fi
+if ! mountpoint -q &quot;$DEST_DIR&quot;; then
+  warn &quot;Destination directory &#39;$DEST_DIR&#39; is not a dedicated mount point.&quot;
+fi
+
+# Source size
+info &quot;Calculating source size (du -sb)...&quot;
+if ! SRC_SIZE_LINE=$(du -sb -- &quot;$SOURCE_DIR&quot; 2&gt;/dev/null); then
+  die &quot;Could not determine source size with du -sb &#39;$SOURCE_DIR&#39;.&quot;
+fi
+SRC_SIZE_BYTES=$(awk &#39;{print $1}&#39; &lt;&lt;&lt;&quot;$SRC_SIZE_LINE&quot;)
+if [[ -z $SRC_SIZE_BYTES ]]; then
+  die &quot;Failed to parse source size from du output.&quot;
+fi
+SRC_SIZE_HUMAN=$(numfmt --to=iec &quot;$SRC_SIZE_BYTES&quot;)
+info &quot;Source size: ${SRC_SIZE_HUMAN} (${SRC_SIZE_BYTES} bytes)&quot;
+
+if (( SRC_SIZE_BYTES &lt;= 4096 )); then
+  warn &quot;Source directory size is very small; it may be effectively empty.&quot;
+fi
+
+# Destination free space
+if ! DEST_AVAIL_BYTES=$(df --output=avail -B1 -- &quot;$DEST_DIR&quot; 2&gt;/dev/null | awk &#39;NR==2{print $1}&#39;); then
+  die &quot;Could not determine destination available space for &#39;$DEST_DIR&#39;.&quot;
+fi
+if [[ -z $DEST_AVAIL_BYTES ]]; then
+  die &quot;Failed to parse destination available space.&quot;
+fi
+DEST_AVAIL_HUMAN=$(numfmt --to=iec &quot;$DEST_AVAIL_BYTES&quot;)
+info &quot;Destination available space: ${DEST_AVAIL_HUMAN} (${DEST_AVAIL_BYTES} bytes)&quot;
+
+if (( SRC_SIZE_BYTES &gt; DEST_AVAIL_BYTES )); then
+  print_separator
+  warn &quot;Source size (${SRC_SIZE_HUMAN}) is larger than destination free space (${DEST_AVAIL_HUMAN}).&quot;
+  warn &quot;Backup will only succeed if compression reduces data below available space.&quot;
+elif (( DEST_AVAIL_BYTES &lt; SRC_SIZE_BYTES / 2 )); then
+  warn &quot;Destination free space is less than half the source size; ensure compression is effective.&quot;
+fi
+
+# Destination file path
+TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+DEST_FILENAME=&quot;${FILENAME_BASE}_L${COMPRESSION_LEVEL}_${TIMESTAMP}.tar.zst&quot;
+DEST_FILE_PATH=&quot;${DEST_DIR%/}/$DEST_FILENAME&quot;
+
+if [[ -e $DEST_FILE_PATH ]]; then
+  if confirm_yes &quot;Destination file &#39;$DEST_FILE_PATH&#39; exists. Overwrite? (y/N): &quot;; then
+    warn &quot;Overwriting existing file.&quot;
+  else
+    info &quot;Aborting.&quot;
+    exit 0
+  fi
+fi
+
+# --- Summary and confirmation ---
+print_separator
+info &quot;Backup summary:&quot;
+info &quot;  Source:      $SOURCE_DIR ($SRC_SIZE_HUMAN)&quot;
+info &quot;  Destination: $DEST_FILE_PATH&quot;
+info &quot;  Compression: zstd level $COMPRESSION_LEVEL&quot;
+
+PROGRESS_STR=&quot;pv disabled&quot;
+[[ $USE_PV == y ]] &amp;&amp; PROGRESS_STR=&quot;pv enabled&quot;
+BUFFER_STR=&quot;none&quot;
+[[ $USE_MBUFFER == y ]] &amp;&amp; BUFFER_STR=&quot;mbuffer ($MBUFFER_SIZE)&quot;
+
+info &quot;  Progress:    $PROGRESS_STR&quot;
+info &quot;  IO buffer:   $BUFFER_STR&quot;
+
+if ((${#EXCLUDE_PATTERNS[@]} &gt; 0)); then
+  info &quot;  Exclusions:  ${EXCLUDE_PATTERNS[*]}&quot;
+fi
+print_separator
+
+if ! confirm_yes &quot;Proceed with backup? (y/N): &quot;; then
+  info &quot;Aborted by user.&quot;
+  exit 0
+fi
+
+# Optionally lower priority for the backup process
+if confirm_yes &quot;Lower CPU/IO priority for backup (recommended on busy systems)? (y/N): &quot;; then
+  if command -v ionice &gt;/dev/null 2&gt;&amp;1; then
+    ionice -c3 -p &quot;$$&quot; &gt;/dev/null 2&gt;&amp;1 || warn &quot;ionice failed to adjust I/O priority.&quot;
+  fi
+  renice 10 -p &quot;$$&quot; &gt;/dev/null 2&gt;&amp;1 || true
+fi
+
+# --- Build tar command array ---
+TAR_CMD=(tar -cf -)
+for pattern in &quot;${EXCLUDE_PATTERNS[@]}&quot;; do
+  TAR_CMD+=(--exclude=&quot;$pattern&quot;)
+done
+TAR_CMD+=(-C &quot;$SOURCE_DIR&quot; .)
+
+# --- Execute backup pipeline ---
+print_separator
+PIPE_DESC=&quot;tar | &quot;
+[[ $USE_PV == y ]] &amp;&amp; PIPE_DESC+=&quot;pv | &quot;
+[[ $USE_MBUFFER == y ]] &amp;&amp; PIPE_DESC+=&quot;mbuffer | &quot;
+PIPE_DESC+=&quot;zstd&quot;
+info &quot;Starting backup process...&quot;
+info &quot;Running $PIPE_DESC ...&quot;
+print_separator
+
+PIPE_STATUS=()
+EXECUTION_EXIT_CODE=0
+
+run_pipeline() {
+  if [[ $USE_PV == y &amp;&amp; $USE_MBUFFER == y ]]; then
+    &quot;${TAR_CMD[@]}&quot; \
+      | pv -s &quot;$SRC_SIZE_BYTES&quot; \
+      | mbuffer -m &quot;$MBUFFER_SIZE&quot; \
+      | zstd -T0 &quot;-${COMPRESSION_LEVEL}&quot; -o &quot;$DEST_FILE_PATH&quot;
+  elif [[ $USE_PV == y &amp;&amp; $USE_MBUFFER != y ]]; then
+    &quot;${TAR_CMD[@]}&quot; \
+      | pv -s &quot;$SRC_SIZE_BYTES&quot; \
+      | zstd -T0 &quot;-${COMPRESSION_LEVEL}&quot; -o &quot;$DEST_FILE_PATH&quot;
+  elif [[ $USE_PV != y &amp;&amp; $USE_MBUFFER == y ]]; then
+    &quot;${TAR_CMD[@]}&quot; \
+      | mbuffer -m &quot;$MBUFFER_SIZE&quot; \
+      | zstd -T0 &quot;-${COMPRESSION_LEVEL}&quot; -o &quot;$DEST_FILE_PATH&quot;
+  else
+    &quot;${TAR_CMD[@]}&quot; \
+      | zstd -T0 &quot;-${COMPRESSION_LEVEL}&quot; -o &quot;$DEST_FILE_PATH&quot;
+  fi
+}
+
+run_pipeline
+EXECUTION_EXIT_CODE=$?
+PIPE_STATUS=(&quot;${PIPESTATUS[@]}&quot;)
+
+print_separator
+info &quot;Backup process finished.&quot;
+info &quot;Checking pipeline exit codes: ${PIPE_STATUS[*]:-none}&quot;
+
+STAGE_NAMES=(&quot;tar&quot;)
+if [[ $USE_PV == y ]]; then STAGE_NAMES+=(&quot;pv&quot;); fi
+if [[ $USE_MBUFFER == y ]]; then STAGE_NAMES+=(&quot;mbuffer&quot;); fi
+STAGE_NAMES+=(&quot;zstd&quot;)
+
+FINAL_EXIT_CODE=0
+for i in &quot;${!PIPE_STATUS[@]}&quot;; do
+  stage_name=${STAGE_NAMES[$i]:-stage_$i}
+  stage_status=${PIPE_STATUS[$i]}
+  if [[ $stage_status -ne 0 ]]; then
+    printf &#39;Error: Stage %s failed with exit code %d\n&#39; &quot;$stage_name&quot; &quot;$stage_status&quot; &gt;&amp;2
+    if [[ $FINAL_EXIT_CODE -eq 0 ]]; then
+      FINAL_EXIT_CODE=$stage_status
+    fi
+  fi
+done
+
+if [[ $FINAL_EXIT_CODE -eq 0 &amp;&amp; $EXECUTION_EXIT_CODE -ne 0 ]]; then
+  warn &quot;Overall pipeline exit code is $EXECUTION_EXIT_CODE despite all stages reporting success.&quot;
+  FINAL_EXIT_CODE=$EXECUTION_EXIT_CODE
+fi
+
+if [[ $FINAL_EXIT_CODE -ne 0 ]]; then
+  printf &#39;Backup FAILED (exit code %d). Archive may be incomplete: %s\n&#39; &quot;$FINAL_EXIT_CODE&quot; &quot;$DEST_FILE_PATH&quot; &gt;&amp;2
+  exit &quot;$FINAL_EXIT_CODE&quot;
+fi
+
+info &quot;Pipeline completed successfully.&quot;
+
+# --- Post-execution: report size and optional verification ---
+if ! COMPRESSED_SIZE_BYTES=$(stat -c%s -- &quot;$DEST_FILE_PATH&quot; 2&gt;/dev/null); then
+  warn &quot;Could not stat archive &#39;$DEST_FILE_PATH&#39;.&quot;
+else
+  COMPRESSED_SIZE_HUMAN=$(numfmt --to=iec &quot;$COMPRESSED_SIZE_BYTES&quot;)
+  info &quot;Archive saved to: $DEST_FILE_PATH&quot;
+  info &quot;Compressed size:  ${COMPRESSED_SIZE_HUMAN} (${COMPRESSED_SIZE_BYTES} bytes)&quot;
+fi
+
+print_separator
+info &quot;Verification commands:&quot;
+info &quot;  zstd -t \&quot;$DEST_FILE_PATH\&quot;&quot;
+info &quot;  tar --list -I zstd -f \&quot;$DEST_FILE_PATH\&quot; | less&quot;
+
+if confirm_yes &quot;Run &#39;zstd -t&#39; now to test archive integrity? (y/N): &quot;; then
+  print_separator
+  info &quot;Running: zstd -t \&quot;$DEST_FILE_PATH\&quot;&quot;
+  if zstd -t &quot;$DEST_FILE_PATH&quot;; then
+    info &quot;Integrity test PASSED.&quot;
+  else
+    warn &quot;Integrity test FAILED.&quot;
+  fi
+fi
+
+exit 0</code>
+</section>
 
         </div>
         
@@ -692,7 +1127,7 @@ exit 0
         
         
         <a href="https://ib.bsb.br/404" aria-label="404">
-          2025-11-19 20:23:36
+          2025-11-19 22:46:22
         </a>
         &#x23;
     
@@ -760,7 +1195,7 @@ exit 0
         "headline": "backup bash script",
         "description": "",
         "datePublished": "2025-05-12T00:00:00+00:00",
-        "dateModified": "2025-05-12T18:04:46+00:00",
+        "dateModified": "2025-11-20T01:41:34+00:00",
         "author": {
           "@type": "Person",
           "name": "Author"
