@@ -1,4 +1,563 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2025-12-19T19:24:21+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">Debian 13 bootable USB setup</title><link href="https://ib.bsb.br/debian13usb/" rel="alternate" type="text/html" title="Debian 13 bootable USB setup" /><published>2025-11-19T00:00:00+00:00</published><updated>2025-11-19T21:47:09+00:00</updated><id>https://ib.bsb.br/debian13usb</id><content type="html" xml:base="https://ib.bsb.br/debian13usb/"><![CDATA[<pre><code class="language-build_debian13_usb.sh">#!/usr/bin/env bash
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2025-12-19T19:33:47+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">RK3588 capability scan</title><link href="https://ib.bsb.br/rk3588-scan/" rel="alternate" type="text/html" title="RK3588 capability scan" /><published>2025-12-19T00:00:00+00:00</published><updated>2025-12-19T19:26:27+00:00</updated><id>https://ib.bsb.br/rk3588-scan</id><content type="html" xml:base="https://ib.bsb.br/rk3588-scan/"><![CDATA[<h1 id="rk3588_auditsh">rk3588_audit.sh</h1>
+<section class="code-block-container" role="group" aria-label=" Code Block" data-filename="_code_block.txt" data-code="#!/usr/bin/env bash
+set -euo pipefail
+set -o errtrace
+IFS=$&#39;\n\t&#39;
+trap &#39;echo &quot;Error on or near line ${LINENO}; command exited with status $?&quot; &gt;&amp;2&#39; ERR
+
+# rk3588_audit.sh
+#
+# Purpose:
+#   - Create a timestamped audit directory under ~/rk3588_audit_&lt;timestamp&gt;/
+#   - Collect system/display/GPU/VPU/network/storage snapshots
+#   - Install diagnostic packages idempotently (skips missing packages)
+#   - Avoid destructive actions; optional actions require explicit confirmation
+
+START_TS=&quot;$(date +%Y%m%d_%H%M%S)&quot;
+AUDIT_DIR=&quot;$HOME/rk3588_audit_${START_TS}&quot;
+LOG_DIR=&quot;$AUDIT_DIR/logs&quot;
+OUT_DIR=&quot;$AUDIT_DIR/out&quot;
+REPORT_MD=&quot;$AUDIT_DIR/REPORT.md&quot;
+LOG_FILE=&quot;$LOG_DIR/audit.log&quot;
+ENV_FILE=&quot;$LOG_DIR/env.txt&quot;
+DMESG_FILE=&quot;$LOG_DIR/dmesg.txt&quot;
+
+CMD_FAIL_HINT=&quot;Check ${LOG_FILE} and ${REPORT_MD} for details.&quot;
+
+: &quot;${NET_TIMEOUT:=5}&quot;
+: &quot;${FIO_SIZE_MB:=512}&quot;
+: &quot;${FIO_BS:=1M}&quot;
+: &quot;${FIO_IODEPTH:=16}&quot;
+: &quot;${RUN_COLORS:=1}&quot;
+
+TMPDIR_CREATED=&quot;&quot;
+cleanup() {
+  if [[ -n &quot;${TMPDIR_CREATED:-}&quot; &amp;&amp; -d &quot;$TMPDIR_CREATED&quot; ]]; then
+    rm -rf &quot;$TMPDIR_CREATED&quot; || true
+  fi
+}
+trap cleanup EXIT SIGINT SIGTERM
+
+if [[ -t 1 &amp;&amp; &quot;$RUN_COLORS&quot; -eq 1 ]] &amp;&amp; command -v tput &gt;/dev/null 2&gt;&amp;1; then
+  GREEN=&quot;$(tput setaf 2)&quot;; YELLOW=&quot;$(tput setaf 3)&quot;; RED=&quot;$(tput setaf 1)&quot;; BLUE=&quot;$(tput setaf 4)&quot;; BOLD=&quot;$(tput bold)&quot;; RESET=&quot;$(tput sgr0)&quot;
+else
+  GREEN=&quot;&quot;; YELLOW=&quot;&quot;; RED=&quot;&quot;; BLUE=&quot;&quot;; BOLD=&quot;&quot;; RESET=&quot;&quot;
+fi
+
+log() { echo -e &quot;$*&quot; | tee -a &quot;$LOG_FILE&quot;; }
+section() { log &quot;\n${BOLD}${BLUE}==&gt; $1${RESET}&quot;; }
+
+ensure_dir() { [[ -d &quot;$1&quot; ]] || mkdir -p &quot;$1&quot;; }
+
+ask_yes() {
+  local prompt=&quot;$1&quot; ans
+  echo
+  read -r -p &quot;${YELLOW}${prompt}${RESET} (type &#39;yes&#39; to continue, anything else to cancel): &quot; ans
+  [[ &quot;$ans&quot; == &quot;yes&quot; ]] || { echo &quot;Cancelled by user.&quot;; return 1; }
+}
+
+need_sudo() {
+  command -v sudo &gt;/dev/null 2&gt;&amp;1 || { echo &quot;Error: sudo required.&quot; &gt;&amp;2; exit 1; }
+  sudo -v || { echo &quot;Error: sudo auth failed.&quot; &gt;&amp;2; exit 1; }
+}
+
+package_available() {
+  local pkg=&quot;$1&quot;
+  apt-cache policy &quot;$pkg&quot; 2&gt;/dev/null | awk &#39;/Candidate:/ {print $2}&#39; | grep -vq &quot;(none)&quot;
+}
+
+is_installed() { dpkg -s &quot;$1&quot; &gt;/dev/null 2&gt;&amp;1; }
+
+ensure_package() {
+  local pkg=&quot;$1&quot;
+  if is_installed &quot;$pkg&quot;; then
+    log &quot;Package already installed: ${GREEN}${pkg}${RESET}&quot;
+    return 0
+  fi
+  if ! package_available &quot;$pkg&quot;; then
+    log &quot;Package not available (skipping): ${YELLOW}${pkg}${RESET}&quot;
+    return 0
+  fi
+  log &quot;Installing package: ${GREEN}${pkg}${RESET}&quot;
+  sudo apt-get install -y --no-install-recommends &quot;$pkg&quot; &gt;&gt;&quot;$LOG_FILE&quot; 2&gt;&amp;1 || {
+    echo &quot;Error: Failed to install &#39;$pkg&#39;. ${CMD_FAIL_HINT}&quot; &gt;&amp;2
+    exit 1
+  }
+}
+
+ensure_packages() { for pkg in &quot;$@&quot;; do ensure_package &quot;$pkg&quot;; done; }
+
+run_continue() {
+  local title=&quot;$1&quot;; shift
+  log &quot;\n--- $title ---&quot;
+  &quot;$@&quot; &gt;&gt;&quot;$LOG_FILE&quot; 2&gt;&amp;1 || log &quot;  (Command failed but continuing): $*&quot;
+}
+
+run_fail() {
+  local title=&quot;$1&quot;; shift
+  log &quot;\n&gt;&gt;&gt; $title&quot;
+  &quot;$@&quot; &gt;&gt;&quot;$LOG_FILE&quot; 2&gt;&amp;1 || { echo &quot;Error: $title failed. ${CMD_FAIL_HINT}&quot; &gt;&amp;2; exit 1; }
+}
+
+quick_net_check() {
+  section &quot;Quick network check&quot;
+  if command -v ping &gt;/dev/null 2&gt;&amp;1 &amp;&amp; ping -c1 -W &quot;$NET_TIMEOUT&quot; deb.debian.org &gt;/dev/null 2&gt;&amp;1; then
+    log &quot;Network reachable.&quot;
+    return 0
+  fi
+  log &quot;Network check failed; installs/downloads may be limited.&quot;
+  return 1
+}
+
+check_platform() {
+  section &quot;Platform checks&quot;
+  local debver arch
+  debver=&quot;$(cut -d&#39;.&#39; -f1 &lt; /etc/debian_version 2&gt;/dev/null || echo unknown)&quot;
+  arch=&quot;$(uname -m 2&gt;/dev/null || echo unknown)&quot;
+  log &quot;Debian major: $debver&quot;
+  log &quot;Arch        : $arch&quot;
+  [[ &quot;$debver&quot; == &quot;11&quot; ]] || log &quot;WARNING: tuned for Debian 11 (Bullseye).&quot;
+  [[ &quot;$arch&quot; == &quot;aarch64&quot; || &quot;$arch&quot; == &quot;arm64&quot; ]] || log &quot;WARNING: tuned for ARM64.&quot;
+}
+
+enable_nonfree_optional() {
+  section &quot;Optional: Enable contrib/non-free (Bullseye)&quot;
+  if ! ask_yes &quot;Enable &#39;contrib non-free&#39; in /etc/apt/sources.list (backup + apt update)?&quot;; then
+    log &quot;Skipped enabling contrib/non-free.&quot;
+    return 0
+  fi
+
+  local src=&quot;/etc/apt/sources.list&quot;
+  if [[ ! -f &quot;$src&quot; ]]; then
+    log &quot;No $src found; skipping.&quot;
+    return 0
+  fi
+
+  sudo cp -a &quot;$src&quot; &quot;${src}.bak.${START_TS}&quot;
+
+  TMPDIR_CREATED=&quot;$(mktemp -d)&quot;
+  local tmp=&quot;$TMPDIR_CREATED/sources.list&quot;
+
+  sudo awk &#39;{
+    if ($1==&quot;deb&quot; || $1==&quot;deb-src&quot;) {
+      line=$0
+      has_contrib=match(line,/(^| )contrib( |$)/)
+      has_nonfree=match(line,/(^| )non-free( |$)/)
+      if (!has_contrib) line=line&quot; contrib&quot;
+      if (!has_nonfree) line=line&quot; non-free&quot;
+      print line
+    } else {
+      print
+    }
+  }&#39; &quot;$src&quot; | sudo tee &quot;$tmp&quot; &gt;/dev/null
+
+  sudo mv &quot;$tmp&quot; &quot;$src&quot;
+  run_fail &quot;apt-get update (after enabling contrib/non-free)&quot; sudo apt-get update
+  rm -rf &quot;$TMPDIR_CREATED&quot; || true
+  TMPDIR_CREATED=&quot;&quot;
+}
+
+main() {
+  ensure_dir &quot;$AUDIT_DIR&quot;; ensure_dir &quot;$LOG_DIR&quot;; ensure_dir &quot;$OUT_DIR&quot;
+  : &gt;&quot;$LOG_FILE&quot;
+
+  section &quot;Start&quot;
+  log &quot;Audit directory: $AUDIT_DIR&quot;
+  log &quot;Log file       : $LOG_FILE&quot;
+
+  need_sudo
+
+  {
+    echo &quot;===== ENVIRONMENT =====&quot;
+    echo &quot;Timestamp: $START_TS&quot;
+    uname -a || true
+    echo
+    echo &quot;----- /etc/os-release -----&quot;
+    cat /etc/os-release 2&gt;/dev/null || true
+    echo
+    echo &quot;----- /proc/cmdline -----&quot;
+    cat /proc/cmdline 2&gt;/dev/null || true
+    echo
+    echo &quot;----- CPU -----&quot;
+    lscpu 2&gt;/dev/null || true
+    echo
+    echo &quot;----- Memory/CMA -----&quot;
+    grep -E &#39;CmaTotal|CmaFree|MemTotal|MemFree|HugePages&#39; /proc/meminfo 2&gt;/dev/null || true
+  } &gt;&quot;$ENV_FILE&quot;
+
+  run_continue &quot;Collect dmesg&quot; bash -lc &quot;sudo dmesg -T &gt; &#39;$DMESG_FILE&#39;&quot;
+
+  check_platform
+  quick_net_check || true
+
+  section &quot;APT update&quot;
+  run_fail &quot;apt-get update&quot; sudo apt-get update
+
+  enable_nonfree_optional || true
+
+  section &quot;Install baseline diagnostic tools (idempotent; skips unavailable)&quot;
+  ensure_packages \
+    curl wget ca-certificates \
+    pciutils usbutils lshw hwinfo inxi \
+    ethtool iproute2 net-tools jq \
+    i2c-tools lm-sensors \
+    v4l-utils \
+    gstreamer1.0-tools gstreamer1.0-plugins-base gstreamer1.0-plugins-good gstreamer1.0-plugins-bad gstreamer1.0-plugins-ugly \
+    ffmpeg alsa-utils \
+    vulkan-tools mesa-utils kmscube \
+    xrandr x11-xserver-utils autorandr \
+    edid-decode read-edid ddcutil \
+    fio hdparm nvme-cli smartmontools \
+    iw wireless-tools bluez can-utils
+
+  section &quot;System overview&quot;
+  run_continue &quot;lshw (short)&quot; sudo lshw -short
+  run_continue &quot;lsblk -O&quot; lsblk -O
+  run_continue &quot;df -hT&quot; df -hT
+  run_continue &quot;lsusb -t&quot; lsusb -t
+  run_continue &quot;lspci -nnk&quot; lspci -nnk
+  run_continue &quot;Kernel warnings/errors (last 200)&quot; bash -lc &#39;dmesg -T --level=err,warn | tail -n 200&#39;
+
+  section &quot;GPU &amp; Display&quot;
+  run_continue &quot;GPU modules loaded&quot; bash -lc &quot;lsmod | egrep -i &#39;panthor|panfrost|mali|kbase&#39; || true&quot;
+  run_continue &quot;GPU-related dmesg&quot; bash -lc &quot;dmesg -T | egrep -i &#39;mali|panthor|panfrost|csf|gpu&#39; || true&quot;
+  run_continue &quot;DRM connectors (modetest -c)&quot; modetest -c
+  run_continue &quot;kmscube smoke test&quot; bash -lc &quot;kmscube -i 100 &gt;/dev/null 2&gt;&amp;1 || true&quot;
+  run_continue &quot;Vulkan summary&quot; vulkaninfo --summary
+  run_continue &quot;xrandr --props (if X running)&quot; bash -lc &quot;DISPLAY=\${DISPLAY:-:0} xrandr --props 2&gt;/dev/null || true&quot;
+
+  section &quot;Video / V4L2 / Codecs&quot;
+  run_continue &quot;List V4L2 devices&quot; v4l2-ctl --list-devices
+  run_continue &quot;FFmpeg hwaccels&quot; ffmpeg -hide_banner -hwaccels
+  run_continue &quot;GStreamer rockchip-ish plugins&quot; bash -lc &quot;gst-inspect-1.0 | egrep -i &#39;v4l2|rkv|hantro|rockchip&#39; || true&quot;
+
+  section &quot;Audio&quot;
+  run_continue &quot;ALSA playback&quot; aplay -l
+  run_continue &quot;ALSA capture&quot; arecord -l
+
+  section &quot;Network&quot;
+  run_continue &quot;ip -details addr&quot; ip -details address
+  run_continue &quot;iw dev&quot; iw dev
+
+  section &quot;Storage&quot;
+  run_continue &quot;lsblk (model/serial)&quot; lsblk -o NAME,SIZE,TYPE,MOUNTPOINTS,MODEL,SERIAL,TRAN
+  run_continue &quot;SATA/NVMe/PCIe dmesg&quot; bash -lc &quot;dmesg -T | egrep -i &#39;sata|ahci|nvme|pcie&#39; || true&quot;
+  run_continue &quot;nvme list (if any)&quot; bash -lc &quot;ls /dev/nvme*n1 &gt;/dev/null 2&gt;&amp;1 &amp;&amp; sudo nvme list || true&quot;
+
+  section &quot;Optional actions&quot;
+  if ask_yes &quot;Run powertop --auto-tune (changes power tunables until reboot)?&quot;; then
+    run_fail &quot;powertop --auto-tune&quot; sudo powertop --auto-tune
+  fi
+  if ask_yes &quot;Run sensors-detect (interactive; may load modules)?&quot;; then
+    run_fail &quot;sensors-detect&quot; sudo sensors-detect
+  fi
+  if ask_yes &quot;Run quick fio seq read/write in $HOME (~${FIO_SIZE_MB}MB temp file, then removed)?&quot;; then
+    TMPDIR_CREATED=&quot;$(mktemp -d)&quot;
+    local fiofile=&quot;$TMPDIR_CREATED/fio_test.dat&quot;
+    run_fail &quot;dd create file&quot; dd if=/dev/zero of=&quot;$fiofile&quot; bs=1M count=&quot;$FIO_SIZE_MB&quot; status=none
+    run_fail &quot;fio seq rw&quot; fio --name=seqrw --filename=&quot;$fiofile&quot; --rw=readwrite --bs=&quot;$FIO_BS&quot; --direct=1 --numjobs=1 --iodepth=&quot;$FIO_IODEPTH&quot; --size=&quot;${FIO_SIZE_MB}M&quot; --group_reporting
+    rm -rf &quot;$TMPDIR_CREATED&quot; || true
+    TMPDIR_CREATED=&quot;&quot;
+  fi
+
+  section &quot;REPORT.md&quot;
+  {
+    echo &quot;# RK3588 Capability Audit — $START_TS&quot;
+    echo
+    echo &quot;Audit directory: $AUDIT_DIR&quot;
+    echo &quot;Log file: $LOG_FILE&quot;
+    echo &quot;Env snapshot: $ENV_FILE&quot;
+    echo &quot;dmesg: $DMESG_FILE&quot;
+  } &gt;&quot;$REPORT_MD&quot;
+
+  ( cd &quot;$HOME&quot; &amp;&amp; tar czf &quot;${AUDIT_DIR}.tar.gz&quot; &quot;$(basename &quot;$AUDIT_DIR&quot;)&quot; )
+
+  section &quot;Done&quot;
+  log &quot;Report : $REPORT_MD&quot;
+  log &quot;Archive: ${AUDIT_DIR}.tar.gz&quot;
+}
+
+main &quot;$@&quot;" data-download-link="" data-download-label="Download ">
+  <code class="language-">#!/usr/bin/env bash
+set -euo pipefail
+set -o errtrace
+IFS=$&#39;\n\t&#39;
+trap &#39;echo &quot;Error on or near line ${LINENO}; command exited with status $?&quot; &gt;&amp;2&#39; ERR
+
+# rk3588_audit.sh
+#
+# Purpose:
+#   - Create a timestamped audit directory under ~/rk3588_audit_&lt;timestamp&gt;/
+#   - Collect system/display/GPU/VPU/network/storage snapshots
+#   - Install diagnostic packages idempotently (skips missing packages)
+#   - Avoid destructive actions; optional actions require explicit confirmation
+
+START_TS=&quot;$(date +%Y%m%d_%H%M%S)&quot;
+AUDIT_DIR=&quot;$HOME/rk3588_audit_${START_TS}&quot;
+LOG_DIR=&quot;$AUDIT_DIR/logs&quot;
+OUT_DIR=&quot;$AUDIT_DIR/out&quot;
+REPORT_MD=&quot;$AUDIT_DIR/REPORT.md&quot;
+LOG_FILE=&quot;$LOG_DIR/audit.log&quot;
+ENV_FILE=&quot;$LOG_DIR/env.txt&quot;
+DMESG_FILE=&quot;$LOG_DIR/dmesg.txt&quot;
+
+CMD_FAIL_HINT=&quot;Check ${LOG_FILE} and ${REPORT_MD} for details.&quot;
+
+: &quot;${NET_TIMEOUT:=5}&quot;
+: &quot;${FIO_SIZE_MB:=512}&quot;
+: &quot;${FIO_BS:=1M}&quot;
+: &quot;${FIO_IODEPTH:=16}&quot;
+: &quot;${RUN_COLORS:=1}&quot;
+
+TMPDIR_CREATED=&quot;&quot;
+cleanup() {
+  if [[ -n &quot;${TMPDIR_CREATED:-}&quot; &amp;&amp; -d &quot;$TMPDIR_CREATED&quot; ]]; then
+    rm -rf &quot;$TMPDIR_CREATED&quot; || true
+  fi
+}
+trap cleanup EXIT SIGINT SIGTERM
+
+if [[ -t 1 &amp;&amp; &quot;$RUN_COLORS&quot; -eq 1 ]] &amp;&amp; command -v tput &gt;/dev/null 2&gt;&amp;1; then
+  GREEN=&quot;$(tput setaf 2)&quot;; YELLOW=&quot;$(tput setaf 3)&quot;; RED=&quot;$(tput setaf 1)&quot;; BLUE=&quot;$(tput setaf 4)&quot;; BOLD=&quot;$(tput bold)&quot;; RESET=&quot;$(tput sgr0)&quot;
+else
+  GREEN=&quot;&quot;; YELLOW=&quot;&quot;; RED=&quot;&quot;; BLUE=&quot;&quot;; BOLD=&quot;&quot;; RESET=&quot;&quot;
+fi
+
+log() { echo -e &quot;$*&quot; | tee -a &quot;$LOG_FILE&quot;; }
+section() { log &quot;\n${BOLD}${BLUE}==&gt; $1${RESET}&quot;; }
+
+ensure_dir() { [[ -d &quot;$1&quot; ]] || mkdir -p &quot;$1&quot;; }
+
+ask_yes() {
+  local prompt=&quot;$1&quot; ans
+  echo
+  read -r -p &quot;${YELLOW}${prompt}${RESET} (type &#39;yes&#39; to continue, anything else to cancel): &quot; ans
+  [[ &quot;$ans&quot; == &quot;yes&quot; ]] || { echo &quot;Cancelled by user.&quot;; return 1; }
+}
+
+need_sudo() {
+  command -v sudo &gt;/dev/null 2&gt;&amp;1 || { echo &quot;Error: sudo required.&quot; &gt;&amp;2; exit 1; }
+  sudo -v || { echo &quot;Error: sudo auth failed.&quot; &gt;&amp;2; exit 1; }
+}
+
+package_available() {
+  local pkg=&quot;$1&quot;
+  apt-cache policy &quot;$pkg&quot; 2&gt;/dev/null | awk &#39;/Candidate:/ {print $2}&#39; | grep -vq &quot;(none)&quot;
+}
+
+is_installed() { dpkg -s &quot;$1&quot; &gt;/dev/null 2&gt;&amp;1; }
+
+ensure_package() {
+  local pkg=&quot;$1&quot;
+  if is_installed &quot;$pkg&quot;; then
+    log &quot;Package already installed: ${GREEN}${pkg}${RESET}&quot;
+    return 0
+  fi
+  if ! package_available &quot;$pkg&quot;; then
+    log &quot;Package not available (skipping): ${YELLOW}${pkg}${RESET}&quot;
+    return 0
+  fi
+  log &quot;Installing package: ${GREEN}${pkg}${RESET}&quot;
+  sudo apt-get install -y --no-install-recommends &quot;$pkg&quot; &gt;&gt;&quot;$LOG_FILE&quot; 2&gt;&amp;1 || {
+    echo &quot;Error: Failed to install &#39;$pkg&#39;. ${CMD_FAIL_HINT}&quot; &gt;&amp;2
+    exit 1
+  }
+}
+
+ensure_packages() { for pkg in &quot;$@&quot;; do ensure_package &quot;$pkg&quot;; done; }
+
+run_continue() {
+  local title=&quot;$1&quot;; shift
+  log &quot;\n--- $title ---&quot;
+  &quot;$@&quot; &gt;&gt;&quot;$LOG_FILE&quot; 2&gt;&amp;1 || log &quot;  (Command failed but continuing): $*&quot;
+}
+
+run_fail() {
+  local title=&quot;$1&quot;; shift
+  log &quot;\n&gt;&gt;&gt; $title&quot;
+  &quot;$@&quot; &gt;&gt;&quot;$LOG_FILE&quot; 2&gt;&amp;1 || { echo &quot;Error: $title failed. ${CMD_FAIL_HINT}&quot; &gt;&amp;2; exit 1; }
+}
+
+quick_net_check() {
+  section &quot;Quick network check&quot;
+  if command -v ping &gt;/dev/null 2&gt;&amp;1 &amp;&amp; ping -c1 -W &quot;$NET_TIMEOUT&quot; deb.debian.org &gt;/dev/null 2&gt;&amp;1; then
+    log &quot;Network reachable.&quot;
+    return 0
+  fi
+  log &quot;Network check failed; installs/downloads may be limited.&quot;
+  return 1
+}
+
+check_platform() {
+  section &quot;Platform checks&quot;
+  local debver arch
+  debver=&quot;$(cut -d&#39;.&#39; -f1 &lt; /etc/debian_version 2&gt;/dev/null || echo unknown)&quot;
+  arch=&quot;$(uname -m 2&gt;/dev/null || echo unknown)&quot;
+  log &quot;Debian major: $debver&quot;
+  log &quot;Arch        : $arch&quot;
+  [[ &quot;$debver&quot; == &quot;11&quot; ]] || log &quot;WARNING: tuned for Debian 11 (Bullseye).&quot;
+  [[ &quot;$arch&quot; == &quot;aarch64&quot; || &quot;$arch&quot; == &quot;arm64&quot; ]] || log &quot;WARNING: tuned for ARM64.&quot;
+}
+
+enable_nonfree_optional() {
+  section &quot;Optional: Enable contrib/non-free (Bullseye)&quot;
+  if ! ask_yes &quot;Enable &#39;contrib non-free&#39; in /etc/apt/sources.list (backup + apt update)?&quot;; then
+    log &quot;Skipped enabling contrib/non-free.&quot;
+    return 0
+  fi
+
+  local src=&quot;/etc/apt/sources.list&quot;
+  if [[ ! -f &quot;$src&quot; ]]; then
+    log &quot;No $src found; skipping.&quot;
+    return 0
+  fi
+
+  sudo cp -a &quot;$src&quot; &quot;${src}.bak.${START_TS}&quot;
+
+  TMPDIR_CREATED=&quot;$(mktemp -d)&quot;
+  local tmp=&quot;$TMPDIR_CREATED/sources.list&quot;
+
+  sudo awk &#39;{
+    if ($1==&quot;deb&quot; || $1==&quot;deb-src&quot;) {
+      line=$0
+      has_contrib=match(line,/(^| )contrib( |$)/)
+      has_nonfree=match(line,/(^| )non-free( |$)/)
+      if (!has_contrib) line=line&quot; contrib&quot;
+      if (!has_nonfree) line=line&quot; non-free&quot;
+      print line
+    } else {
+      print
+    }
+  }&#39; &quot;$src&quot; | sudo tee &quot;$tmp&quot; &gt;/dev/null
+
+  sudo mv &quot;$tmp&quot; &quot;$src&quot;
+  run_fail &quot;apt-get update (after enabling contrib/non-free)&quot; sudo apt-get update
+  rm -rf &quot;$TMPDIR_CREATED&quot; || true
+  TMPDIR_CREATED=&quot;&quot;
+}
+
+main() {
+  ensure_dir &quot;$AUDIT_DIR&quot;; ensure_dir &quot;$LOG_DIR&quot;; ensure_dir &quot;$OUT_DIR&quot;
+  : &gt;&quot;$LOG_FILE&quot;
+
+  section &quot;Start&quot;
+  log &quot;Audit directory: $AUDIT_DIR&quot;
+  log &quot;Log file       : $LOG_FILE&quot;
+
+  need_sudo
+
+  {
+    echo &quot;===== ENVIRONMENT =====&quot;
+    echo &quot;Timestamp: $START_TS&quot;
+    uname -a || true
+    echo
+    echo &quot;----- /etc/os-release -----&quot;
+    cat /etc/os-release 2&gt;/dev/null || true
+    echo
+    echo &quot;----- /proc/cmdline -----&quot;
+    cat /proc/cmdline 2&gt;/dev/null || true
+    echo
+    echo &quot;----- CPU -----&quot;
+    lscpu 2&gt;/dev/null || true
+    echo
+    echo &quot;----- Memory/CMA -----&quot;
+    grep -E &#39;CmaTotal|CmaFree|MemTotal|MemFree|HugePages&#39; /proc/meminfo 2&gt;/dev/null || true
+  } &gt;&quot;$ENV_FILE&quot;
+
+  run_continue &quot;Collect dmesg&quot; bash -lc &quot;sudo dmesg -T &gt; &#39;$DMESG_FILE&#39;&quot;
+
+  check_platform
+  quick_net_check || true
+
+  section &quot;APT update&quot;
+  run_fail &quot;apt-get update&quot; sudo apt-get update
+
+  enable_nonfree_optional || true
+
+  section &quot;Install baseline diagnostic tools (idempotent; skips unavailable)&quot;
+  ensure_packages \
+    curl wget ca-certificates \
+    pciutils usbutils lshw hwinfo inxi \
+    ethtool iproute2 net-tools jq \
+    i2c-tools lm-sensors \
+    v4l-utils \
+    gstreamer1.0-tools gstreamer1.0-plugins-base gstreamer1.0-plugins-good gstreamer1.0-plugins-bad gstreamer1.0-plugins-ugly \
+    ffmpeg alsa-utils \
+    vulkan-tools mesa-utils kmscube \
+    xrandr x11-xserver-utils autorandr \
+    edid-decode read-edid ddcutil \
+    fio hdparm nvme-cli smartmontools \
+    iw wireless-tools bluez can-utils
+
+  section &quot;System overview&quot;
+  run_continue &quot;lshw (short)&quot; sudo lshw -short
+  run_continue &quot;lsblk -O&quot; lsblk -O
+  run_continue &quot;df -hT&quot; df -hT
+  run_continue &quot;lsusb -t&quot; lsusb -t
+  run_continue &quot;lspci -nnk&quot; lspci -nnk
+  run_continue &quot;Kernel warnings/errors (last 200)&quot; bash -lc &#39;dmesg -T --level=err,warn | tail -n 200&#39;
+
+  section &quot;GPU &amp; Display&quot;
+  run_continue &quot;GPU modules loaded&quot; bash -lc &quot;lsmod | egrep -i &#39;panthor|panfrost|mali|kbase&#39; || true&quot;
+  run_continue &quot;GPU-related dmesg&quot; bash -lc &quot;dmesg -T | egrep -i &#39;mali|panthor|panfrost|csf|gpu&#39; || true&quot;
+  run_continue &quot;DRM connectors (modetest -c)&quot; modetest -c
+  run_continue &quot;kmscube smoke test&quot; bash -lc &quot;kmscube -i 100 &gt;/dev/null 2&gt;&amp;1 || true&quot;
+  run_continue &quot;Vulkan summary&quot; vulkaninfo --summary
+  run_continue &quot;xrandr --props (if X running)&quot; bash -lc &quot;DISPLAY=\${DISPLAY:-:0} xrandr --props 2&gt;/dev/null || true&quot;
+
+  section &quot;Video / V4L2 / Codecs&quot;
+  run_continue &quot;List V4L2 devices&quot; v4l2-ctl --list-devices
+  run_continue &quot;FFmpeg hwaccels&quot; ffmpeg -hide_banner -hwaccels
+  run_continue &quot;GStreamer rockchip-ish plugins&quot; bash -lc &quot;gst-inspect-1.0 | egrep -i &#39;v4l2|rkv|hantro|rockchip&#39; || true&quot;
+
+  section &quot;Audio&quot;
+  run_continue &quot;ALSA playback&quot; aplay -l
+  run_continue &quot;ALSA capture&quot; arecord -l
+
+  section &quot;Network&quot;
+  run_continue &quot;ip -details addr&quot; ip -details address
+  run_continue &quot;iw dev&quot; iw dev
+
+  section &quot;Storage&quot;
+  run_continue &quot;lsblk (model/serial)&quot; lsblk -o NAME,SIZE,TYPE,MOUNTPOINTS,MODEL,SERIAL,TRAN
+  run_continue &quot;SATA/NVMe/PCIe dmesg&quot; bash -lc &quot;dmesg -T | egrep -i &#39;sata|ahci|nvme|pcie&#39; || true&quot;
+  run_continue &quot;nvme list (if any)&quot; bash -lc &quot;ls /dev/nvme*n1 &gt;/dev/null 2&gt;&amp;1 &amp;&amp; sudo nvme list || true&quot;
+
+  section &quot;Optional actions&quot;
+  if ask_yes &quot;Run powertop --auto-tune (changes power tunables until reboot)?&quot;; then
+    run_fail &quot;powertop --auto-tune&quot; sudo powertop --auto-tune
+  fi
+  if ask_yes &quot;Run sensors-detect (interactive; may load modules)?&quot;; then
+    run_fail &quot;sensors-detect&quot; sudo sensors-detect
+  fi
+  if ask_yes &quot;Run quick fio seq read/write in $HOME (~${FIO_SIZE_MB}MB temp file, then removed)?&quot;; then
+    TMPDIR_CREATED=&quot;$(mktemp -d)&quot;
+    local fiofile=&quot;$TMPDIR_CREATED/fio_test.dat&quot;
+    run_fail &quot;dd create file&quot; dd if=/dev/zero of=&quot;$fiofile&quot; bs=1M count=&quot;$FIO_SIZE_MB&quot; status=none
+    run_fail &quot;fio seq rw&quot; fio --name=seqrw --filename=&quot;$fiofile&quot; --rw=readwrite --bs=&quot;$FIO_BS&quot; --direct=1 --numjobs=1 --iodepth=&quot;$FIO_IODEPTH&quot; --size=&quot;${FIO_SIZE_MB}M&quot; --group_reporting
+    rm -rf &quot;$TMPDIR_CREATED&quot; || true
+    TMPDIR_CREATED=&quot;&quot;
+  fi
+
+  section &quot;REPORT.md&quot;
+  {
+    echo &quot;# RK3588 Capability Audit — $START_TS&quot;
+    echo
+    echo &quot;Audit directory: $AUDIT_DIR&quot;
+    echo &quot;Log file: $LOG_FILE&quot;
+    echo &quot;Env snapshot: $ENV_FILE&quot;
+    echo &quot;dmesg: $DMESG_FILE&quot;
+  } &gt;&quot;$REPORT_MD&quot;
+
+  ( cd &quot;$HOME&quot; &amp;&amp; tar czf &quot;${AUDIT_DIR}.tar.gz&quot; &quot;$(basename &quot;$AUDIT_DIR&quot;)&quot; )
+
+  section &quot;Done&quot;
+  log &quot;Report : $REPORT_MD&quot;
+  log &quot;Archive: ${AUDIT_DIR}.tar.gz&quot;
+}
+
+main &quot;$@&quot;</code>
+</section>]]></content><author><name></name></author><category term="aid&gt;software&gt;linux&gt;rockchip" /></entry><entry><title type="html">Debian 13 bootable USB setup</title><link href="https://ib.bsb.br/debian13usb/" rel="alternate" type="text/html" title="Debian 13 bootable USB setup" /><published>2025-11-19T00:00:00+00:00</published><updated>2025-11-19T21:47:09+00:00</updated><id>https://ib.bsb.br/debian13usb</id><content type="html" xml:base="https://ib.bsb.br/debian13usb/"><![CDATA[<pre><code class="language-build_debian13_usb.sh">#!/usr/bin/env bash
 # Script to build a Debian 13 (Trixie) amd64 persistent USB image with X11, ratpoison,
 # auto-login, and autostarting TreeSheets and Impala, from a host running Debian 11 arm64.
 # 
@@ -2618,253 +3177,4 @@ COMPORTAMENTO
 - Pedir as entradas mínimas uma única vez se ausentes; caso já fornecidas, prosseguir diretamente.
 - Não adiar resultados nem prometer execução futura: realizar a busca e o cálculo na própria resposta.
 - Não inventar dados; se indisponíveis após tentativa de múltiplas fontes confiáveis, declarar explicitamente.
-</code></pre></div></div>]]></content><author><name></name></author><category term="AI&gt;prompt" /></entry><entry><title type="html">FIFA Two‑Button Controls</title><link href="https://ib.bsb.br/fifa-twobutton-controls/" rel="alternate" type="text/html" title="FIFA Two‑Button Controls" /><published>2025-10-05T00:00:00+00:00</published><updated>2025-10-05T00:39:38+00:00</updated><id>https://ib.bsb.br/fifa-twobutton-controls</id><content type="html" xml:base="https://ib.bsb.br/fifa-twobutton-controls/"><![CDATA[<h3 id="ea-sports-fc-25--twobutton-controls-conceptual-map">EA Sports FC 25 • Two‑Button Controls (Conceptual Map)</h3>
-
-<blockquote>
-  <p>Use <strong>generic names</strong> below; hardware labels differ by platform. Typical equivalence:
-<strong>PASS</strong> ≈ (PlayStation: ✕) / (Xbox: A) | <strong>SHOOT</strong> ≈ (PlayStation: ○) / (Xbox: B)</p>
-</blockquote>
-
-<p><strong>Attack</strong></p>
-
-<ul>
-  <li><strong>Move/Aim:</strong> Left Stick.</li>
-  <li><strong>PASS (tap):</strong> Short ground pass.</li>
-  <li><strong>PASS (hold):</strong> Longer/lofted pass or lead into space (angle with Left Stick).</li>
-  <li><strong>SHOOT (tap/hold):</strong> Shoot on goal. When wide/in crossing zones, <strong>SHOOT</strong> acts as <strong>cross</strong>.</li>
-  <li><strong>Clearance:</strong> Long <strong>SHOOT</strong> from deep.</li>
-</ul>
-
-<p><strong>Defense</strong></p>
-
-<ul>
-  <li><strong>PASS (tap/hold):</strong> Close down/stand tackle (contain then poke).</li>
-  <li><strong>SHOOT (tap):</strong> Slide tackle (last resort).</li>
-  <li><strong>SHOOT (hold):</strong> Big clearance under pressure.</li>
-</ul>
-
-<blockquote>
-  <p>Why this mapping? It preserves the <strong>“stand‑tackle first, slide rarely”</strong> and <strong>“cross/finish with same strike input by context”</strong> ideas, aligning with the source’s conservative, percentage‑play philosophy.</p>
-</blockquote>
-
-<hr />
-
-<h3 id="10second-match-plan-twobutton-edition">10‑Second Match Plan (Two‑Button edition)</h3>
-
-<p>(Adapted from the source’s 10‑second plan while removing advanced inputs. )</p>
-
-<ol>
-  <li><strong>Tempo discipline:</strong> Glide with the Left Stick; add tiny bursts by pushing further, then settle.</li>
-  <li><strong>Pattern out of defense:</strong> <strong>PASS → PASS → (angle) PASS long</strong> up the channel or <strong>SHOOT (cross)</strong> if wide.</li>
-  <li><strong>Around the box:</strong> Aim with Left Stick; <strong>SHOOT</strong> with <strong>2–3 bars</strong>—still the right power discipline idea from the source.</li>
-  <li><strong>Defend first by shape:</strong> Stay goal‑side with Left Stick; <strong>PASS</strong> to contain, <strong>tap PASS</strong> to poke; <strong>SHOOT</strong> slide only if the angle is clean.</li>
-  <li><strong>Wing outlet:</strong> If trapped, funnel the ball wide with <strong>PASS</strong>, then <strong>SHOOT</strong> to cross.</li>
-</ol>
-
-<hr />
-
-<h3 id="onball-microrules-twobutton-friendly">On‑Ball Micro‑Rules (Two‑Button friendly)</h3>
-
-<ul>
-  <li><strong>Change pace:</strong> walk → burst → settle (Left‑Stick pacing). Don’t “turbo everywhere”—a direct carry‑over.</li>
-  <li><strong>One easy fake:</strong> <strong>Left‑Stick feint</strong>—a small lateral touch, then <strong>PASS</strong> or <strong>SHOOT</strong>.</li>
-  <li>
-    <p><strong>Power discipline:</strong></p>
-
-    <ul>
-      <li><strong>Shots:</strong> 2–3 bars.</li>
-      <li><strong>Crosses:</strong> moderate hold on <strong>SHOOT</strong>.</li>
-      <li><strong>Passes:</strong> tap/hold by distance (aim ahead of runners).
-(This restates the source’s power heuristics with two buttons. )</li>
-    </ul>
-  </li>
-</ul>
-
-<hr />
-
-<h3 id="defending-that-works-twobutton-edition">Defending That Works (Two‑Button edition)</h3>
-
-<ul>
-  <li><strong>Shape first:</strong> Mirror attacker with Left Stick; <strong>hold PASS</strong> to contain; add a quick <strong>tap PASS</strong> when the ball leaves their foot. Same sequencing principle as the source.</li>
-  <li><strong>Block the lane:</strong> Stand between passer and runner; take a <strong>diagonal</strong> angle to cut the obvious ball (adapts “kill the through‑ball lane”).</li>
-  <li><strong>Tackle timing:</strong> <strong>Tap PASS</strong> when the touch is loose. <strong>SHOOT</strong> slide only at good angles or as last resort—explicitly lifted from the source’s caution.</li>
-</ul>
-
-<hr />
-
-<h3 id="transitions">Transitions</h3>
-
-<ul>
-  <li><strong>Won it?</strong> First idea: <strong>one‑touch PASS</strong> out of pressure, then a longer <strong>PASS (hold)</strong> into space or a <strong>SHOOT cross</strong> if wide. Mirrors “one touch out → vertical” from the PDF.</li>
-  <li><strong>Lost it?</strong> Protect central space in front of your CBs; contain with <strong>PASS</strong>, don’t drag centre‑backs. (Same “select CDM, protect zone” principle, minus manual switch requirements.)</li>
-</ul>
-
-<hr />
-
-<h3 id="setpiece-quick-wins-twobutton">Set‑Piece Quick Wins (Two‑Button)</h3>
-
-<ul>
-  <li><strong>Corners (right‑footer on left):</strong> <strong>Short PASS</strong>, immediate <strong>return PASS</strong>, then <strong>SHOOT</strong> (cross) to the near‑post run. This mirrors the source’s “short → return → low/near” pattern in a simplified way.</li>
-  <li><strong>Direct Free Kicks (20–25m):</strong> Aim a touch outside far post, <strong>moderate SHOOT</strong>, or <strong>PASS short</strong> if the wall/angle is poor (adapts the source’s guidance minus finesse input).</li>
-  <li><strong>Goal‑kicks/under heavy press:</strong> <strong>PASS</strong> to a full‑back or <strong>SHOOT</strong> long to reset.</li>
-</ul>
-
-<hr />
-
-<h2 id="two-alwayson-tactics-for-muscle-memory">Two “Always‑On” Tactics for Muscle Memory</h2>
-
-<blockquote>
-  <p>The goal is <strong>repeatability</strong>: two simple blueprints you can run all match until they become automatic.</p>
-</blockquote>
-
-<h3 id="a-2pass--strike-2ps--your-breadandbutter-attack-loop">A. <strong>“2‑Pass &amp; Strike” (2PS)</strong> — your bread‑and‑butter attack loop</h3>
-
-<p><strong>When:</strong> Any settled possession in midfield.
-<strong>Loop (four beats):</strong></p>
-
-<ol>
-  <li><strong>Square up</strong>—face forward with Left Stick; don’t over‑dribble.</li>
-  <li><strong>PASS</strong> to the nearest support (turn body to the target first).</li>
-  <li><strong>PASS</strong> again immediately to the next forward option (or back to the first if pressure bites).</li>
-  <li>
-    <p>Now <strong>commit</strong>:</p>
-
-    <ul>
-      <li>If central and 20–25m: <strong>SHOOT</strong> (2–3 bars).</li>
-      <li>If the ball gets wide: <strong>SHOOT</strong> for a cross.
-<strong>Why it works:</strong> It compresses the source’s “look for triangles, power discipline” into a two‑button rhythm—<strong>Pass → Pass → Decide (Shoot/Cross)</strong>.</li>
-    </ul>
-  </li>
-</ol>
-
-<p><strong>Checklist to cue the move</strong></p>
-
-<ul>
-  <li>See a <strong>triangle</strong> (you + two teammates)? Run 2PS.</li>
-  <li>If no lane after 2 passes: recycle and <em>restart</em> 2PS.</li>
-  <li>Don’t take a third dribble—<strong>make the third action a finish or cross</strong>.</li>
-</ul>
-
-<hr />
-
-<h3 id="b-funnel--break-fb--defend-smart-counter-simple">B. <strong>“Funnel &amp; Break” (F&amp;B)</strong> — defend smart, counter simple</h3>
-
-<p><strong>When:</strong> Opponent builds through the middle.
-<strong>Loop (four beats):</strong></p>
-
-<ol>
-  <li><strong>Funnel:</strong> Use Left Stick to sit <strong>goal‑side and slightly to their strong foot</strong>; <strong>hold PASS</strong> to contain—guide them wide.</li>
-  <li><strong>Win it:</strong> Time a <strong>tap PASS</strong> when the touch is away from the foot.</li>
-  <li><strong>First exit:</strong> <strong>Immediate PASS</strong> to a free midfielder or full‑back.</li>
-  <li><strong>Break:</strong> <strong>PASS (hold)</strong> up the channel or <strong>SHOOT cross</strong> early if your wide player is free.
-<strong>Why it works:</strong> It re‑uses the source’s “shape first, kill lanes, one‑touch out then vertical” without advanced defensive inputs.</li>
-</ol>
-
-<p><strong>Checklist to cue the move</strong></p>
-
-<ul>
-  <li>If they face you centrally: <strong>Funnel</strong> (shoulders angled to show outside).</li>
-  <li>If you win it near touchline: <strong>early SHOOT cross</strong>—don’t dribble back inside.</li>
-</ul>
-
-<hr />
-
-<h2 id="short-repeatable-practice-drills">Short, Repeatable Practice Drills</h2>
-
-<blockquote>
-  <p>Total: ~10 minutes to ingrain 2PS and F&amp;B.</p>
-</blockquote>
-
-<ol>
-  <li>
-    <p><strong>2‑Minute Triangle Rondo (solo vs CPU, Amateur):</strong></p>
-
-    <ul>
-      <li>Only <strong>PASS</strong>; every third pass must aim <strong>forward</strong>.</li>
-      <li>Add one <strong>SHOOT</strong> finish every minute from the D with 2–3 bars.
-(Reinforces “triangles + power discipline”.)</li>
-    </ul>
-  </li>
-  <li>
-    <p><strong>3‑Minute Wing Cross Ladder:</strong></p>
-
-    <ul>
-      <li>Receive wide → one touch inside → <strong>SHOOT cross</strong>; finish with near‑post run.</li>
-      <li>Focus on <strong>moderate cross power</strong>; don’t over‑hit.</li>
-    </ul>
-  </li>
-  <li>
-    <p><strong>3‑Minute Contain Drill (Two‑Button version of the source’s “3‑minute jockey drill”):</strong></p>
-
-    <ul>
-      <li><strong>0–1 min:</strong> Left‑Stick mirror only; stay half‑step away, goal‑side.</li>
-      <li><strong>1–2 min:</strong> Add <strong>PASS (hold)</strong> contain, release as you close.</li>
-      <li><strong>2–3 min:</strong> <strong>Tap PASS</strong> at the loose touch; if you miss, reset shape first.
-(Adapts the original drill’s progression.)</li>
-    </ul>
-  </li>
-  <li>
-    <p><strong>2‑Minute Funnel &amp; Break Reps:</strong></p>
-
-    <ul>
-      <li>Start central → guide wide (contain) → win it → <strong>PASS</strong> out → <strong>PASS (hold)</strong> long.</li>
-    </ul>
-  </li>
-</ol>
-
-<hr />
-
-<h2 id="troubleshooting--common-mistakes">Troubleshooting &amp; Common Mistakes</h2>
-
-<ul>
-  <li><strong>Over‑dribbling:</strong> The playbook is <strong>two passes then a decision</strong>. If you hit a third dribble, you’re likely late.</li>
-  <li><strong>Shot power too high:</strong> Cap yourself to <strong>2–3 bars</strong> unless it’s a cut‑back sitter. Source emphasis retained.</li>
-  <li><strong>Sliding early:</strong> If you press <strong>SHOOT</strong> before angling the run, you’ll foul or miss. Slide only on clear angles—same last‑resort warning as the source.</li>
-  <li><strong>Forcing the middle:</strong> If the lane is blocked, <strong>funnel your own attack wide</strong>: PASS to the flank, <strong>SHOOT cross</strong>.</li>
-</ul>
-
-<hr />
-
-<h2 id="optional-helpful-prematch-tweaks">Optional, Helpful Pre‑Match Tweaks</h2>
-
-<ul>
-  <li><strong>Camera:</strong> Tele Broadcast (around Height ≈ 12, Zoom ≈ 5), matching the source’s suggestion for clarity.</li>
-  <li>
-    <p><strong>Simple instructions to favor the patterns:</strong></p>
-
-    <ul>
-      <li>Strikers: <strong>Get In Behind</strong> (creates the forward lane for 2PS).</li>
-      <li>CDM(s): <strong>Stay Back</strong> (keeps the shield for F&amp;B).
-(These are the spirit of the source’s optional notes.)</li>
-    </ul>
-  </li>
-</ul>
-
-<hr />
-
-<h2 id="onepage-summary-printable-text-block">One‑Page Summary (printable text block)</h2>
-
-<p><strong>EA Sports FC 25 — Two‑Button Cheat Card (PASS + SHOOT)</strong></p>
-
-<ul>
-  <li><strong>Plan:</strong> 2PS = <strong>PASS → PASS → SHOOT/CROSS</strong>. F&amp;B = <strong>Contain → Win → PASS Out → Long PASS/Cross</strong>.</li>
-  <li><strong>On ball:</strong> left‑stick pace; triangles; shots <strong>2–3 bars</strong>.</li>
-  <li><strong>Defend:</strong> contain with <strong>PASS</strong>; <strong>tap PASS</strong> to poke; <strong>SHOOT</strong> slide only late/clean.</li>
-  <li><strong>Transitions:</strong> one‑touch <strong>PASS</strong> out; go vertical; wide? <strong>SHOOT cross</strong>.</li>
-  <li><strong>Set pieces:</strong> short <strong>PASS</strong>; return; <strong>SHOOT</strong> (cross) near post.</li>
-  <li><strong>If stuck:</strong> recycle and <strong>restart 2PS</strong>; or switch wide and cross.</li>
-</ul>
-
-<hr />
-
-<h2 id="og4--weaknesses--tradeoffs-explicit">OG4 — Weaknesses / trade‑offs (explicit)</h2>
-
-<ul>
-  <li>Two‑Button removes granular tools (e.g., manual jockey, second‑man press, finesse shots). You trade precision for <strong>simplicity + repetition</strong>. The frameworks above compensate by emphasizing <strong>angles, timing, and power discipline</strong>, all preserved from the source.</li>
-</ul>
-
-<hr />
-
-<h2 id="og5--next-iterations">OG5 — Next iterations</h2>
-
-<p>If you want, I can condense this into a true <strong>single‑page printable</strong> or tailor the drills to your preferred formation. For now, run <strong>2PS</strong> in possession and <strong>F&amp;B</strong> out of possession until they become automatic.</p>]]></content><author><name></name></author><category term="scratchpad" /></entry></feed>
+</code></pre></div></div>]]></content><author><name></name></author><category term="AI&gt;prompt" /></entry></feed>
