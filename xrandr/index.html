@@ -67,7 +67,7 @@
         
           <span class="post-updated">
             ↣
-            <time datetime="2025-12-19T19:10:46+00:00">
+            <time datetime="2025-12-19T22:55:34+00:00">
               19 Dec 2025
             </time>
           </span>
@@ -90,11 +90,11 @@
         <div class="page-stats mt-3" role="status" aria-label="Page statistics">
       
       <span class="badge bg-primary">
-        109637 characters
+        115623 characters
       </span>
         <span class="separator mx-2" aria-hidden="true">•</span>
         <span class="badge bg-primary">
-        12193 words
+        12841 words
       </span>
       </div>
         <div class="action-buttons d-flex flex-wrap gap-2">
@@ -128,7 +128,7 @@
       <article class="post-wrapper">
         <div class="post-content-body">
           
-<ul><li><a href="#recommended-flow">Recommended flow:</a><ul><li><a href="#optional-baseline-audit">Optional: baseline audit</a></li><li><a href="#install-display-tools--collect-info--create-custom-xrandr--save-autorandr-profile">Install display tools / collect info / create custom xrandr / save autorandr profile</a></li><li><a href="#in-x-session-safe-interactive-mode-picking">In X session: safe interactive mode picking</a></li><li><a href="#if-you-have-the-specific-hdmidp-low-mode-issue">If you have the specific HDMI+DP low-mode issue</a></li><li><a href="#wire-autorandr-persistence-at-loginresume">Wire autorandr persistence at login/resume</a></li></ul></li><li><a href="#homelinarork3588-display-toolkitbindebian_display_setupsh">/home/linaro/rk3588-display-toolkit/bin/debian_display_setup.sh</a></li><li><a href="#homelinarork3588-display-toolkitbinmonitor_setup_interactivesh">/home/linaro/rk3588-display-toolkit/bin/monitor_setup_interactive.sh</a></li><li><a href="#homelinarork3588-display-toolkitbinpwsh_monitor_setupps1">/home/linaro/rk3588-display-toolkit/bin/pwsh_monitor_setup.ps1</a></li><li><a href="#homelinarork3588-display-toolkitbinrk3588_auditsh">/home/linaro/rk3588-display-toolkit/bin/rk3588_audit.sh</a></li><li><a href="#homelinarork3588-display-toolkitbinrk3588_autorandr_bootstrapsh">/home/linaro/rk3588-display-toolkit/bin/rk3588_autorandr_bootstrap.sh</a></li><li><a href="#homelinarork3588-display-toolkitbinrk3588_dual_display_setupsh">/home/linaro/rk3588-display-toolkit/bin/rk3588_dual_display_setup.sh</a></li></ul>
+<ul><li><a href="#recommended-flow">Recommended flow:</a><ul><li><a href="#optional-baseline-audit">Optional: baseline audit</a></li><li><a href="#install-display-tools--collect-info--create-custom-xrandr--save-autorandr-profile">Install display tools / collect info / create custom xrandr / save autorandr profile</a></li><li><a href="#in-x-session-safe-interactive-mode-picking">In X session: safe interactive mode picking</a></li><li><a href="#if-you-have-the-specific-hdmidp-low-mode-issue">If you have the specific HDMI+DP low-mode issue</a></li><li><a href="#wire-autorandr-persistence-at-loginresume">Wire autorandr persistence at login/resume</a></li></ul></li><li><a href="#homelinarork3588-display-toolkitbindebian_display_setupsh">/home/linaro/rk3588-display-toolkit/bin/debian_display_setup.sh</a></li><li><a href="#homelinarork3588-display-toolkitbinmonitor_setup_interactivesh">/home/linaro/rk3588-display-toolkit/bin/monitor_setup_interactive.sh</a></li><li><a href="#homelinarork3588-display-toolkitbinpwsh_monitor_setupps1">/home/linaro/rk3588-display-toolkit/bin/pwsh_monitor_setup.ps1</a></li><li><a href="#homelinarork3588-display-toolkitbinrk3588_auditsh">/home/linaro/rk3588-display-toolkit/bin/rk3588_audit.sh</a></li><li><a href="#homelinarork3588-display-toolkitbinrk3588_autorandr_bootstrapsh">/home/linaro/rk3588-display-toolkit/bin/rk3588_autorandr_bootstrap.sh</a></li><li><a href="#homelinarork3588-display-toolkitbinrk3588_dual_display_setupsh">/home/linaro/rk3588-display-toolkit/bin/rk3588_dual_display_setup.sh</a></li><li><a href="#homelinaromy_custom_display_configsh">/home/linaro/my_custom_display_config.sh</a></li></ul>
           <table>
   <thead>
     <tr>
@@ -5118,6 +5118,357 @@ SH
 
 main &quot;$@&quot;</code>
 </section>
+  <h1 id="homelinaromy_custom_display_configsh">
+    
+    
+     <a href="#homelinaromy_custom_display_configsh">#</a><a href="#" aria-label="Back to top">/home/linaro/my_custom_display_config.sh</a>
+        
+    
+  </h1>
+      
+<section class="code-block-container" role="group" aria-label="Bash Code Block" data-filename="bash_code_block.sh" data-code="#!/bin/bash
+# Xrandr dual-monitor setup (expanded, refactored)
+# HDMI-1 → 1280x720@60 (primary)
+# DP-1   → 800x600@60 (right of HDMI-1)
+# Modelines and outputs are fixed based on provided logs. No placeholders.
+
+set -Eeuo pipefail
+
+# --------------------------
+# Utilities / Logging
+# --------------------------
+log()  { printf &#39;[INFO ] %s\n&#39; &quot;$*&quot;; }
+warn() { printf &#39;[WARN ] %s\n&#39; &quot;$*&quot; &gt;&amp;2; }
+err()  { printf &#39;[ERROR] %s\n&#39; &quot;$*&quot; &gt;&amp;2; }
+
+# If DRY_RUN=1 is set in the environment, print commands instead of executing them.
+: &quot;${DRY_RUN:=0}&quot;
+run() {
+  if [[ &quot;$DRY_RUN&quot; == &quot;1&quot; ]]; then
+    printf &#39;[DRYRUN] %s\n&#39; &quot;$*&quot;
+    return 0
+  fi
+  eval &quot;$@&quot;
+}
+
+# --------------------------
+# Pre-flight checks
+# --------------------------
+if ! command -v xrandr &gt;/dev/null 2&gt;&amp;1; then
+  err &#39;xrandr not found&#39;
+  exit 127
+fi
+
+# --------------------------
+# Fixed configuration from logs
+# --------------------------
+# Data derived from: Modeline &quot;1280x720_60.00&quot; 74.50 1280... -hsync +vsync
+OUTPUT_1_NAME=&quot;HDMI-1&quot;
+MODE_1_NAME=&quot;1280x720_60.00&quot;
+# Params: Clock HDisp HSyncStart HSyncEnd HTotal VDisp VSyncStart VSyncEnd VTotal Flags
+MODELINE_1_PARAMS=&quot;74.50  1280 1344 1472 1664  720 723 728 748 -hsync +vsync&quot;
+
+# Data derived from: Modeline &quot;800x600_60.00&quot; 38.25 800... -hsync +vsync
+OUTPUT_2_NAME=&quot;DP-1&quot;
+MODE_2_NAME=&quot;800x600_60.00&quot;
+# Params: Clock HDisp HSyncStart HSyncEnd HTotal VDisp VSyncStart VSyncEnd VTotal Flags
+MODELINE_2_PARAMS=&quot;38.25  800 832 912 1024  600 603 607 624 -hsync +vsync&quot;
+
+# --------------------------
+# Helpers for xrandr state
+# --------------------------
+connected() {
+  xrandr | grep -q &quot;^$1\s*connected&quot;
+}
+
+mode_defined() {
+  local name=&quot;$1&quot;
+  # A mode is &quot;defined&quot; if it appears anywhere in xrandr --query output
+  xrandr --query | awk &#39;{print $1}&#39; | grep -Fxq &quot;$name&quot;
+}
+
+output_has_mode() {
+  local out=&quot;$1&quot; name=&quot;$2&quot;
+  # Extract the block for this output and list the mode names, then search for ours.
+  xrandr --query | awk -v o=&quot;$out&quot; &#39;
+    $1==o {on=1; next}
+    on &amp;&amp; NF==0 {on=0}
+    on &amp;&amp; $1!~/^\t/ &amp;&amp; $2==&quot;connected&quot; {on=0}
+    on {print $1}
+  &#39; | sed &#39;s/^[[:space:]]*//&#39; | grep -Fxq &quot;$name&quot; 2&gt;/dev/null
+}
+
+active_geom() {
+  # Prints WxH for given output if connected; empty otherwise
+  local out=&quot;$1&quot;
+  xrandr --query | awk -v o=&quot;$out&quot; &#39;$1==o &amp;&amp; $2==&quot;connected&quot; {
+    match($0, /[0-9]+x[0-9]+\+[0-9]+\+[0-9]+/);
+    if (RSTART) { s=substr($0,RSTART,RLENGTH); sub(/\+.*/, &quot;&quot;, s); print s; }
+  }&#39;
+}
+
+# --------------------------
+# Capture pre-state for reversible changes
+# --------------------------
+PRESTATE_CMD=()
+for out in &quot;$OUTPUT_1_NAME&quot; &quot;$OUTPUT_2_NAME&quot;; do
+  if connected &quot;$out&quot;; then
+    # Best-effort revert uses preferred mode and auto placement for each output.
+    PRESTATE_CMD+=(--output &quot;$out&quot; --auto)
+  fi
+done
+
+revert() {
+  if ((${#PRESTATE_CMD[@]})); then
+    warn &quot;Reverting to auto configuration&quot;
+    run xrandr &quot;${PRESTATE_CMD[@]}&quot; || warn &quot;Revert failed&quot;
+  fi
+}
+
+trap &#39;err &quot;Failure occurred&quot;; revert&#39; ERR
+
+# --------------------------
+# Ensure modes exist and are assigned to outputs
+# --------------------------
+ensure_mode_defined() {
+  local name=&quot;$1&quot;; shift
+  if mode_defined &quot;$name&quot;; then
+    # NOTE: This check only verifies the NAME exists. It does NOT verify if the
+    # parameters match. If you changed modeline params but kept the name,
+    # you must delete the mode manually or rename it.
+    log &quot;Mode present: $name (skipping definition)&quot;
+  else
+    log &quot;Defining mode: $name&quot;
+    run xrandr --newmode &quot;$name&quot; &quot;$@&quot;
+  fi
+}
+
+ensure_output_has_mode() {
+  local out=&quot;$1&quot; name=&quot;$2&quot;
+  if output_has_mode &quot;$out&quot; &quot;$name&quot;; then
+    log &quot;Output $out already has mode $name&quot;
+  else
+    log &quot;Adding mode $name to $out&quot;
+    run xrandr --addmode &quot;$out&quot; &quot;$name&quot;
+  fi
+}
+
+# Validate outputs are connected before modifying
+for out in &quot;$OUTPUT_1_NAME&quot; &quot;$OUTPUT_2_NAME&quot;; do
+  if ! connected &quot;$out&quot;; then
+    err &quot;Output not connected: $out&quot;
+    exit 2
+  fi
+done
+
+# Define modes idempotently
+ensure_mode_defined &quot;$MODE_1_NAME&quot; $MODELINE_1_PARAMS
+ensure_mode_defined &quot;$MODE_2_NAME&quot; $MODELINE_2_PARAMS
+
+# Assign modes to each output
+ensure_output_has_mode &quot;$OUTPUT_1_NAME&quot; &quot;$MODE_1_NAME&quot;
+ensure_output_has_mode &quot;$OUTPUT_2_NAME&quot; &quot;$MODE_2_NAME&quot;
+
+# --------------------------
+# Apply requested layout
+# --------------------------
+LAYOUT_CMD=(
+  --output &quot;$OUTPUT_1_NAME&quot; --mode &quot;$MODE_1_NAME&quot; --primary
+  --output &quot;$OUTPUT_2_NAME&quot; --mode &quot;$MODE_2_NAME&quot; --right-of &quot;$OUTPUT_1_NAME&quot;
+)
+
+log &quot;Applying layout&quot;
+run xrandr &quot;${LAYOUT_CMD[@]}&quot;
+
+# --------------------------
+# Post-apply verification
+# --------------------------
+geom1=$(active_geom &quot;$OUTPUT_1_NAME&quot;)
+geom2=$(active_geom &quot;$OUTPUT_2_NAME&quot;)
+
+if [[ &quot;$geom1&quot; != &quot;1280x720&quot; ]]; then
+  err &quot;Post-check failed: $OUTPUT_1_NAME geometry is &#39;$geom1&#39; (expected 1280x720)&quot;
+  revert; exit 3
+fi
+if [[ &quot;$geom2&quot; != &quot;800x600&quot; ]]; then
+  err &quot;Post-check failed: $OUTPUT_2_NAME geometry is &#39;$geom2&#39; (expected 800x600)&quot;
+  revert; exit 4
+fi
+
+log &quot;Configuration successful: $OUTPUT_1_NAME=$geom1 (primary), $OUTPUT_2_NAME=$geom2 (right)&quot;
+exit 0" data-download-link="" data-download-label="Download Bash">
+  <code class="language-bash">#!/bin/bash
+# Xrandr dual-monitor setup (expanded, refactored)
+# HDMI-1 → 1280x720@60 (primary)
+# DP-1   → 800x600@60 (right of HDMI-1)
+# Modelines and outputs are fixed based on provided logs. No placeholders.
+
+set -Eeuo pipefail
+
+# --------------------------
+# Utilities / Logging
+# --------------------------
+log()  { printf &#39;[INFO ] %s\n&#39; &quot;$*&quot;; }
+warn() { printf &#39;[WARN ] %s\n&#39; &quot;$*&quot; &gt;&amp;2; }
+err()  { printf &#39;[ERROR] %s\n&#39; &quot;$*&quot; &gt;&amp;2; }
+
+# If DRY_RUN=1 is set in the environment, print commands instead of executing them.
+: &quot;${DRY_RUN:=0}&quot;
+run() {
+  if [[ &quot;$DRY_RUN&quot; == &quot;1&quot; ]]; then
+    printf &#39;[DRYRUN] %s\n&#39; &quot;$*&quot;
+    return 0
+  fi
+  eval &quot;$@&quot;
+}
+
+# --------------------------
+# Pre-flight checks
+# --------------------------
+if ! command -v xrandr &gt;/dev/null 2&gt;&amp;1; then
+  err &#39;xrandr not found&#39;
+  exit 127
+fi
+
+# --------------------------
+# Fixed configuration from logs
+# --------------------------
+# Data derived from: Modeline &quot;1280x720_60.00&quot; 74.50 1280... -hsync +vsync
+OUTPUT_1_NAME=&quot;HDMI-1&quot;
+MODE_1_NAME=&quot;1280x720_60.00&quot;
+# Params: Clock HDisp HSyncStart HSyncEnd HTotal VDisp VSyncStart VSyncEnd VTotal Flags
+MODELINE_1_PARAMS=&quot;74.50  1280 1344 1472 1664  720 723 728 748 -hsync +vsync&quot;
+
+# Data derived from: Modeline &quot;800x600_60.00&quot; 38.25 800... -hsync +vsync
+OUTPUT_2_NAME=&quot;DP-1&quot;
+MODE_2_NAME=&quot;800x600_60.00&quot;
+# Params: Clock HDisp HSyncStart HSyncEnd HTotal VDisp VSyncStart VSyncEnd VTotal Flags
+MODELINE_2_PARAMS=&quot;38.25  800 832 912 1024  600 603 607 624 -hsync +vsync&quot;
+
+# --------------------------
+# Helpers for xrandr state
+# --------------------------
+connected() {
+  xrandr | grep -q &quot;^$1\s*connected&quot;
+}
+
+mode_defined() {
+  local name=&quot;$1&quot;
+  # A mode is &quot;defined&quot; if it appears anywhere in xrandr --query output
+  xrandr --query | awk &#39;{print $1}&#39; | grep -Fxq &quot;$name&quot;
+}
+
+output_has_mode() {
+  local out=&quot;$1&quot; name=&quot;$2&quot;
+  # Extract the block for this output and list the mode names, then search for ours.
+  xrandr --query | awk -v o=&quot;$out&quot; &#39;
+    $1==o {on=1; next}
+    on &amp;&amp; NF==0 {on=0}
+    on &amp;&amp; $1!~/^\t/ &amp;&amp; $2==&quot;connected&quot; {on=0}
+    on {print $1}
+  &#39; | sed &#39;s/^[[:space:]]*//&#39; | grep -Fxq &quot;$name&quot; 2&gt;/dev/null
+}
+
+active_geom() {
+  # Prints WxH for given output if connected; empty otherwise
+  local out=&quot;$1&quot;
+  xrandr --query | awk -v o=&quot;$out&quot; &#39;$1==o &amp;&amp; $2==&quot;connected&quot; {
+    match($0, /[0-9]+x[0-9]+\+[0-9]+\+[0-9]+/);
+    if (RSTART) { s=substr($0,RSTART,RLENGTH); sub(/\+.*/, &quot;&quot;, s); print s; }
+  }&#39;
+}
+
+# --------------------------
+# Capture pre-state for reversible changes
+# --------------------------
+PRESTATE_CMD=()
+for out in &quot;$OUTPUT_1_NAME&quot; &quot;$OUTPUT_2_NAME&quot;; do
+  if connected &quot;$out&quot;; then
+    # Best-effort revert uses preferred mode and auto placement for each output.
+    PRESTATE_CMD+=(--output &quot;$out&quot; --auto)
+  fi
+done
+
+revert() {
+  if ((${#PRESTATE_CMD[@]})); then
+    warn &quot;Reverting to auto configuration&quot;
+    run xrandr &quot;${PRESTATE_CMD[@]}&quot; || warn &quot;Revert failed&quot;
+  fi
+}
+
+trap &#39;err &quot;Failure occurred&quot;; revert&#39; ERR
+
+# --------------------------
+# Ensure modes exist and are assigned to outputs
+# --------------------------
+ensure_mode_defined() {
+  local name=&quot;$1&quot;; shift
+  if mode_defined &quot;$name&quot;; then
+    # NOTE: This check only verifies the NAME exists. It does NOT verify if the
+    # parameters match. If you changed modeline params but kept the name,
+    # you must delete the mode manually or rename it.
+    log &quot;Mode present: $name (skipping definition)&quot;
+  else
+    log &quot;Defining mode: $name&quot;
+    run xrandr --newmode &quot;$name&quot; &quot;$@&quot;
+  fi
+}
+
+ensure_output_has_mode() {
+  local out=&quot;$1&quot; name=&quot;$2&quot;
+  if output_has_mode &quot;$out&quot; &quot;$name&quot;; then
+    log &quot;Output $out already has mode $name&quot;
+  else
+    log &quot;Adding mode $name to $out&quot;
+    run xrandr --addmode &quot;$out&quot; &quot;$name&quot;
+  fi
+}
+
+# Validate outputs are connected before modifying
+for out in &quot;$OUTPUT_1_NAME&quot; &quot;$OUTPUT_2_NAME&quot;; do
+  if ! connected &quot;$out&quot;; then
+    err &quot;Output not connected: $out&quot;
+    exit 2
+  fi
+done
+
+# Define modes idempotently
+ensure_mode_defined &quot;$MODE_1_NAME&quot; $MODELINE_1_PARAMS
+ensure_mode_defined &quot;$MODE_2_NAME&quot; $MODELINE_2_PARAMS
+
+# Assign modes to each output
+ensure_output_has_mode &quot;$OUTPUT_1_NAME&quot; &quot;$MODE_1_NAME&quot;
+ensure_output_has_mode &quot;$OUTPUT_2_NAME&quot; &quot;$MODE_2_NAME&quot;
+
+# --------------------------
+# Apply requested layout
+# --------------------------
+LAYOUT_CMD=(
+  --output &quot;$OUTPUT_1_NAME&quot; --mode &quot;$MODE_1_NAME&quot; --primary
+  --output &quot;$OUTPUT_2_NAME&quot; --mode &quot;$MODE_2_NAME&quot; --right-of &quot;$OUTPUT_1_NAME&quot;
+)
+
+log &quot;Applying layout&quot;
+run xrandr &quot;${LAYOUT_CMD[@]}&quot;
+
+# --------------------------
+# Post-apply verification
+# --------------------------
+geom1=$(active_geom &quot;$OUTPUT_1_NAME&quot;)
+geom2=$(active_geom &quot;$OUTPUT_2_NAME&quot;)
+
+if [[ &quot;$geom1&quot; != &quot;1280x720&quot; ]]; then
+  err &quot;Post-check failed: $OUTPUT_1_NAME geometry is &#39;$geom1&#39; (expected 1280x720)&quot;
+  revert; exit 3
+fi
+if [[ &quot;$geom2&quot; != &quot;800x600&quot; ]]; then
+  err &quot;Post-check failed: $OUTPUT_2_NAME geometry is &#39;$geom2&#39; (expected 800x600)&quot;
+  revert; exit 4
+fi
+
+log &quot;Configuration successful: $OUTPUT_1_NAME=$geom1 (primary), $OUTPUT_2_NAME=$geom2 (right)&quot;
+exit 0</code>
+</section>
 
         </div>
         
@@ -5311,7 +5662,7 @@ main &quot;$@&quot;</code>
         
         
         <a href="https://ib.bsb.br/404" aria-label="404">
-          2025-12-19 16:33:47
+          2025-12-19 20:00:26
         </a>
         &#x23;
     
@@ -5379,7 +5730,7 @@ main &quot;$@&quot;</code>
         "headline": "xrandr display-toolkit setup",
         "description": "",
         "datePublished": "2025-04-03T00:00:00+00:00",
-        "dateModified": "2025-12-19T19:10:46+00:00",
+        "dateModified": "2025-12-19T22:55:34+00:00",
         "author": {
           "@type": "Person",
           "name": "Author"
