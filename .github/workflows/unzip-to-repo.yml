@@ -1,14 +1,16 @@
 name: Production-Ready Unzip to Repository
 
-on:
+"on":
   workflow_dispatch:
     inputs:
       repo_name:
         description: 'Repository name (alphanumeric, hyphens, underscores only)'
         required: true
+        type: string
       zip_url:
         description: 'ZIP file URL (must be direct download link)'
         required: true
+        type: string
         default: 'https://x0.at'
       private_repo:
         description: 'Create as private repository?'
@@ -19,18 +21,19 @@ jobs:
   validate-and-create:
     runs-on: ubuntu-latest
     timeout-minutes: 999
-    
+
     outputs:
       repo_url: ${{ steps.create-repo.outputs.result }}
-    
+
     steps:
       - name: Validate repository name
+        shell: bash
         run: |
           if [[ ! "${{ inputs.repo_name }}" =~ ^[a-zA-Z0-9_-]{1,100}$ ]]; then
             echo "::error::Invalid repository name. Use only letters, numbers, hyphens, and underscores (1-100 characters)"
             exit 1
           fi
-      
+
       - name: Download ZIP with retry
         uses: nick-fields/retry@v2
         with:
@@ -42,45 +45,46 @@ jobs:
               echo "Downloaded file is empty"
               exit 1
             fi
-      
+
       - name: Extract and validate
+        shell: bash
         run: |
-          mkdir extracted_content
+          mkdir -p extracted_content
           if ! unzip -q archive.zip -d extracted_content; then
             echo "::error::Failed to extract ZIP file. File may be corrupted."
             exit 1
           fi
-          
+
           file_count=$(find extracted_content -type f | wc -l)
           if [ "$file_count" -eq 0 ]; then
             echo "::error::ZIP archive contains no files"
             exit 1
           fi
-          
-          echo "FILES_COUNT=$file_count" >> $GITHUB_ENV
+
+          echo "FILES_COUNT=$file_count" >> "$GITHUB_ENV"
           echo "::notice::Successfully extracted $file_count files"
-      
+
       - name: Create repository
         id: create-repo
         uses: actions/github-script@v8
         env:
           REPO_NAME: ${{ inputs.repo_name }}
           PRIVATE: ${{ inputs.private_repo }}
+          ZIP_URL: ${{ inputs.zip_url }}
         with:
           github-token: ${{ secrets.REPO_CREATE_TOKEN }}
-          retries: 3
           script: |
-            const { data: user } = await github.rest.users.getAuthenticated();
             const { data: repo } = await github.rest.repos.createForAuthenticatedUser({
               name: process.env.REPO_NAME,
-              description: `Created from ZIP: ${{ inputs.zip_url }}`,
+              description: `Created from ZIP: ${process.env.ZIP_URL}`,
               private: process.env.PRIVATE === 'true',
               auto_init: false
             });
             core.notice(`Repository created: ${repo.html_url}`);
             return repo.clone_url;
-      
+
       - name: Push content
+        shell: bash
         env:
           REPO_URL: ${{ steps.create-repo.outputs.result }}
           TOKEN: ${{ secrets.REPO_CREATE_TOKEN }}
@@ -91,18 +95,20 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add .
           git commit -m "Initial commit from ZIP archive"
-          git remote add origin $(echo "$REPO_URL" | sed "s|https://|https://x-access-token:$TOKEN@|")
+          git remote add origin "$(echo "$REPO_URL" | sed "s|https://|https://x-access-token:$TOKEN@|")"
           git push -u origin main
-      
+
       - name: Success summary
+        shell: bash
         run: |
-          cat >> $GITHUB_STEP_SUMMARY << EOF
+          repo_web_url="$(echo "${{ steps.create-repo.outputs.result }}" | sed 's/\.git$//')"
+          cat >> "$GITHUB_STEP_SUMMARY" << EOF
           ## ✅ Repository Created Successfully
-          
+
           - **Name:** ${{ inputs.repo_name }}
-          - **URL:** $(echo "${{ steps.create-repo.outputs.result }}" | sed 's/.git$//')
+          - **URL:** ${repo_web_url}
           - **Files:** ${{ env.FILES_COUNT }}
-          - **Visibility:** ${{ inputs.private_repo == 'true' && 'Private 🔒' || 'Public 🌍' }}
-          
-          [View Repository →]($(echo "${{ steps.create-repo.outputs.result }}" | sed 's/.git$//'))
+          - **Visibility:** ${{ inputs.private_repo && 'Private 🔒' || 'Public 🌍' }}
+
+          [View Repository →](${repo_web_url})
           EOF
