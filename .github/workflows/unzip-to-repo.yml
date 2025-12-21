@@ -1,6 +1,6 @@
 name: Production-Ready Unzip to Repository
 
-"on":
+on:
   workflow_dispatch:
     inputs:
       repo_name:
@@ -17,6 +17,9 @@ name: Production-Ready Unzip to Repository
         type: boolean
         default: false
 
+permissions:
+  contents: read
+
 jobs:
   validate-and-create:
     runs-on: ubuntu-latest
@@ -25,39 +28,100 @@ jobs:
     outputs:
       repo_url: ${{ steps.create-repo.outputs.result }}
 
-    steps:
-      - name: Validate repository name
+    defaults:
+      run:
         shell: bash
+
+    steps:
+      - name: Validate inputs
         run: |
-          if [[ ! "${{ inputs.repo_name }}" =~ ^[a-zA-Z0-9_-]{1,100}$ ]]; then
+          set -euo pipefail
+
+          repo_name="${{ inputs.repo_name }}"
+          zip_url="${{ inputs.zip_url }}"
+
+          if [[ ! "$repo_name" =~ ^[a-zA-Z0-9_-]{1,100}$ ]]; then
             echo "::error::Invalid repository name. Use only letters, numbers, hyphens, and underscores (1-100 characters)"
             exit 1
           fi
 
+          if [[ ! "$zip_url" =~ ^https?:// ]]; then
+            echo "::error::Invalid ZIP URL. Must start with http:// or https://"
+            exit 1
+          fi
+
       - name: Download ZIP with retry
-        uses: nick-fields/retry@v2
+        uses: nick-fields/retry@v3
         with:
           timeout_minutes: 99
           max_attempts: 9
           command: |
+            set -euo pipefail
             curl -L -f -o archive.zip "${{ inputs.zip_url }}"
             if [ ! -s archive.zip ]; then
-              echo "Downloaded file is empty"
+              echo "::error::Downloaded file is empty"
               exit 1
             fi
 
-      - name: Extract and validate
-        shell: bash
+      - name: Validate ZIP and extract safely
         run: |
-          mkdir -p extracted_content
-          if ! unzip -q archive.zip -d extracted_content; then
-            echo "::error::Failed to extract ZIP file. File may be corrupted."
+          set -euo pipefail
+
+          if ! unzip -tq archive.zip >/dev/null 2>&1; then
+            echo "::error::Downloaded file is not a valid ZIP archive or is corrupted"
             exit 1
           fi
 
-          file_count=$(find extracted_content -type f | wc -l)
+          # Security Check: Zip Slip and unsafe paths
+          mapfile -t entries < <(unzip -Z1 archive.zip)
+
+          if [ "${#entries[@]}" -eq 0 ]; then
+            echo "::error::ZIP archive contains no entries"
+            exit 1
+          fi
+
+          for entry in "${entries[@]}"; do
+            if [[ "$entry" =~ (^/|(^|/)\.\.(/|$)) ]]; then
+              echo "::error::Unsafe ZIP entry detected (path traversal): $entry"
+              exit 1
+            fi
+            if [[ "$entry" == *\\* ]]; then
+              echo "::error::Unsafe ZIP entry detected (backslash in path): $entry"
+              exit 1
+            fi
+            if [[ "$entry" =~ ^[A-Za-z]: ]]; then
+              echo "::error::Unsafe ZIP entry detected (drive path): $entry"
+              exit 1
+            fi
+          done
+
+          # Extraction
+          rm -rf extracted_content
+          mkdir -p extracted_content
+          unzip -q archive.zip -d extracted_content
+
+          file_count=$(find extracted_content -type f | wc -l | tr -d '[:space:]')
           if [ "$file_count" -eq 0 ]; then
             echo "::error::ZIP archive contains no files"
+            exit 1
+          fi
+
+          # Unnesting Logic: If 1 folder contains everything, move contents up
+          shopt -s dotglob nullglob
+          items=(extracted_content/*)
+          if [ "${#items[@]}" -eq 1 ] && [ -d "${items[0]}" ]; then
+            inner="${items[0]}"
+            inner_items=("$inner"/*)
+            if [ "${#inner_items[@]}" -gt 0 ]; then
+              echo "::notice::Unnesting single top-level directory..."
+              mv "$inner"/* extracted_content/
+            fi
+            rm -rf "$inner"
+          fi
+
+          file_count=$(find extracted_content -type f | wc -l | tr -d '[:space:]')
+          if [ "$file_count" -eq 0 ]; then
+            echo "::error::No files found after extraction processing"
             exit 1
           fi
 
@@ -66,7 +130,7 @@ jobs:
 
       - name: Create repository
         id: create-repo
-        uses: actions/github-script@v8
+        uses: actions/github-script@v7
         env:
           REPO_NAME: ${{ inputs.repo_name }}
           PRIVATE: ${{ inputs.private_repo }}
@@ -74,34 +138,53 @@ jobs:
         with:
           github-token: ${{ secrets.REPO_CREATE_TOKEN }}
           script: |
-            const { data: repo } = await github.rest.repos.createForAuthenticatedUser({
-              name: process.env.REPO_NAME,
-              description: `Created from ZIP: ${process.env.ZIP_URL}`,
-              private: process.env.PRIVATE === 'true',
-              auto_init: false
-            });
-            core.notice(`Repository created: ${repo.html_url}`);
-            return repo.clone_url;
+            try {
+              const { data: repo } = await github.rest.repos.createForAuthenticatedUser({
+                name: process.env.REPO_NAME,
+                description: `Created from ZIP: ${process.env.ZIP_URL}`,
+                private: process.env.PRIVATE === 'true',
+                auto_init: false
+              });
+              core.notice(`Repository created: ${repo.html_url}`);
+              return repo.clone_url;
+            } catch (err) {
+              const status = err?.status;
+              const msg = err?.message || String(err);
+              if (status === 422) {
+                core.setFailed(`Repository creation failed (likely already exists or name invalid): ${msg}`);
+              } else if (status === 401 || status === 403) {
+                core.setFailed(`Repository creation failed (token permissions/auth): ${msg}`);
+              } else {
+                core.setFailed(`Repository creation failed: ${msg}`);
+              }
+              throw err;
+            }
 
       - name: Push content
-        shell: bash
         env:
           REPO_URL: ${{ steps.create-repo.outputs.result }}
           TOKEN: ${{ secrets.REPO_CREATE_TOKEN }}
         run: |
+          set -euo pipefail
+          export GIT_TERMINAL_PROMPT=0
+
           cd extracted_content
+
           git init -b main
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+
           git add .
           git commit -m "Initial commit from ZIP archive"
+
           git remote add origin "$(echo "$REPO_URL" | sed "s|https://|https://x-access-token:$TOKEN@|")"
           git push -u origin main
 
       - name: Success summary
-        shell: bash
         run: |
+          set -euo pipefail
           repo_web_url="$(echo "${{ steps.create-repo.outputs.result }}" | sed 's/\.git$//')"
+
           cat >> "$GITHUB_STEP_SUMMARY" << EOF
           ## ✅ Repository Created Successfully
 
