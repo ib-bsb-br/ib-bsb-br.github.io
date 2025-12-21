@@ -1,0 +1,235 @@
+name: Unzip and Create Repository (Git Method)
+
+on:
+  workflow_dispatch:
+    inputs:
+      repo_name:
+        description: 'Name for the new repository (must be unique)'
+        required: true
+        default: 'repo_name'
+      zip_url:
+        description: 'URL of the ZIP file to download'
+        required: true
+        default: 'zip_url'
+      repo_description:
+        description: 'Description for the new repository'
+        required: false
+        default: 'repo_description'
+      private_repo:
+        description: 'Make repository private?'
+        required: true
+        type: boolean
+        default: false
+
+jobs:
+  create-repo-from-zip:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Validate inputs
+        run: |
+          echo "🔍 Validating inputs..."
+          echo "Repository name: ${{ inputs.repo_name }}"
+          echo "ZIP URL: ${{ inputs.zip_url }}"
+          echo "Private: ${{ inputs.private_repo }}"
+          
+          if [[ ! "${{ inputs.repo_name }}" =~ ^[a-zA-Z0-9_-]+$ ]]; then
+            echo "❌ Error: Repository name can only contain alphanumeric characters, hyphens, and underscores"
+            exit 1
+          fi
+
+      - name: Download ZIP file
+        run: |
+          echo "📥 Downloading ZIP file from ${{ inputs.zip_url }}"
+          
+          if ! curl -L -f -o archive.zip --max-time 300 "${{ inputs.zip_url }}"; then
+            echo "❌ Failed to download ZIP file"
+            exit 1
+          fi
+          
+          if [ ! -s archive.zip ]; then
+            echo "❌ Downloaded file is empty"
+            exit 1
+          fi
+          
+          echo "✅ Downloaded $(du -h archive.zip | cut -f1) file"
+          
+      - name: Extract ZIP contents
+        run: |
+          echo "📦 Extracting ZIP file..."
+          mkdir -p extracted_content
+          
+          if ! unzip -q archive.zip -d extracted_content; then
+            echo "❌ Failed to extract ZIP file"
+            exit 1
+          fi
+          
+          file_count=$(find extracted_content -type f | wc -l)
+          if [ "$file_count" -eq 0 ]; then
+            echo "❌ No files found in ZIP archive"
+            exit 1
+          fi
+          
+          echo "✅ Extracted $file_count files"
+
+      - name: Create repository via API
+        uses: actions/github-script@v8
+        id: create-repo
+        env:
+          REPO_NAME: ${{ inputs.repo_name }}
+          REPO_DESCRIPTION: ${{ inputs.repo_description }}
+          PRIVATE_REPO: ${{ inputs.private_repo }}
+        with:
+          github-token: ${{ secrets.REPO_CREATE_TOKEN }}
+          retries: 3
+          script: |
+            const repoName = process.env.REPO_NAME;
+            const repoDescription = process.env.REPO_DESCRIPTION;
+            const isPrivate = process.env.PRIVATE_REPO === 'true';
+            
+            const { data: user } = await github.rest.users.getAuthenticated();
+            console.log(`🔐 Authenticated as: ${user.login}`);
+            
+            try {
+              console.log(`📝 Creating repository: ${user.login}/${repoName}`);
+              
+              const { data: repo } = await github.rest.repos.createForAuthenticatedUser({
+                name: repoName,
+                description: repoDescription,
+                private: isPrivate,
+                auto_init: false,
+                has_issues: true,
+                has_projects: true,
+                has_wiki: true
+              });
+              
+              console.log(`✅ Repository created: ${repo.html_url}`);
+              console.log(`📋 Clone URL: ${repo.clone_url}`);
+              
+              return repo.clone_url;
+              
+            } catch (error) {
+              if (error.status === 422) {
+                core.setFailed(`Repository '${repoName}' already exists in your account. Please choose a different name or delete the existing repository.`);
+              } else if (error.status === 401) {
+                core.setFailed('Authentication failed. Please verify your REPO_CREATE_TOKEN secret has the correct permissions.');
+              } else {
+                core.setFailed(`Failed to create repository: ${error.message}`);
+              }
+              throw error;
+            }
+
+      - name: Initialize git and push content
+        env:
+          REPO_URL: ${{ steps.create-repo.outputs.result }}
+          GITHUB_TOKEN: ${{ secrets.REPO_CREATE_TOKEN }}
+        run: |
+          cd extracted_content
+          
+          echo "🔧 Configuring git..."
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config http.postBuffer 524288000
+          git config http.version HTTP/1.1
+          
+          echo "📋 Initializing repository..."
+          git init
+          
+          echo "* text=auto" > .gitattributes
+          
+          echo "➕ Adding all files..."
+          git add .
+          
+          TOTAL_SIZE=$(du -sh . | cut -f1)
+          FILE_COUNT=$(find . -type f | wc -l)
+          echo "📊 Repository stats: $FILE_COUNT files, $TOTAL_SIZE total"
+          
+          LARGE_FILES=$(find . -type f -size +100M 2>/dev/null || true)
+          if [ -n "$LARGE_FILES" ]; then
+            echo "⚠️ Warning: Found files over 100MB:"
+            echo "$LARGE_FILES"
+            echo "These exceed GitHub's file size limit and must be handled with Git LFS or removed"
+            exit 1
+          fi
+          
+          echo "💾 Creating initial commit..."
+          git commit -m "Initial commit: Add files from ZIP archive
+
+          Source: ${{ inputs.zip_url }}
+          Extracted: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+          Workflow: ${{ github.repository }}@${{ github.sha }}"
+          
+          echo "🌿 Setting default branch to main..."
+          git branch -M main
+          
+          echo "🔗 Adding remote..."
+          REPO_URL_WITH_TOKEN=$(echo "$REPO_URL" | sed "s|https://|https://x-access-token:${GITHUB_TOKEN}@|")
+          git remote add origin "$REPO_URL_WITH_TOKEN"
+          
+          echo "⬆️ Pushing to remote..."
+          for attempt in 1 2 3; do
+            echo "Attempt $attempt of 3..."
+            if GIT_CURL_VERBOSE=1 git push -u origin main --verbose 2>&1; then
+              echo "✅ Successfully pushed to repository!"
+              exit 0
+            else
+              PUSH_EXIT_CODE=$?
+              echo "⚠️ Push attempt $attempt failed (exit code: $PUSH_EXIT_CODE)"
+              
+              if [ $attempt -eq 3 ]; then
+                echo ""
+                echo "❌ Failed to push after 3 attempts"
+                echo ""
+                echo "🔍 Troubleshooting:"
+                echo "1. Verify REPO_CREATE_TOKEN has 'repo' scope or 'Contents: Read and write' permission"
+                echo "2. Check repository: ${REPO_URL%.git}"
+                echo "3. Push size: $TOTAL_SIZE ($FILE_COUNT files)"
+                echo "4. Review the verbose output above for specific errors"
+                exit 1
+              fi
+              
+              echo "Retrying in 10 seconds..."
+              sleep 10
+            fi
+          done
+
+      - name: Generate summary
+        if: success()
+        env:
+          REPO_URL: ${{ steps.create-repo.outputs.result }}
+        run: |
+          echo "## ✅ Workflow Completed Successfully!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Repository Details" >> $GITHUB_STEP_SUMMARY
+          echo "- **Name:** ${{ inputs.repo_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **URL:** [View Repository](${REPO_URL%.git})" >> $GITHUB_STEP_SUMMARY
+          echo "- **Visibility:** ${{ inputs.private_repo == 'true' && 'Private' || 'Public' }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Source" >> $GITHUB_STEP_SUMMARY
+          echo "- **ZIP URL:** ${{ inputs.zip_url }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "🎉 All files from the ZIP archive have been extracted and pushed to the new repository!" >> $GITHUB_STEP_SUMMARY
+
+      - name: Cleanup failure
+        if: failure()
+        uses: actions/github-script@v8
+        env:
+          REPO_NAME: ${{ inputs.repo_name }}
+        with:
+          github-token: ${{ secrets.REPO_CREATE_TOKEN }}
+          script: |
+            const repoName = process.env.REPO_NAME;
+            const { data: user } = await github.rest.users.getAuthenticated();
+            
+            try {
+              await github.rest.repos.get({
+                owner: user.login,
+                repo: repoName
+              });
+              
+              console.log(`⚠️ Repository ${user.login}/${repoName} created but workflow failed.`);
+              console.log(`Consider deleting it manually if it's empty: https://github.com/${user.login}/${repoName}/settings`);
+              
+            } catch (error) {
+              console.log('No repository cleanup needed.');
+            }
