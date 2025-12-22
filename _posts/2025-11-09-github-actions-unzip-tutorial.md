@@ -91,6 +91,7 @@ This tutorial demonstrates how to create a GitHub Actions workflow that:
 ### Create Workflow File
 Create `.github/workflows/unzip-to-repo.yml` in your repository:
 
+{% raw %}
 {% codeblock yaml %}
 name: Unzip and Create Repository (Git Method)
 
@@ -319,3 +320,4 @@ jobs:
               console.log('No repository cleanup needed.');
             }
 {% endcodeblock %}
+{% endraw %}
