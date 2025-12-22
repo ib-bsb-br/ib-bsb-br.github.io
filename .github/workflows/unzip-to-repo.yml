@@ -1,197 +1,216 @@
-name: Production-Ready Unzip to Repository
+name: Unzip and Create Repository (Git Method)
 
 on:
   workflow_dispatch:
     inputs:
       repo_name:
-        description: 'Repository name (alphanumeric, hyphens, underscores only)'
+        description: 'Name for the new repository (must be unique)'
         required: true
-        type: string
+        default: 'unzipped-content'
       zip_url:
-        description: 'ZIP file URL (must be direct download link)'
+        description: 'URL of the ZIP file to download'
         required: true
-        type: string
-        default: 'https://x0.at'
+        default: 'https://x0.at/XS2C.zip'
+      repo_description:
+        description: 'Description for the new repository'
+        required: false
+        default: 'Repository created from ZIP file extraction'
       private_repo:
-        description: 'Create as private repository?'
+        description: 'Make repository private?'
+        required: true
         type: boolean
         default: false
 
-permissions:
-  contents: read
-
 jobs:
-  validate-and-create:
+  create-repo-from-zip:
     runs-on: ubuntu-latest
-    timeout-minutes: 999
-
-    outputs:
-      repo_url: ${{ steps.create-repo.outputs.result }}
-
-    defaults:
-      run:
-        shell: bash
-
+    
     steps:
       - name: Validate inputs
         run: |
-          set -euo pipefail
-
-          repo_name="${{ inputs.repo_name }}"
-          zip_url="${{ inputs.zip_url }}"
-
-          if [[ ! "$repo_name" =~ ^[a-zA-Z0-9_-]{1,100}$ ]]; then
-            echo "::error::Invalid repository name. Use only letters, numbers, hyphens, and underscores (1-100 characters)"
+          echo "🔍 Validating inputs..."
+          echo "Repository name: ${{ inputs.repo_name }}"
+          echo "ZIP URL: ${{ inputs.zip_url }}"
+          echo "Private: ${{ inputs.private_repo }}"
+          
+          # Basic repository name validation
+          if [[ ! "${{ inputs.repo_name }}" =~ ^[a-zA-Z0-9_-]+$ ]]; then
+            echo "❌ Error: Repository name can only contain alphanumeric characters, hyphens, and underscores"
             exit 1
           fi
 
-          if [[ ! "$zip_url" =~ ^https?:// ]]; then
-            echo "::error::Invalid ZIP URL. Must start with http:// or https://"
-            exit 1
-          fi
-
-      - name: Download ZIP with retry
-        uses: nick-fields/retry@v3
-        with:
-          timeout_minutes: 99
-          max_attempts: 9
-          command: |
-            set -euo pipefail
-            curl -L -f -o archive.zip "${{ inputs.zip_url }}"
-            if [ ! -s archive.zip ]; then
-              echo "::error::Downloaded file is empty"
-              exit 1
-            fi
-
-      - name: Validate ZIP and extract safely
+      - name: Download ZIP file
         run: |
-          set -euo pipefail
-
-          if ! unzip -tq archive.zip >/dev/null 2>&1; then
-            echo "::error::Downloaded file is not a valid ZIP archive or is corrupted"
+          echo "📥 Downloading ZIP file from ${{ inputs.zip_url }}"
+          
+          # Download with timeout and error handling
+          if ! curl -L -f -o archive.zip --max-time 300 "${{ inputs.zip_url }}"; then
+            echo "❌ Failed to download ZIP file"
             exit 1
           fi
-
-          # Security Check: Zip Slip and unsafe paths
-          mapfile -t entries < <(unzip -Z1 archive.zip)
-
-          if [ "${#entries[@]}" -eq 0 ]; then
-            echo "::error::ZIP archive contains no entries"
+          
+          # Verify file was downloaded and has content
+          if [ ! -s archive.zip ]; then
+            echo "❌ Downloaded file is empty"
             exit 1
           fi
-
-          for entry in "${entries[@]}"; do
-            if [[ "$entry" =~ (^/|(^|/)\.\.(/|$)) ]]; then
-              echo "::error::Unsafe ZIP entry detected (path traversal): $entry"
-              exit 1
-            fi
-            if [[ "$entry" == *\\* ]]; then
-              echo "::error::Unsafe ZIP entry detected (backslash in path): $entry"
-              exit 1
-            fi
-            if [[ "$entry" =~ ^[A-Za-z]: ]]; then
-              echo "::error::Unsafe ZIP entry detected (drive path): $entry"
-              exit 1
-            fi
-          done
-
-          # Extraction
-          rm -rf extracted_content
+          
+          echo "✅ Downloaded $(du -h archive.zip | cut -f1) file"
+          
+      - name: Extract ZIP contents
+        run: |
+          echo "📦 Extracting ZIP file..."
           mkdir -p extracted_content
-          unzip -q archive.zip -d extracted_content
-
-          file_count=$(find extracted_content -type f | wc -l | tr -d '[:space:]')
-          if [ "$file_count" -eq 0 ]; then
-            echo "::error::ZIP archive contains no files"
+          
+          # Extract with error handling
+          if ! unzip -q archive.zip -d extracted_content; then
+            echo "❌ Failed to extract ZIP file"
             exit 1
           fi
-
-          # Unnesting Logic: If 1 folder contains everything, move contents up
-          shopt -s dotglob nullglob
-          items=(extracted_content/*)
-          if [ "${#items[@]}" -eq 1 ] && [ -d "${items[0]}" ]; then
-            inner="${items[0]}"
-            inner_items=("$inner"/*)
-            if [ "${#inner_items[@]}" -gt 0 ]; then
-              echo "::notice::Unnesting single top-level directory..."
-              mv "$inner"/* extracted_content/
-            fi
-            rm -rf "$inner"
-          fi
-
-          file_count=$(find extracted_content -type f | wc -l | tr -d '[:space:]')
+          
+          # Check if extraction produced files
+          file_count=$(find extracted_content -type f | wc -l)
           if [ "$file_count" -eq 0 ]; then
-            echo "::error::No files found after extraction processing"
+            echo "❌ No files found in ZIP archive"
             exit 1
           fi
+          
+          echo "✅ Extracted $file_count files"
+          echo "📂 Directory structure:"
+          tree extracted_content/ || ls -R extracted_content/
 
-          echo "FILES_COUNT=$file_count" >> "$GITHUB_ENV"
-          echo "::notice::Successfully extracted $file_count files"
-
-      - name: Create repository
+      - name: Create repository via API
+        uses: actions/github-script@v8
         id: create-repo
-        uses: actions/github-script@v7
         env:
           REPO_NAME: ${{ inputs.repo_name }}
-          PRIVATE: ${{ inputs.private_repo }}
-          ZIP_URL: ${{ inputs.zip_url }}
+          REPO_DESCRIPTION: ${{ inputs.repo_description }}
+          PRIVATE_REPO: ${{ inputs.private_repo }}
+        with:
+          github-token: ${{ secrets.REPO_CREATE_TOKEN }}
+          retries: 3
+          script: |
+            const repoName = process.env.REPO_NAME;
+            const repoDescription = process.env.REPO_DESCRIPTION;
+            const isPrivate = process.env.PRIVATE_REPO === 'true';
+            
+            // Get the authenticated user to ensure we're creating in the right account
+            const { data: user } = await github.rest.users.getAuthenticated();
+            console.log(`🔐 Authenticated as: ${user.login}`);
+            
+            try {
+              console.log(`📝 Creating repository: ${user.login}/${repoName}`);
+              
+              const { data: repo } = await github.rest.repos.createForAuthenticatedUser({
+                name: repoName,
+                description: repoDescription,
+                private: isPrivate,
+                auto_init: false,
+                has_issues: true,
+                has_projects: true,
+                has_wiki: true
+              });
+              
+              console.log(`✅ Repository created: ${repo.html_url}`);
+              console.log(`📋 Clone URL: ${repo.clone_url}`);
+              
+              // Return the clone URL for the next step
+              return repo.clone_url;
+              
+            } catch (error) {
+              if (error.status === 422) {
+                core.setFailed(`Repository '${repoName}' already exists in your account. Please choose a different name or delete the existing repository.`);
+              } else if (error.status === 401) {
+                core.setFailed('Authentication failed. Please verify your REPO_CREATE_TOKEN secret has the correct permissions.');
+              } else {
+                core.setFailed(`Failed to create repository: ${error.message}`);
+              }
+              throw error;
+            }
+
+      - name: Initialize git and push content
+        env:
+          REPO_URL: ${{ steps.create-repo.outputs.result }}
+          GITHUB_TOKEN: ${{ secrets.REPO_CREATE_TOKEN }}
+        run: |
+          cd extracted_content
+          
+          echo "🔧 Configuring git..."
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          
+          echo "📋 Initializing repository..."
+          git init
+          
+          # Create .gitattributes for proper line ending handling
+          echo "* text=auto" > .gitattributes
+          
+          echo "➕ Adding all files..."
+          git add .
+          
+          echo "💾 Creating initial commit..."
+          git commit -m "Initial commit: Add files from ZIP archive
+
+          Source: ${{ inputs.zip_url }}
+          Extracted: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+          Workflow: ${{ github.repository }}@${{ github.sha }}"
+          
+          echo "🌿 Setting default branch to main..."
+          git branch -M main
+          
+          echo "🔗 Adding remote..."
+          # Insert token into URL for authentication
+          REPO_URL_WITH_TOKEN=$(echo "$REPO_URL" | sed "s|https://|https://x-access-token:${GITHUB_TOKEN}@|")
+          git remote add origin "$REPO_URL_WITH_TOKEN"
+          
+          echo "⬆️ Pushing to remote..."
+          if git push -u origin main; then
+            echo "✅ Successfully pushed to repository!"
+          else
+            echo "❌ Failed to push to repository"
+            exit 1
+          fi
+
+      - name: Generate summary
+        if: success()
+        env:
+          REPO_URL: ${{ steps.create-repo.outputs.result }}
+        run: |
+          echo "## ✅ Workflow Completed Successfully!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Repository Details" >> $GITHUB_STEP_SUMMARY
+          echo "- **Name:** ${{ inputs.repo_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **URL:** [View Repository](${REPO_URL%.git})" >> $GITHUB_STEP_SUMMARY
+          echo "- **Visibility:** ${{ inputs.private_repo == 'true' && 'Private' || 'Public' }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Source" >> $GITHUB_STEP_SUMMARY
+          echo "- **ZIP URL:** ${{ inputs.zip_url }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "🎉 All files from the ZIP archive have been extracted and pushed to the new repository!" >> $GITHUB_STEP_SUMMARY
+
+      - name: Cleanup failure
+        if: failure()
+        uses: actions/github-script@v8
+        env:
+          REPO_NAME: ${{ inputs.repo_name }}
         with:
           github-token: ${{ secrets.REPO_CREATE_TOKEN }}
           script: |
+            const repoName = process.env.REPO_NAME;
+            const { data: user } = await github.rest.users.getAuthenticated();
+            
             try {
-              const { data: repo } = await github.rest.repos.createForAuthenticatedUser({
-                name: process.env.REPO_NAME,
-                description: `Created from ZIP: ${process.env.ZIP_URL}`,
-                private: process.env.PRIVATE === 'true',
-                auto_init: false
+              // Check if repo exists
+              await github.rest.repos.get({
+                owner: user.login,
+                repo: repoName
               });
-              core.notice(`Repository created: ${repo.html_url}`);
-              return repo.clone_url;
-            } catch (err) {
-              const status = err?.status;
-              const msg = err?.message || String(err);
-              if (status === 422) {
-                core.setFailed(`Repository creation failed (likely already exists or name invalid): ${msg}`);
-              } else if (status === 401 || status === 403) {
-                core.setFailed(`Repository creation failed (token permissions/auth): ${msg}`);
-              } else {
-                core.setFailed(`Repository creation failed: ${msg}`);
-              }
-              throw err;
+              
+              // If we get here, repo exists - ask if they want to clean it up
+              console.log(`⚠️ Repository ${user.login}/${repoName} was created but workflow failed.`);
+              console.log(`Consider deleting it manually if it's empty: https://github.com/${user.login}/${repoName}/settings`);
+              
+            } catch (error) {
+              // Repo doesn't exist, nothing to clean up
+              console.log('No repository cleanup needed.');
             }
-
-      - name: Push content
-        env:
-          REPO_URL: ${{ steps.create-repo.outputs.result }}
-          TOKEN: ${{ secrets.REPO_CREATE_TOKEN }}
-        run: |
-          set -euo pipefail
-          export GIT_TERMINAL_PROMPT=0
-
-          cd extracted_content
-
-          git init -b main
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
-          git add .
-          git commit -m "Initial commit from ZIP archive"
-
-          git remote add origin "$(echo "$REPO_URL" | sed "s|https://|https://x-access-token:$TOKEN@|")"
-          git push -u origin main
-
-      - name: Success summary
-        run: |
-          set -euo pipefail
-          repo_web_url="$(echo "${{ steps.create-repo.outputs.result }}" | sed 's/\.git$//')"
-
-          cat >> "$GITHUB_STEP_SUMMARY" << EOF
-          ## ✅ Repository Created Successfully
-
-          - **Name:** ${{ inputs.repo_name }}
-          - **URL:** ${repo_web_url}
-          - **Files:** ${{ env.FILES_COUNT }}
-          - **Visibility:** ${{ inputs.private_repo && 'Private 🔒' || 'Public 🌍' }}
-
-          [View Repository →](${repo_web_url})
-          EOF
