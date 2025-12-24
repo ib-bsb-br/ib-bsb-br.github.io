@@ -1,4 +1,70 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2025-12-22T19:14:03+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">RK3588 capability scan</title><link href="https://ib.bsb.br/rk3588-scan/" rel="alternate" type="text/html" title="RK3588 capability scan" /><published>2025-12-19T00:00:00+00:00</published><updated>2025-12-19T19:26:27+00:00</updated><id>https://ib.bsb.br/rk3588-scan</id><content type="html" xml:base="https://ib.bsb.br/rk3588-scan/"><![CDATA[<h1 id="rk3588_auditsh">rk3588_audit.sh</h1>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2025-12-24T15:38:37+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">verify OpenGL+OpenGL ES within Bullseye</title><link href="https://ib.bsb.br/opengl-status/" rel="alternate" type="text/html" title="verify OpenGL+OpenGL ES within Bullseye" /><published>2025-12-24T00:00:00+00:00</published><updated>2025-12-24T15:32:41+00:00</updated><id>https://ib.bsb.br/opengl-status</id><content type="html" xml:base="https://ib.bsb.br/opengl-status/"><![CDATA[<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c">#!/bin/bash</span>
+
+<span class="c"># Description: Exhaustively lists OpenGL/ES/EGL/Mesa packages and verifies runtime versions.</span>
+<span class="c"># OS Target: Debian 11 (Bullseye)</span>
+
+<span class="c"># Define colors for readability</span>
+<span class="nv">BOLD</span><span class="o">=</span><span class="s2">"</span><span class="se">\0</span><span class="s2">33[1m"</span>
+<span class="nv">CYAN</span><span class="o">=</span><span class="s2">"</span><span class="se">\0</span><span class="s2">33[36m"</span>
+<span class="nv">GREEN</span><span class="o">=</span><span class="s2">"</span><span class="se">\0</span><span class="s2">33[32m"</span>
+<span class="nv">RED</span><span class="o">=</span><span class="s2">"</span><span class="se">\0</span><span class="s2">33[31m"</span>
+<span class="nv">RESET</span><span class="o">=</span><span class="s2">"</span><span class="se">\0</span><span class="s2">33[0m"</span>
+
+<span class="nb">echo</span> <span class="nt">-e</span> <span class="s2">"</span><span class="k">${</span><span class="nv">BOLD</span><span class="k">}</span><span class="s2">==================================================</span><span class="k">${</span><span class="nv">RESET</span><span class="k">}</span><span class="s2">"</span>
+<span class="nb">echo</span> <span class="nt">-e</span> <span class="s2">"</span><span class="k">${</span><span class="nv">BOLD</span><span class="k">}</span><span class="s2"> PART 1: EXHAUSTIVE PACKAGE AUDIT</span><span class="k">${</span><span class="nv">RESET</span><span class="k">}</span><span class="s2">"</span>
+<span class="nb">echo</span> <span class="nt">-e</span> <span class="s2">"</span><span class="k">${</span><span class="nv">BOLD</span><span class="k">}</span><span class="s2">==================================================</span><span class="k">${</span><span class="nv">RESET</span><span class="k">}</span><span class="s2">"</span>
+
+<span class="c"># 1. SEARCH PATTERN</span>
+<span class="c"># We look for: mesa, opengl, libgl(x), libgles, libegl, and nvidia (if present).</span>
+<span class="c"># We EXCLUDE: libglib (GNOME core), glibc (C library), and unrelated globs.</span>
+<span class="nv">SEARCH_REGEX</span><span class="o">=</span><span class="s2">"^(libgl[0-9]|libglx|libgles|libegl|mesa|nvidia|xserver-xorg-video|opengl)"</span>
+<span class="nv">EXCLUDE_REGEX</span><span class="o">=</span><span class="s2">"(libglib|glibc|syslog|global)"</span>
+
+<span class="c"># 2. DYNAMIC DISCOVERY</span>
+<span class="c"># Get list of ALL installed packages matching the regex.</span>
+<span class="nb">echo</span> <span class="nt">-e</span> <span class="s2">"</span><span class="k">${</span><span class="nv">CYAN</span><span class="k">}</span><span class="s2">[*] Scanning dpkg database for all graphics-related packages...</span><span class="k">${</span><span class="nv">RESET</span><span class="k">}</span><span class="se">\n</span><span class="s2">"</span>
+
+<span class="c"># Format: PackageName Version</span>
+<span class="c"># We use grep to filter the list of installed packages.</span>
+<span class="nv">MATCHING_PACKAGES</span><span class="o">=</span><span class="si">$(</span>dpkg-query <span class="nt">-W</span> <span class="nt">-f</span><span class="o">=</span><span class="s1">'${Package} ${Version}\n'</span> | <span class="nb">grep</span> <span class="nt">-E</span> <span class="s2">"</span><span class="nv">$SEARCH_REGEX</span><span class="s2">"</span> | <span class="nb">grep</span> <span class="nt">-v</span> <span class="nt">-E</span> <span class="s2">"</span><span class="nv">$EXCLUDE_REGEX</span><span class="s2">"</span> | <span class="nb">sort</span><span class="si">)</span>
+
+<span class="k">if</span> <span class="o">[</span> <span class="nt">-z</span> <span class="s2">"</span><span class="nv">$MATCHING_PACKAGES</span><span class="s2">"</span> <span class="o">]</span><span class="p">;</span> <span class="k">then
+    </span><span class="nb">echo</span> <span class="nt">-e</span> <span class="s2">"</span><span class="k">${</span><span class="nv">RED</span><span class="k">}</span><span class="s2">[!] No OpenGL/Mesa packages found!</span><span class="k">${</span><span class="nv">RESET</span><span class="k">}</span><span class="s2">"</span>
+<span class="k">else
+    </span><span class="nb">printf</span> <span class="s2">"%-40s %-30s</span><span class="se">\n</span><span class="s2">"</span> <span class="s2">"PACKAGE NAME"</span> <span class="s2">"INSTALLED VERSION"</span>
+    <span class="nb">printf</span> <span class="s2">"%-40s %-30s</span><span class="se">\n</span><span class="s2">"</span> <span class="s2">"------------"</span> <span class="s2">"-----------------"</span>
+    <span class="nb">echo</span> <span class="s2">"</span><span class="nv">$MATCHING_PACKAGES</span><span class="s2">"</span> | <span class="nb">awk</span> <span class="s1">'{printf "%-40s %s\n", $1, $2}'</span>
+<span class="k">fi
+
+</span><span class="nb">echo</span> <span class="nt">-e</span> <span class="s2">"</span><span class="se">\n</span><span class="k">${</span><span class="nv">BOLD</span><span class="k">}</span><span class="s2">==================================================</span><span class="k">${</span><span class="nv">RESET</span><span class="k">}</span><span class="s2">"</span>
+<span class="nb">echo</span> <span class="nt">-e</span> <span class="s2">"</span><span class="k">${</span><span class="nv">BOLD</span><span class="k">}</span><span class="s2"> PART 2: RUNTIME CAPABILITY CHECK</span><span class="k">${</span><span class="nv">RESET</span><span class="k">}</span><span class="s2">"</span>
+<span class="nb">echo</span> <span class="nt">-e</span> <span class="s2">"</span><span class="k">${</span><span class="nv">BOLD</span><span class="k">}</span><span class="s2">==================================================</span><span class="k">${</span><span class="nv">RESET</span><span class="k">}</span><span class="s2">"</span>
+
+<span class="c"># 3. RUNTIME VERIFICATION</span>
+<span class="c"># Keeps going even if tools are missing.</span>
+
+<span class="c"># Check for glxinfo (Standard OpenGL)</span>
+<span class="k">if </span><span class="nb">command</span> <span class="nt">-v</span> glxinfo &amp;&gt; /dev/null<span class="p">;</span> <span class="k">then
+    </span><span class="nb">echo</span> <span class="nt">-e</span> <span class="s2">"</span><span class="k">${</span><span class="nv">GREEN</span><span class="k">}</span><span class="s2">[*] Testing Standard OpenGL (glxinfo):</span><span class="k">${</span><span class="nv">RESET</span><span class="k">}</span><span class="s2">"</span>
+    <span class="c"># Extract relevant version lines</span>
+    glxinfo | <span class="nb">grep</span> <span class="nt">-E</span> <span class="nt">-i</span> <span class="s2">"(OpenGL version|OpenGL renderer|OpenGL vendor|OpenGL core profile version)"</span> | <span class="nb">sed</span> <span class="s1">'s/^/    /'</span>
+<span class="k">else
+    </span><span class="nb">echo</span> <span class="nt">-e</span> <span class="s2">"</span><span class="k">${</span><span class="nv">RED</span><span class="k">}</span><span class="s2">[MISSING] 'glxinfo' not found.</span><span class="k">${</span><span class="nv">RESET</span><span class="k">}</span><span class="s2"> Install 'mesa-utils' to verify runtime OpenGL."</span>
+<span class="k">fi
+
+</span><span class="nb">echo</span> <span class="s2">""</span>
+
+<span class="c"># Check for es2_info (OpenGL ES)</span>
+<span class="k">if </span><span class="nb">command</span> <span class="nt">-v</span> es2_info &amp;&gt; /dev/null<span class="p">;</span> <span class="k">then
+    </span><span class="nb">echo</span> <span class="nt">-e</span> <span class="s2">"</span><span class="k">${</span><span class="nv">GREEN</span><span class="k">}</span><span class="s2">[*] Testing OpenGL ES (es2_info):</span><span class="k">${</span><span class="nv">RESET</span><span class="k">}</span><span class="s2">"</span>
+    <span class="c"># Extract relevant version lines</span>
+    es2_info | <span class="nb">grep</span> <span class="nt">-E</span> <span class="nt">-i</span> <span class="s2">"(GL_VERSION|GL_RENDERER|GL_VENDOR)"</span> | <span class="nb">sed</span> <span class="s1">'s/^/    /'</span>
+<span class="k">else
+    </span><span class="nb">echo</span> <span class="nt">-e</span> <span class="s2">"</span><span class="k">${</span><span class="nv">RED</span><span class="k">}</span><span class="s2">[MISSING] 'es2_info' not found.</span><span class="k">${</span><span class="nv">RESET</span><span class="k">}</span><span class="s2"> Install 'mesa-utils-extra' to verify runtime OpenGL ES."</span>
+<span class="k">fi
+
+</span><span class="nb">echo</span> <span class="nt">-e</span> <span class="s2">"</span><span class="se">\n</span><span class="k">${</span><span class="nv">BOLD</span><span class="k">}</span><span class="s2">[DONE] Verification complete.</span><span class="k">${</span><span class="nv">RESET</span><span class="k">}</span><span class="s2">"</span>
+</code></pre></div></div>]]></content><author><name></name></author><category term="scratchpad" /></entry><entry><title type="html">RK3588 capability scan</title><link href="https://ib.bsb.br/rk3588-scan/" rel="alternate" type="text/html" title="RK3588 capability scan" /><published>2025-12-19T00:00:00+00:00</published><updated>2025-12-19T19:26:27+00:00</updated><id>https://ib.bsb.br/rk3588-scan</id><content type="html" xml:base="https://ib.bsb.br/rk3588-scan/"><![CDATA[<h1 id="rk3588_auditsh">rk3588_audit.sh</h1>
 <section class="code-block-container" role="group" aria-label=" Code Block" data-filename="_code_block.txt" data-code="#!/usr/bin/env bash
 set -euo pipefail
 set -o errtrace
@@ -2859,126 +2925,4 @@ Deliver blunt, directive answers to the provided user request [[user_message]], 
       &lt;bhgchg&gt;&amp;yg;fgebat&amp;tg;Ncyvpnçãb qr zrqvqn N if. O&amp;yg;/fgebat&amp;tg;\aB nedhvib ncerfragn bevragnçõrf qvfgvagnf: N — erfhzb pbeerfcbaqragr (Sbagr: [Znahny K], [Frçãb 3.2]); O — erfhzb pbeerfcbaqragr (Sbagr: [Znahny L], [Frçãb 5.1]).&lt;/bhgchg&gt;
     &lt;/rknzcyr&gt;
   &lt;/rknzcyrf&gt;
-</code></pre></div></div>]]></content><author><name></name></author><category term="AI&gt;prompt" /></entry><entry><title type="html">b3 - SELL</title><link href="https://ib.bsb.br/b3-sell/" rel="alternate" type="text/html" title="b3 - SELL" /><published>2025-10-06T00:00:00+00:00</published><updated>2025-10-06T20:42:20+00:00</updated><id>https://ib.bsb.br/b3-sell</id><content type="html" xml:base="https://ib.bsb.br/b3-sell/"><![CDATA[<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>You are an AI portfolio sell-scenario planner for B3/BOVESPA. Operate deterministically, never fabricate data, and always respond in Portuguese (pt-BR). Timezone: America/Sao_Paulo.
-
-GOAL
-- Receber entradas mínimas do usuário e gerar DOIS cenários de venda que, cada um, somem ≥ target_brl em receita bruta:
-  A) “Realizar lucros”: prioriza ações que foram simultaneamente fortes em 30d e 12m.
-  B) “Cortar perdas”: prioriza ações que foram simultaneamente fracas em 30d e 12m.
-- Vender apenas quantidades INTEIRAS, sem venda a descoberto, ignorando taxas/IR por padrão.
-
-INTERAÇÃO (UMA ÚNICA SOLICITAÇÃO DE ENTRADA, SE NECESSÁRIO)
-- Se as entradas ainda não foram fornecidas, solicitar exatamente uma vez, aceitando UM dos formatos:
-  JSON:
-  {
-    "positions": [
-      {"ticker": "PETR4", "quantity": 200},
-      {"ticker": "VALE3", "quantity": 50}
-    ],
-    "target_brl": 5000.00
-  }
-  CSV (e target_brl separado):
-  ticker,quantity
-  PETR4,200
-  VALE3,50
-  target_brl=5000.00
-
-ENTRADAS VÁLIDAS
-- positions: lista de objetos com ticker (B3) e quantity (inteiro ≥ 0).
-- target_brl: número &gt; 0 em BRL.
-
-COLETA DE DADOS (ONLINE, SEM INVENTAR NÚMEROS)
-- Preferência: https://www.fundamentus.com.br
-- Alternativas confiáveis se a preferência estiver indisponível: site da B3 e portais financeiros reconhecidos.
-- Para CADA ticker:
-  - Obter: preço atual (BRL), variação 30 dias (%), variação 12 meses (%).
-  - Registrar em metadata por ticker:
-    - source_url: URL exata consultada
-    - fetched_at: data/hora de coleta (America/Sao_Paulo)
-    - metrics_available: quais métricas foram obtidas (preço, 30d, 12m)
-- Se um ticker não for encontrado, estiver suspenso ou sem preço (&gt; 0), reportar e excluí-lo dos rankings; ainda assim tentar atender o alvo com os demais.
-
-PRÉ-CÁLCULO
-- Para cada ticker i:
-  - ret_30d[i], ret_12m[i], price[i] (BRL), qty[i] (int)
-  - position_value[i] = price[i] * qty[i]
-  - Validar price[i] &gt; 0 e qty[i] ≥ 0.
-
-FALTA DE MÉTRICAS
-- Se faltar apenas uma métrica (30d OU 12m): usar a métrica disponível; desempate por position_value (desc).
-- Se faltarem ambas (30d E 12m) para um ticker: excluí-lo do ranking combinado; poderá entrar ao final, apenas como recurso, se necessário para atingir o alvo (com nota de limitação).
-- Se todas as ações estiverem sem métricas de desempenho, reportar impossibilidade de aplicar o critério “duplo” e oferecer alternativa baseada apenas em preço/valor de posição (sujeito a confirmação do usuário).
-
-CENÁRIO A — REALIZAR LUCROS (FORTES EM 30D E 12M)
-- Ranking combinado (50/50):
-  - rank30 = rank(desc, ret_30d)
-  - rank12 = rank(desc, ret_12m)
-  - score_A = rank30 + rank12
-  - Ordenação: score_A asc; desempates (nesta ordem):
-    1) maior position_value
-    2) maior price_brl
-    3) ticker em ordem alfabética asc
-- Seleção (gananciosa com inteiros):
-  - remaining = target_brl
-  - Para cada ticker na ordem:
-    - need = ceil(remaining / price)
-    - sell = min(need, qty)
-    - Se sell &lt;= 0, pular
-    - revenue += sell * price; remaining -= sell * price
-    - Parar assim que remaining &lt;= 0 (não vender além do necessário)
-
-CENÁRIO B — CORTAR PERDAS (FRACOS EM 30D E 12M)
-- Ranking combinado (50/50):
-  - rank30w = rank(asc, ret_30d)
-  - rank12w = rank(asc, ret_12m)
-  - score_B = rank30w + rank12w
-  - Ordenação e desempates idênticos ao Cenário A
-- Seleção: mesma regra gananciosa com inteiros até remaining &lt;= 0
-
-CASOS-LIMITE E ERROS
-- Se a soma máxima possível de venda (∑ price * qty) &lt; target_brl:
-  - Reportar claramente o máximo alcançável, listar as vendas correspondentes e o gap remanescente.
-- Se dados online não puderem ser obtidos para um ticker, reportar e continuar com os demais.
-- Se rounding criar leve “overshoot”, manter a menor venda que fez remaining &lt;= 0; não adicionar vendas extras.
-- Nunca vender quantidade superior à disponível; nunca usar frações de ação.
-
-SAÍDA (SEMPRE EM PORTUGUÊS)
-1) JSON estruturado:
-{
-  "scenario_A": {
-    "policy": "Realizar lucros — fortes em 30d e 12m (peso igual)",
-    "items": [
-      {"ticker": "...", "qty_sold": 0, "price_brl": 0.00, "revenue_brl": 0.00, "pct_of_position": 0.0, "note": "justificativa breve (ex.: top em 30d e 12m)"}
-    ],
-    "total_revenue_brl": 0.00
-  },
-  "scenario_B": {
-    "policy": "Cortar perdas — fracos em 30d e 12m (peso igual)",
-    "items": [
-      {"ticker": "...", "qty_sold": 0, "price_brl": 0.00, "revenue_brl": 0.00, "pct_of_position": 0.0, "note": "justificativa breve (ex.: bottom em 30d e 12m)"}
-    ],
-    "total_revenue_brl": 0.00
-  },
-  "metadata": {
-    "target_brl": 0.00,
-    "currency": "BRL",
-    "timestamp": "YYYY-MM-DDTHH:MM:SS-03:00",
-    "sources": [
-      {"ticker": "...", "source_url": "...", "fetched_at": "YYYY-MM-DDTHH:MM:SS-03:00", "metrics_available": ["price","30d","12m"]}
-    ],
-    "limitations": [
-      "listar limitações encontradas, se houver (ex.: métrica ausente, ticker excluído, etc.)"
-    ]
-  }
-}
-2) Tabelas Markdown para cada cenário com colunas:
-   Ticker | Qtde vendida | Preço (BRL) | Receita (BRL) | % da posição | Observação
-3) Notas/avisos:
-   - Análise operacional baseada em dados públicos; não constitui recomendação financeira.
-   - Sem taxas/IR por padrão; sem venda a descoberto; liquidez presumida.
-
-COMPORTAMENTO
-- Pedir as entradas mínimas uma única vez se ausentes; caso já fornecidas, prosseguir diretamente.
-- Não adiar resultados nem prometer execução futura: realizar a busca e o cálculo na própria resposta.
-- Não inventar dados; se indisponíveis após tentativa de múltiplas fontes confiáveis, declarar explicitamente.
 </code></pre></div></div>]]></content><author><name></name></author><category term="AI&gt;prompt" /></entry></feed>
