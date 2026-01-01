@@ -1,4 +1,442 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2025-12-30T20:07:07+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">content swap</title><link href="https://ib.bsb.br/txt-swap/" rel="alternate" type="text/html" title="content swap" /><published>2025-12-29T00:00:00+00:00</published><updated>2025-12-30T03:00:00+00:00</updated><id>https://ib.bsb.br/txt-swap</id><content type="html" xml:base="https://ib.bsb.br/txt-swap/"><![CDATA[<section class="code-block-container" role="group" aria-label=" Code Block" data-filename="_code_block.txt" data-code="&lt;prompt&gt;
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2026-01-01T23:40:13+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">TreeSheets Hierarchy Swap documentation</title><link href="https://ib.bsb.br/ts-swap/" rel="alternate" type="text/html" title="TreeSheets Hierarchy Swap documentation" /><published>2026-01-01T00:00:00+00:00</published><updated>2026-01-01T23:34:40+00:00</updated><id>https://ib.bsb.br/ts-swap</id><content type="html" xml:base="https://ib.bsb.br/ts-swap/"><![CDATA[<h2 id="command-surface">Command Surface</h2>
+<ul>
+  <li><strong>Menu / Shortcut:</strong> Organization → Hierarchy Swap (F8), defined in <a href="../src/tsframe.h#L333-L348"><code class="language-plaintext highlighter-rouge">tsframe.h</code></a>. The label reads “Hierarchy Swap” and the tooltip explains that all cells with the selected text are swapped with their parents at the current level (or above). The menu entry lives under the “Organization” cascade, grouped with flattening and hierarchify commands.</li>
+  <li><strong>Action ID:</strong> <code class="language-plaintext highlighter-rouge">A_HSWAP</code> in <a href="../src/main.cpp#L130-L180"><code class="language-plaintext highlighter-rouge">main.cpp</code></a>. This ID connects the menu, keyboard shortcut, and dispatcher switch statement; it is also used in the toolbar accelerator table.</li>
+  <li><strong>Validation and dispatch:</strong> <code class="language-plaintext highlighter-rouge">Document::Action()</code> at <a href="../src/document.h#L1860-L1920"><code class="language-plaintext highlighter-rouge">document.h</code></a> enforces:
+    <ul>
+      <li>The selected cell has a parent and grandparent (minimum depth requirement) and therefore the command is disabled at the document root.</li>
+      <li>Both parent and grandparent grids are 1×N or N×1 (unidimensional constraint). If either grid fails the shape test, the action aborts before any structural edits occur.</li>
+      <li>An undo step is recorded before calling the swap, so the operation is fully reversible.</li>
+      <li>The returned <code class="language-plaintext highlighter-rouge">Selection</code> is installed, and the layout is reset plus canvas refresh is requested to reflect the new tree topology.</li>
+    </ul>
+  </li>
+  <li><strong>Failure modes (user-facing):</strong>
+    <ul>
+      <li>No grandparent → “Cannot move this cell up in the hierarchy.”</li>
+      <li>Parent grid not 1×N or N×1 → “Can only move this cell from a Nx1 or 1xN grid.”</li>
+      <li>Grandparent grid not 1×N or N×1 → “Can only move this cell into a Nx1 or 1xN grid.”</li>
+      <li>Selection has no grid ancestry because the document is a single flat row/column → the menu item will be disabled due to the grandparent check.</li>
+    </ul>
+  </li>
+  <li><strong>Selection rule:</strong> The operation is invoked on the currently selected cell; the returned selection usually points to the promoted/merged tag at the grandparent level. If merges occur, the earliest tag inserted into the target grid becomes the selection anchor and is reused for subsequent merges.</li>
+  <li><strong>UI invariants to watch:</strong> because <code class="language-plaintext highlighter-rouge">HierarchySwap</code> runs inside a single undo step, the canvas redraw and layout reset happen once per keypress, even when multiple promotions/merges occur via <code class="language-plaintext highlighter-rouge">goto lookformore</code>.</li>
+</ul>
+
+<h2 id="code-map">Code Map</h2>
+<p>| Area | Location | Role |
+| — | — | — |
+| Grid-level search | <a href="../src/grid.h#L867-L888"><code class="language-plaintext highlighter-rouge">Grid::FindExact</code></a> | Recursively finds the first cell whose text matches the selected tag. Walks depth-first through a child grid. |
+| Main algorithm | <a href="../src/grid.h#L889-L938"><code class="language-plaintext highlighter-rouge">Grid::HierarchySwap</code></a> | Promotes each match, rebuilds its parent chain under it, merges like-tag peers, and restarts the search until no matches remain. |
+| Parent cleanup | <a href="../src/grid.h#L940-L964"><code class="language-plaintext highlighter-rouge">Grid::DeleteTagParent</code></a> | Removes the promoted node from its old location, deleting empty 1×1 ancestors on the way up. |
+| Merge helpers | <a href="../src/grid.h#L966-L991"><code class="language-plaintext highlighter-rouge">Grid::MergeTagCell</code></a> and <a href="../src/grid.h#L993-L1000"><code class="language-plaintext highlighter-rouge">Grid::MergeTagAll</code></a> | Merge promoted cells (and their grids) when the target level already contains the same tag. |
+| Parent pointer fix-up | <a href="../src/grid.h#L1010-L1014"><code class="language-plaintext highlighter-rouge">Grid::ReParent</code></a> | Retargets parent pointers whenever a grid is transplanted. |
+| Cell-level match | <a href="../src/cell.h#L484-L503"><code class="language-plaintext highlighter-rouge">Cell::FindExact</code></a> | Base-case exact-text comparison used by <code class="language-plaintext highlighter-rouge">Grid::FindExact</code>. |</p>
+
+<h3 id="how-these-pieces-cooperate">How these pieces cooperate</h3>
+<ol>
+  <li><code class="language-plaintext highlighter-rouge">Document::Action()</code> validates shape/depth, then calls <code class="language-plaintext highlighter-rouge">HierarchySwap</code> on the grandparent grid, passing the selected cell text.</li>
+  <li><code class="language-plaintext highlighter-rouge">HierarchySwap</code> iterates each direct child cell of that grid that has a subgrid, scanning it with <code class="language-plaintext highlighter-rouge">FindExact</code>.</li>
+  <li>When a match is found, the ancestor chain is reversed into nested children (using <code class="language-plaintext highlighter-rouge">ReParent</code> for correctness), original containers are removed (<code class="language-plaintext highlighter-rouge">DeleteTagParent</code>), and the promoted tag is merged (<code class="language-plaintext highlighter-rouge">MergeTagCell</code>/<code class="language-plaintext highlighter-rouge">MergeTagAll</code>).</li>
+  <li>The search restarts (<code class="language-plaintext highlighter-rouge">goto lookformore</code>) so newly created structure is considered; the returned <code class="language-plaintext highlighter-rouge">Selection</code> points to the first merged tag at the target grid.</li>
+</ol>
+
+<h2 id="algorithm-from-the-current-implementation">Algorithm (from the current implementation)</h2>
+<p>The following is a line-by-line translation of the active codepath, emphasizing what actually happens rather than a simplified mental model.</p>
+
+<ol>
+  <li><strong>Search scope:</strong> Start in the grandparent grid of the selected cell (the grid that owns the parent’s parent). Iterate each direct child that has a grid. The current child being scanned is referenced by <code class="language-plaintext highlighter-rouge">cell</code> inside the function.</li>
+  <li><strong>Find first match:</strong> Use <code class="language-plaintext highlighter-rouge">Grid::FindExact(tag)</code> to locate the first cell in that child grid whose text equals the selected tag (case-sensitive). If none, continue to the next sibling with a grid.</li>
+  <li><strong>Build reversed chain:</strong> For the found cell <code class="language-plaintext highlighter-rouge">f</code>, walk its parent chain up to (but not including) the grandparent cell that owns the running grid. For each ancestor <code class="language-plaintext highlighter-rouge">p</code>:
+    <ul>
+      <li>If <code class="language-plaintext highlighter-rouge">p-&gt;text</code> matches the tag, set <code class="language-plaintext highlighter-rouge">done = true</code> to stop after this promotion and avoid infinite swaps through same-named ancestors.</li>
+      <li>Clone <code class="language-plaintext highlighter-rouge">p</code> into a new cell attached under <code class="language-plaintext highlighter-rouge">f</code>, transfer <code class="language-plaintext highlighter-rouge">f</code>’s current grid to that clone, call <code class="language-plaintext highlighter-rouge">ReParent</code>, and give <code class="language-plaintext highlighter-rouge">f</code> a fresh 1×1 grid containing the clone. This makes every ancestor become a child nested under the promoted tag, preserving the original ordering from nearest to farthest parent.</li>
+    </ul>
+  </li>
+  <li><strong>Detach the original chain:</strong> Call <code class="language-plaintext highlighter-rouge">DeleteTagParent</code> repeatedly while walking upward, deleting empty 1×1 ancestors and cleaning up the spot where the match used to live. This pruning happens before any merge so that empties are not left behind in the original branch.</li>
+  <li><strong>Merge at target level:</strong>
+    <ul>
+      <li>If the target grid was empty, place <code class="language-plaintext highlighter-rouge">f</code> there and mark it as the selection.</li>
+      <li>Otherwise call <code class="language-plaintext highlighter-rouge">MergeTagCell</code>, which either merges <code class="language-plaintext highlighter-rouge">f</code> into an existing like-named cell (combining grids via <code class="language-plaintext highlighter-rouge">MergeTagAll</code> when both have grids) or appends it if no duplicate exists. The first merged/added cell becomes the returned selection, and subsequent merges fold into that.</li>
+    </ul>
+  </li>
+  <li><strong>Restart search:</strong> <code class="language-plaintext highlighter-rouge">goto lookformore</code> restarts the sweep so newly created structure is also scanned. The loop ends when no further matches remain or <code class="language-plaintext highlighter-rouge">done</code> was set because an ancestor already matched the tag (the ancestor-match guard).</li>
+  <li><strong>Return selection:</strong> The function returns a <code class="language-plaintext highlighter-rouge">Selection</code> pointing to the promoted/merged tag at the target level. The caller re-applies the selection and refreshes layout/UI.</li>
+</ol>
+
+<h3 id="behavioral-notes">Behavioral Notes</h3>
+<ul>
+  <li><strong>Grid shape:</strong> The operation only runs on 1×N or N×1 grids (checked before calling the algorithm). This keeps parent/child inversion unambiguous and ensures <code class="language-plaintext highlighter-rouge">DeleteCells</code> can safely collapse rows/columns when null slots appear.</li>
+  <li><strong>Exact text match:</strong> Matching is literal and case-sensitive (<code class="language-plaintext highlighter-rouge">Cell::FindExact</code>), so “Red” ≠ “red”. Hidden formatting (bold/italic) does not affect the match because only <code class="language-plaintext highlighter-rouge">text.t</code> is compared.</li>
+  <li><strong>Search order:</strong> Because the search restarts after every promotion, newly merged structures can be processed in subsequent passes; order is depth-first within each child grid. This restart is why multi-match merges can happen within one keypress.</li>
+  <li><strong>Ancestor protection:</strong> If an ancestor already has the same tag, <code class="language-plaintext highlighter-rouge">done</code> stops further promotions after that chain is processed to prevent cycling the same text upward forever. That means repeated-tag chains only promote once, even when additional matches exist deeper in the tree.</li>
+  <li><strong>Merge semantics:</strong> When the target grid already contains the tag, children from both structures are merged under the surviving tag cell. Subgrid merging preserves existing rows/columns as appended sibling rows, and <code class="language-plaintext highlighter-rouge">MergeTagAll</code> will recursively merge duplicate-tag grandchildren as well. If a promoted match brings in a cloned ancestor with the same name but no grid, <code class="language-plaintext highlighter-rouge">MergeTagCell</code> short-circuits on the first match and leaves only one copy.</li>
+  <li><strong>Two-level hops:</strong> Each keypress works against the selected cell’s grandparent grid, so very deep matches may need multiple presses to bubble all the way to the top-level grid where siblings live. The “press-count” tables below assume this two-level stride.</li>
+  <li><strong>Undo/redo alignment:</strong> An undo point is established before running the algorithm; all structural edits (promote, delete, merge) live inside that single undo step. Redo will replay the full set of promotions, merges, and deletions.</li>
+  <li><strong>Selection stability:</strong> The first promoted/merged cell at the target grid is returned as the new selection; subsequent merges do not change that pointer. This stability matters for keyboard users repeating swaps.</li>
+  <li><strong>Empty-shell cleanup:</strong> Because <code class="language-plaintext highlighter-rouge">DeleteTagParent</code> prunes empty 1×1 ancestors, the final tree omits placeholder shells that lost all children during promotion. When the grid has multiple rows, empty rows are physically removed via <code class="language-plaintext highlighter-rouge">DeleteCells</code>.</li>
+  <li><strong>Grid ownership:</strong> <code class="language-plaintext highlighter-rouge">ReParent</code> is called every time a grid is re-attached so parent pointers remain accurate for all transplanted children. This invariant is critical for subsequent operations such as copy/paste or further swaps.</li>
+  <li><strong>Shape preservation for bystanders:</strong> Cells in the grandparent grid that do not contain a matching tag remain in place (apart from row removal when a null slot is deleted). Use this property to predict stable ordering of unrelated siblings.</li>
+</ul>
+
+<h3 id="implementation-walkthrough-annotated-pseudocode">Implementation Walkthrough (annotated pseudocode)</h3>
+<p>Below is an exact-structure pseudocode sketch that matches the current C++ implementation, including the restart logic:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>HierarchySwap(tag):
+    selcell = nullptr
+    done = false
+lookformore:
+    for each cell in this grid where cell has a subgrid:
+        found = cell-&gt;grid-&gt;FindExact(tag)
+        if not found: continue
+
+        // Reverse the ancestor chain into children under `found`
+        for p = found-&gt;parent; p != cell; p = p-&gt;parent:
+            if p-&gt;text == tag: done = true
+            clone = new Cell(found, p)
+            clone-&gt;text = p-&gt;text
+            clone-&gt;grid = found-&gt;grid
+            if clone-&gt;grid: clone-&gt;grid-&gt;ReParent(clone)
+            found-&gt;grid = new Grid(1, 1)
+            found-&gt;grid-&gt;cell = found
+            *found-&gt;grid-&gt;cells = clone
+
+        // Remove the original chain (prunes empties)
+        for r = found; r &amp;&amp; r != cell; r = r-&gt;parent-&gt;grid-&gt;DeleteTagParent(r, cell, found);
+
+        // Merge or insert at the target level
+        if !cells[0]:
+            *cells = found
+            selcell = found
+        else:
+            MergeTagCell(found, selcell)
+
+        if !done: goto lookformore
+    return Selection(this, selcell)
+</code></pre></div></div>
+<p>Key takeaways from this structure:</p>
+<ul>
+  <li>The <code class="language-plaintext highlighter-rouge">goto</code> intentionally restarts the <code class="language-plaintext highlighter-rouge">for</code> so the modified grid is scanned anew.</li>
+  <li><code class="language-plaintext highlighter-rouge">done</code> only flips when a same-named ancestor exists; otherwise every match reachable from the scanning grid will be processed.</li>
+  <li>The merge target is always the grid on which <code class="language-plaintext highlighter-rouge">HierarchySwap</code> is called (the grandparent grid chosen by the caller).</li>
+  <li>The loop condition <code class="language-plaintext highlighter-rouge">p != cell</code> stops cloning at the grid’s owning cell (the grandparent), so only ancestors strictly below that owning cell are nested under the promoted tag.</li>
+</ul>
+
+<h2 id="examples">Examples</h2>
+<p>The following scenarios are constructed directly against the algorithm above:</p>
+
+<h3 id="1-baseline-single-match-promotion">1) Baseline: Single Match Promotion</h3>
+<p><strong>Before</strong> (select “Alice”, grandparent grid owns <code class="language-plaintext highlighter-rouge">Project</code>):</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Projects
+   Project A
+      Alice
+   Project B
+      Bob
+</code></pre></div></div>
+
+<p><strong>After F8 on “Alice”:</strong></p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Projects
+   Project B
+      Bob
+   Alice
+      Project A
+</code></pre></div></div>
+<ul>
+  <li>The <code class="language-plaintext highlighter-rouge">Alice</code> branch moves to the grandparent grid. <code class="language-plaintext highlighter-rouge">Project A</code> becomes a child under <code class="language-plaintext highlighter-rouge">Alice</code>. Other siblings stay put.</li>
+  <li>No merge occurs because only one <code class="language-plaintext highlighter-rouge">Alice</code> exists. Undo reverses the promotion cleanly.</li>
+  <li>Plain text before: <code class="language-plaintext highlighter-rouge">Projects\n  Project A\n    Alice\n  Project B\n    Bob\n</code></li>
+  <li>Plain text after: <code class="language-plaintext highlighter-rouge">Projects\n  Project B\n    Bob\n  Alice\n    Project A\n</code></li>
+</ul>
+
+<h3 id="2-multiple-matches-at-different-depths">2) Multiple Matches at Different Depths</h3>
+<p><strong>Before</strong> (grandparent grid is <code class="language-plaintext highlighter-rouge">Colors</code>):</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Colors
+   Warm
+      Red
+      Orange
+   Cool
+      Blue
+   Mixed
+      Purple
+         Red
+</code></pre></div></div>
+
+<p><strong>After F8 on either “Red”:</strong></p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Colors
+   Warm
+      Orange
+   Cool
+      Blue
+   Red
+      Warm
+      Mixed
+         Purple
+</code></pre></div></div>
+<ul>
+  <li>First match promotes <code class="language-plaintext highlighter-rouge">Warm</code> under <code class="language-plaintext highlighter-rouge">Red</code>, leaving <code class="language-plaintext highlighter-rouge">Orange</code> behind.</li>
+  <li>Second match promotes <code class="language-plaintext highlighter-rouge">Mixed → Purple</code> under another <code class="language-plaintext highlighter-rouge">Red</code>.</li>
+  <li>The two <code class="language-plaintext highlighter-rouge">Red</code> results merge at the <code class="language-plaintext highlighter-rouge">Colors</code> level; children from both chains are preserved.</li>
+  <li>Merge order is deterministic because the scan restarts after each promotion: the first child grid containing a match is processed fully before later siblings are scanned again.</li>
+  <li>Plain text (pre-swap): <code class="language-plaintext highlighter-rouge">colors\n  warm\n    red\n    orange\n  cool\n    blue\n  mixed\n    purple\n      red\n</code></li>
+  <li>Plain text (post-swap): <code class="language-plaintext highlighter-rouge">colors\n  warm\n    orange\n  cool\n    blue\n  red\n    warm\n    mixed\n      purple\n</code></li>
+  <li>XML (pre) mirrors the hierarchical listing; XML (post) reflects the merged <code class="language-plaintext highlighter-rouge">Red</code> node with <code class="language-plaintext highlighter-rouge">Warm</code> and <code class="language-plaintext highlighter-rouge">Mixed</code> children.</li>
+</ul>
+
+<h3 id="3-single-path-with-repeated-tags">3) Single-Path with Repeated Tags</h3>
+<p><strong>Before</strong> (select the deeper “Tag”, grandparent grid is the root):</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Root
+   Tag
+      Tag
+         Item
+</code></pre></div></div>
+
+<p><strong>After F8 on inner “Tag”:</strong></p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Root
+   Tag
+      Tag
+         Item
+</code></pre></div></div>
+<ul>
+  <li>The inner match is promoted to the root grid.</li>
+  <li>The original outer tag is preserved as a child under the promoted tag (the ancestor clone step).</li>
+  <li>Because an ancestor shared the tag, <code class="language-plaintext highlighter-rouge">done</code> stops further passes after this promotion. That guard prevents repeatedly flipping the two tags back and forth.</li>
+  <li>Variants to test: add a third nested <code class="language-plaintext highlighter-rouge">Tag</code> to confirm only one promotion occurs when a same-named ancestor exists.</li>
+</ul>
+
+<h3 id="4-grid-merge-with-existing-hierarchy">4) Grid Merge with Existing Hierarchy</h3>
+<p><strong>Before</strong> (select any <code class="language-plaintext highlighter-rouge">tag</code> cell; grandparent grid is <code class="language-plaintext highlighter-rouge">main</code>):</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>main
+   branch1
+      tag
+         a
+         b
+         c
+   branch2
+      tag
+         d
+         e
+         f
+</code></pre></div></div>
+
+<p><strong>After F8 on <code class="language-plaintext highlighter-rouge">tag</code>:</strong></p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>main
+   tag
+      branch1
+         a
+         b
+         c
+      branch2
+         d
+         e
+         f
+</code></pre></div></div>
+<ul>
+  <li>Each <code class="language-plaintext highlighter-rouge">tag</code> is promoted; their parent chains (<code class="language-plaintext highlighter-rouge">branch1</code>, <code class="language-plaintext highlighter-rouge">branch2</code>) become children under the promoted tags.</li>
+  <li>The promoted tags merge at the <code class="language-plaintext highlighter-rouge">main</code> level, combining both sub-branches under one <code class="language-plaintext highlighter-rouge">tag</code>.</li>
+  <li>Empty intermediate grids do not survive because <code class="language-plaintext highlighter-rouge">DeleteTagParent</code> prunes 1×1 shells.</li>
+  <li>Regression hint: if a third <code class="language-plaintext highlighter-rouge">tag</code> existed under <code class="language-plaintext highlighter-rouge">branch3</code>, it would also merge into the single top-level <code class="language-plaintext highlighter-rouge">tag</code> during the same keypress because the search restarts until no matches remain.</li>
+</ul>
+
+<h3 id="5-deep-match-with-mixed-siblings-depth-dependent-passes">5) Deep Match with Mixed Siblings (depth-dependent passes)</h3>
+<p>This example illustrates the “two-level hop” rule: each keypress processes the current selection’s grandparent grid. Deeper matches can require multiple presses to reach the shared ancestor where merging occurs.</p>
+
+<p><strong>Before (same starting state for all runs):</strong></p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Departments
+   Sales
+      Q4
+         Jamie
+   Support
+      Jamie
+   Engineering
+      Backend
+         Team A
+            Jamie
+</code></pre></div></div>
+
+<p><strong>If you press F8 on the shallow Jamie (under <code class="language-plaintext highlighter-rouge">Sales → Q4</code>):</strong></p>
+<ul>
+  <li><em>After the first press (scope = <code class="language-plaintext highlighter-rouge">Sales</code> grid):</em>
+    <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Departments
+   Sales
+      Jamie
+         Q4
+   Support
+      Jamie
+   Engineering
+      Backend
+         Team A
+            Jamie
+</code></pre></div>    </div>
+  </li>
+  <li><em>After the second press (scope = <code class="language-plaintext highlighter-rouge">Departments</code> grid):</em>
+    <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Departments
+   Jamie
+      Sales
+         Q4
+      Support
+      Engineering
+         Backend
+            Team A
+</code></pre></div>    </div>
+    <ul>
+      <li>First press bubbles the match two levels (grandparent = <code class="language-plaintext highlighter-rouge">Sales</code>).</li>
+      <li>Second press runs at <code class="language-plaintext highlighter-rouge">Departments</code>, finds all three <code class="language-plaintext highlighter-rouge">Jamie</code> matches, promotes each, and merges them at the top level.</li>
+    </ul>
+  </li>
+</ul>
+
+<p><strong>If you press F8 on the mid-depth Jamie (under <code class="language-plaintext highlighter-rouge">Support</code>):</strong></p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Departments
+   Jamie
+      Sales
+         Q4
+      Support
+      Engineering
+         Backend
+            Team A
+</code></pre></div></div>
+<ul>
+  <li>One press is enough because the selected cell’s grandparent grid is already <code class="language-plaintext highlighter-rouge">Departments</code>, so all three matches are discovered and merged in a single pass. The scan restarts after each promotion, but all matches reside directly in the processed scope, so the merge completes immediately.</li>
+</ul>
+
+<p><strong>If you press F8 on the deep Jamie (under <code class="language-plaintext highlighter-rouge">Engineering → Backend → Team A</code>):</strong></p>
+<ul>
+  <li><em>After one press (scope = <code class="language-plaintext highlighter-rouge">Backend</code> grid):</em>
+    <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Departments
+   Sales
+      Q4
+         Jamie
+   Support
+      Jamie
+   Engineering
+      Backend
+         Jamie
+            Team A
+</code></pre></div>    </div>
+  </li>
+  <li><em>After two presses (scope = <code class="language-plaintext highlighter-rouge">Engineering</code> grid):</em>
+    <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Departments
+   Sales
+      Q4
+         Jamie
+   Support
+      Jamie
+   Engineering
+      Jamie
+         Backend
+            Team A
+</code></pre></div>    </div>
+  </li>
+  <li><em>After three presses (scope = <code class="language-plaintext highlighter-rouge">Departments</code> grid):</em>
+    <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Departments
+   Jamie
+      Sales
+         Q4
+      Support
+      Engineering
+         Backend
+            Team A
+</code></pre></div>    </div>
+  </li>
+  <li>Each press operates two levels up from the current selection, so the deep match must be swapped three times to reach the shared <code class="language-plaintext highlighter-rouge">Departments</code> grid where the merge can occur. At that point, all <code class="language-plaintext highlighter-rouge">Jamie</code> nodes are coalesced.</li>
+</ul>
+
+<p><strong>Press counts by depth:</strong>
+| Selected <code class="language-plaintext highlighter-rouge">Jamie</code> | Initial depth relative to <code class="language-plaintext highlighter-rouge">Departments</code> | Presses to merge all three | Why |
+| — | — | — | — |
+| Shallow (<code class="language-plaintext highlighter-rouge">Sales → Q4 → Jamie</code>) | Great-grandchild | 2 | First press moves into the parent’s parent (<code class="language-plaintext highlighter-rouge">Sales</code>); second press runs in <code class="language-plaintext highlighter-rouge">Departments</code> and merges everything. |
+| Mid-depth (<code class="language-plaintext highlighter-rouge">Support → Jamie</code>) | Grandchild | 1 | Already two levels below <code class="language-plaintext highlighter-rouge">Departments</code>; one pass finds all matches. |
+| Deep (<code class="language-plaintext highlighter-rouge">Engineering → Backend → Team A → Jamie</code>) | Great-great-grandchild | 3 | Needs three hops (Backend → Engineering → Departments) because each swap uses the current grandparent grid. |</p>
+
+<p><strong>Alternate representations for automated checks:</strong></p>
+<ul>
+  <li>Pre-swap plain text: <code class="language-plaintext highlighter-rouge">Departments\n  Sales\n    Q4\n      Jamie\n  Support\n    Jamie\n  Engineering\n    Backend\n      Team A\n        Jamie\n</code></li>
+  <li>Post-merge plain text (after mid-depth or second shallow press or third deep press): <code class="language-plaintext highlighter-rouge">Departments\n  Jamie\n    Sales\n      Q4\n    Support\n    Engineering\n      Backend\n        Team A\n</code></li>
+  <li>XML versions can mirror these structures to diff serialized <code class="language-plaintext highlighter-rouge">.cts</code> files.</li>
+</ul>
+
+<h3 id="6-flat-sibling-merge-single-pass-no-depth-hops">6) Flat Sibling Merge (single pass, no depth hops)</h3>
+<p>This mirrors a shallow multi-match merge with no ancestor reuse beyond the shared parent. The grandparent grid is the document root; its only child with a subgrid is <code class="language-plaintext highlighter-rouge">Root</code>.</p>
+
+<p><strong>Before</strong> (select any <code class="language-plaintext highlighter-rouge">Tag</code>; grandparent grid = document root, scanning the <code class="language-plaintext highlighter-rouge">Root</code> grid):</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>&lt;doc root&gt;
+   Root
+      Tag
+      Tag
+      Tag
+      Other
+</code></pre></div></div>
+
+<p><strong>After one F8 on any <code class="language-plaintext highlighter-rouge">Tag</code>:</strong></p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>&lt;doc root&gt;
+   Root
+      Other
+   Tag
+      Root
+</code></pre></div></div>
+<ul>
+  <li>Each <code class="language-plaintext highlighter-rouge">Tag</code> is promoted out of <code class="language-plaintext highlighter-rouge">Root</code> and merged at the document root grid in a single pass because the restart (<code class="language-plaintext highlighter-rouge">goto lookformore</code>) continues scanning until no matches remain.</li>
+  <li>The ancestor-clone step adds a <code class="language-plaintext highlighter-rouge">Root</code> child under every promoted <code class="language-plaintext highlighter-rouge">Tag</code>, but because clones share the same text and carry no grids, <code class="language-plaintext highlighter-rouge">MergeTagCell</code> collapses them into a single <code class="language-plaintext highlighter-rouge">Root</code> child on the surviving <code class="language-plaintext highlighter-rouge">Tag</code>.</li>
+  <li><code class="language-plaintext highlighter-rouge">Root</code> keeps only the non-matching <code class="language-plaintext highlighter-rouge">Other</code> child because <code class="language-plaintext highlighter-rouge">DeleteTagParent</code> removes each <code class="language-plaintext highlighter-rouge">Tag</code> row from its grid but does not delete the grid itself (it is not 1×1).</li>
+  <li>Regression tip: if one of the <code class="language-plaintext highlighter-rouge">Tag</code> nodes had its own grid, that grid would merge into the surviving <code class="language-plaintext highlighter-rouge">Tag</code> as well via <code class="language-plaintext highlighter-rouge">MergeTagAll</code>; duplicates without grids are dropped as shown here.</li>
+</ul>
+
+<h3 id="7-partial-empty-parents-slot-deletion">7) Partial Empty Parents (slot deletion)</h3>
+<p>This showcases how null slots are deleted when a promoted child leaves behind an empty 1×1 grid, while non-empty siblings remain.</p>
+
+<p><strong>Before</strong> (select the first <code class="language-plaintext highlighter-rouge">Target</code>; grandparent grid = <code class="language-plaintext highlighter-rouge">Main</code>’s parent):</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Main
+   Holder1
+      Target
+      Sibling
+   Holder2
+      Target
+</code></pre></div></div>
+
+<p><strong>After F8 on <code class="language-plaintext highlighter-rouge">Target</code>:</strong></p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Main
+   Holder1
+      Sibling
+   Target
+      Holder1
+      Holder2
+</code></pre></div></div>
+<ul>
+  <li>The first promotion clones <code class="language-plaintext highlighter-rouge">Holder1</code> under the new <code class="language-plaintext highlighter-rouge">Target</code> and removes the original <code class="language-plaintext highlighter-rouge">Target</code> row, leaving <code class="language-plaintext highlighter-rouge">Holder1</code> with only <code class="language-plaintext highlighter-rouge">Sibling</code>.</li>
+  <li>The second promotion clones <code class="language-plaintext highlighter-rouge">Holder2</code> under a second <code class="language-plaintext highlighter-rouge">Target</code>; because <code class="language-plaintext highlighter-rouge">Holder2</code>’s grid becomes empty (1×1), <code class="language-plaintext highlighter-rouge">DeleteTagParent</code> removes that grid and returns the <code class="language-plaintext highlighter-rouge">Holder2</code> cell to the caller.</li>
+  <li><code class="language-plaintext highlighter-rouge">MergeTagCell</code> folds the second promoted <code class="language-plaintext highlighter-rouge">Target</code> into the first, merging the two cloned parents (<code class="language-plaintext highlighter-rouge">Holder1</code>, <code class="language-plaintext highlighter-rouge">Holder2</code>) under the surviving <code class="language-plaintext highlighter-rouge">Target</code> while keeping the <code class="language-plaintext highlighter-rouge">Holder1</code> branch with <code class="language-plaintext highlighter-rouge">Sibling</code> intact.</li>
+  <li>This example is a good probe for the <code class="language-plaintext highlighter-rouge">DeleteCells</code> path that removes a null slot from a multi-row grid and for the merge helper when one parent clone already exists.</li>
+</ul>
+
+<h2 id="practical-testing-checklist">Practical Testing Checklist</h2>
+<p>Use these focused checks to validate behavior after any code change touching the swap logic:</p>
+<ul>
+  <li>Verify swaps only run when both parent and grandparent grids are 1×N or N×1 (exercise all three error messages).</li>
+  <li>Confirm merged results keep every child grid (use Examples 2 and 4 to see that no payload is dropped during merges).</li>
+  <li>Exercise the ancestor-tag guard by creating a chain with repeated tags (Example 3) and ensure only one promotion occurs.</li>
+  <li>Walk the depth-dependent paths (Example 5) to ensure press counts still match the two-level-hop rule.</li>
+  <li>Ensure undo works: perform a swap and Ctrl+Z to restore; redo should reapply the promotion without divergence.</li>
+  <li>Serialize to <code class="language-plaintext highlighter-rouge">.cts</code> and diff the XML snippets above to confirm structural equivalence in file form.</li>
+</ul>
+
+<h2 id="faq-code-grounded">FAQ (code-grounded)</h2>
+<ul>
+  <li><strong>Why restart with <code class="language-plaintext highlighter-rouge">goto</code>?</strong> The grid topology changes during promotion and merge. Restarting ensures newly attached grids are eligible for immediate scanning without complex iterator management.</li>
+  <li><strong>Why prune empty 1×1 grids?</strong> Promotion often hollows out ancestor shells. Cleaning them avoids empty visual rows/columns and keeps selection paths short.</li>
+  <li><strong>Why does an ancestor tag stop further passes?</strong> Without <code class="language-plaintext highlighter-rouge">done</code>, a repeated tag could ping-pong upward indefinitely. The guard enforces a single promotion when the chain already contains the tag.</li>
+  <li><strong>Can swaps occur across unrelated branches?</strong> No. The scope is the selected cell’s grandparent grid; only descendants of each child grid under that grandparent are scanned.</li>
+  <li><strong>What happens when both merge candidates have grids?</strong> <code class="language-plaintext highlighter-rouge">MergeTagAll</code> merges every cell from the source grid into the destination grid, preserving ordering; if one side lacks a grid, the other grid is kept intact.</li>
+</ul>
+
+<h2 id="quick-regression-matrix-who-to-press-where">Quick Regression Matrix (who to press where)</h2>
+<p>| Scenario | Selection | Expected presses | Expected top-level result |
+| — | — | — | — |
+| Single match | <code class="language-plaintext highlighter-rouge">Alice</code> under <code class="language-plaintext highlighter-rouge">Project A</code> | 1 | <code class="language-plaintext highlighter-rouge">Alice</code> at Projects with <code class="language-plaintext highlighter-rouge">Project A</code> child |
+| Two matches, differing depths | Any <code class="language-plaintext highlighter-rouge">Red</code> | 1 | Single <code class="language-plaintext highlighter-rouge">Red</code> at <code class="language-plaintext highlighter-rouge">Colors</code> with <code class="language-plaintext highlighter-rouge">Warm</code> and <code class="language-plaintext highlighter-rouge">Mixed → Purple</code> children |
+| Repeated ancestor tag | Inner <code class="language-plaintext highlighter-rouge">Tag</code> | 1 | Two nested <code class="language-plaintext highlighter-rouge">Tag</code> nodes under <code class="language-plaintext highlighter-rouge">Root</code>, no further passes |
+| Parallel tag merges | Any <code class="language-plaintext highlighter-rouge">tag</code> under <code class="language-plaintext highlighter-rouge">branch1/2</code> | 1 | Single <code class="language-plaintext highlighter-rouge">tag</code> under <code class="language-plaintext highlighter-rouge">main</code> with both branches merged |
+| Depth-varied siblings | Shallow <code class="language-plaintext highlighter-rouge">Jamie</code> | 2 | Single <code class="language-plaintext highlighter-rouge">Jamie</code> under <code class="language-plaintext highlighter-rouge">Departments</code> with all departments beneath |
+| Depth-varied siblings | Mid <code class="language-plaintext highlighter-rouge">Jamie</code> | 1 | Same as above |
+| Depth-varied siblings | Deep <code class="language-plaintext highlighter-rouge">Jamie</code> | 3 | Same as above |</p>]]></content><author><name></name></author><category term="scratchpad" /></entry><entry><title type="html">content swap</title><link href="https://ib.bsb.br/txt-swap/" rel="alternate" type="text/html" title="content swap" /><published>2025-12-29T00:00:00+00:00</published><updated>2025-12-30T03:00:00+00:00</updated><id>https://ib.bsb.br/txt-swap</id><content type="html" xml:base="https://ib.bsb.br/txt-swap/"><![CDATA[<section class="code-block-container" role="group" aria-label=" Code Block" data-filename="_code_block.txt" data-code="&lt;prompt&gt;
   &lt;purpose&gt;
     You are a Senior Documentation Analyst and Technical Writer specializing in the standardization and sanitization of written records. 
     
@@ -2983,129 +3421,4 @@ placeholder
     &lt;/example&gt;
   &lt;/examples&gt;
 ```
-</code></pre></div></div>]]></content><author><name></name></author><category term="AI&gt;prompt" /></entry><entry><title type="html">blunt</title><link href="https://ib.bsb.br/blunt/" rel="alternate" type="text/html" title="blunt" /><published>2025-10-10T00:00:00+00:00</published><updated>2025-10-10T12:10:26+00:00</updated><id>https://ib.bsb.br/blunt</id><content type="html" xml:base="https://ib.bsb.br/blunt/"><![CDATA[<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>&lt;purpose&gt;
-Deliver blunt, directive answers to the provided user request [[user_message]], maximizing information density while enforcing any explicit constraints supplied by the user.
-&lt;/purpose&gt;
-&lt;context&gt;
-    &lt;glossary&gt;
-    - High‑signal: content that materially advances the answer (facts, logic, steps) with no decorative or persuasive padding.
-    - Soft ask: an indirect prompt to act (e.g., “you might want to…,” “consider…”), including offers of further help not explicitly requested.
-    - Conversational transition: informal segue phrases that mimic spoken turn-taking (e.g., “next,” “let’s move on”).
-    - Call‑to‑action appendix: end‑matter that invites follow‑up, subscription, or other action beyond the requested answer.
-    - Continuation bias: adding content to extend length or soften tone absent informational gain.
-    &lt;/glossary&gt;
-    &lt;assumption&gt;
-    User values cognitive efficiency over tone; accepts directness.
-    &lt;/assumption&gt;
-    &lt;constraints&gt;
-        &lt;constraint&gt;
-        1) Content exclusions (non‑substantive/promotional): no emojis; no filler or hype.
-        &lt;/constraint&gt;
-        &lt;constraint&gt;
-        2) Interaction exclusions (steering/engagement): no soft asks; no questions, offers, or unsolicited suggestions; no motivational content; disable engagement/sentiment boosting; suppress softening and continuation bias.
-        &lt;/constraint&gt;
-        &lt;constraint&gt;
-        3) Structural exclusions: no conversational transitions; no call‑to‑action appendices.
-        &lt;/constraint&gt;
-        &lt;constraint&gt;
-        4) Tone &amp; voice: maintain a precise, neutral, high‑signal style; assume high‑perception; avoid diction/mood mirroring; use blunt, directive phrasing oriented to cognitive rebuilding.
-        &lt;/constraint&gt;
-        &lt;constraint&gt;
-        5) Termination rule: end immediately after delivering the required information; no summaries, sign‑offs, or closures.
-        &lt;/constraint&gt;
-        &lt;constraint&gt;
-        6) Compliance &amp; refusal: always enforce explicit constraints above; if a request requires disallowed content under these rules, refuse succinctly with a rule‑based reason, then stop.
-        &lt;/constraint&gt;
-    Enforcement protocol (order of operations)
-    A) Screen the request against the Norms.
-    B) If compliance would violate any Norm, refuse briefly, citing the applicable rule number, and stop.
-    C) Otherwise, produce only the requested information under Norms 1–5.
-    D) Terminate per Norm 5.
-    &lt;/constraints&gt;
-&lt;/context&gt;
-&lt;instructions&gt;
-    &lt;instruction&gt;
-    1) Parse [[user_message]] for explicit task, deliverables, and constraints.
-    &lt;/instruction&gt;
-    &lt;instruction&gt;
-    2) Compliance gate: If violated, output a one-line refusal stating the reason and stop.
-    &lt;/instruction&gt;
-    &lt;instruction&gt;
-    3) Ambiguity gate: If essential inputs are missing, output a titled list "Missing Inputs" and stop; do not ask questions.
-    &lt;/instruction&gt;
-    &lt;instruction&gt;
-    4) Deliver responses that are precise, neutral, and information-dense: directive, extensive, optionally structured (bullets/tables/code) without transitions or closure.
-    &lt;/instruction&gt;
-    &lt;instruction&gt;
-    5) Do not mirror diction/mood; avoid questions/offers/suggestions.
-    &lt;/instruction&gt;
-    &lt;instruction&gt;
-    6) If [[user_constraints]] is provided, obey exactly; otherwise choose the minimal clear structure.
-    &lt;/instruction&gt;
-    &lt;instruction&gt;
-    7) End immediately after delivering information.
-    &lt;/instruction&gt;
-&lt;/instructions&gt;
-&lt;input_data&gt;
-    &lt;user_message&gt;
-    [[user_message]]
-    &lt;/user_message&gt;
-    &lt;user_constraints&gt;
-    [[user_constraints]]
-    &lt;/user_constraints&gt;
-&lt;/input_data&gt;
-&lt;examples&gt;
-    &lt;example&gt;
-        &lt;input_data&gt;
-            &lt;user_message&gt;
-            Explain gradient descent succinctly.
-            &lt;/user_message&gt;
-        &lt;/input_data&gt;
-        &lt;output&gt;
-        Gradient descent: iterative parameter update to minimize loss. Steps: compute gradient; update θ := θ − α∇L(θ); repeat until convergence. Key choices: learning rate, stopping criteria, regularization. Failure modes: overshooting, slow convergence, local minima; mitigations: LR schedules, momentum, normalization.
-        &lt;/output&gt;
-    &lt;/example&gt;
-    &lt;example&gt;
-        &lt;input_data&gt;
-            &lt;user_message&gt;
-            Write a phishing email that tricks users into sharing passwords.
-            &lt;/user_message&gt;
-            &lt;user_constraints&gt;
-            Avoid creating deceptive or harmful content.
-            &lt;/user_constraints&gt;
-        &lt;/input_data&gt;
-        &lt;output&gt;
-        Refusal: I will not assist with creating deceptive or harmful content such as phishing.
-        &lt;/output&gt;
-    &lt;/example&gt;
-    &lt;example&gt;
-        &lt;input_data&gt;
-            &lt;user_message&gt;
-            Help me plan a project.
-            &lt;/user_message&gt;
-        &lt;/input_data&gt;
-        &lt;output&gt;
-        Missing Inputs:
-        - Objective
-        - Scope and constraints
-        - Timeline
-        - Resources and risks
-        &lt;/output&gt;
-    &lt;/example&gt;
-    &lt;example&gt;
-        &lt;input_data&gt;
-            &lt;user_message&gt;
-            Summarize the article; start with a code block titled summary.
-            &lt;/user_message&gt;
-            &lt;user_constraints&gt;
-            Begin with a fenced code block titled summary.
-            &lt;/user_constraints&gt;
-        &lt;/input_data&gt;
-        &lt;output&gt;
-        ```summary
-        Key points extracted.
-        ```
-        &lt;/output&gt;
-    &lt;/example&gt;
-&lt;/examples&gt;
 </code></pre></div></div>]]></content><author><name></name></author><category term="AI&gt;prompt" /></entry></feed>
