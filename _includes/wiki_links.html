@@ -1,0 +1,126 @@
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const contentArea = document.querySelector('.post-content-body');
+    if (!contentArea) return;
+
+    const notes = [
+      {%- for post in site.posts -%}
+        {
+          title: {{ (post.title | default: post.slug) | jsonify }},
+          slug: {{ post.slug | jsonify }},
+          url: {{ post.url | relative_url | jsonify }},
+          excerpt: {{ post.content | strip_html | normalize_whitespace | truncatewords: 20 | escape | jsonify }}
+        }{%- unless forloop.last -%},{%- endunless -%}
+      {%- endfor -%}
+    ];
+
+    const slugify = (value) => {
+      return value
+        .toString()
+        .trim()
+        .toLowerCase()
+        .replace(/[_\s]+/g, '-')
+        .replace(/[^a-z0-9-]/g, '')
+        .replace(/-{2,}/g, '-')
+        .replace(/^-+|-+$/g, '');
+    };
+
+    const findNote = (text) => {
+      const target = slugify(text);
+      return notes.find((note) => slugify(note.slug || note.title) === target || slugify(note.title) === target);
+    };
+
+    const showPreview = (link, title, excerpt) => {
+      hidePreview();
+      const preview = document.createElement('div');
+      preview.className = 'link-preview';
+      preview.innerHTML = `
+        <div class="preview-content">
+          <strong>${title}</strong>
+          <p>${excerpt}</p>
+        </div>
+      `;
+      document.body.appendChild(preview);
+      const rect = link.getBoundingClientRect();
+      preview.style.left = `${rect.left}px`;
+      preview.style.top = `${rect.bottom + 5}px`;
+    };
+
+    const hidePreview = () => {
+      const preview = document.querySelector('.link-preview');
+      if (preview) preview.remove();
+    };
+
+    const processNode = (node) => {
+      if (node.nodeType === Node.TEXT_NODE) {
+        let ancestor = node.parentElement;
+        while (ancestor) {
+          if (['CODE', 'PRE'].includes(ancestor.tagName) || ancestor.classList.contains('highlighter-rouge') || ancestor.classList.contains('highlight')) {
+            return;
+          }
+          ancestor = ancestor.parentElement;
+        }
+
+        const text = node.textContent;
+        const wikiLinkRegex = /\[\[([^\]]+)\]\]/g;
+        let match;
+        let lastIndex = 0;
+        const fragments = [];
+
+        while ((match = wikiLinkRegex.exec(text)) !== null) {
+          if (match.index > lastIndex) {
+            fragments.push(document.createTextNode(text.slice(lastIndex, match.index)));
+          }
+
+          const linkText = match[1];
+          const wrapper = document.createElement('span');
+
+          if (linkText.includes('::')) {
+            const [label, url] = linkText.split('::');
+            const anchor = document.createElement('a');
+            anchor.href = url;
+            anchor.target = '_blank';
+            anchor.rel = 'noopener';
+            anchor.textContent = label;
+            wrapper.appendChild(anchor);
+          } else {
+            const targetNote = findNote(linkText);
+            const anchor = document.createElement('a');
+
+            if (targetNote) {
+              anchor.href = targetNote.url;
+              anchor.textContent = linkText;
+              anchor.className = 'wiki-link';
+              anchor.addEventListener('mouseenter', () => showPreview(anchor, targetNote.title, targetNote.excerpt));
+              anchor.addEventListener('mouseleave', hidePreview);
+            } else {
+              anchor.href = 'javascript:void(0)';
+              anchor.textContent = linkText;
+              anchor.className = 'stale-link';
+              anchor.title = `Note not found: ${linkText}`;
+            }
+
+            wrapper.appendChild(anchor);
+          }
+
+          fragments.push(wrapper);
+          lastIndex = match.index + match[0].length;
+        }
+
+        if (lastIndex < text.length) {
+          fragments.push(document.createTextNode(text.slice(lastIndex)));
+        }
+
+        if (fragments.length > 0) {
+          const parent = node.parentNode;
+          fragments.forEach((fragment) => parent.insertBefore(fragment, node));
+          parent.removeChild(node);
+        }
+      } else if (node.nodeType === Node.ELEMENT_NODE) {
+        Array.from(node.childNodes).forEach(processNode);
+      }
+    };
+
+    processNode(contentArea);
+  });
+</script>

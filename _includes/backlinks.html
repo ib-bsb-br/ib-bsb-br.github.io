@@ -1,0 +1,39 @@
+{%- assign search_keys = '' | split: ',' -%}
+{%- if page.title %}
+  {%- assign search_keys = search_keys | push: page.title | push: page.title | slugify: 'default' -%}
+{%- endif %}
+{%- if page.slug %}
+  {%- assign search_keys = search_keys | push: page.slug | push: page.slug | slugify: 'default' -%}
+{%- endif %}
+{%- assign search_keys = search_keys | uniq -%}
+
+{%- assign backlink_count = 0 -%}
+{%- capture backlink_list -%}
+  <ul class="backlinks-list">
+  {%- for post in site.posts -%}
+    {%- if post.url != page.url -%}
+      {%- assign post_content = post.content | downcase -%}
+      {%- assign matched = false -%}
+      {%- for key in search_keys -%}
+        {%- assign target = '[[' | append: key | append: ']]' | downcase -%}
+        {%- if post_content contains target -%}
+          {%- assign matched = true -%}
+        {%- endif -%}
+      {%- endfor -%}
+      {%- if matched -%}
+        {%- assign backlink_count = backlink_count | plus: 1 -%}
+        <li class="backlink-item">
+          <a href="{{ post.url | relative_url }}" class="backlink-link">{{ post.title | default: post.slug }}</a>
+        </li>
+      {%- endif -%}
+    {%- endif -%}
+  {%- endfor -%}
+  </ul>
+{%- endcapture -%}
+
+{%- if backlink_count > 0 -%}
+<div class="backlinks">
+  <div class="backlinks-header">Links to this note</div>
+  {{ backlink_list }}
+</div>
+{%- endif -%}
