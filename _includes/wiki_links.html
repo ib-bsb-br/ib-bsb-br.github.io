@@ -30,6 +30,32 @@
       return notes.find((note) => slugify(note.slug || note.title) === target || slugify(note.title) === target);
     };
 
+    const parseWikiTarget = (raw) => {
+      // Handle external style [[label::https://...]] early to preserve previous behavior
+      if (raw.includes('::')) {
+        const [label, url] = raw.split('::');
+        return { type: 'external', label: label.trim(), url: url.trim() };
+      }
+
+      let display = raw;
+      let target = raw;
+      let fragment = '';
+
+      if (raw.includes('|')) {
+        const [ref, alias] = raw.split('|');
+        target = ref.trim();
+        display = alias.trim() || target;
+      }
+
+      if (target.includes('#')) {
+        const parts = target.split('#');
+        target = parts.shift().trim();
+        fragment = parts.join('#').trim();
+      }
+
+      return { type: 'internal', target, display, fragment };
+    };
+
     const showPreview = (link, title, excerpt) => {
       hidePreview();
       const preview = document.createElement('div');
@@ -73,31 +99,32 @@
           }
 
           const linkText = match[1];
+          const parsed = parseWikiTarget(linkText);
           const wrapper = document.createElement('span');
-
-          if (linkText.includes('::')) {
-            const [label, url] = linkText.split('::');
+          if (parsed.type === 'external') {
             const anchor = document.createElement('a');
-            anchor.href = url;
+            anchor.href = parsed.url;
             anchor.target = '_blank';
             anchor.rel = 'noopener';
-            anchor.textContent = label;
+            anchor.textContent = parsed.label;
             wrapper.appendChild(anchor);
           } else {
-            const targetNote = findNote(linkText);
+            const targetNote = findNote(parsed.target);
             const anchor = document.createElement('a');
 
+            const displayText = parsed.display || parsed.target;
+
             if (targetNote) {
-              anchor.href = targetNote.url;
-              anchor.textContent = linkText;
+              anchor.href = `${targetNote.url}${parsed.fragment ? '#' + slugify(parsed.fragment) : ''}`;
+              anchor.textContent = displayText;
               anchor.className = 'wiki-link';
               anchor.addEventListener('mouseenter', () => showPreview(anchor, targetNote.title, targetNote.excerpt));
               anchor.addEventListener('mouseleave', hidePreview);
             } else {
               anchor.href = 'javascript:void(0)';
-              anchor.textContent = linkText;
+              anchor.textContent = displayText;
               anchor.className = 'stale-link';
-              anchor.title = `Note not found: ${linkText}`;
+              anchor.title = `Note not found: ${displayText}`;
             }
 
             wrapper.appendChild(anchor);
