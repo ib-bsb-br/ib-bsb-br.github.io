@@ -6,7 +6,7 @@
     const notes = [
       {%- for post in site.posts -%}
         {
-          title: {{ (post.title | default: post.slug) | jsonify }},
+          title: {{ (post.title | default: post.slug) | escape | jsonify }},
           slug: {{ post.slug | jsonify }},
           url: {{ post.url | relative_url | jsonify }},
           excerpt: {{ post.content | strip_html | normalize_whitespace | truncatewords: 20 | escape | jsonify }}
@@ -33,7 +33,9 @@
     const parseWikiTarget = (raw) => {
       // Handle external style [[label::https://...]] early to preserve previous behavior
       if (raw.includes('::')) {
-        const [label, url] = raw.split('::');
+        const idx = raw.indexOf('::');
+        const label = raw.slice(0, idx);
+        const url = raw.slice(idx + 2);
         return { type: 'external', label: label.trim(), url: url.trim() };
       }
 
@@ -60,12 +62,20 @@
       hidePreview();
       const preview = document.createElement('div');
       preview.className = 'link-preview';
-      preview.innerHTML = `
-        <div class="preview-content">
-          <strong>${title}</strong>
-          <p>${excerpt}</p>
-        </div>
-      `;
+
+      const previewContent = document.createElement('div');
+      previewContent.className = 'preview-content';
+
+      const heading = document.createElement('strong');
+      heading.textContent = title;
+
+      const paragraph = document.createElement('p');
+      paragraph.textContent = excerpt;
+
+      previewContent.appendChild(heading);
+      previewContent.appendChild(paragraph);
+      preview.appendChild(previewContent);
+
       document.body.appendChild(preview);
       const rect = link.getBoundingClientRect();
       preview.style.left = `${rect.left}px`;
@@ -103,10 +113,20 @@
           const wrapper = document.createElement('span');
           if (parsed.type === 'external') {
             const anchor = document.createElement('a');
-            anchor.href = parsed.url;
-            anchor.target = '_blank';
-            anchor.rel = 'noopener';
             anchor.textContent = parsed.label;
+
+            const safeUrl = parsed.url;
+            if (safeUrl.startsWith('http:') || safeUrl.startsWith('https:') || safeUrl.startsWith('/')) {
+              anchor.href = safeUrl;
+              anchor.target = '_blank';
+              anchor.rel = 'noopener';
+            } else {
+              anchor.href = '#';
+              anchor.className = 'stale-link';
+              anchor.title = `Invalid URL: ${safeUrl}`;
+              anchor.addEventListener('click', (event) => event.preventDefault());
+            }
+
             wrapper.appendChild(anchor);
           } else {
             const targetNote = findNote(parsed.target);
@@ -121,10 +141,11 @@
               anchor.addEventListener('mouseenter', () => showPreview(anchor, targetNote.title, targetNote.excerpt));
               anchor.addEventListener('mouseleave', hidePreview);
             } else {
-              anchor.href = 'javascript:void(0)';
+              anchor.href = '#';
               anchor.textContent = displayText;
               anchor.className = 'stale-link';
               anchor.title = `Note not found: ${displayText}`;
+              anchor.addEventListener('click', (event) => event.preventDefault());
             }
 
             wrapper.appendChild(anchor);
