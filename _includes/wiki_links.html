@@ -3,17 +3,6 @@
     const contentArea = document.querySelector('.post-content-body');
     if (!contentArea) return;
 
-    const notes = [
-      {%- for post in site.posts -%}
-        {
-          title: {{ (post.title | default: post.slug) | escape | jsonify }},
-          slug: {{ post.slug | jsonify }},
-          url: {{ post.url | relative_url | jsonify }},
-          excerpt: {{ post.content | strip_html | normalize_whitespace | truncatewords: 20 | escape | jsonify }}
-        }{%- unless forloop.last -%},{%- endunless -%}
-      {%- endfor -%}
-    ];
-
     const slugify = (value) => {
       return value
         .toString()
@@ -25,9 +14,33 @@
         .replace(/^-+|-+$/g, '');
     };
 
+    const notes = [
+      {%- for post in site.posts -%}
+        {
+          title: {{ (post.title | default: post.slug) | escape | jsonify }},
+          slug: {{ post.slug | jsonify }},
+          url: {{ post.url | relative_url | jsonify }},
+          excerpt: {{ post.content | strip_html | normalize_whitespace | truncatewords: 20 | escape | jsonify }}
+        }{%- unless forloop.last -%},{%- endunless -%}
+      {%- endfor -%}
+    ];
+
+    const normalizedNotes = notes.map((note) => ({
+      ...note,
+      normalizedSlug: slugify(note.slug || note.title),
+      normalizedTitle: slugify(note.title)
+    }));
+
     const findNote = (text) => {
       const target = slugify(text);
-      return notes.find((note) => slugify(note.slug || note.title) === target || slugify(note.title) === target);
+      return normalizedNotes.find((note) => note.normalizedSlug === target || note.normalizedTitle === target);
+    };
+
+    const isSafeUrl = (url) => {
+      const trimmed = url.trim();
+      if (trimmed.startsWith('/')) return true;
+      const lower = trimmed.toLowerCase();
+      return lower.startsWith('http://') || lower.startsWith('https://') || lower.startsWith('./') || lower.startsWith('../');
     };
 
     const parseWikiTarget = (raw) => {
@@ -115,8 +128,8 @@
             const anchor = document.createElement('a');
             anchor.textContent = parsed.label;
 
-            const safeUrl = parsed.url;
-            if (safeUrl.startsWith('http:') || safeUrl.startsWith('https:') || safeUrl.startsWith('/')) {
+            const safeUrl = parsed.url.trim();
+            if (isSafeUrl(safeUrl)) {
               anchor.href = safeUrl;
               anchor.target = '_blank';
               anchor.rel = 'noopener';
@@ -124,6 +137,7 @@
               anchor.href = '#';
               anchor.className = 'stale-link';
               anchor.title = `Invalid URL: ${safeUrl}`;
+              anchor.setAttribute('aria-disabled', 'true');
               anchor.addEventListener('click', (event) => event.preventDefault());
             }
 
@@ -145,6 +159,7 @@
               anchor.textContent = displayText;
               anchor.className = 'stale-link';
               anchor.title = `Note not found: ${displayText}`;
+              anchor.setAttribute('aria-disabled', 'true');
               anchor.addEventListener('click', (event) => event.preventDefault());
             }
 
