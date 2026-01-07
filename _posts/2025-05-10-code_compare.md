@@ -1,8 +1,9 @@
 ---
-title: compare
+title: code compare
 date: 2025-05-10
 tags: [AI>prompt]
 info: aberto.
+slug: code_compare
 type: post
 layout: post
 ---
