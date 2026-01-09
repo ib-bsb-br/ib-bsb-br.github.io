@@ -1,4 +1,1936 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2026-01-09T15:00:10+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">TreeSheets Debian 11 arm64 build</title><link href="https://ib.bsb.br/treesheets-build/" rel="alternate" type="text/html" title="TreeSheets Debian 11 arm64 build" /><published>2026-01-09T00:00:00+00:00</published><updated>2026-01-09T10:15:07+00:00</updated><id>https://ib.bsb.br/treesheets-build</id><content type="html" xml:base="https://ib.bsb.br/treesheets-build/"><![CDATA[<section class="code-block-container" role="group" aria-label="Bash Code Block" data-filename="bash_code_block.sh" data-code="#!/usr/bin/env bash
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2026-01-09T15:30:52+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">html to markdown</title><link href="https://ib.bsb.br/html2md/" rel="alternate" type="text/html" title="html to markdown" /><published>2026-01-09T00:00:00+00:00</published><updated>2026-01-09T15:25:06+00:00</updated><id>https://ib.bsb.br/html2md</id><content type="html" xml:base="https://ib.bsb.br/html2md/"><![CDATA[<p>It accepts a local file, a URL, or stdin; it can emit Jekyll front matter; and it uses conservative conversion rules that tend to render well on GitHub Pages (kramdown).</p>
+
+<h1 id="key-behaviors">Key behaviors</h1>
+
+<ul>
+  <li>Default extraction is <code class="language-plaintext highlighter-rouge">--mode main</code> (tries <code class="language-plaintext highlighter-rouge">&lt;main&gt;</code>, <code class="language-plaintext highlighter-rouge">&lt;article&gt;</code>, common content containers, then a “largest text block” heuristic).</li>
+  <li>Use <code class="language-plaintext highlighter-rouge">--selector</code> when heuristics pick the wrong container.</li>
+  <li>Tables become Markdown tables only when they’re simple; otherwise they become bullets.</li>
+</ul>
+
+<h1 id="install-and-run">Install and run</h1>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>python3 <span class="nt">-m</span> pip <span class="nb">install</span> <span class="nt">--user</span> beautifulsoup4 lxml
+</code></pre></div></div>
+
+<h2 id="generic-html-file--jekyll-post">Generic HTML file → Jekyll post</h2>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>python3 html_to_jekyll_md.py page.html <span class="nt">-o</span> _posts/2026-01-09-page.md <span class="nt">--layout</span> post <span class="nt">--date-from-meta</span> <span class="nt">--tags</span> imported,html
+</code></pre></div></div>
+
+<h2 id="generic-url--jekyll-page">Generic URL → Jekyll page</h2>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>python3 html_to_jekyll_md.py https://example.com/article <span class="nt">-o</span> docs/article.md <span class="nt">--layout</span> page <span class="nt">--permalink</span> /article/ <span class="nt">--date-from-meta</span>
+</code></pre></div></div>
+
+<h2 id="when-heuristics-pick-the-wrong-content-container-force-it-with-a-selector">When heuristics pick the wrong content container, force it with a selector</h2>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>python3 html_to_jekyll_md.py page.html <span class="nt">--selector</span> <span class="s2">"article"</span> <span class="nt">-o</span> docs/page.md <span class="nt">--layout</span> page
+</code></pre></div></div>
+
+<h1 id="practical-limits">Practical limits</h1>
+
+<ul>
+  <li>If the page is JavaScript-rendered (SPA shells), you need a “rendered HTML snapshot” first (browser “Save page as…”, or a headless browser step). This script converts the HTML it is given; it does not run scripts.</li>
+  <li>Highly visual layouts won’t “round-trip” cleanly. The goal here is readable Markdown, not pixel-perfect reconstruction.</li>
+  <li>Tables are conservative by design: broken tables are worse than bullet lists on GitHub Pages.</li>
+</ul>
+
+<h1 id="optional-batch-wrapper-bash">Optional batch wrapper (bash)</h1>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c">#!/usr/bin/env bash</span>
+<span class="nb">set</span> <span class="nt">-euo</span> pipefail
+
+<span class="k">in</span><span class="o">=</span><span class="s2">"</span><span class="k">${</span><span class="nv">1</span>:?input<span class="p"> (file or URL or </span><span class="s1">'-'</span><span class="p">) required</span><span class="k">}</span><span class="s2">"</span>
+<span class="nv">out</span><span class="o">=</span><span class="s2">"</span><span class="k">${</span><span class="nv">2</span><span class="k">:-</span><span class="nv">docs</span><span class="p">/</span><span class="si">$(</span><span class="nb">basename</span> <span class="s2">"</span><span class="k">${</span><span class="nv">in</span><span class="p">%.*</span><span class="k">}</span><span class="s2">"</span><span class="si">)</span><span class="p">.md</span><span class="k">}</span><span class="s2">"</span>
+
+python3 ./html_to_jekyll_md.py <span class="s2">"</span><span class="nv">$in</span><span class="s2">"</span> <span class="nt">-o</span> <span class="s2">"</span><span class="nv">$out</span><span class="s2">"</span> <span class="nt">--layout</span> page <span class="nt">--date-from-meta</span>
+<span class="nb">echo</span> <span class="s2">"Wrote: </span><span class="nv">$out</span><span class="s2">"</span>
+</code></pre></div></div>
+
+<h1 id="python-script">python script</h1>
+
+<section class="code-block-container" role="group" aria-label="Python Code Block" data-filename="python_code_block.py" data-code="#!/usr/bin/env python3
+&quot;&quot;&quot;html_to_jekyll_md.py
+
+Universal HTML → Markdown converter with Jekyll front matter.
+
+Goals
+- Accept *any* single-page HTML source: local file, URL (http/https), or stdin.
+- Emit readable Markdown that works well on GitHub Pages (Jekyll + kramdown).
+- Provide an optional HardInfo2 profile (because HardInfo2 uses layout tables).
+
+Install
+  python3 -m pip install beautifulsoup4
+  (optional, faster/more robust parsing) python3 -m pip install lxml
+
+Examples
+  # Local file → Jekyll post
+  python3 html_to_jekyll_md.py ./page.html -o _posts/2026-01-09-page.md --layout post --date-from-meta
+
+  # URL → Jekyll page
+  python3 html_to_jekyll_md.py https://example.com/article -o docs/article.md --layout page --permalink /article/
+
+  # stdin → stdout
+  cat page.html | python3 html_to_jekyll_md.py -
+
+  # HardInfo2 report (auto-detect, or force)
+  python3 html_to_jekyll_md.py hardinfo2_report.html --profile hardinfo2 -o docs/hardinfo2.md
+
+Notes
+- This converts the HTML it receives; it does not execute JavaScript.
+- “Perfect” HTML→Markdown is not generally achievable. This aims for a clean, readable document.
+&quot;&quot;&quot;
+
+from __future__ import annotations
+
+import argparse
+import re
+import sys
+import urllib.parse
+import urllib.request
+from dataclasses import dataclass
+from datetime import datetime
+from pathlib import Path
+from typing import Iterable, List, Optional, Sequence, Tuple
+
+
+# -----------------------------
+# Parsing helpers
+# -----------------------------
+
+_WS_RE = re.compile(r&quot;[ \t\r\f\v]+&quot;)
+
+
+def _require_bs4() -&gt; None:
+    try:
+        import bs4  # noqa: F401
+    except Exception:
+        print(
+            &quot;ERROR: Missing dependency: beautifulsoup4\n&quot;
+            &quot;  Install with: python3 -m pip install beautifulsoup4&quot;,
+            file=sys.stderr,
+        )
+        raise
+
+
+def _make_soup(html: str):
+    from bs4 import BeautifulSoup
+
+    try:
+        return BeautifulSoup(html, &quot;lxml&quot;)
+    except Exception:
+        return BeautifulSoup(html, &quot;html.parser&quot;)
+
+
+def _norm_ws_keep_newlines(s: str) -&gt; str:
+    s = s.replace(&quot;\u00a0&quot;, &quot; &quot;)
+    s = s.replace(&quot;\r\n&quot;, &quot;\n&quot;).replace(&quot;\r&quot;, &quot;\n&quot;)
+    lines = [_WS_RE.sub(&quot; &quot;, ln).strip() for ln in s.split(&quot;\n&quot;)]
+    out = &quot;\n&quot;.join(lines)
+    out = re.sub(r&quot;\n{3,}&quot;, &quot;\n\n&quot;, out)
+    return out.strip()
+
+
+def _yaml_quote(s: str) -&gt; str:
+    return &#39;&quot;&#39; + s.replace(&quot;\\&quot;, &quot;\\\\&quot;).replace(&#39;&quot;&#39;, &#39;\\&quot;&#39;) + &#39;&quot;&#39;
+
+
+def _escape_md_inline(s: str) -&gt; str:
+    # Minimal escaping; keep it conservative.
+    return s.replace(&quot;\\&quot;, &quot;\\\\&quot;).replace(&quot;`&quot;, &quot;\\`&quot;)
+
+
+def _escape_table_cell(s: str) -&gt; str:
+    s = s.replace(&quot;\\&quot;, &quot;\\\\&quot;)
+    s = s.replace(&quot;|&quot;, &quot;\\|&quot;)
+    s = s.replace(&quot;\n&quot;, &quot;&lt;br /&gt;&quot;)
+    return s.strip()
+
+
+def _collapse_blank_lines(lines: List[str]) -&gt; List[str]:
+    out: List[str] = []
+    blank = False
+    for ln in lines:
+        if not ln.strip():
+            if not blank:
+                out.append(&quot;&quot;)
+            blank = True
+        else:
+            out.append(ln.rstrip())
+            blank = False
+
+    while out and out[0] == &quot;&quot;:
+        out.pop(0)
+    while out and out[-1] == &quot;&quot;:
+        out.pop()
+    return out
+
+
+def _indent_lines(lines: Iterable[str], spaces: int) -&gt; List[str]:
+    pad = &quot; &quot; * spaces
+    return [(pad + ln) if ln else &quot;&quot; for ln in lines]
+
+
+def _inline_or_codeblock(text: str) -&gt; Tuple[str, Optional[List[str]]]:
+    text = _norm_ws_keep_newlines(text)
+    if not text:
+        return &quot;&quot;, None
+
+    lines = [ln.rstrip() for ln in text.splitlines() if ln.strip()]
+    if len(lines) &lt;= 1:
+        return (lines[0] if lines else &quot;&quot;), None
+
+    total = sum(len(ln) for ln in lines)
+    if len(lines) &lt;= 3 and total &lt;= 140:
+        return &quot; ; &quot;.join(lines), None
+
+    return &quot;&quot;, [&quot;```text&quot;, *lines, &quot;```&quot;]
+
+
+# -----------------------------
+# Input loading
+# -----------------------------
+
+
+def _read_input(input_arg: str, user_agent: str = &quot;html_to_jekyll_md/1.1&quot;) -&gt; Tuple[str, Optional[str]]:
+    &quot;&quot;&quot;Return (html, base_url).
+
+    base_url is used to resolve relative links/images.
+    - stdin: None
+    - file: None
+    - URL: the URL
+    &quot;&quot;&quot;
+
+    if input_arg == &quot;-&quot;:
+        return sys.stdin.read(), None
+
+    if re.match(r&quot;^https?://&quot;, input_arg, flags=re.IGNORECASE):
+        req = urllib.request.Request(input_arg, headers={&quot;User-Agent&quot;: user_agent})
+        with urllib.request.urlopen(req) as resp:
+            charset = resp.headers.get_content_charset() or &quot;utf-8&quot;
+            data = resp.read()
+            try:
+                html = data.decode(charset, errors=&quot;replace&quot;)
+            except Exception:
+                html = data.decode(&quot;utf-8&quot;, errors=&quot;replace&quot;)
+        return html, input_arg
+
+    path = Path(input_arg)
+    return path.read_text(encoding=&quot;utf-8&quot;, errors=&quot;replace&quot;), None
+
+
+def _extract_base_href(soup) -&gt; Optional[str]:
+    base = soup.find(&quot;base&quot;)
+    if base and base.get(&quot;href&quot;):
+        return _norm_ws_keep_newlines(base[&quot;href&quot;]) or None
+    return None
+
+
+# -----------------------------
+# Jekyll front matter
+# -----------------------------
+
+
+@dataclass
+class FrontMatter:
+    layout: str = &quot;post&quot;
+    title: str = &quot;Document&quot;
+    date: Optional[str] = None
+    categories: Optional[List[str]] = None
+    tags: Optional[List[str]] = None
+    permalink: Optional[str] = None
+
+    def render(self) -&gt; str:
+        lines = [&quot;---&quot;, f&quot;layout: {self.layout}&quot;, f&quot;title: {_yaml_quote(self.title)}&quot;]
+        if self.date:
+            lines.append(f&quot;date: {_yaml_quote(self.date)}&quot;)
+        if self.categories:
+            lines.append(&quot;categories:&quot;)
+            for c in self.categories:
+                lines.append(f&quot;  - {c}&quot;)
+        if self.tags:
+            lines.append(&quot;tags:&quot;)
+            for t in self.tags:
+                lines.append(f&quot;  - {t}&quot;)
+        if self.permalink:
+            lines.append(f&quot;permalink: {self.permalink}&quot;)
+        lines.append(&quot;---&quot;)
+        return &quot;\n&quot;.join(lines) + &quot;\n\n&quot;
+
+
+def _extract_title(soup, override: Optional[str] = None) -&gt; str:
+    if override:
+        return override
+
+    t = soup.find(&quot;title&quot;)
+    if t and t.get_text(strip=True):
+        return _norm_ws_keep_newlines(t.get_text())
+
+    h1 = soup.find(&quot;h1&quot;)
+    if h1 and h1.get_text(strip=True):
+        return _norm_ws_keep_newlines(h1.get_text())
+
+    return &quot;Document&quot;
+
+
+def _extract_date_hint(soup) -&gt; Optional[str]:
+    meta_props = [
+        (&quot;property&quot;, &quot;article:published_time&quot;),
+        (&quot;name&quot;, &quot;date&quot;),
+        (&quot;name&quot;, &quot;publish-date&quot;),
+        (&quot;name&quot;, &quot;pubdate&quot;),
+        (&quot;itemprop&quot;, &quot;datePublished&quot;),
+    ]
+
+    for attr, key in meta_props:
+        m = soup.find(&quot;meta&quot;, attrs={attr: key})
+        if m and m.get(&quot;content&quot;):
+            return _norm_ws_keep_newlines(m[&quot;content&quot;])
+
+    tm = soup.find(&quot;time&quot;)
+    if tm and tm.get(&quot;datetime&quot;):
+        return _norm_ws_keep_newlines(tm[&quot;datetime&quot;])
+
+    return None
+
+
+def _now_with_tz() -&gt; str:
+    return datetime.now().astimezone().strftime(&quot;%Y-%m-%d %H:%M:%S %z&quot;)
+
+
+# -----------------------------
+# Content selection
+# -----------------------------
+
+
+def _strip_non_content(soup) -&gt; None:
+    # Keep it conservative; do not drop “head” here.
+    for sel in [&quot;script&quot;, &quot;style&quot;, &quot;noscript&quot;, &quot;template&quot;, &quot;iframe&quot;]:
+        for tag in soup.select(sel):
+            tag.decompose()
+
+
+def _maybe_strip_chrome(root) -&gt; None:
+    for sel in [&quot;nav&quot;, &quot;header&quot;, &quot;footer&quot;, &quot;aside&quot;]:
+        for tag in root.find_all(sel):
+            tag.decompose()
+
+
+def _text_len(tag) -&gt; int:
+    return len(tag.get_text(&quot; &quot;, strip=True))
+
+
+def _score_candidate(tag) -&gt; int:
+    text = tag.get_text(&quot; &quot;, strip=True)
+    if not text:
+        return 0
+    text_len = len(text)
+    link_text = &quot; &quot;.join(a.get_text(&quot; &quot;, strip=True) for a in tag.find_all(&quot;a&quot;))
+    return max(0, text_len - int(0.7 * len(link_text)))
+
+
+def _select_root(soup, mode: str, selector: Optional[str]):
+    body = soup.body or soup
+
+    if selector:
+        found = soup.select_one(selector)
+        return found or body
+
+    if mode == &quot;body&quot;:
+        return body
+
+    # mode == &quot;main&quot;
+    for tagname in [&quot;main&quot;, &quot;article&quot;]:
+        t = body.find(tagname)
+        if t and _text_len(t) &gt; 50:
+            _maybe_strip_chrome(t)
+            return t
+
+    for css in [&quot;#content&quot;, &quot;#main&quot;, &quot;.content&quot;, &quot;.main&quot;, &quot;.post&quot;, &quot;.article&quot;, &quot;.entry-content&quot;]:
+        t = body.select_one(css)
+        if t and _text_len(t) &gt; 80:
+            _maybe_strip_chrome(t)
+            return t
+
+    candidates = body.find_all([&quot;div&quot;, &quot;section&quot;, &quot;article&quot;, &quot;main&quot;], limit=250)
+    best = body
+    best_score = _score_candidate(body)
+    for c in candidates:
+        sc = _score_candidate(c)
+        if sc &gt; best_score:
+            best, best_score = c, sc
+
+    _maybe_strip_chrome(best)
+    return best
+
+
+# -----------------------------
+# HardInfo2 profile (optional)
+# -----------------------------
+
+
+def _looks_like_hardinfo2(soup) -&gt; bool:
+    # HardInfo2 exports layout tables with these classes.
+    return bool(soup.find(&quot;td&quot;, class_=&quot;stitle&quot;) or soup.find(&quot;h1&quot;, class_=&quot;title&quot;))
+
+
+def _hardinfo2_text(tag) -&gt; str:
+    # HardInfo2 uses &lt;br&gt; and &lt;tt&gt; blocks; preserve newlines.
+    return _norm_ws_keep_newlines(tag.get_text(&quot;\n&quot;, strip=True))
+
+
+def _hardinfo2_iter_rows(table):
+    tbody = table.find(&quot;tbody&quot;, recursive=False)
+    container = tbody if tbody else table
+
+    for tr in container.find_all(&quot;tr&quot;, recursive=False):
+        tds = tr.find_all(&quot;td&quot;, recursive=False)
+        if not tds:
+            continue
+
+        if any(&quot;stitle&quot; in (td.get(&quot;class&quot;) or []) for td in tds):
+            continue
+
+        sst = tr.find(&quot;td&quot;, class_=&quot;sstitle&quot;)
+        if sst:
+            yield (&quot;sstitle&quot;, _hardinfo2_text(sst))
+            continue
+
+        nested_tables = tr.find_all(&quot;table&quot;)
+        if nested_tables and len(tds) == 1 and tds[0].get(&quot;colspan&quot;):
+            yield (&quot;details&quot;, nested_tables)
+            continue
+
+        # Drop icon columns
+        data = []
+        for td in tds:
+            cls = td.get(&quot;class&quot;) or []
+            if &quot;icon&quot; in cls or &quot;icon_subtitle&quot; in cls:
+                continue
+            data.append(td)
+        if not data:
+            continue
+
+        if &quot;field&quot; in (data[0].get(&quot;class&quot;) or []):
+            field = _hardinfo2_text(data[0])
+            vals = [_hardinfo2_text(td) for td in data[1:]]
+            yield (&quot;kv&quot;, (field, vals, tr.find_all(&quot;table&quot;) or None))
+        else:
+            yield (&quot;raw&quot;, [_hardinfo2_text(td) for td in data])
+
+
+def _hardinfo2_render_table(table, heading_level: int) -&gt; List[str]:
+    lines: List[str] = []
+
+    st = table.find(&quot;td&quot;, class_=&quot;stitle&quot;)
+    title = _hardinfo2_text(st) if st else None
+    if title:
+        lines.append(&quot;#&quot; * heading_level + f&quot; {_escape_md_inline(title)}&quot;)
+        lines.append(&quot;&quot;)
+
+    def render_details(details_table, indent=2) -&gt; List[str]:
+        out: List[str] = []
+        for kind, payload in _hardinfo2_iter_rows(details_table):
+            if kind == &quot;sstitle&quot;:
+                out.append(&quot; &quot; * indent + f&quot;- **{_escape_md_inline(payload)}**&quot;)
+                continue
+
+            if kind == &quot;details&quot;:
+                for t in payload:
+                    out.extend(render_details(t, indent=indent + 2))
+                continue
+
+            if kind == &quot;kv&quot;:
+                field, vals, nested = payload
+                val_text = &quot; | &quot;.join(v for v in vals if v)
+                inline, code = _inline_or_codeblock(val_text)
+                if inline:
+                    out.append(&quot; &quot; * indent + f&quot;- **{_escape_md_inline(field)}:** {_escape_md_inline(inline)}&quot;)
+                else:
+                    out.append(&quot; &quot; * indent + f&quot;- **{_escape_md_inline(field)}:**&quot;)
+                    out.extend(_indent_lines(code or [], indent + 4))
+                if nested:
+                    for t in nested:
+                        out.extend(render_details(t, indent=indent + 2))
+                continue
+
+            if kind == &quot;raw&quot;:
+                txt = &quot; | &quot;.join(payload)
+                inline, code = _inline_or_codeblock(txt)
+                if inline:
+                    out.append(&quot; &quot; * indent + f&quot;- {_escape_md_inline(inline)}&quot;)
+                else:
+                    out.append(&quot; &quot; * indent + &quot;-&quot;)
+                    out.extend(_indent_lines(code or [], indent + 4))
+
+        return out
+
+    for kind, payload in _hardinfo2_iter_rows(table):
+        if kind == &quot;sstitle&quot;:
+            lines.append(&quot;#&quot; * (heading_level + 1) + f&quot; {_escape_md_inline(payload)}&quot;)
+            lines.append(&quot;&quot;)
+            continue
+
+        if kind == &quot;details&quot;:
+            lines.append(&quot;- **Details:**&quot;)
+            for t in payload:
+                lines.extend(render_details(t, indent=2))
+            lines.append(&quot;&quot;)
+            continue
+
+        if kind == &quot;kv&quot;:
+            field, vals, nested = payload
+            val_text = &quot; | &quot;.join(v for v in vals if v)
+            inline, code = _inline_or_codeblock(val_text)
+            if inline:
+                lines.append(f&quot;- **{_escape_md_inline(field)}:** {_escape_md_inline(inline)}&quot;)
+            else:
+                lines.append(f&quot;- **{_escape_md_inline(field)}:**&quot;)
+                lines.extend(_indent_lines(code or [], 4))
+            if nested:
+                for t in nested:
+                    lines.extend(render_details(t, indent=2))
+            continue
+
+        if kind == &quot;raw&quot;:
+            txt = &quot; | &quot;.join(payload)
+            inline, code = _inline_or_codeblock(txt)
+            if inline:
+                lines.append(f&quot;- {_escape_md_inline(inline)}&quot;)
+            else:
+                lines.append(&quot;-&quot;)
+                lines.extend(_indent_lines(code or [], 4))
+
+    lines.append(&quot;&quot;)
+    return lines
+
+
+def _hardinfo2_convert(html: str, section_heading_level: int = 2) -&gt; str:
+    soup = _make_soup(html)
+    root = soup.body or soup
+
+    out: List[str] = []
+    for el in root.find_all([&quot;h1&quot;, &quot;table&quot;], recursive=True):
+        if el.name == &quot;h1&quot; and &quot;title&quot; in (el.get(&quot;class&quot;) or []):
+            out.append(&quot;#&quot; * section_heading_level + f&quot; {_escape_md_inline(_hardinfo2_text(el))}&quot;)
+            out.append(&quot;&quot;)
+        elif el.name == &quot;table&quot; and el.find_parent(&quot;table&quot;) is None:
+            out.extend(_hardinfo2_render_table(el, heading_level=section_heading_level + 1))
+
+    return &quot;\n&quot;.join(_collapse_blank_lines(out)) + &quot;\n&quot;
+
+
+# -----------------------------
+# Generic HTML → Markdown
+# -----------------------------
+
+
+BLOCK_TAGS = {
+    &quot;p&quot;,
+    &quot;div&quot;,
+    &quot;section&quot;,
+    &quot;article&quot;,
+    &quot;main&quot;,
+    &quot;pre&quot;,
+    &quot;blockquote&quot;,
+    &quot;ul&quot;,
+    &quot;ol&quot;,
+    &quot;table&quot;,
+    &quot;hr&quot;,
+    &quot;h1&quot;,
+    &quot;h2&quot;,
+    &quot;h3&quot;,
+    &quot;h4&quot;,
+    &quot;h5&quot;,
+    &quot;h6&quot;,
+}
+
+
+class _Ctx:
+    def __init__(
+        self,
+        base_url: Optional[str],
+        keep_images: bool,
+        heading_offset: int,
+        max_heading_level: int,
+    ):
+        self.base_url = base_url
+        self.keep_images = keep_images
+        self.heading_offset = heading_offset
+        self.max_heading_level = max_heading_level
+
+
+def _resolve_url(href: str, base_url: Optional[str]) -&gt; str:
+    if not href:
+        return &quot;&quot;
+    return urllib.parse.urljoin(base_url, href) if base_url else href
+
+
+def _extract_text(tag) -&gt; str:
+    return _norm_ws_keep_newlines(tag.get_text(&quot; &quot;, strip=True))
+
+
+def _convert_children(tag, ctx: _Ctx) -&gt; List[str]:
+    from bs4 import NavigableString, Tag
+
+    out: List[str] = []
+    for child in tag.children:
+        if isinstance(child, NavigableString):
+            txt = _norm_ws_keep_newlines(str(child))
+            if txt:
+                out.append(txt)
+            continue
+        if isinstance(child, Tag):
+            out.extend(_convert_node(child, ctx))
+    return out
+
+
+def _convert_children_inline(tag, ctx: _Ctx) -&gt; List[str]:
+    from bs4 import NavigableString, Tag
+
+    out: List[str] = []
+    for child in tag.children:
+        if isinstance(child, NavigableString):
+            txt = _norm_ws_keep_newlines(str(child))
+            if txt:
+                out.append(txt)
+            continue
+        if isinstance(child, Tag):
+            out.append(_convert_inline(child, ctx))
+    return out
+
+
+def _convert_inline(tag, ctx: _Ctx) -&gt; str:
+    name = tag.name.lower()
+
+    if name in (&quot;span&quot;, &quot;label&quot;, &quot;small&quot;, &quot;sup&quot;, &quot;sub&quot;):
+        return &quot;&quot;.join(_convert_children_inline(tag, ctx))
+
+    if name in (&quot;strong&quot;, &quot;b&quot;):
+        inner = &quot;&quot;.join(_convert_children_inline(tag, ctx)).strip()
+        return f&quot;**{inner}**&quot; if inner else &quot;&quot;
+
+    if name in (&quot;em&quot;, &quot;i&quot;):
+        inner = &quot;&quot;.join(_convert_children_inline(tag, ctx)).strip()
+        return f&quot;*{inner}*&quot; if inner else &quot;&quot;
+
+    if name == &quot;code&quot;:
+        inner = _extract_text(tag)
+        if &quot;`&quot; in inner:
+            return f&quot;``{inner}``&quot;
+        return f&quot;`{inner}`&quot;
+
+    if name == &quot;br&quot;:
+        return &quot;  \n&quot;
+
+    if name == &quot;a&quot;:
+        href = _resolve_url(tag.get(&quot;href&quot;, &quot;&quot;), ctx.base_url)
+        text = &quot;&quot;.join(_convert_children_inline(tag, ctx)).strip() or href
+        return f&quot;[{text}]({href})&quot; if href else text
+
+    if name == &quot;img&quot;:
+        if not ctx.keep_images:
+            return &quot;&quot;
+        alt = (tag.get(&quot;alt&quot;) or &quot;image&quot;).strip() or &quot;image&quot;
+        src = _resolve_url(tag.get(&quot;src&quot;, &quot;&quot;), ctx.base_url)
+        return f&quot;![{_escape_md_inline(alt)}]({src})&quot; if src else &quot;&quot;
+
+    return &quot;&quot;.join(_convert_children_inline(tag, ctx))
+
+
+def _table_to_bullets(table, ctx: _Ctx) -&gt; List[str]:
+    lines: List[str] = []
+    tbody = table.find(&quot;tbody&quot;, recursive=False)
+    container = tbody if tbody else table
+
+    for tr in container.find_all(&quot;tr&quot;, recursive=False):
+        cells = tr.find_all([&quot;th&quot;, &quot;td&quot;], recursive=False)
+        if not cells:
+            continue
+        vals = [_extract_text(td) for td in cells]
+        vals = [v for v in vals if v]
+        if not vals:
+            continue
+        txt = &quot; | &quot;.join(vals)
+        inline, code = _inline_or_codeblock(txt)
+        if inline:
+            lines.append(f&quot;- {_escape_md_inline(inline)}&quot;)
+        else:
+            lines.append(&quot;-&quot;)
+            lines.extend(_indent_lines(code or [], 4))
+
+    lines.append(&quot;&quot;)
+    return lines
+
+
+def _table_to_md(table, ctx: _Ctx) -&gt; List[str]:
+    if table.find(&quot;table&quot;):
+        return _table_to_bullets(table, ctx)
+
+    rows: List[List[str]] = []
+    tbody = table.find(&quot;tbody&quot;, recursive=False)
+    container = tbody if tbody else table
+
+    for tr in container.find_all(&quot;tr&quot;, recursive=False):
+        cells = tr.find_all([&quot;th&quot;, &quot;td&quot;], recursive=False)
+        if not cells:
+            continue
+        rows.append([_extract_text(td) for td in cells])
+
+    if not rows:
+        return []
+
+    has_th = bool(table.find(&quot;th&quot;))
+    header = rows[0] if has_th else None
+    body_rows = rows[1:] if has_th else rows
+
+    if header is None:
+        first = rows[0]
+        if first and all(len(c) &lt;= 40 for c in first) and len(first) &lt;= 6:
+            header = first
+            body_rows = rows[1:]
+        else:
+            header = [f&quot;Col {i+1}&quot; for i in range(len(rows[0]))]
+            body_rows = rows
+
+    col_count = max(len(header), *(len(r) for r in body_rows))
+
+    def pad(r: List[str]) -&gt; List[str]:
+        return (r + [&quot;&quot;] * col_count)[:col_count]
+
+    header = pad(header)
+
+    lines: List[str] = []
+    lines.append(&quot;| &quot; + &quot; | &quot;.join(_escape_table_cell(c) for c in header) + &quot; |&quot;)
+    lines.append(&quot;|&quot; + &quot;|&quot;.join([&quot;---&quot;] * col_count) + &quot;|&quot;)
+
+    for r in body_rows:
+        r = pad(r)
+        if any(&quot;\n&quot; in c for c in r):
+            return _table_to_bullets(table, ctx)
+        lines.append(&quot;| &quot; + &quot; | &quot;.join(_escape_table_cell(c) for c in r) + &quot; |&quot;)
+
+    lines.append(&quot;&quot;)
+    return lines
+
+
+def _list_to_md(list_tag, ordered: bool, ctx: _Ctx, indent: int = 0) -&gt; List[str]:
+    from bs4 import Tag
+
+    lines: List[str] = []
+    items = [li for li in list_tag.find_all(&quot;li&quot;, recursive=False) if isinstance(li, Tag)]
+
+    for idx, li in enumerate(items, start=1):
+        prefix = f&quot;{idx}. &quot; if ordered else &quot;- &quot;
+        cont_indent = indent + len(prefix)
+
+        # Build “main line” from inline-ish children and the first paragraph-ish block.
+        main_fragments: List[str] = []
+        extra_blocks: List[List[str]] = []
+
+        for child in li.children:
+            if isinstance(child, Tag) and child.name.lower() in (&quot;ul&quot;, &quot;ol&quot;):
+                continue
+
+            if isinstance(child, Tag) and child.name.lower() in BLOCK_TAGS:
+                block_lines = _convert_node(child, ctx)
+                block_lines = _collapse_blank_lines(block_lines)
+                if block_lines:
+                    if not main_fragments:
+                        # Use first non-empty line as the main line.
+                        first_line = next((x for x in block_lines if x.strip()), &quot;&quot;)
+                        if first_line:
+                            main_fragments.append(first_line)
+                        rest = [x for x in block_lines if x.strip()][1:]
+                        if rest:
+                            extra_blocks.append(rest)
+                    else:
+                        extra_blocks.append([x for x in block_lines if x.strip()])
+                continue
+
+            if isinstance(child, Tag):
+                main_fragments.append(_convert_inline(child, ctx))
+            else:
+                txt = _norm_ws_keep_newlines(str(child))
+                if txt:
+                    main_fragments.append(txt)
+
+        main_line = _norm_ws_keep_newlines(&quot;&quot;.join(main_fragments)).strip()
+        lines.append(&quot; &quot; * indent + prefix + main_line)
+
+        for block in extra_blocks:
+            for ln in block:
+                lines.append(&quot; &quot; * cont_indent + ln)
+
+        for child in li.find_all([&quot;ul&quot;, &quot;ol&quot;], recursive=False):
+            lines.extend(_list_to_md(child, ordered=(child.name.lower() == &quot;ol&quot;), ctx=ctx, indent=indent + 2))
+
+    lines.append(&quot;&quot;)
+    return lines
+
+
+def _convert_node(tag, ctx: _Ctx) -&gt; List[str]:
+    name = tag.name.lower()
+
+    if name in (&quot;script&quot;, &quot;style&quot;, &quot;noscript&quot;, &quot;template&quot;):
+        return []
+
+    if name in (&quot;h1&quot;, &quot;h2&quot;, &quot;h3&quot;, &quot;h4&quot;, &quot;h5&quot;, &quot;h6&quot;):
+        lvl = int(name[1]) + ctx.heading_offset
+        lvl = max(1, min(ctx.max_heading_level, lvl))
+        text = &quot;&quot;.join(_convert_children_inline(tag, ctx)).strip()
+        text = _norm_ws_keep_newlines(text)
+        return [&quot;#&quot; * lvl + f&quot; {_escape_md_inline(text)}&quot;, &quot;&quot;] if text else []
+
+    if name == &quot;p&quot;:
+        text = &quot;&quot;.join(_convert_children_inline(tag, ctx)).strip()
+        text = _norm_ws_keep_newlines(text)
+        return [text, &quot;&quot;] if text else []
+
+    if name == &quot;hr&quot;:
+        return [&quot;---&quot;, &quot;&quot;]
+
+    if name == &quot;blockquote&quot;:
+        inner = _collapse_blank_lines(_convert_children(tag, ctx))
+        quoted: List[str] = []
+        for ln in inner:
+            quoted.append(&quot;&gt;&quot; if not ln.strip() else &quot;&gt; &quot; + ln)
+        quoted.append(&quot;&quot;)
+        return quoted
+
+    if name == &quot;pre&quot;:
+        # Try to infer a language from pre/code classes.
+        lang = &quot;&quot;
+        cls = &quot; &quot;.join(tag.get(&quot;class&quot;) or [])
+        m = re.search(r&quot;language-([a-zA-Z0-9_+-]+)&quot;, cls)
+        if not m:
+            code = tag.find(&quot;code&quot;)
+            if code:
+                cls2 = &quot; &quot;.join(code.get(&quot;class&quot;) or [])
+                m = re.search(r&quot;language-([a-zA-Z0-9_+-]+)&quot;, cls2)
+        if m:
+            lang = m.group(1)
+
+        code_text = tag.get_text(&quot;\n&quot;, strip=False).replace(&quot;\r\n&quot;, &quot;\n&quot;).replace(&quot;\r&quot;, &quot;\n&quot;)
+        lines = code_text.splitlines()
+        while lines and not lines[0].strip():
+            lines.pop(0)
+        while lines and not lines[-1].strip():
+            lines.pop()
+        return [f&quot;```{lang}&quot;.rstrip(), *lines, &quot;```&quot;, &quot;&quot;]
+
+    if name == &quot;ul&quot;:
+        return _list_to_md(tag, ordered=False, ctx=ctx)
+
+    if name == &quot;ol&quot;:
+        return _list_to_md(tag, ordered=True, ctx=ctx)
+
+    if name == &quot;table&quot;:
+        return _table_to_md(tag, ctx)
+
+    if name == &quot;img&quot;:
+        inline = _convert_inline(tag, ctx)
+        return [inline, &quot;&quot;] if inline else []
+
+    if name in (&quot;div&quot;, &quot;section&quot;, &quot;article&quot;, &quot;main&quot;, &quot;body&quot;):
+        return _convert_children(tag, ctx)
+
+    inline = _convert_inline(tag, ctx).strip()
+    return [inline] if inline else []
+
+
+def _generic_convert(
+    html: str,
+    *,
+    base_url: Optional[str],
+    mode: str,
+    selector: Optional[str],
+    keep_images: bool,
+    heading_offset: int,
+    max_heading_level: int,
+) -&gt; str:
+    soup = _make_soup(html)
+    _strip_non_content(soup)
+
+    root = _select_root(soup, mode=mode, selector=selector)
+    ctx = _Ctx(
+        base_url=base_url,
+        keep_images=keep_images,
+        heading_offset=heading_offset,
+        max_heading_level=max_heading_level,
+    )
+
+    lines = _convert_children(root, ctx)
+    lines = _collapse_blank_lines(lines)
+    return &quot;\n&quot;.join(lines) + &quot;\n&quot;
+
+
+def convert_html_to_markdown(
+    html: str,
+    *,
+    base_url: Optional[str] = None,
+    mode: str = &quot;main&quot;,  # main|body
+    selector: Optional[str] = None,
+    keep_images: bool = False,
+    heading_offset: int = 0,
+    max_heading_level: int = 6,
+    profile: str = &quot;auto&quot;,  # auto|generic|hardinfo2
+    hardinfo_section_level: int = 2,
+) -&gt; str:
+    soup = _make_soup(html)
+    _strip_non_content(soup)
+
+    if profile == &quot;hardinfo2&quot; or (profile == &quot;auto&quot; and _looks_like_hardinfo2(soup)):
+        return _hardinfo2_convert(html, section_heading_level=max(1, hardinfo_section_level))
+
+    return _generic_convert(
+        html,
+        base_url=base_url,
+        mode=mode,
+        selector=selector,
+        keep_images=keep_images,
+        heading_offset=heading_offset,
+        max_heading_level=max(1, max_heading_level),
+    )
+
+
+# -----------------------------
+# CLI
+# -----------------------------
+
+
+def main(argv: Optional[Sequence[str]] = None) -&gt; int:
+    _require_bs4()
+
+    p = argparse.ArgumentParser(description=&quot;Convert HTML (file/URL/stdin) to Jekyll-friendly Markdown&quot;)
+    p.add_argument(&quot;input&quot;, help=&quot;Path, URL, or &#39;-&#39; for stdin&quot;)
+    p.add_argument(&quot;-o&quot;, &quot;--output&quot;, type=Path, default=None, help=&quot;Output .md file (default: stdout)&quot;)
+
+    # Front matter
+    p.add_argument(&quot;--no-front-matter&quot;, action=&quot;store_true&quot;, help=&quot;Do not emit YAML front matter&quot;)
+    p.add_argument(&quot;--layout&quot;, default=&quot;post&quot;, help=&quot;Front matter layout (default: post)&quot;)
+    p.add_argument(&quot;--title&quot;, default=None, help=&quot;Front matter title override&quot;)
+    p.add_argument(&quot;--date&quot;, default=None, help=&quot;Front matter date override&quot;)
+    p.add_argument(&quot;--date-from-meta&quot;, action=&quot;store_true&quot;, help=&quot;Try to extract date from meta/time tags&quot;)
+    p.add_argument(&quot;--categories&quot;, default=None, help=&quot;Comma-separated categories&quot;)
+    p.add_argument(&quot;--tags&quot;, default=None, help=&quot;Comma-separated tags&quot;)
+    p.add_argument(&quot;--permalink&quot;, default=None, help=&quot;Front matter permalink&quot;)
+
+    # Conversion knobs
+    p.add_argument(&quot;--mode&quot;, choices=[&quot;main&quot;, &quot;body&quot;], default=&quot;main&quot;, help=&quot;Content selection mode&quot;)
+    p.add_argument(&quot;--selector&quot;, default=None, help=&quot;CSS selector to choose content root (overrides --mode)&quot;)
+    p.add_argument(&quot;--base-url&quot;, default=None, help=&quot;Base URL for resolving relative links/images&quot;)
+    p.add_argument(&quot;--keep-images&quot;, action=&quot;store_true&quot;, help=&quot;Include &lt;img&gt; as Markdown images&quot;)
+    p.add_argument(&quot;--heading-offset&quot;, type=int, default=0, help=&quot;Add to heading levels (e.g., 1 makes h1→h2)&quot;)
+    p.add_argument(&quot;--max-heading-level&quot;, type=int, default=6, help=&quot;Clamp max heading depth (default: 6)&quot;)
+
+    # Profiles
+    p.add_argument(
+        &quot;--profile&quot;,
+        choices=[&quot;auto&quot;, &quot;generic&quot;, &quot;hardinfo2&quot;],
+        default=&quot;auto&quot;,
+        help=&quot;auto detects HardInfo2; otherwise force generic/hardinfo2&quot;,
+    )
+    p.add_argument(
+        &quot;--hardinfo-section-level&quot;,
+        type=int,
+        default=2,
+        help=&quot;Heading level for HardInfo2 section titles (default: 2)&quot;,
+    )
+
+    args = p.parse_args(argv)
+
+    html, inferred_base = _read_input(args.input)
+    soup = _make_soup(html)
+
+    # Base URL: CLI &gt; &lt;base href&gt; &gt; inferred (URL input)
+    base_url = args.base_url or _extract_base_href(soup) or inferred_base
+
+    fm = None
+    if not args.no_front_matter:
+        title = _extract_title(soup, args.title)
+        date = args.date
+        if not date and args.date_from_meta:
+            date = _extract_date_hint(soup)
+        if not date:
+            date = _now_with_tz()
+
+        fm = FrontMatter(
+            layout=args.layout,
+            title=title,
+            date=date,
+            categories=[c.strip() for c in (args.categories or &quot;&quot;).split(&quot;,&quot;) if c.strip()] or None,
+            tags=[t.strip() for t in (args.tags or &quot;&quot;).split(&quot;,&quot;) if t.strip()] or None,
+            permalink=args.permalink,
+        )
+
+    md_body = convert_html_to_markdown(
+        html,
+        base_url=base_url,
+        mode=args.mode,
+        selector=args.selector,
+        keep_images=args.keep_images,
+        heading_offset=args.heading_offset,
+        max_heading_level=args.max_heading_level,
+        profile=args.profile,
+        hardinfo_section_level=args.hardinfo_section_level,
+    )
+
+    out_text = (fm.render() if fm else &quot;&quot;) + md_body
+
+    if args.output:
+        args.output.parent.mkdir(parents=True, exist_ok=True)
+        args.output.write_text(out_text, encoding=&quot;utf-8&quot;)
+    else:
+        sys.stdout.write(out_text)
+
+    return 0
+
+
+if __name__ == &quot;__main__&quot;:
+    raise SystemExit(main())" data-download-link="" data-download-label="Download Python">
+  <code class="language-python">#!/usr/bin/env python3
+&quot;&quot;&quot;html_to_jekyll_md.py
+
+Universal HTML → Markdown converter with Jekyll front matter.
+
+Goals
+- Accept *any* single-page HTML source: local file, URL (http/https), or stdin.
+- Emit readable Markdown that works well on GitHub Pages (Jekyll + kramdown).
+- Provide an optional HardInfo2 profile (because HardInfo2 uses layout tables).
+
+Install
+  python3 -m pip install beautifulsoup4
+  (optional, faster/more robust parsing) python3 -m pip install lxml
+
+Examples
+  # Local file → Jekyll post
+  python3 html_to_jekyll_md.py ./page.html -o _posts/2026-01-09-page.md --layout post --date-from-meta
+
+  # URL → Jekyll page
+  python3 html_to_jekyll_md.py https://example.com/article -o docs/article.md --layout page --permalink /article/
+
+  # stdin → stdout
+  cat page.html | python3 html_to_jekyll_md.py -
+
+  # HardInfo2 report (auto-detect, or force)
+  python3 html_to_jekyll_md.py hardinfo2_report.html --profile hardinfo2 -o docs/hardinfo2.md
+
+Notes
+- This converts the HTML it receives; it does not execute JavaScript.
+- “Perfect” HTML→Markdown is not generally achievable. This aims for a clean, readable document.
+&quot;&quot;&quot;
+
+from __future__ import annotations
+
+import argparse
+import re
+import sys
+import urllib.parse
+import urllib.request
+from dataclasses import dataclass
+from datetime import datetime
+from pathlib import Path
+from typing import Iterable, List, Optional, Sequence, Tuple
+
+
+# -----------------------------
+# Parsing helpers
+# -----------------------------
+
+_WS_RE = re.compile(r&quot;[ \t\r\f\v]+&quot;)
+
+
+def _require_bs4() -&gt; None:
+    try:
+        import bs4  # noqa: F401
+    except Exception:
+        print(
+            &quot;ERROR: Missing dependency: beautifulsoup4\n&quot;
+            &quot;  Install with: python3 -m pip install beautifulsoup4&quot;,
+            file=sys.stderr,
+        )
+        raise
+
+
+def _make_soup(html: str):
+    from bs4 import BeautifulSoup
+
+    try:
+        return BeautifulSoup(html, &quot;lxml&quot;)
+    except Exception:
+        return BeautifulSoup(html, &quot;html.parser&quot;)
+
+
+def _norm_ws_keep_newlines(s: str) -&gt; str:
+    s = s.replace(&quot;\u00a0&quot;, &quot; &quot;)
+    s = s.replace(&quot;\r\n&quot;, &quot;\n&quot;).replace(&quot;\r&quot;, &quot;\n&quot;)
+    lines = [_WS_RE.sub(&quot; &quot;, ln).strip() for ln in s.split(&quot;\n&quot;)]
+    out = &quot;\n&quot;.join(lines)
+    out = re.sub(r&quot;\n{3,}&quot;, &quot;\n\n&quot;, out)
+    return out.strip()
+
+
+def _yaml_quote(s: str) -&gt; str:
+    return &#39;&quot;&#39; + s.replace(&quot;\\&quot;, &quot;\\\\&quot;).replace(&#39;&quot;&#39;, &#39;\\&quot;&#39;) + &#39;&quot;&#39;
+
+
+def _escape_md_inline(s: str) -&gt; str:
+    # Minimal escaping; keep it conservative.
+    return s.replace(&quot;\\&quot;, &quot;\\\\&quot;).replace(&quot;`&quot;, &quot;\\`&quot;)
+
+
+def _escape_table_cell(s: str) -&gt; str:
+    s = s.replace(&quot;\\&quot;, &quot;\\\\&quot;)
+    s = s.replace(&quot;|&quot;, &quot;\\|&quot;)
+    s = s.replace(&quot;\n&quot;, &quot;&lt;br /&gt;&quot;)
+    return s.strip()
+
+
+def _collapse_blank_lines(lines: List[str]) -&gt; List[str]:
+    out: List[str] = []
+    blank = False
+    for ln in lines:
+        if not ln.strip():
+            if not blank:
+                out.append(&quot;&quot;)
+            blank = True
+        else:
+            out.append(ln.rstrip())
+            blank = False
+
+    while out and out[0] == &quot;&quot;:
+        out.pop(0)
+    while out and out[-1] == &quot;&quot;:
+        out.pop()
+    return out
+
+
+def _indent_lines(lines: Iterable[str], spaces: int) -&gt; List[str]:
+    pad = &quot; &quot; * spaces
+    return [(pad + ln) if ln else &quot;&quot; for ln in lines]
+
+
+def _inline_or_codeblock(text: str) -&gt; Tuple[str, Optional[List[str]]]:
+    text = _norm_ws_keep_newlines(text)
+    if not text:
+        return &quot;&quot;, None
+
+    lines = [ln.rstrip() for ln in text.splitlines() if ln.strip()]
+    if len(lines) &lt;= 1:
+        return (lines[0] if lines else &quot;&quot;), None
+
+    total = sum(len(ln) for ln in lines)
+    if len(lines) &lt;= 3 and total &lt;= 140:
+        return &quot; ; &quot;.join(lines), None
+
+    return &quot;&quot;, [&quot;```text&quot;, *lines, &quot;```&quot;]
+
+
+# -----------------------------
+# Input loading
+# -----------------------------
+
+
+def _read_input(input_arg: str, user_agent: str = &quot;html_to_jekyll_md/1.1&quot;) -&gt; Tuple[str, Optional[str]]:
+    &quot;&quot;&quot;Return (html, base_url).
+
+    base_url is used to resolve relative links/images.
+    - stdin: None
+    - file: None
+    - URL: the URL
+    &quot;&quot;&quot;
+
+    if input_arg == &quot;-&quot;:
+        return sys.stdin.read(), None
+
+    if re.match(r&quot;^https?://&quot;, input_arg, flags=re.IGNORECASE):
+        req = urllib.request.Request(input_arg, headers={&quot;User-Agent&quot;: user_agent})
+        with urllib.request.urlopen(req) as resp:
+            charset = resp.headers.get_content_charset() or &quot;utf-8&quot;
+            data = resp.read()
+            try:
+                html = data.decode(charset, errors=&quot;replace&quot;)
+            except Exception:
+                html = data.decode(&quot;utf-8&quot;, errors=&quot;replace&quot;)
+        return html, input_arg
+
+    path = Path(input_arg)
+    return path.read_text(encoding=&quot;utf-8&quot;, errors=&quot;replace&quot;), None
+
+
+def _extract_base_href(soup) -&gt; Optional[str]:
+    base = soup.find(&quot;base&quot;)
+    if base and base.get(&quot;href&quot;):
+        return _norm_ws_keep_newlines(base[&quot;href&quot;]) or None
+    return None
+
+
+# -----------------------------
+# Jekyll front matter
+# -----------------------------
+
+
+@dataclass
+class FrontMatter:
+    layout: str = &quot;post&quot;
+    title: str = &quot;Document&quot;
+    date: Optional[str] = None
+    categories: Optional[List[str]] = None
+    tags: Optional[List[str]] = None
+    permalink: Optional[str] = None
+
+    def render(self) -&gt; str:
+        lines = [&quot;---&quot;, f&quot;layout: {self.layout}&quot;, f&quot;title: {_yaml_quote(self.title)}&quot;]
+        if self.date:
+            lines.append(f&quot;date: {_yaml_quote(self.date)}&quot;)
+        if self.categories:
+            lines.append(&quot;categories:&quot;)
+            for c in self.categories:
+                lines.append(f&quot;  - {c}&quot;)
+        if self.tags:
+            lines.append(&quot;tags:&quot;)
+            for t in self.tags:
+                lines.append(f&quot;  - {t}&quot;)
+        if self.permalink:
+            lines.append(f&quot;permalink: {self.permalink}&quot;)
+        lines.append(&quot;---&quot;)
+        return &quot;\n&quot;.join(lines) + &quot;\n\n&quot;
+
+
+def _extract_title(soup, override: Optional[str] = None) -&gt; str:
+    if override:
+        return override
+
+    t = soup.find(&quot;title&quot;)
+    if t and t.get_text(strip=True):
+        return _norm_ws_keep_newlines(t.get_text())
+
+    h1 = soup.find(&quot;h1&quot;)
+    if h1 and h1.get_text(strip=True):
+        return _norm_ws_keep_newlines(h1.get_text())
+
+    return &quot;Document&quot;
+
+
+def _extract_date_hint(soup) -&gt; Optional[str]:
+    meta_props = [
+        (&quot;property&quot;, &quot;article:published_time&quot;),
+        (&quot;name&quot;, &quot;date&quot;),
+        (&quot;name&quot;, &quot;publish-date&quot;),
+        (&quot;name&quot;, &quot;pubdate&quot;),
+        (&quot;itemprop&quot;, &quot;datePublished&quot;),
+    ]
+
+    for attr, key in meta_props:
+        m = soup.find(&quot;meta&quot;, attrs={attr: key})
+        if m and m.get(&quot;content&quot;):
+            return _norm_ws_keep_newlines(m[&quot;content&quot;])
+
+    tm = soup.find(&quot;time&quot;)
+    if tm and tm.get(&quot;datetime&quot;):
+        return _norm_ws_keep_newlines(tm[&quot;datetime&quot;])
+
+    return None
+
+
+def _now_with_tz() -&gt; str:
+    return datetime.now().astimezone().strftime(&quot;%Y-%m-%d %H:%M:%S %z&quot;)
+
+
+# -----------------------------
+# Content selection
+# -----------------------------
+
+
+def _strip_non_content(soup) -&gt; None:
+    # Keep it conservative; do not drop “head” here.
+    for sel in [&quot;script&quot;, &quot;style&quot;, &quot;noscript&quot;, &quot;template&quot;, &quot;iframe&quot;]:
+        for tag in soup.select(sel):
+            tag.decompose()
+
+
+def _maybe_strip_chrome(root) -&gt; None:
+    for sel in [&quot;nav&quot;, &quot;header&quot;, &quot;footer&quot;, &quot;aside&quot;]:
+        for tag in root.find_all(sel):
+            tag.decompose()
+
+
+def _text_len(tag) -&gt; int:
+    return len(tag.get_text(&quot; &quot;, strip=True))
+
+
+def _score_candidate(tag) -&gt; int:
+    text = tag.get_text(&quot; &quot;, strip=True)
+    if not text:
+        return 0
+    text_len = len(text)
+    link_text = &quot; &quot;.join(a.get_text(&quot; &quot;, strip=True) for a in tag.find_all(&quot;a&quot;))
+    return max(0, text_len - int(0.7 * len(link_text)))
+
+
+def _select_root(soup, mode: str, selector: Optional[str]):
+    body = soup.body or soup
+
+    if selector:
+        found = soup.select_one(selector)
+        return found or body
+
+    if mode == &quot;body&quot;:
+        return body
+
+    # mode == &quot;main&quot;
+    for tagname in [&quot;main&quot;, &quot;article&quot;]:
+        t = body.find(tagname)
+        if t and _text_len(t) &gt; 50:
+            _maybe_strip_chrome(t)
+            return t
+
+    for css in [&quot;#content&quot;, &quot;#main&quot;, &quot;.content&quot;, &quot;.main&quot;, &quot;.post&quot;, &quot;.article&quot;, &quot;.entry-content&quot;]:
+        t = body.select_one(css)
+        if t and _text_len(t) &gt; 80:
+            _maybe_strip_chrome(t)
+            return t
+
+    candidates = body.find_all([&quot;div&quot;, &quot;section&quot;, &quot;article&quot;, &quot;main&quot;], limit=250)
+    best = body
+    best_score = _score_candidate(body)
+    for c in candidates:
+        sc = _score_candidate(c)
+        if sc &gt; best_score:
+            best, best_score = c, sc
+
+    _maybe_strip_chrome(best)
+    return best
+
+
+# -----------------------------
+# HardInfo2 profile (optional)
+# -----------------------------
+
+
+def _looks_like_hardinfo2(soup) -&gt; bool:
+    # HardInfo2 exports layout tables with these classes.
+    return bool(soup.find(&quot;td&quot;, class_=&quot;stitle&quot;) or soup.find(&quot;h1&quot;, class_=&quot;title&quot;))
+
+
+def _hardinfo2_text(tag) -&gt; str:
+    # HardInfo2 uses &lt;br&gt; and &lt;tt&gt; blocks; preserve newlines.
+    return _norm_ws_keep_newlines(tag.get_text(&quot;\n&quot;, strip=True))
+
+
+def _hardinfo2_iter_rows(table):
+    tbody = table.find(&quot;tbody&quot;, recursive=False)
+    container = tbody if tbody else table
+
+    for tr in container.find_all(&quot;tr&quot;, recursive=False):
+        tds = tr.find_all(&quot;td&quot;, recursive=False)
+        if not tds:
+            continue
+
+        if any(&quot;stitle&quot; in (td.get(&quot;class&quot;) or []) for td in tds):
+            continue
+
+        sst = tr.find(&quot;td&quot;, class_=&quot;sstitle&quot;)
+        if sst:
+            yield (&quot;sstitle&quot;, _hardinfo2_text(sst))
+            continue
+
+        nested_tables = tr.find_all(&quot;table&quot;)
+        if nested_tables and len(tds) == 1 and tds[0].get(&quot;colspan&quot;):
+            yield (&quot;details&quot;, nested_tables)
+            continue
+
+        # Drop icon columns
+        data = []
+        for td in tds:
+            cls = td.get(&quot;class&quot;) or []
+            if &quot;icon&quot; in cls or &quot;icon_subtitle&quot; in cls:
+                continue
+            data.append(td)
+        if not data:
+            continue
+
+        if &quot;field&quot; in (data[0].get(&quot;class&quot;) or []):
+            field = _hardinfo2_text(data[0])
+            vals = [_hardinfo2_text(td) for td in data[1:]]
+            yield (&quot;kv&quot;, (field, vals, tr.find_all(&quot;table&quot;) or None))
+        else:
+            yield (&quot;raw&quot;, [_hardinfo2_text(td) for td in data])
+
+
+def _hardinfo2_render_table(table, heading_level: int) -&gt; List[str]:
+    lines: List[str] = []
+
+    st = table.find(&quot;td&quot;, class_=&quot;stitle&quot;)
+    title = _hardinfo2_text(st) if st else None
+    if title:
+        lines.append(&quot;#&quot; * heading_level + f&quot; {_escape_md_inline(title)}&quot;)
+        lines.append(&quot;&quot;)
+
+    def render_details(details_table, indent=2) -&gt; List[str]:
+        out: List[str] = []
+        for kind, payload in _hardinfo2_iter_rows(details_table):
+            if kind == &quot;sstitle&quot;:
+                out.append(&quot; &quot; * indent + f&quot;- **{_escape_md_inline(payload)}**&quot;)
+                continue
+
+            if kind == &quot;details&quot;:
+                for t in payload:
+                    out.extend(render_details(t, indent=indent + 2))
+                continue
+
+            if kind == &quot;kv&quot;:
+                field, vals, nested = payload
+                val_text = &quot; | &quot;.join(v for v in vals if v)
+                inline, code = _inline_or_codeblock(val_text)
+                if inline:
+                    out.append(&quot; &quot; * indent + f&quot;- **{_escape_md_inline(field)}:** {_escape_md_inline(inline)}&quot;)
+                else:
+                    out.append(&quot; &quot; * indent + f&quot;- **{_escape_md_inline(field)}:**&quot;)
+                    out.extend(_indent_lines(code or [], indent + 4))
+                if nested:
+                    for t in nested:
+                        out.extend(render_details(t, indent=indent + 2))
+                continue
+
+            if kind == &quot;raw&quot;:
+                txt = &quot; | &quot;.join(payload)
+                inline, code = _inline_or_codeblock(txt)
+                if inline:
+                    out.append(&quot; &quot; * indent + f&quot;- {_escape_md_inline(inline)}&quot;)
+                else:
+                    out.append(&quot; &quot; * indent + &quot;-&quot;)
+                    out.extend(_indent_lines(code or [], indent + 4))
+
+        return out
+
+    for kind, payload in _hardinfo2_iter_rows(table):
+        if kind == &quot;sstitle&quot;:
+            lines.append(&quot;#&quot; * (heading_level + 1) + f&quot; {_escape_md_inline(payload)}&quot;)
+            lines.append(&quot;&quot;)
+            continue
+
+        if kind == &quot;details&quot;:
+            lines.append(&quot;- **Details:**&quot;)
+            for t in payload:
+                lines.extend(render_details(t, indent=2))
+            lines.append(&quot;&quot;)
+            continue
+
+        if kind == &quot;kv&quot;:
+            field, vals, nested = payload
+            val_text = &quot; | &quot;.join(v for v in vals if v)
+            inline, code = _inline_or_codeblock(val_text)
+            if inline:
+                lines.append(f&quot;- **{_escape_md_inline(field)}:** {_escape_md_inline(inline)}&quot;)
+            else:
+                lines.append(f&quot;- **{_escape_md_inline(field)}:**&quot;)
+                lines.extend(_indent_lines(code or [], 4))
+            if nested:
+                for t in nested:
+                    lines.extend(render_details(t, indent=2))
+            continue
+
+        if kind == &quot;raw&quot;:
+            txt = &quot; | &quot;.join(payload)
+            inline, code = _inline_or_codeblock(txt)
+            if inline:
+                lines.append(f&quot;- {_escape_md_inline(inline)}&quot;)
+            else:
+                lines.append(&quot;-&quot;)
+                lines.extend(_indent_lines(code or [], 4))
+
+    lines.append(&quot;&quot;)
+    return lines
+
+
+def _hardinfo2_convert(html: str, section_heading_level: int = 2) -&gt; str:
+    soup = _make_soup(html)
+    root = soup.body or soup
+
+    out: List[str] = []
+    for el in root.find_all([&quot;h1&quot;, &quot;table&quot;], recursive=True):
+        if el.name == &quot;h1&quot; and &quot;title&quot; in (el.get(&quot;class&quot;) or []):
+            out.append(&quot;#&quot; * section_heading_level + f&quot; {_escape_md_inline(_hardinfo2_text(el))}&quot;)
+            out.append(&quot;&quot;)
+        elif el.name == &quot;table&quot; and el.find_parent(&quot;table&quot;) is None:
+            out.extend(_hardinfo2_render_table(el, heading_level=section_heading_level + 1))
+
+    return &quot;\n&quot;.join(_collapse_blank_lines(out)) + &quot;\n&quot;
+
+
+# -----------------------------
+# Generic HTML → Markdown
+# -----------------------------
+
+
+BLOCK_TAGS = {
+    &quot;p&quot;,
+    &quot;div&quot;,
+    &quot;section&quot;,
+    &quot;article&quot;,
+    &quot;main&quot;,
+    &quot;pre&quot;,
+    &quot;blockquote&quot;,
+    &quot;ul&quot;,
+    &quot;ol&quot;,
+    &quot;table&quot;,
+    &quot;hr&quot;,
+    &quot;h1&quot;,
+    &quot;h2&quot;,
+    &quot;h3&quot;,
+    &quot;h4&quot;,
+    &quot;h5&quot;,
+    &quot;h6&quot;,
+}
+
+
+class _Ctx:
+    def __init__(
+        self,
+        base_url: Optional[str],
+        keep_images: bool,
+        heading_offset: int,
+        max_heading_level: int,
+    ):
+        self.base_url = base_url
+        self.keep_images = keep_images
+        self.heading_offset = heading_offset
+        self.max_heading_level = max_heading_level
+
+
+def _resolve_url(href: str, base_url: Optional[str]) -&gt; str:
+    if not href:
+        return &quot;&quot;
+    return urllib.parse.urljoin(base_url, href) if base_url else href
+
+
+def _extract_text(tag) -&gt; str:
+    return _norm_ws_keep_newlines(tag.get_text(&quot; &quot;, strip=True))
+
+
+def _convert_children(tag, ctx: _Ctx) -&gt; List[str]:
+    from bs4 import NavigableString, Tag
+
+    out: List[str] = []
+    for child in tag.children:
+        if isinstance(child, NavigableString):
+            txt = _norm_ws_keep_newlines(str(child))
+            if txt:
+                out.append(txt)
+            continue
+        if isinstance(child, Tag):
+            out.extend(_convert_node(child, ctx))
+    return out
+
+
+def _convert_children_inline(tag, ctx: _Ctx) -&gt; List[str]:
+    from bs4 import NavigableString, Tag
+
+    out: List[str] = []
+    for child in tag.children:
+        if isinstance(child, NavigableString):
+            txt = _norm_ws_keep_newlines(str(child))
+            if txt:
+                out.append(txt)
+            continue
+        if isinstance(child, Tag):
+            out.append(_convert_inline(child, ctx))
+    return out
+
+
+def _convert_inline(tag, ctx: _Ctx) -&gt; str:
+    name = tag.name.lower()
+
+    if name in (&quot;span&quot;, &quot;label&quot;, &quot;small&quot;, &quot;sup&quot;, &quot;sub&quot;):
+        return &quot;&quot;.join(_convert_children_inline(tag, ctx))
+
+    if name in (&quot;strong&quot;, &quot;b&quot;):
+        inner = &quot;&quot;.join(_convert_children_inline(tag, ctx)).strip()
+        return f&quot;**{inner}**&quot; if inner else &quot;&quot;
+
+    if name in (&quot;em&quot;, &quot;i&quot;):
+        inner = &quot;&quot;.join(_convert_children_inline(tag, ctx)).strip()
+        return f&quot;*{inner}*&quot; if inner else &quot;&quot;
+
+    if name == &quot;code&quot;:
+        inner = _extract_text(tag)
+        if &quot;`&quot; in inner:
+            return f&quot;``{inner}``&quot;
+        return f&quot;`{inner}`&quot;
+
+    if name == &quot;br&quot;:
+        return &quot;  \n&quot;
+
+    if name == &quot;a&quot;:
+        href = _resolve_url(tag.get(&quot;href&quot;, &quot;&quot;), ctx.base_url)
+        text = &quot;&quot;.join(_convert_children_inline(tag, ctx)).strip() or href
+        return f&quot;[{text}]({href})&quot; if href else text
+
+    if name == &quot;img&quot;:
+        if not ctx.keep_images:
+            return &quot;&quot;
+        alt = (tag.get(&quot;alt&quot;) or &quot;image&quot;).strip() or &quot;image&quot;
+        src = _resolve_url(tag.get(&quot;src&quot;, &quot;&quot;), ctx.base_url)
+        return f&quot;![{_escape_md_inline(alt)}]({src})&quot; if src else &quot;&quot;
+
+    return &quot;&quot;.join(_convert_children_inline(tag, ctx))
+
+
+def _table_to_bullets(table, ctx: _Ctx) -&gt; List[str]:
+    lines: List[str] = []
+    tbody = table.find(&quot;tbody&quot;, recursive=False)
+    container = tbody if tbody else table
+
+    for tr in container.find_all(&quot;tr&quot;, recursive=False):
+        cells = tr.find_all([&quot;th&quot;, &quot;td&quot;], recursive=False)
+        if not cells:
+            continue
+        vals = [_extract_text(td) for td in cells]
+        vals = [v for v in vals if v]
+        if not vals:
+            continue
+        txt = &quot; | &quot;.join(vals)
+        inline, code = _inline_or_codeblock(txt)
+        if inline:
+            lines.append(f&quot;- {_escape_md_inline(inline)}&quot;)
+        else:
+            lines.append(&quot;-&quot;)
+            lines.extend(_indent_lines(code or [], 4))
+
+    lines.append(&quot;&quot;)
+    return lines
+
+
+def _table_to_md(table, ctx: _Ctx) -&gt; List[str]:
+    if table.find(&quot;table&quot;):
+        return _table_to_bullets(table, ctx)
+
+    rows: List[List[str]] = []
+    tbody = table.find(&quot;tbody&quot;, recursive=False)
+    container = tbody if tbody else table
+
+    for tr in container.find_all(&quot;tr&quot;, recursive=False):
+        cells = tr.find_all([&quot;th&quot;, &quot;td&quot;], recursive=False)
+        if not cells:
+            continue
+        rows.append([_extract_text(td) for td in cells])
+
+    if not rows:
+        return []
+
+    has_th = bool(table.find(&quot;th&quot;))
+    header = rows[0] if has_th else None
+    body_rows = rows[1:] if has_th else rows
+
+    if header is None:
+        first = rows[0]
+        if first and all(len(c) &lt;= 40 for c in first) and len(first) &lt;= 6:
+            header = first
+            body_rows = rows[1:]
+        else:
+            header = [f&quot;Col {i+1}&quot; for i in range(len(rows[0]))]
+            body_rows = rows
+
+    col_count = max(len(header), *(len(r) for r in body_rows))
+
+    def pad(r: List[str]) -&gt; List[str]:
+        return (r + [&quot;&quot;] * col_count)[:col_count]
+
+    header = pad(header)
+
+    lines: List[str] = []
+    lines.append(&quot;| &quot; + &quot; | &quot;.join(_escape_table_cell(c) for c in header) + &quot; |&quot;)
+    lines.append(&quot;|&quot; + &quot;|&quot;.join([&quot;---&quot;] * col_count) + &quot;|&quot;)
+
+    for r in body_rows:
+        r = pad(r)
+        if any(&quot;\n&quot; in c for c in r):
+            return _table_to_bullets(table, ctx)
+        lines.append(&quot;| &quot; + &quot; | &quot;.join(_escape_table_cell(c) for c in r) + &quot; |&quot;)
+
+    lines.append(&quot;&quot;)
+    return lines
+
+
+def _list_to_md(list_tag, ordered: bool, ctx: _Ctx, indent: int = 0) -&gt; List[str]:
+    from bs4 import Tag
+
+    lines: List[str] = []
+    items = [li for li in list_tag.find_all(&quot;li&quot;, recursive=False) if isinstance(li, Tag)]
+
+    for idx, li in enumerate(items, start=1):
+        prefix = f&quot;{idx}. &quot; if ordered else &quot;- &quot;
+        cont_indent = indent + len(prefix)
+
+        # Build “main line” from inline-ish children and the first paragraph-ish block.
+        main_fragments: List[str] = []
+        extra_blocks: List[List[str]] = []
+
+        for child in li.children:
+            if isinstance(child, Tag) and child.name.lower() in (&quot;ul&quot;, &quot;ol&quot;):
+                continue
+
+            if isinstance(child, Tag) and child.name.lower() in BLOCK_TAGS:
+                block_lines = _convert_node(child, ctx)
+                block_lines = _collapse_blank_lines(block_lines)
+                if block_lines:
+                    if not main_fragments:
+                        # Use first non-empty line as the main line.
+                        first_line = next((x for x in block_lines if x.strip()), &quot;&quot;)
+                        if first_line:
+                            main_fragments.append(first_line)
+                        rest = [x for x in block_lines if x.strip()][1:]
+                        if rest:
+                            extra_blocks.append(rest)
+                    else:
+                        extra_blocks.append([x for x in block_lines if x.strip()])
+                continue
+
+            if isinstance(child, Tag):
+                main_fragments.append(_convert_inline(child, ctx))
+            else:
+                txt = _norm_ws_keep_newlines(str(child))
+                if txt:
+                    main_fragments.append(txt)
+
+        main_line = _norm_ws_keep_newlines(&quot;&quot;.join(main_fragments)).strip()
+        lines.append(&quot; &quot; * indent + prefix + main_line)
+
+        for block in extra_blocks:
+            for ln in block:
+                lines.append(&quot; &quot; * cont_indent + ln)
+
+        for child in li.find_all([&quot;ul&quot;, &quot;ol&quot;], recursive=False):
+            lines.extend(_list_to_md(child, ordered=(child.name.lower() == &quot;ol&quot;), ctx=ctx, indent=indent + 2))
+
+    lines.append(&quot;&quot;)
+    return lines
+
+
+def _convert_node(tag, ctx: _Ctx) -&gt; List[str]:
+    name = tag.name.lower()
+
+    if name in (&quot;script&quot;, &quot;style&quot;, &quot;noscript&quot;, &quot;template&quot;):
+        return []
+
+    if name in (&quot;h1&quot;, &quot;h2&quot;, &quot;h3&quot;, &quot;h4&quot;, &quot;h5&quot;, &quot;h6&quot;):
+        lvl = int(name[1]) + ctx.heading_offset
+        lvl = max(1, min(ctx.max_heading_level, lvl))
+        text = &quot;&quot;.join(_convert_children_inline(tag, ctx)).strip()
+        text = _norm_ws_keep_newlines(text)
+        return [&quot;#&quot; * lvl + f&quot; {_escape_md_inline(text)}&quot;, &quot;&quot;] if text else []
+
+    if name == &quot;p&quot;:
+        text = &quot;&quot;.join(_convert_children_inline(tag, ctx)).strip()
+        text = _norm_ws_keep_newlines(text)
+        return [text, &quot;&quot;] if text else []
+
+    if name == &quot;hr&quot;:
+        return [&quot;---&quot;, &quot;&quot;]
+
+    if name == &quot;blockquote&quot;:
+        inner = _collapse_blank_lines(_convert_children(tag, ctx))
+        quoted: List[str] = []
+        for ln in inner:
+            quoted.append(&quot;&gt;&quot; if not ln.strip() else &quot;&gt; &quot; + ln)
+        quoted.append(&quot;&quot;)
+        return quoted
+
+    if name == &quot;pre&quot;:
+        # Try to infer a language from pre/code classes.
+        lang = &quot;&quot;
+        cls = &quot; &quot;.join(tag.get(&quot;class&quot;) or [])
+        m = re.search(r&quot;language-([a-zA-Z0-9_+-]+)&quot;, cls)
+        if not m:
+            code = tag.find(&quot;code&quot;)
+            if code:
+                cls2 = &quot; &quot;.join(code.get(&quot;class&quot;) or [])
+                m = re.search(r&quot;language-([a-zA-Z0-9_+-]+)&quot;, cls2)
+        if m:
+            lang = m.group(1)
+
+        code_text = tag.get_text(&quot;\n&quot;, strip=False).replace(&quot;\r\n&quot;, &quot;\n&quot;).replace(&quot;\r&quot;, &quot;\n&quot;)
+        lines = code_text.splitlines()
+        while lines and not lines[0].strip():
+            lines.pop(0)
+        while lines and not lines[-1].strip():
+            lines.pop()
+        return [f&quot;```{lang}&quot;.rstrip(), *lines, &quot;```&quot;, &quot;&quot;]
+
+    if name == &quot;ul&quot;:
+        return _list_to_md(tag, ordered=False, ctx=ctx)
+
+    if name == &quot;ol&quot;:
+        return _list_to_md(tag, ordered=True, ctx=ctx)
+
+    if name == &quot;table&quot;:
+        return _table_to_md(tag, ctx)
+
+    if name == &quot;img&quot;:
+        inline = _convert_inline(tag, ctx)
+        return [inline, &quot;&quot;] if inline else []
+
+    if name in (&quot;div&quot;, &quot;section&quot;, &quot;article&quot;, &quot;main&quot;, &quot;body&quot;):
+        return _convert_children(tag, ctx)
+
+    inline = _convert_inline(tag, ctx).strip()
+    return [inline] if inline else []
+
+
+def _generic_convert(
+    html: str,
+    *,
+    base_url: Optional[str],
+    mode: str,
+    selector: Optional[str],
+    keep_images: bool,
+    heading_offset: int,
+    max_heading_level: int,
+) -&gt; str:
+    soup = _make_soup(html)
+    _strip_non_content(soup)
+
+    root = _select_root(soup, mode=mode, selector=selector)
+    ctx = _Ctx(
+        base_url=base_url,
+        keep_images=keep_images,
+        heading_offset=heading_offset,
+        max_heading_level=max_heading_level,
+    )
+
+    lines = _convert_children(root, ctx)
+    lines = _collapse_blank_lines(lines)
+    return &quot;\n&quot;.join(lines) + &quot;\n&quot;
+
+
+def convert_html_to_markdown(
+    html: str,
+    *,
+    base_url: Optional[str] = None,
+    mode: str = &quot;main&quot;,  # main|body
+    selector: Optional[str] = None,
+    keep_images: bool = False,
+    heading_offset: int = 0,
+    max_heading_level: int = 6,
+    profile: str = &quot;auto&quot;,  # auto|generic|hardinfo2
+    hardinfo_section_level: int = 2,
+) -&gt; str:
+    soup = _make_soup(html)
+    _strip_non_content(soup)
+
+    if profile == &quot;hardinfo2&quot; or (profile == &quot;auto&quot; and _looks_like_hardinfo2(soup)):
+        return _hardinfo2_convert(html, section_heading_level=max(1, hardinfo_section_level))
+
+    return _generic_convert(
+        html,
+        base_url=base_url,
+        mode=mode,
+        selector=selector,
+        keep_images=keep_images,
+        heading_offset=heading_offset,
+        max_heading_level=max(1, max_heading_level),
+    )
+
+
+# -----------------------------
+# CLI
+# -----------------------------
+
+
+def main(argv: Optional[Sequence[str]] = None) -&gt; int:
+    _require_bs4()
+
+    p = argparse.ArgumentParser(description=&quot;Convert HTML (file/URL/stdin) to Jekyll-friendly Markdown&quot;)
+    p.add_argument(&quot;input&quot;, help=&quot;Path, URL, or &#39;-&#39; for stdin&quot;)
+    p.add_argument(&quot;-o&quot;, &quot;--output&quot;, type=Path, default=None, help=&quot;Output .md file (default: stdout)&quot;)
+
+    # Front matter
+    p.add_argument(&quot;--no-front-matter&quot;, action=&quot;store_true&quot;, help=&quot;Do not emit YAML front matter&quot;)
+    p.add_argument(&quot;--layout&quot;, default=&quot;post&quot;, help=&quot;Front matter layout (default: post)&quot;)
+    p.add_argument(&quot;--title&quot;, default=None, help=&quot;Front matter title override&quot;)
+    p.add_argument(&quot;--date&quot;, default=None, help=&quot;Front matter date override&quot;)
+    p.add_argument(&quot;--date-from-meta&quot;, action=&quot;store_true&quot;, help=&quot;Try to extract date from meta/time tags&quot;)
+    p.add_argument(&quot;--categories&quot;, default=None, help=&quot;Comma-separated categories&quot;)
+    p.add_argument(&quot;--tags&quot;, default=None, help=&quot;Comma-separated tags&quot;)
+    p.add_argument(&quot;--permalink&quot;, default=None, help=&quot;Front matter permalink&quot;)
+
+    # Conversion knobs
+    p.add_argument(&quot;--mode&quot;, choices=[&quot;main&quot;, &quot;body&quot;], default=&quot;main&quot;, help=&quot;Content selection mode&quot;)
+    p.add_argument(&quot;--selector&quot;, default=None, help=&quot;CSS selector to choose content root (overrides --mode)&quot;)
+    p.add_argument(&quot;--base-url&quot;, default=None, help=&quot;Base URL for resolving relative links/images&quot;)
+    p.add_argument(&quot;--keep-images&quot;, action=&quot;store_true&quot;, help=&quot;Include &lt;img&gt; as Markdown images&quot;)
+    p.add_argument(&quot;--heading-offset&quot;, type=int, default=0, help=&quot;Add to heading levels (e.g., 1 makes h1→h2)&quot;)
+    p.add_argument(&quot;--max-heading-level&quot;, type=int, default=6, help=&quot;Clamp max heading depth (default: 6)&quot;)
+
+    # Profiles
+    p.add_argument(
+        &quot;--profile&quot;,
+        choices=[&quot;auto&quot;, &quot;generic&quot;, &quot;hardinfo2&quot;],
+        default=&quot;auto&quot;,
+        help=&quot;auto detects HardInfo2; otherwise force generic/hardinfo2&quot;,
+    )
+    p.add_argument(
+        &quot;--hardinfo-section-level&quot;,
+        type=int,
+        default=2,
+        help=&quot;Heading level for HardInfo2 section titles (default: 2)&quot;,
+    )
+
+    args = p.parse_args(argv)
+
+    html, inferred_base = _read_input(args.input)
+    soup = _make_soup(html)
+
+    # Base URL: CLI &gt; &lt;base href&gt; &gt; inferred (URL input)
+    base_url = args.base_url or _extract_base_href(soup) or inferred_base
+
+    fm = None
+    if not args.no_front_matter:
+        title = _extract_title(soup, args.title)
+        date = args.date
+        if not date and args.date_from_meta:
+            date = _extract_date_hint(soup)
+        if not date:
+            date = _now_with_tz()
+
+        fm = FrontMatter(
+            layout=args.layout,
+            title=title,
+            date=date,
+            categories=[c.strip() for c in (args.categories or &quot;&quot;).split(&quot;,&quot;) if c.strip()] or None,
+            tags=[t.strip() for t in (args.tags or &quot;&quot;).split(&quot;,&quot;) if t.strip()] or None,
+            permalink=args.permalink,
+        )
+
+    md_body = convert_html_to_markdown(
+        html,
+        base_url=base_url,
+        mode=args.mode,
+        selector=args.selector,
+        keep_images=args.keep_images,
+        heading_offset=args.heading_offset,
+        max_heading_level=args.max_heading_level,
+        profile=args.profile,
+        hardinfo_section_level=args.hardinfo_section_level,
+    )
+
+    out_text = (fm.render() if fm else &quot;&quot;) + md_body
+
+    if args.output:
+        args.output.parent.mkdir(parents=True, exist_ok=True)
+        args.output.write_text(out_text, encoding=&quot;utf-8&quot;)
+    else:
+        sys.stdout.write(out_text)
+
+    return 0
+
+
+if __name__ == &quot;__main__&quot;:
+    raise SystemExit(main())</code>
+</section>]]></content><author><name></name></author><category term="scratchpad" /></entry><entry><title type="html">TreeSheets Debian 11 arm64 build</title><link href="https://ib.bsb.br/treesheets-build/" rel="alternate" type="text/html" title="TreeSheets Debian 11 arm64 build" /><published>2026-01-09T00:00:00+00:00</published><updated>2026-01-09T10:15:07+00:00</updated><id>https://ib.bsb.br/treesheets-build</id><content type="html" xml:base="https://ib.bsb.br/treesheets-build/"><![CDATA[<section class="code-block-container" role="group" aria-label="Bash Code Block" data-filename="bash_code_block.sh" data-code="#!/usr/bin/env bash
 #
 # TreeSheets local build for Debian 11 (bullseye) on arm64/aarch64.
 #
@@ -3352,563 +5284,4 @@ lookformore:
 <span class="k">fi
 
 </span><span class="nb">echo</span> <span class="nt">-e</span> <span class="s2">"</span><span class="se">\n</span><span class="k">${</span><span class="nv">BOLD</span><span class="k">}</span><span class="s2">[DONE] Verification complete.</span><span class="k">${</span><span class="nv">RESET</span><span class="k">}</span><span class="s2">"</span>
-</code></pre></div></div>]]></content><author><name></name></author><category term="scratchpad" /></entry><entry><title type="html">RK3588 capability scan</title><link href="https://ib.bsb.br/rk3588-scan/" rel="alternate" type="text/html" title="RK3588 capability scan" /><published>2025-12-19T00:00:00+00:00</published><updated>2025-12-19T19:26:27+00:00</updated><id>https://ib.bsb.br/rk3588-scan</id><content type="html" xml:base="https://ib.bsb.br/rk3588-scan/"><![CDATA[<h1 id="rk3588_auditsh">rk3588_audit.sh</h1>
-<section class="code-block-container" role="group" aria-label=" Code Block" data-filename="_code_block.txt" data-code="#!/usr/bin/env bash
-set -euo pipefail
-set -o errtrace
-IFS=$&#39;\n\t&#39;
-trap &#39;echo &quot;Error on or near line ${LINENO}; command exited with status $?&quot; &gt;&amp;2&#39; ERR
-
-# rk3588_audit.sh
-#
-# Purpose:
-#   - Create a timestamped audit directory under ~/rk3588_audit_&lt;timestamp&gt;/
-#   - Collect system/display/GPU/VPU/network/storage snapshots
-#   - Install diagnostic packages idempotently (skips missing packages)
-#   - Avoid destructive actions; optional actions require explicit confirmation
-
-START_TS=&quot;$(date +%Y%m%d_%H%M%S)&quot;
-AUDIT_DIR=&quot;$HOME/rk3588_audit_${START_TS}&quot;
-LOG_DIR=&quot;$AUDIT_DIR/logs&quot;
-OUT_DIR=&quot;$AUDIT_DIR/out&quot;
-REPORT_MD=&quot;$AUDIT_DIR/REPORT.md&quot;
-LOG_FILE=&quot;$LOG_DIR/audit.log&quot;
-ENV_FILE=&quot;$LOG_DIR/env.txt&quot;
-DMESG_FILE=&quot;$LOG_DIR/dmesg.txt&quot;
-
-CMD_FAIL_HINT=&quot;Check ${LOG_FILE} and ${REPORT_MD} for details.&quot;
-
-: &quot;${NET_TIMEOUT:=5}&quot;
-: &quot;${FIO_SIZE_MB:=512}&quot;
-: &quot;${FIO_BS:=1M}&quot;
-: &quot;${FIO_IODEPTH:=16}&quot;
-: &quot;${RUN_COLORS:=1}&quot;
-
-TMPDIR_CREATED=&quot;&quot;
-cleanup() {
-  if [[ -n &quot;${TMPDIR_CREATED:-}&quot; &amp;&amp; -d &quot;$TMPDIR_CREATED&quot; ]]; then
-    rm -rf &quot;$TMPDIR_CREATED&quot; || true
-  fi
-}
-trap cleanup EXIT SIGINT SIGTERM
-
-if [[ -t 1 &amp;&amp; &quot;$RUN_COLORS&quot; -eq 1 ]] &amp;&amp; command -v tput &gt;/dev/null 2&gt;&amp;1; then
-  GREEN=&quot;$(tput setaf 2)&quot;; YELLOW=&quot;$(tput setaf 3)&quot;; RED=&quot;$(tput setaf 1)&quot;; BLUE=&quot;$(tput setaf 4)&quot;; BOLD=&quot;$(tput bold)&quot;; RESET=&quot;$(tput sgr0)&quot;
-else
-  GREEN=&quot;&quot;; YELLOW=&quot;&quot;; RED=&quot;&quot;; BLUE=&quot;&quot;; BOLD=&quot;&quot;; RESET=&quot;&quot;
-fi
-
-log() { echo -e &quot;$*&quot; | tee -a &quot;$LOG_FILE&quot;; }
-section() { log &quot;\n${BOLD}${BLUE}==&gt; $1${RESET}&quot;; }
-
-ensure_dir() { [[ -d &quot;$1&quot; ]] || mkdir -p &quot;$1&quot;; }
-
-ask_yes() {
-  local prompt=&quot;$1&quot; ans
-  echo
-  read -r -p &quot;${YELLOW}${prompt}${RESET} (type &#39;yes&#39; to continue, anything else to cancel): &quot; ans
-  [[ &quot;$ans&quot; == &quot;yes&quot; ]] || { echo &quot;Cancelled by user.&quot;; return 1; }
-}
-
-need_sudo() {
-  command -v sudo &gt;/dev/null 2&gt;&amp;1 || { echo &quot;Error: sudo required.&quot; &gt;&amp;2; exit 1; }
-  sudo -v || { echo &quot;Error: sudo auth failed.&quot; &gt;&amp;2; exit 1; }
-}
-
-package_available() {
-  local pkg=&quot;$1&quot;
-  apt-cache policy &quot;$pkg&quot; 2&gt;/dev/null | awk &#39;/Candidate:/ {print $2}&#39; | grep -vq &quot;(none)&quot;
-}
-
-is_installed() { dpkg -s &quot;$1&quot; &gt;/dev/null 2&gt;&amp;1; }
-
-ensure_package() {
-  local pkg=&quot;$1&quot;
-  if is_installed &quot;$pkg&quot;; then
-    log &quot;Package already installed: ${GREEN}${pkg}${RESET}&quot;
-    return 0
-  fi
-  if ! package_available &quot;$pkg&quot;; then
-    log &quot;Package not available (skipping): ${YELLOW}${pkg}${RESET}&quot;
-    return 0
-  fi
-  log &quot;Installing package: ${GREEN}${pkg}${RESET}&quot;
-  sudo apt-get install -y --no-install-recommends &quot;$pkg&quot; &gt;&gt;&quot;$LOG_FILE&quot; 2&gt;&amp;1 || {
-    echo &quot;Error: Failed to install &#39;$pkg&#39;. ${CMD_FAIL_HINT}&quot; &gt;&amp;2
-    exit 1
-  }
-}
-
-ensure_packages() { for pkg in &quot;$@&quot;; do ensure_package &quot;$pkg&quot;; done; }
-
-run_continue() {
-  local title=&quot;$1&quot;; shift
-  log &quot;\n--- $title ---&quot;
-  &quot;$@&quot; &gt;&gt;&quot;$LOG_FILE&quot; 2&gt;&amp;1 || log &quot;  (Command failed but continuing): $*&quot;
-}
-
-run_fail() {
-  local title=&quot;$1&quot;; shift
-  log &quot;\n&gt;&gt;&gt; $title&quot;
-  &quot;$@&quot; &gt;&gt;&quot;$LOG_FILE&quot; 2&gt;&amp;1 || { echo &quot;Error: $title failed. ${CMD_FAIL_HINT}&quot; &gt;&amp;2; exit 1; }
-}
-
-quick_net_check() {
-  section &quot;Quick network check&quot;
-  if command -v ping &gt;/dev/null 2&gt;&amp;1 &amp;&amp; ping -c1 -W &quot;$NET_TIMEOUT&quot; deb.debian.org &gt;/dev/null 2&gt;&amp;1; then
-    log &quot;Network reachable.&quot;
-    return 0
-  fi
-  log &quot;Network check failed; installs/downloads may be limited.&quot;
-  return 1
-}
-
-check_platform() {
-  section &quot;Platform checks&quot;
-  local debver arch
-  debver=&quot;$(cut -d&#39;.&#39; -f1 &lt; /etc/debian_version 2&gt;/dev/null || echo unknown)&quot;
-  arch=&quot;$(uname -m 2&gt;/dev/null || echo unknown)&quot;
-  log &quot;Debian major: $debver&quot;
-  log &quot;Arch        : $arch&quot;
-  [[ &quot;$debver&quot; == &quot;11&quot; ]] || log &quot;WARNING: tuned for Debian 11 (Bullseye).&quot;
-  [[ &quot;$arch&quot; == &quot;aarch64&quot; || &quot;$arch&quot; == &quot;arm64&quot; ]] || log &quot;WARNING: tuned for ARM64.&quot;
-}
-
-enable_nonfree_optional() {
-  section &quot;Optional: Enable contrib/non-free (Bullseye)&quot;
-  if ! ask_yes &quot;Enable &#39;contrib non-free&#39; in /etc/apt/sources.list (backup + apt update)?&quot;; then
-    log &quot;Skipped enabling contrib/non-free.&quot;
-    return 0
-  fi
-
-  local src=&quot;/etc/apt/sources.list&quot;
-  if [[ ! -f &quot;$src&quot; ]]; then
-    log &quot;No $src found; skipping.&quot;
-    return 0
-  fi
-
-  sudo cp -a &quot;$src&quot; &quot;${src}.bak.${START_TS}&quot;
-
-  TMPDIR_CREATED=&quot;$(mktemp -d)&quot;
-  local tmp=&quot;$TMPDIR_CREATED/sources.list&quot;
-
-  sudo awk &#39;{
-    if ($1==&quot;deb&quot; || $1==&quot;deb-src&quot;) {
-      line=$0
-      has_contrib=match(line,/(^| )contrib( |$)/)
-      has_nonfree=match(line,/(^| )non-free( |$)/)
-      if (!has_contrib) line=line&quot; contrib&quot;
-      if (!has_nonfree) line=line&quot; non-free&quot;
-      print line
-    } else {
-      print
-    }
-  }&#39; &quot;$src&quot; | sudo tee &quot;$tmp&quot; &gt;/dev/null
-
-  sudo mv &quot;$tmp&quot; &quot;$src&quot;
-  run_fail &quot;apt-get update (after enabling contrib/non-free)&quot; sudo apt-get update
-  rm -rf &quot;$TMPDIR_CREATED&quot; || true
-  TMPDIR_CREATED=&quot;&quot;
-}
-
-main() {
-  ensure_dir &quot;$AUDIT_DIR&quot;; ensure_dir &quot;$LOG_DIR&quot;; ensure_dir &quot;$OUT_DIR&quot;
-  : &gt;&quot;$LOG_FILE&quot;
-
-  section &quot;Start&quot;
-  log &quot;Audit directory: $AUDIT_DIR&quot;
-  log &quot;Log file       : $LOG_FILE&quot;
-
-  need_sudo
-
-  {
-    echo &quot;===== ENVIRONMENT =====&quot;
-    echo &quot;Timestamp: $START_TS&quot;
-    uname -a || true
-    echo
-    echo &quot;----- /etc/os-release -----&quot;
-    cat /etc/os-release 2&gt;/dev/null || true
-    echo
-    echo &quot;----- /proc/cmdline -----&quot;
-    cat /proc/cmdline 2&gt;/dev/null || true
-    echo
-    echo &quot;----- CPU -----&quot;
-    lscpu 2&gt;/dev/null || true
-    echo
-    echo &quot;----- Memory/CMA -----&quot;
-    grep -E &#39;CmaTotal|CmaFree|MemTotal|MemFree|HugePages&#39; /proc/meminfo 2&gt;/dev/null || true
-  } &gt;&quot;$ENV_FILE&quot;
-
-  run_continue &quot;Collect dmesg&quot; bash -lc &quot;sudo dmesg -T &gt; &#39;$DMESG_FILE&#39;&quot;
-
-  check_platform
-  quick_net_check || true
-
-  section &quot;APT update&quot;
-  run_fail &quot;apt-get update&quot; sudo apt-get update
-
-  enable_nonfree_optional || true
-
-  section &quot;Install baseline diagnostic tools (idempotent; skips unavailable)&quot;
-  ensure_packages \
-    curl wget ca-certificates \
-    pciutils usbutils lshw hwinfo inxi \
-    ethtool iproute2 net-tools jq \
-    i2c-tools lm-sensors \
-    v4l-utils \
-    gstreamer1.0-tools gstreamer1.0-plugins-base gstreamer1.0-plugins-good gstreamer1.0-plugins-bad gstreamer1.0-plugins-ugly \
-    ffmpeg alsa-utils \
-    vulkan-tools mesa-utils kmscube \
-    xrandr x11-xserver-utils autorandr \
-    edid-decode read-edid ddcutil \
-    fio hdparm nvme-cli smartmontools \
-    iw wireless-tools bluez can-utils
-
-  section &quot;System overview&quot;
-  run_continue &quot;lshw (short)&quot; sudo lshw -short
-  run_continue &quot;lsblk -O&quot; lsblk -O
-  run_continue &quot;df -hT&quot; df -hT
-  run_continue &quot;lsusb -t&quot; lsusb -t
-  run_continue &quot;lspci -nnk&quot; lspci -nnk
-  run_continue &quot;Kernel warnings/errors (last 200)&quot; bash -lc &#39;dmesg -T --level=err,warn | tail -n 200&#39;
-
-  section &quot;GPU &amp; Display&quot;
-  run_continue &quot;GPU modules loaded&quot; bash -lc &quot;lsmod | egrep -i &#39;panthor|panfrost|mali|kbase&#39; || true&quot;
-  run_continue &quot;GPU-related dmesg&quot; bash -lc &quot;dmesg -T | egrep -i &#39;mali|panthor|panfrost|csf|gpu&#39; || true&quot;
-  run_continue &quot;DRM connectors (modetest -c)&quot; modetest -c
-  run_continue &quot;kmscube smoke test&quot; bash -lc &quot;kmscube -i 100 &gt;/dev/null 2&gt;&amp;1 || true&quot;
-  run_continue &quot;Vulkan summary&quot; vulkaninfo --summary
-  run_continue &quot;xrandr --props (if X running)&quot; bash -lc &quot;DISPLAY=\${DISPLAY:-:0} xrandr --props 2&gt;/dev/null || true&quot;
-
-  section &quot;Video / V4L2 / Codecs&quot;
-  run_continue &quot;List V4L2 devices&quot; v4l2-ctl --list-devices
-  run_continue &quot;FFmpeg hwaccels&quot; ffmpeg -hide_banner -hwaccels
-  run_continue &quot;GStreamer rockchip-ish plugins&quot; bash -lc &quot;gst-inspect-1.0 | egrep -i &#39;v4l2|rkv|hantro|rockchip&#39; || true&quot;
-
-  section &quot;Audio&quot;
-  run_continue &quot;ALSA playback&quot; aplay -l
-  run_continue &quot;ALSA capture&quot; arecord -l
-
-  section &quot;Network&quot;
-  run_continue &quot;ip -details addr&quot; ip -details address
-  run_continue &quot;iw dev&quot; iw dev
-
-  section &quot;Storage&quot;
-  run_continue &quot;lsblk (model/serial)&quot; lsblk -o NAME,SIZE,TYPE,MOUNTPOINTS,MODEL,SERIAL,TRAN
-  run_continue &quot;SATA/NVMe/PCIe dmesg&quot; bash -lc &quot;dmesg -T | egrep -i &#39;sata|ahci|nvme|pcie&#39; || true&quot;
-  run_continue &quot;nvme list (if any)&quot; bash -lc &quot;ls /dev/nvme*n1 &gt;/dev/null 2&gt;&amp;1 &amp;&amp; sudo nvme list || true&quot;
-
-  section &quot;Optional actions&quot;
-  if ask_yes &quot;Run powertop --auto-tune (changes power tunables until reboot)?&quot;; then
-    run_fail &quot;powertop --auto-tune&quot; sudo powertop --auto-tune
-  fi
-  if ask_yes &quot;Run sensors-detect (interactive; may load modules)?&quot;; then
-    run_fail &quot;sensors-detect&quot; sudo sensors-detect
-  fi
-  if ask_yes &quot;Run quick fio seq read/write in $HOME (~${FIO_SIZE_MB}MB temp file, then removed)?&quot;; then
-    TMPDIR_CREATED=&quot;$(mktemp -d)&quot;
-    local fiofile=&quot;$TMPDIR_CREATED/fio_test.dat&quot;
-    run_fail &quot;dd create file&quot; dd if=/dev/zero of=&quot;$fiofile&quot; bs=1M count=&quot;$FIO_SIZE_MB&quot; status=none
-    run_fail &quot;fio seq rw&quot; fio --name=seqrw --filename=&quot;$fiofile&quot; --rw=readwrite --bs=&quot;$FIO_BS&quot; --direct=1 --numjobs=1 --iodepth=&quot;$FIO_IODEPTH&quot; --size=&quot;${FIO_SIZE_MB}M&quot; --group_reporting
-    rm -rf &quot;$TMPDIR_CREATED&quot; || true
-    TMPDIR_CREATED=&quot;&quot;
-  fi
-
-  section &quot;REPORT.md&quot;
-  {
-    echo &quot;# RK3588 Capability Audit — $START_TS&quot;
-    echo
-    echo &quot;Audit directory: $AUDIT_DIR&quot;
-    echo &quot;Log file: $LOG_FILE&quot;
-    echo &quot;Env snapshot: $ENV_FILE&quot;
-    echo &quot;dmesg: $DMESG_FILE&quot;
-  } &gt;&quot;$REPORT_MD&quot;
-
-  ( cd &quot;$HOME&quot; &amp;&amp; tar czf &quot;${AUDIT_DIR}.tar.gz&quot; &quot;$(basename &quot;$AUDIT_DIR&quot;)&quot; )
-
-  section &quot;Done&quot;
-  log &quot;Report : $REPORT_MD&quot;
-  log &quot;Archive: ${AUDIT_DIR}.tar.gz&quot;
-}
-
-main &quot;$@&quot;" data-download-link="" data-download-label="Download ">
-  <code class="language-">#!/usr/bin/env bash
-set -euo pipefail
-set -o errtrace
-IFS=$&#39;\n\t&#39;
-trap &#39;echo &quot;Error on or near line ${LINENO}; command exited with status $?&quot; &gt;&amp;2&#39; ERR
-
-# rk3588_audit.sh
-#
-# Purpose:
-#   - Create a timestamped audit directory under ~/rk3588_audit_&lt;timestamp&gt;/
-#   - Collect system/display/GPU/VPU/network/storage snapshots
-#   - Install diagnostic packages idempotently (skips missing packages)
-#   - Avoid destructive actions; optional actions require explicit confirmation
-
-START_TS=&quot;$(date +%Y%m%d_%H%M%S)&quot;
-AUDIT_DIR=&quot;$HOME/rk3588_audit_${START_TS}&quot;
-LOG_DIR=&quot;$AUDIT_DIR/logs&quot;
-OUT_DIR=&quot;$AUDIT_DIR/out&quot;
-REPORT_MD=&quot;$AUDIT_DIR/REPORT.md&quot;
-LOG_FILE=&quot;$LOG_DIR/audit.log&quot;
-ENV_FILE=&quot;$LOG_DIR/env.txt&quot;
-DMESG_FILE=&quot;$LOG_DIR/dmesg.txt&quot;
-
-CMD_FAIL_HINT=&quot;Check ${LOG_FILE} and ${REPORT_MD} for details.&quot;
-
-: &quot;${NET_TIMEOUT:=5}&quot;
-: &quot;${FIO_SIZE_MB:=512}&quot;
-: &quot;${FIO_BS:=1M}&quot;
-: &quot;${FIO_IODEPTH:=16}&quot;
-: &quot;${RUN_COLORS:=1}&quot;
-
-TMPDIR_CREATED=&quot;&quot;
-cleanup() {
-  if [[ -n &quot;${TMPDIR_CREATED:-}&quot; &amp;&amp; -d &quot;$TMPDIR_CREATED&quot; ]]; then
-    rm -rf &quot;$TMPDIR_CREATED&quot; || true
-  fi
-}
-trap cleanup EXIT SIGINT SIGTERM
-
-if [[ -t 1 &amp;&amp; &quot;$RUN_COLORS&quot; -eq 1 ]] &amp;&amp; command -v tput &gt;/dev/null 2&gt;&amp;1; then
-  GREEN=&quot;$(tput setaf 2)&quot;; YELLOW=&quot;$(tput setaf 3)&quot;; RED=&quot;$(tput setaf 1)&quot;; BLUE=&quot;$(tput setaf 4)&quot;; BOLD=&quot;$(tput bold)&quot;; RESET=&quot;$(tput sgr0)&quot;
-else
-  GREEN=&quot;&quot;; YELLOW=&quot;&quot;; RED=&quot;&quot;; BLUE=&quot;&quot;; BOLD=&quot;&quot;; RESET=&quot;&quot;
-fi
-
-log() { echo -e &quot;$*&quot; | tee -a &quot;$LOG_FILE&quot;; }
-section() { log &quot;\n${BOLD}${BLUE}==&gt; $1${RESET}&quot;; }
-
-ensure_dir() { [[ -d &quot;$1&quot; ]] || mkdir -p &quot;$1&quot;; }
-
-ask_yes() {
-  local prompt=&quot;$1&quot; ans
-  echo
-  read -r -p &quot;${YELLOW}${prompt}${RESET} (type &#39;yes&#39; to continue, anything else to cancel): &quot; ans
-  [[ &quot;$ans&quot; == &quot;yes&quot; ]] || { echo &quot;Cancelled by user.&quot;; return 1; }
-}
-
-need_sudo() {
-  command -v sudo &gt;/dev/null 2&gt;&amp;1 || { echo &quot;Error: sudo required.&quot; &gt;&amp;2; exit 1; }
-  sudo -v || { echo &quot;Error: sudo auth failed.&quot; &gt;&amp;2; exit 1; }
-}
-
-package_available() {
-  local pkg=&quot;$1&quot;
-  apt-cache policy &quot;$pkg&quot; 2&gt;/dev/null | awk &#39;/Candidate:/ {print $2}&#39; | grep -vq &quot;(none)&quot;
-}
-
-is_installed() { dpkg -s &quot;$1&quot; &gt;/dev/null 2&gt;&amp;1; }
-
-ensure_package() {
-  local pkg=&quot;$1&quot;
-  if is_installed &quot;$pkg&quot;; then
-    log &quot;Package already installed: ${GREEN}${pkg}${RESET}&quot;
-    return 0
-  fi
-  if ! package_available &quot;$pkg&quot;; then
-    log &quot;Package not available (skipping): ${YELLOW}${pkg}${RESET}&quot;
-    return 0
-  fi
-  log &quot;Installing package: ${GREEN}${pkg}${RESET}&quot;
-  sudo apt-get install -y --no-install-recommends &quot;$pkg&quot; &gt;&gt;&quot;$LOG_FILE&quot; 2&gt;&amp;1 || {
-    echo &quot;Error: Failed to install &#39;$pkg&#39;. ${CMD_FAIL_HINT}&quot; &gt;&amp;2
-    exit 1
-  }
-}
-
-ensure_packages() { for pkg in &quot;$@&quot;; do ensure_package &quot;$pkg&quot;; done; }
-
-run_continue() {
-  local title=&quot;$1&quot;; shift
-  log &quot;\n--- $title ---&quot;
-  &quot;$@&quot; &gt;&gt;&quot;$LOG_FILE&quot; 2&gt;&amp;1 || log &quot;  (Command failed but continuing): $*&quot;
-}
-
-run_fail() {
-  local title=&quot;$1&quot;; shift
-  log &quot;\n&gt;&gt;&gt; $title&quot;
-  &quot;$@&quot; &gt;&gt;&quot;$LOG_FILE&quot; 2&gt;&amp;1 || { echo &quot;Error: $title failed. ${CMD_FAIL_HINT}&quot; &gt;&amp;2; exit 1; }
-}
-
-quick_net_check() {
-  section &quot;Quick network check&quot;
-  if command -v ping &gt;/dev/null 2&gt;&amp;1 &amp;&amp; ping -c1 -W &quot;$NET_TIMEOUT&quot; deb.debian.org &gt;/dev/null 2&gt;&amp;1; then
-    log &quot;Network reachable.&quot;
-    return 0
-  fi
-  log &quot;Network check failed; installs/downloads may be limited.&quot;
-  return 1
-}
-
-check_platform() {
-  section &quot;Platform checks&quot;
-  local debver arch
-  debver=&quot;$(cut -d&#39;.&#39; -f1 &lt; /etc/debian_version 2&gt;/dev/null || echo unknown)&quot;
-  arch=&quot;$(uname -m 2&gt;/dev/null || echo unknown)&quot;
-  log &quot;Debian major: $debver&quot;
-  log &quot;Arch        : $arch&quot;
-  [[ &quot;$debver&quot; == &quot;11&quot; ]] || log &quot;WARNING: tuned for Debian 11 (Bullseye).&quot;
-  [[ &quot;$arch&quot; == &quot;aarch64&quot; || &quot;$arch&quot; == &quot;arm64&quot; ]] || log &quot;WARNING: tuned for ARM64.&quot;
-}
-
-enable_nonfree_optional() {
-  section &quot;Optional: Enable contrib/non-free (Bullseye)&quot;
-  if ! ask_yes &quot;Enable &#39;contrib non-free&#39; in /etc/apt/sources.list (backup + apt update)?&quot;; then
-    log &quot;Skipped enabling contrib/non-free.&quot;
-    return 0
-  fi
-
-  local src=&quot;/etc/apt/sources.list&quot;
-  if [[ ! -f &quot;$src&quot; ]]; then
-    log &quot;No $src found; skipping.&quot;
-    return 0
-  fi
-
-  sudo cp -a &quot;$src&quot; &quot;${src}.bak.${START_TS}&quot;
-
-  TMPDIR_CREATED=&quot;$(mktemp -d)&quot;
-  local tmp=&quot;$TMPDIR_CREATED/sources.list&quot;
-
-  sudo awk &#39;{
-    if ($1==&quot;deb&quot; || $1==&quot;deb-src&quot;) {
-      line=$0
-      has_contrib=match(line,/(^| )contrib( |$)/)
-      has_nonfree=match(line,/(^| )non-free( |$)/)
-      if (!has_contrib) line=line&quot; contrib&quot;
-      if (!has_nonfree) line=line&quot; non-free&quot;
-      print line
-    } else {
-      print
-    }
-  }&#39; &quot;$src&quot; | sudo tee &quot;$tmp&quot; &gt;/dev/null
-
-  sudo mv &quot;$tmp&quot; &quot;$src&quot;
-  run_fail &quot;apt-get update (after enabling contrib/non-free)&quot; sudo apt-get update
-  rm -rf &quot;$TMPDIR_CREATED&quot; || true
-  TMPDIR_CREATED=&quot;&quot;
-}
-
-main() {
-  ensure_dir &quot;$AUDIT_DIR&quot;; ensure_dir &quot;$LOG_DIR&quot;; ensure_dir &quot;$OUT_DIR&quot;
-  : &gt;&quot;$LOG_FILE&quot;
-
-  section &quot;Start&quot;
-  log &quot;Audit directory: $AUDIT_DIR&quot;
-  log &quot;Log file       : $LOG_FILE&quot;
-
-  need_sudo
-
-  {
-    echo &quot;===== ENVIRONMENT =====&quot;
-    echo &quot;Timestamp: $START_TS&quot;
-    uname -a || true
-    echo
-    echo &quot;----- /etc/os-release -----&quot;
-    cat /etc/os-release 2&gt;/dev/null || true
-    echo
-    echo &quot;----- /proc/cmdline -----&quot;
-    cat /proc/cmdline 2&gt;/dev/null || true
-    echo
-    echo &quot;----- CPU -----&quot;
-    lscpu 2&gt;/dev/null || true
-    echo
-    echo &quot;----- Memory/CMA -----&quot;
-    grep -E &#39;CmaTotal|CmaFree|MemTotal|MemFree|HugePages&#39; /proc/meminfo 2&gt;/dev/null || true
-  } &gt;&quot;$ENV_FILE&quot;
-
-  run_continue &quot;Collect dmesg&quot; bash -lc &quot;sudo dmesg -T &gt; &#39;$DMESG_FILE&#39;&quot;
-
-  check_platform
-  quick_net_check || true
-
-  section &quot;APT update&quot;
-  run_fail &quot;apt-get update&quot; sudo apt-get update
-
-  enable_nonfree_optional || true
-
-  section &quot;Install baseline diagnostic tools (idempotent; skips unavailable)&quot;
-  ensure_packages \
-    curl wget ca-certificates \
-    pciutils usbutils lshw hwinfo inxi \
-    ethtool iproute2 net-tools jq \
-    i2c-tools lm-sensors \
-    v4l-utils \
-    gstreamer1.0-tools gstreamer1.0-plugins-base gstreamer1.0-plugins-good gstreamer1.0-plugins-bad gstreamer1.0-plugins-ugly \
-    ffmpeg alsa-utils \
-    vulkan-tools mesa-utils kmscube \
-    xrandr x11-xserver-utils autorandr \
-    edid-decode read-edid ddcutil \
-    fio hdparm nvme-cli smartmontools \
-    iw wireless-tools bluez can-utils
-
-  section &quot;System overview&quot;
-  run_continue &quot;lshw (short)&quot; sudo lshw -short
-  run_continue &quot;lsblk -O&quot; lsblk -O
-  run_continue &quot;df -hT&quot; df -hT
-  run_continue &quot;lsusb -t&quot; lsusb -t
-  run_continue &quot;lspci -nnk&quot; lspci -nnk
-  run_continue &quot;Kernel warnings/errors (last 200)&quot; bash -lc &#39;dmesg -T --level=err,warn | tail -n 200&#39;
-
-  section &quot;GPU &amp; Display&quot;
-  run_continue &quot;GPU modules loaded&quot; bash -lc &quot;lsmod | egrep -i &#39;panthor|panfrost|mali|kbase&#39; || true&quot;
-  run_continue &quot;GPU-related dmesg&quot; bash -lc &quot;dmesg -T | egrep -i &#39;mali|panthor|panfrost|csf|gpu&#39; || true&quot;
-  run_continue &quot;DRM connectors (modetest -c)&quot; modetest -c
-  run_continue &quot;kmscube smoke test&quot; bash -lc &quot;kmscube -i 100 &gt;/dev/null 2&gt;&amp;1 || true&quot;
-  run_continue &quot;Vulkan summary&quot; vulkaninfo --summary
-  run_continue &quot;xrandr --props (if X running)&quot; bash -lc &quot;DISPLAY=\${DISPLAY:-:0} xrandr --props 2&gt;/dev/null || true&quot;
-
-  section &quot;Video / V4L2 / Codecs&quot;
-  run_continue &quot;List V4L2 devices&quot; v4l2-ctl --list-devices
-  run_continue &quot;FFmpeg hwaccels&quot; ffmpeg -hide_banner -hwaccels
-  run_continue &quot;GStreamer rockchip-ish plugins&quot; bash -lc &quot;gst-inspect-1.0 | egrep -i &#39;v4l2|rkv|hantro|rockchip&#39; || true&quot;
-
-  section &quot;Audio&quot;
-  run_continue &quot;ALSA playback&quot; aplay -l
-  run_continue &quot;ALSA capture&quot; arecord -l
-
-  section &quot;Network&quot;
-  run_continue &quot;ip -details addr&quot; ip -details address
-  run_continue &quot;iw dev&quot; iw dev
-
-  section &quot;Storage&quot;
-  run_continue &quot;lsblk (model/serial)&quot; lsblk -o NAME,SIZE,TYPE,MOUNTPOINTS,MODEL,SERIAL,TRAN
-  run_continue &quot;SATA/NVMe/PCIe dmesg&quot; bash -lc &quot;dmesg -T | egrep -i &#39;sata|ahci|nvme|pcie&#39; || true&quot;
-  run_continue &quot;nvme list (if any)&quot; bash -lc &quot;ls /dev/nvme*n1 &gt;/dev/null 2&gt;&amp;1 &amp;&amp; sudo nvme list || true&quot;
-
-  section &quot;Optional actions&quot;
-  if ask_yes &quot;Run powertop --auto-tune (changes power tunables until reboot)?&quot;; then
-    run_fail &quot;powertop --auto-tune&quot; sudo powertop --auto-tune
-  fi
-  if ask_yes &quot;Run sensors-detect (interactive; may load modules)?&quot;; then
-    run_fail &quot;sensors-detect&quot; sudo sensors-detect
-  fi
-  if ask_yes &quot;Run quick fio seq read/write in $HOME (~${FIO_SIZE_MB}MB temp file, then removed)?&quot;; then
-    TMPDIR_CREATED=&quot;$(mktemp -d)&quot;
-    local fiofile=&quot;$TMPDIR_CREATED/fio_test.dat&quot;
-    run_fail &quot;dd create file&quot; dd if=/dev/zero of=&quot;$fiofile&quot; bs=1M count=&quot;$FIO_SIZE_MB&quot; status=none
-    run_fail &quot;fio seq rw&quot; fio --name=seqrw --filename=&quot;$fiofile&quot; --rw=readwrite --bs=&quot;$FIO_BS&quot; --direct=1 --numjobs=1 --iodepth=&quot;$FIO_IODEPTH&quot; --size=&quot;${FIO_SIZE_MB}M&quot; --group_reporting
-    rm -rf &quot;$TMPDIR_CREATED&quot; || true
-    TMPDIR_CREATED=&quot;&quot;
-  fi
-
-  section &quot;REPORT.md&quot;
-  {
-    echo &quot;# RK3588 Capability Audit — $START_TS&quot;
-    echo
-    echo &quot;Audit directory: $AUDIT_DIR&quot;
-    echo &quot;Log file: $LOG_FILE&quot;
-    echo &quot;Env snapshot: $ENV_FILE&quot;
-    echo &quot;dmesg: $DMESG_FILE&quot;
-  } &gt;&quot;$REPORT_MD&quot;
-
-  ( cd &quot;$HOME&quot; &amp;&amp; tar czf &quot;${AUDIT_DIR}.tar.gz&quot; &quot;$(basename &quot;$AUDIT_DIR&quot;)&quot; )
-
-  section &quot;Done&quot;
-  log &quot;Report : $REPORT_MD&quot;
-  log &quot;Archive: ${AUDIT_DIR}.tar.gz&quot;
-}
-
-main &quot;$@&quot;</code>
-</section>]]></content><author><name></name></author><category term="aid&gt;software&gt;linux&gt;rockchip" /></entry></feed>
+</code></pre></div></div>]]></content><author><name></name></author><category term="scratchpad" /></entry></feed>
