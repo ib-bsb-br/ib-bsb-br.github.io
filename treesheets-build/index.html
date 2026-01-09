@@ -1,0 +1,1343 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>
+      
+        TreeSheets Debian 11 arm64 build - infoBAG
+      
+    </title>
+    <meta name="title" content="TreeSheets Debian 11 arm64 build - infoBAG" />
+    <meta name="description" content="">
+    <meta property="og:type" content="article">
+    <meta property="og:url" content="https://ib.bsb.br/treesheets-build/">
+    <meta property="og:title" content="TreeSheets Debian 11 arm64 build - infoBAG">
+    <meta property="og:description" content="">
+    <meta property="og:image" content="/favicon.ico">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:url" content="https://ib.bsb.br/treesheets-build/">
+    <meta name="twitter:title" content="TreeSheets Debian 11 arm64 build - infoBAG">
+    <meta name="twitter:description" content="">
+    <meta name="twitter:image" content="/favicon.ico">
+    <link rel="canonical" href="https://ib.bsb.br/treesheets-build/">
+    <link rel="alternate" type="application/rss+xml" title="infoBAG" href="https://ib.bsb.br/rss.xml">
+    
+      <meta name="keywords" content="scratchpad">
+      
+        <meta property="article:tag" content="scratchpad">
+      
+    
+    <link rel="icon" href="/favicon.ico" type="image/x-icon">
+    <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon">
+    
+    <link rel="stylesheet" href="/style.css">
+  </head>
+  <body class="post-content-body">
+    <header class="header-container">
+      <nav aria-label="Main navigation" class="header-content">
+        <a href="/" aria-label="Home">
+          <img src="/favicon.ico" alt="Home" class="favicon search-link" width="32" height="32" loading="lazy">
+        </a>
+        <a href="/tags" aria-label="Tags">
+          <img src="/assets/Label.gif" alt="Tags" class="favicon search-link" width="32" height="32" loading="lazy">
+        </a>
+        <a href="/send" aria-label="send">
+          <img src="/assets/rot.gif" alt="send" class="favicon search-link" width="32" height="32" loading="lazy">
+        </a> 
+        <a href="/created" aria-label="archive created">
+          <img src="/assets/Loose_Stone_Pile.gif" alt="archive created" class="favicon search-link" width="32" height="32" loading="lazy">
+        </a>
+        <a href="/events" aria-label="Events">
+          <img src="/assets/Paralyse_Rune.gif" alt="Events" class="favicon search-link" width="32" height="32" loading="lazy">
+        </a>
+        <a href="/modified" aria-label="archive modified">
+          <img src="/assets/Hole_(Rock).gif" alt="archive modified" class="favicon search-link" width="32" height="32" loading="lazy">
+        </a>
+    </nav>
+      <h5 class="post-title">
+        <a href="#bottom-of-page" aria-label="Go to bottom">
+          TreeSheets Debian 11 arm64 build
+        </a>
+      </h5>
+      <div class="post-meta">
+        <time datetime="2026-01-09T00:00:00+00:00" class="post-date">
+          09 Jan 2026
+        </time>
+        
+          <span class="post-updated">
+            ↣
+            <time datetime="2026-01-09T10:15:07+00:00">
+              09 Jan 2026
+            </time>
+          </span>
+        
+        
+          <p class="post-slug">
+            Slug: <a href="https://ib.bsb.br/treesheets-build" class="tag">treesheets-build</a>
+          </p>
+        
+        
+          <p class="post-tags">
+            Tags:
+            
+              <a href="https://ib.bsb.br/tags/#scratchpad" class="tag">scratchpad</a>
+            
+          </p>
+        
+      </div>
+      <div class="post-actions">
+        <div class="page-stats mt-3" role="status" aria-label="Page statistics">
+      
+      <span class="badge bg-primary">
+        13782 characters
+      </span>
+        <span class="separator mx-2" aria-hidden="true">•</span>
+        <span class="badge bg-primary">
+        1429 words
+      </span>
+      </div>
+        <div class="action-buttons d-flex flex-wrap gap-2">
+          
+            
+              <form action="https://github.com/ib-bsb-br/ib-bsb-br.github.io/edit/main/_posts/2026-01-09-treesheets-build.md"
+                    method="GET"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="d-inline-block">
+                <button type="submit" class="btn btn-danger" aria-label="Edit page content">
+                  Improve this page
+                </button>
+              </form>
+            
+            <form action="https://github.com/ib-bsb-br/ib-bsb-br.github.io/commits/main/_posts/2026-01-09-treesheets-build.md"
+                  method="GET"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="d-inline-block">
+              <button type="submit" class="btn btn-danger" aria-label="View page revision history">
+                View revision history
+              </button>
+            </form>
+          
+        </div>
+      </div>
+    </header>
+    <main class="content">
+      <article class="post-wrapper">
+        <div class="post-content-body">
+          
+
+          <section class="code-block-container" role="group" aria-label="Bash Code Block" data-filename="bash_code_block.sh" data-code="#!/usr/bin/env bash
+#
+# TreeSheets local build for Debian 11 (bullseye) on arm64/aarch64.
+#
+# Key constraints (from your environment):
+#   - glibc stays Debian-11-compatible (2.31)
+#   - Prefer hardware OpenGL ES via EGL/GLES (Mali-G610) when GLX/OpenGL is llvmpipe
+#   - Debian 11 default GCC 10 libstdc++ typically lacks std::from_chars(float/double)
+#     which breaks Lobster; we patch Lobster to use strto*() fallback when needed.
+#
+# What this script does:
+#   1) Installs Debian-11-safe deps (idempotent)
+#   2) Clones/updates TreeSheets
+#   3) Selects a C/C++ toolchain robustly (never captures apt output into CC/CXX)
+#        - Uses system gcc/g++ by default
+#        - Optionally tries gcc-11/12 if already installed or installable
+#        - Never fails just because gcc-11/12 are unavailable
+#   4) Configures CMake + prefers EGL/GLES (wxUSE_GLCANVAS_EGL)
+#   5) Patches Lobster if float-from_chars is missing
+#   6) Builds the CPack &#39;package&#39; target to produce a .deb
+#
+# Usage:
+#   chmod +x ./build-treesheets-debian11-arm64.sh
+#   ./build-treesheets-debian11-arm64.sh --clean
+#
+# Options:
+#   --workdir DIR
+#   --clean
+#   --no-update
+#   --no-deps
+#   --prefer-gles | --prefer-gl
+#   --jobs N
+#   --install
+#   --no-lobster-patch
+#   --try-newer-gcc    (attempt to apt-install gcc-11/12 if available; non-fatal)
+#
+set -euo pipefail
+IFS=$&#39;\n\t&#39;
+
+log(){ printf &#39;\n[treesheets] %s\n&#39; &quot;$*&quot; &gt;&amp;2; }
+warn(){ printf &#39;\n[treesheets][WARN] %s\n&#39; &quot;$*&quot; &gt;&amp;2; }
+die(){ printf &#39;\n[treesheets][ERROR] %s\n&#39; &quot;$*&quot; &gt;&amp;2; exit 1; }
+
+have(){ command -v &quot;$1&quot; &gt;/dev/null 2&gt;&amp;1; }
+
+sudo_cmd(){
+  if [[ &quot;${EUID:-$(id -u)}&quot; -eq 0 ]]; then &quot;$@&quot;; else sudo &quot;$@&quot;; fi
+}
+
+# Defaults
+REPO_URL=&quot;https://github.com/aardappel/treesheets.git&quot;
+BRANCH=&quot;master&quot;
+WORKDIR=&quot;&quot;
+CLEAN=0
+NO_UPDATE=0
+NO_DEPS=0
+PREFER_GFX=&quot;auto&quot;   # auto|gles|gl
+ALLOW_LOBSTER_PATCH=1
+JOBS=&quot;$(getconf _NPROCESSORS_ONLN 2&gt;/dev/null || echo 4)&quot;
+DO_INSTALL=0
+TRY_NEWER_GCC=0
+
+while [[ $# -gt 0 ]]; do
+  case &quot;$1&quot; in
+    --workdir) WORKDIR=&quot;$2&quot;; shift 2;;
+    --clean) CLEAN=1; shift;;
+    --no-update) NO_UPDATE=1; shift;;
+    --no-deps) NO_DEPS=1; shift;;
+    --prefer-gles) PREFER_GFX=&quot;gles&quot;; shift;;
+    --prefer-gl) PREFER_GFX=&quot;gl&quot;; shift;;
+    --no-lobster-patch) ALLOW_LOBSTER_PATCH=0; shift;;
+    --jobs) JOBS=&quot;$2&quot;; shift 2;;
+    --install) DO_INSTALL=1; shift;;
+    --try-newer-gcc) TRY_NEWER_GCC=1; shift;;
+    -h|--help)
+      sed -n &#39;1,220p&#39; &quot;$0&quot; | sed &#39;s/^# \{0,1\}//&#39;; exit 0;;
+    *) die &quot;Unknown arg: $1&quot;;;
+  esac
+done
+
+if [[ -z &quot;$WORKDIR&quot; ]]; then
+  if [[ -d /mnt/mSATA ]]; then WORKDIR=/mnt/mSATA/treesheets-local; else WORKDIR=&quot;$HOME/treesheets-local&quot;; fi
+fi
+
+ARCH=&quot;$(uname -m)&quot;
+OS_ID=&quot;$(. /etc/os-release &amp;&amp; echo &quot;${ID:-unknown}&quot;)&quot;
+OS_VER=&quot;$(. /etc/os-release &amp;&amp; echo &quot;${VERSION_ID:-unknown}&quot;)&quot;
+GLIBC_STR=&quot;$(ldd --version 2&gt;/dev/null | head -n1 || true)&quot;
+
+log &quot;Host: $(hostname) | Arch: $ARCH | OS: $OS_ID $OS_VER&quot;
+log &quot;glibc: ${GLIBC_STR:-unknown}&quot;
+log &quot;Workdir: $WORKDIR&quot;
+log &quot;Jobs: $JOBS&quot;
+
+SRCROOT=&quot;$WORKDIR/src&quot;
+REPODIR=&quot;$SRCROOT/treesheets&quot;
+BUILDDIR=&quot;$WORKDIR/_build&quot;
+DISTDIR=&quot;$WORKDIR/dist&quot;
+
+mkdir -p &quot;$SRCROOT&quot; &quot;$DISTDIR&quot;
+
+has_bullseye_backports(){
+  grep -Rqs &quot;bullseye-backports&quot; /etc/apt/sources.list /etc/apt/sources.list.d/*.list 2&gt;/dev/null
+}
+
+apt_install(){
+  sudo_cmd apt-get -o Acquire::Retries=3 install -y &quot;$@&quot;
+}
+
+apt_install_targeted(){
+  local target=&quot;$1&quot;; shift
+  if has_bullseye_backports; then
+    sudo_cmd apt-get -o Acquire::Retries=3 install -y -t &quot;$target&quot; &quot;$@&quot; || return 1
+  else
+    return 1
+  fi
+}
+
+install_deps(){
+  log &quot;Installing dependencies via apt (Debian 11 compatible)&quot;
+  sudo_cmd apt-get -o Acquire::Retries=3 update
+
+  apt_install \
+    ca-certificates git curl file zip unzip \
+    build-essential pkg-config ninja-build fakeroot dpkg-dev \
+    cmake \
+    libcurl4-openssl-dev
+
+  apt_install libgtk-3-dev libxext-dev
+
+  # EGL/GLES headers
+  apt_install libegl-dev libgles-dev libegl1-mesa-dev mesa-common-dev
+
+  # OpenGL dev package can help FindOpenGL on some setups (even if runtime uses GLES)
+  sudo_cmd apt-get -o Acquire::Retries=3 install -y libgl1-mesa-dev || true
+
+  # Optional debug helpers
+  sudo_cmd apt-get -o Acquire::Retries=3 install -y mesa-utils mesa-utils-extra || true
+
+  have cmake || die &quot;cmake missing after install&quot;
+  have git  || die &quot;git missing after install&quot;
+  have gcc  || die &quot;gcc missing after install (build-essential should provide it)&quot;
+  have g++  || die &quot;g++ missing after install (build-essential should provide it)&quot;
+}
+
+clone_or_update(){
+  if [[ ! -d &quot;$REPODIR/.git&quot; ]]; then
+    log &quot;Cloning: $REPO_URL ($BRANCH)&quot;
+    git clone --branch &quot;$BRANCH&quot; --depth 1 &quot;$REPO_URL&quot; &quot;$REPODIR&quot;
+  else
+    log &quot;Repo exists: $REPODIR&quot;
+    if [[ &quot;$NO_UPDATE&quot; -eq 0 ]]; then
+      log &quot;Updating repo (fetch + reset to origin/$BRANCH)&quot;
+      (cd &quot;$REPODIR&quot; &amp;&amp; git fetch --depth 1 origin &quot;$BRANCH&quot; &amp;&amp; git reset --hard &quot;origin/$BRANCH&quot;)
+    else
+      log &quot;Skipping repo update (--no-update)&quot;
+    fi
+  fi
+}
+
+# Does this libstdc++ provide std::from_chars for double?
+compiler_has_float_from_chars(){
+  local cxx=&quot;$1&quot;
+  local tmpd
+  tmpd=&quot;$(mktemp -d)&quot;
+  cat &gt;&quot;$tmpd/t.cpp&quot; &lt;&lt;&#39;EOF&#39;
+#include &lt;charconv&gt;
+int main(){
+  double x = 0;
+  auto r = std::from_chars(&quot;1.25&quot;, &quot;1.25&quot;+4, x);
+  (void)r;
+}
+EOF
+  &quot;$cxx&quot; -std=c++17 -c &quot;$tmpd/t.cpp&quot; -o &quot;$tmpd/t.o&quot; &gt;/dev/null 2&gt;&amp;1
+  local ok=$?
+  rm -rf &quot;$tmpd&quot;
+  return $ok
+}
+
+# Global outputs from toolchain selection
+CC_PATH=&quot;&quot;
+CXX_PATH=&quot;&quot;
+
+try_pick_toolchain(){
+  local cc=&quot;$1&quot; cxx=&quot;$2&quot;
+  local ccpath cxxpath
+  ccpath=&quot;$(command -v &quot;$cc&quot; 2&gt;/dev/null || true)&quot;
+  cxxpath=&quot;$(command -v &quot;$cxx&quot; 2&gt;/dev/null || true)&quot;
+  [[ -n &quot;$ccpath&quot; &amp;&amp; -n &quot;$cxxpath&quot; ]] || return 1
+  CC_PATH=&quot;$ccpath&quot;
+  CXX_PATH=&quot;$cxxpath&quot;
+  return 0
+}
+
+select_toolchain(){
+  # Always set a working default first.
+  try_pick_toolchain gcc g++ || die &quot;Could not find gcc/g++ in PATH&quot;
+
+  local major
+  major=&quot;$(g++ -dumpversion 2&gt;/dev/null | cut -d. -f1 || echo unknown)&quot;
+  log &quot;Default g++ major: ${major}&quot;
+
+  if compiler_has_float_from_chars &quot;$CXX_PATH&quot;; then
+    log &quot;Toolchain OK: system g++ provides float from_chars&quot;
+    return 0
+  fi
+
+  warn &quot;Current C++ stdlib likely lacks std::from_chars(double). We&#39;ll patch Lobster unless a newer GCC is available.&quot;
+
+  # If user didn&#39;t ask to try installing newer GCC, still prefer an already-installed newer one.
+  for v in 12 11; do
+    if have &quot;g++-$v&quot;; then
+      if compiler_has_float_from_chars &quot;g++-$v&quot;; then
+        log &quot;Using already-installed toolchain: gcc-$v / g++-$v&quot;
+        try_pick_toolchain &quot;gcc-$v&quot; &quot;g++-$v&quot; || true
+        return 0
+      fi
+    fi
+  done
+
+  [[ &quot;$TRY_NEWER_GCC&quot; -eq 1 ]] || return 0
+
+  # Best-effort attempt to install newer GCC. Non-fatal if not available.
+  for v in 11 12; do
+    # Quick check: is there any candidate?
+    if apt-cache policy &quot;g++-$v&quot; 2&gt;/dev/null | grep -q &quot;Candidate:&quot;; then
+      log &quot;Attempting to install gcc-$v/g++-$v (best-effort)&quot;
+
+      if apt_install_targeted bullseye-backports &quot;gcc-$v&quot; &quot;g++-$v&quot;; then
+        true
+      else
+        apt_install &quot;gcc-$v&quot; &quot;g++-$v&quot; || true
+      fi
+
+      if have &quot;g++-$v&quot; &amp;&amp; compiler_has_float_from_chars &quot;g++-$v&quot;; then
+        log &quot;Using toolchain: gcc-$v / g++-$v&quot;
+        try_pick_toolchain &quot;gcc-$v&quot; &quot;g++-$v&quot; || true
+        return 0
+      fi
+    fi
+  done
+
+  warn &quot;Could not obtain a newer GCC via apt. Continuing with system gcc/g++ and Lobster patch.&quot;
+  return 0
+}
+
+configure_cmake(){
+  [[ -n &quot;$CC_PATH&quot; &amp;&amp; -n &quot;$CXX_PATH&quot; ]] || die &quot;Internal error: empty compiler paths&quot;
+  [[ -x &quot;$CC_PATH&quot; &amp;&amp; -x &quot;$CXX_PATH&quot; ]] || die &quot;Compiler not executable: cc=&#39;$CC_PATH&#39; cxx=&#39;$CXX_PATH&#39;&quot;
+
+  if [[ &quot;$CLEAN&quot; -eq 1 ]]; then
+    log &quot;Cleaning build directory: $BUILDDIR&quot;
+    rm -rf &quot;$BUILDDIR&quot;
+  fi
+  mkdir -p &quot;$BUILDDIR&quot;
+
+  local gfx=&quot;$PREFER_GFX&quot;
+  if [[ &quot;$gfx&quot; == &quot;auto&quot; ]]; then
+    if [[ -e /usr/include/EGL/egl.h &amp;&amp; -e /usr/include/GLES2/gl2.h ]]; then gfx=&quot;gles&quot;; else gfx=&quot;gl&quot;; fi
+  fi
+  log &quot;Graphics intent: $gfx&quot;
+
+  local extra_flags=()
+  if [[ &quot;$gfx&quot; == &quot;gles&quot; ]]; then
+    extra_flags+=(&quot;-DwxUSE_GLCANVAS_EGL=ON&quot;)
+  fi
+
+  log &quot;Using CC=$CC_PATH, CXX=$CXX_PATH&quot;
+  log &quot;Configuring CMake (Release)&quot;
+  (
+    cd &quot;$REPODIR&quot;
+    cmake -S . -B &quot;$BUILDDIR&quot; \
+      -G Ninja \
+      -DCMAKE_BUILD_TYPE=Release \
+      -DCMAKE_INSTALL_PREFIX=/usr \
+      -DCPACK_PACKAGING_INSTALL_PREFIX=/usr \
+      -DCMAKE_C_COMPILER=&quot;$CC_PATH&quot; \
+      -DCMAKE_CXX_COMPILER=&quot;$CXX_PATH&quot; \
+      -DwxBUILD_SHARED=OFF \
+      -DwxBUILD_INSTALL=OFF \
+      -DTREESHEETS_VERSION=&quot;$(date +%Y%m%d%H%M)&quot; \
+      &quot;${extra_flags[@]}&quot;
+  )
+}
+
+patch_lobster_if_needed(){
+  [[ &quot;$ALLOW_LOBSTER_PATCH&quot; -eq 1 ]] || return 0
+
+  # If compiler supports float from_chars, no patch.
+  if compiler_has_float_from_chars &quot;$CXX_PATH&quot;; then
+    return 0
+  fi
+
+  local f=&quot;$BUILDDIR/_deps/lobster-src/dev/src/lobster/string_tools.h&quot;
+  if [[ ! -f &quot;$f&quot; ]]; then
+    warn &quot;Lobster header not found yet ($f). If the build fails with from_chars(double), re-run with --clean.&quot;
+    return 0
+  fi
+
+  if grep -q &quot;TREESHEETS_LOCAL_FLOAT_FROM_CHARS_FALLBACK&quot; &quot;$f&quot;; then
+    log &quot;Lobster already patched for float from_chars fallback&quot;
+    return 0
+  fi
+
+  log &quot;Patching Lobster: replace std::from_chars(float/double) with strto*() fallback&quot;
+
+  # Replace the single line in parse_float() that calls from_chars() with a guarded fallback.
+  # This avoids relying on feature-test macros that don&#39;t reliably encode float-from_chars support.
+  perl -0777 -i -pe &#39;s/\Qauto res = from_chars(sv.data(), sv.data() + sv.size(), val);\E/
+\/\/ TREESHEETS_LOCAL_FLOAT_FROM_CHARS_FALLBACK\n#if defined(__GNUC__) &amp;&amp; (__GNUC__ &gt;= 11)\n        auto res = from_chars(sv.data(), sv.data() + sv.size(), val);\n#else\n        \/\/ GCC\/libstdc++ &lt; 11 often lacks std::from_chars for float\/double.\n        \/\/ Fallback: copy to NUL-terminated buffer and use strto*().\n        std::string _tmp(sv);\n        char* _end = nullptr;\n        if constexpr (std::is_same_v&lt;T, float&gt;) {\n            val = std::strtof(_tmp.c_str(), &amp;_end);\n        } else if constexpr (std::is_same_v&lt;T, double&gt;) {\n            val = std::strtod(_tmp.c_str(), &amp;_end);\n        } else {\n            val = (T)std::strtold(_tmp.c_str(), &amp;_end);\n        }\n        std::from_chars_result res{sv.data(), std::errc{}};\n        if (!_end || _end == _tmp.c_str()) {\n            res.ec = std::errc::invalid_argument;\n            res.ptr = sv.data();\n        } else {\n            res.ptr = sv.data() + (size_t)(_end - _tmp.c_str());\n        }\n#endif\n/smg&#39; &quot;$f&quot;
+
+  # Ensure required headers are present (best-effort, non-fatal).
+  if ! grep -q &quot;&lt;cstdlib&gt;&quot; &quot;$f&quot;; then
+    perl -i -pe &#39;if($.==1){print &quot;#include &lt;cstdlib&gt;\n&quot;}&#39; &quot;$f&quot; || true
+  fi
+}
+
+build_and_package(){
+  log &quot;Building + packaging (cmake --build ... --target package), jobs=$JOBS&quot;
+  cmake --build &quot;$BUILDDIR&quot; --target package -j&quot;$JOBS&quot;
+}
+
+collect_artifacts(){
+  log &quot;Collecting artifacts to: $DISTDIR&quot;
+  shopt -s nullglob
+  local debs=(&quot;$BUILDDIR&quot;/treesheets_*.deb)
+  [[ ${#debs[@]} -gt 0 ]] || die &quot;No .deb artifacts found in $BUILDDIR (build likely failed).&quot;
+  rm -f &quot;$DISTDIR&quot;/*.deb &quot;$DISTDIR&quot;/SHA256SUMS 2&gt;/dev/null || true
+  for f in &quot;${debs[@]}&quot;; do cp -av -- &quot;$f&quot; &quot;$DISTDIR/&quot;; done
+  (cd &quot;$DISTDIR&quot; &amp;&amp; sha256sum ./*.deb | tee SHA256SUMS)
+  ls -lh &quot;$DISTDIR&quot;/*.deb
+}
+
+install_artifact(){
+  [[ &quot;$DO_INSTALL&quot; -eq 1 ]] || return 0
+  shopt -s nullglob
+  local newest
+  newest=&quot;$(ls -t &quot;$DISTDIR&quot;/*.deb | head -n1)&quot;
+  log &quot;Installing: $newest&quot;
+  sudo_cmd dpkg -i &quot;$newest&quot; || { warn &quot;dpkg failed; attempting apt-get -f install&quot;; sudo_cmd apt-get -y -f install; }
+}
+
+# Run
+[[ &quot;$NO_DEPS&quot; -eq 1 ]] || install_deps
+clone_or_update
+
+select_toolchain
+[[ -n &quot;$CC_PATH&quot; &amp;&amp; -n &quot;$CXX_PATH&quot; ]] || die &quot;Toolchain selection failed&quot;
+
+configure_cmake
+patch_lobster_if_needed
+build_and_package
+collect_artifacts
+install_artifact
+
+log &quot;Done.&quot;" data-download-link="" data-download-label="Download Bash">
+  <code class="language-bash">#!/usr/bin/env bash
+#
+# TreeSheets local build for Debian 11 (bullseye) on arm64/aarch64.
+#
+# Key constraints (from your environment):
+#   - glibc stays Debian-11-compatible (2.31)
+#   - Prefer hardware OpenGL ES via EGL/GLES (Mali-G610) when GLX/OpenGL is llvmpipe
+#   - Debian 11 default GCC 10 libstdc++ typically lacks std::from_chars(float/double)
+#     which breaks Lobster; we patch Lobster to use strto*() fallback when needed.
+#
+# What this script does:
+#   1) Installs Debian-11-safe deps (idempotent)
+#   2) Clones/updates TreeSheets
+#   3) Selects a C/C++ toolchain robustly (never captures apt output into CC/CXX)
+#        - Uses system gcc/g++ by default
+#        - Optionally tries gcc-11/12 if already installed or installable
+#        - Never fails just because gcc-11/12 are unavailable
+#   4) Configures CMake + prefers EGL/GLES (wxUSE_GLCANVAS_EGL)
+#   5) Patches Lobster if float-from_chars is missing
+#   6) Builds the CPack &#39;package&#39; target to produce a .deb
+#
+# Usage:
+#   chmod +x ./build-treesheets-debian11-arm64.sh
+#   ./build-treesheets-debian11-arm64.sh --clean
+#
+# Options:
+#   --workdir DIR
+#   --clean
+#   --no-update
+#   --no-deps
+#   --prefer-gles | --prefer-gl
+#   --jobs N
+#   --install
+#   --no-lobster-patch
+#   --try-newer-gcc    (attempt to apt-install gcc-11/12 if available; non-fatal)
+#
+set -euo pipefail
+IFS=$&#39;\n\t&#39;
+
+log(){ printf &#39;\n[treesheets] %s\n&#39; &quot;$*&quot; &gt;&amp;2; }
+warn(){ printf &#39;\n[treesheets][WARN] %s\n&#39; &quot;$*&quot; &gt;&amp;2; }
+die(){ printf &#39;\n[treesheets][ERROR] %s\n&#39; &quot;$*&quot; &gt;&amp;2; exit 1; }
+
+have(){ command -v &quot;$1&quot; &gt;/dev/null 2&gt;&amp;1; }
+
+sudo_cmd(){
+  if [[ &quot;${EUID:-$(id -u)}&quot; -eq 0 ]]; then &quot;$@&quot;; else sudo &quot;$@&quot;; fi
+}
+
+# Defaults
+REPO_URL=&quot;https://github.com/aardappel/treesheets.git&quot;
+BRANCH=&quot;master&quot;
+WORKDIR=&quot;&quot;
+CLEAN=0
+NO_UPDATE=0
+NO_DEPS=0
+PREFER_GFX=&quot;auto&quot;   # auto|gles|gl
+ALLOW_LOBSTER_PATCH=1
+JOBS=&quot;$(getconf _NPROCESSORS_ONLN 2&gt;/dev/null || echo 4)&quot;
+DO_INSTALL=0
+TRY_NEWER_GCC=0
+
+while [[ $# -gt 0 ]]; do
+  case &quot;$1&quot; in
+    --workdir) WORKDIR=&quot;$2&quot;; shift 2;;
+    --clean) CLEAN=1; shift;;
+    --no-update) NO_UPDATE=1; shift;;
+    --no-deps) NO_DEPS=1; shift;;
+    --prefer-gles) PREFER_GFX=&quot;gles&quot;; shift;;
+    --prefer-gl) PREFER_GFX=&quot;gl&quot;; shift;;
+    --no-lobster-patch) ALLOW_LOBSTER_PATCH=0; shift;;
+    --jobs) JOBS=&quot;$2&quot;; shift 2;;
+    --install) DO_INSTALL=1; shift;;
+    --try-newer-gcc) TRY_NEWER_GCC=1; shift;;
+    -h|--help)
+      sed -n &#39;1,220p&#39; &quot;$0&quot; | sed &#39;s/^# \{0,1\}//&#39;; exit 0;;
+    *) die &quot;Unknown arg: $1&quot;;;
+  esac
+done
+
+if [[ -z &quot;$WORKDIR&quot; ]]; then
+  if [[ -d /mnt/mSATA ]]; then WORKDIR=/mnt/mSATA/treesheets-local; else WORKDIR=&quot;$HOME/treesheets-local&quot;; fi
+fi
+
+ARCH=&quot;$(uname -m)&quot;
+OS_ID=&quot;$(. /etc/os-release &amp;&amp; echo &quot;${ID:-unknown}&quot;)&quot;
+OS_VER=&quot;$(. /etc/os-release &amp;&amp; echo &quot;${VERSION_ID:-unknown}&quot;)&quot;
+GLIBC_STR=&quot;$(ldd --version 2&gt;/dev/null | head -n1 || true)&quot;
+
+log &quot;Host: $(hostname) | Arch: $ARCH | OS: $OS_ID $OS_VER&quot;
+log &quot;glibc: ${GLIBC_STR:-unknown}&quot;
+log &quot;Workdir: $WORKDIR&quot;
+log &quot;Jobs: $JOBS&quot;
+
+SRCROOT=&quot;$WORKDIR/src&quot;
+REPODIR=&quot;$SRCROOT/treesheets&quot;
+BUILDDIR=&quot;$WORKDIR/_build&quot;
+DISTDIR=&quot;$WORKDIR/dist&quot;
+
+mkdir -p &quot;$SRCROOT&quot; &quot;$DISTDIR&quot;
+
+has_bullseye_backports(){
+  grep -Rqs &quot;bullseye-backports&quot; /etc/apt/sources.list /etc/apt/sources.list.d/*.list 2&gt;/dev/null
+}
+
+apt_install(){
+  sudo_cmd apt-get -o Acquire::Retries=3 install -y &quot;$@&quot;
+}
+
+apt_install_targeted(){
+  local target=&quot;$1&quot;; shift
+  if has_bullseye_backports; then
+    sudo_cmd apt-get -o Acquire::Retries=3 install -y -t &quot;$target&quot; &quot;$@&quot; || return 1
+  else
+    return 1
+  fi
+}
+
+install_deps(){
+  log &quot;Installing dependencies via apt (Debian 11 compatible)&quot;
+  sudo_cmd apt-get -o Acquire::Retries=3 update
+
+  apt_install \
+    ca-certificates git curl file zip unzip \
+    build-essential pkg-config ninja-build fakeroot dpkg-dev \
+    cmake \
+    libcurl4-openssl-dev
+
+  apt_install libgtk-3-dev libxext-dev
+
+  # EGL/GLES headers
+  apt_install libegl-dev libgles-dev libegl1-mesa-dev mesa-common-dev
+
+  # OpenGL dev package can help FindOpenGL on some setups (even if runtime uses GLES)
+  sudo_cmd apt-get -o Acquire::Retries=3 install -y libgl1-mesa-dev || true
+
+  # Optional debug helpers
+  sudo_cmd apt-get -o Acquire::Retries=3 install -y mesa-utils mesa-utils-extra || true
+
+  have cmake || die &quot;cmake missing after install&quot;
+  have git  || die &quot;git missing after install&quot;
+  have gcc  || die &quot;gcc missing after install (build-essential should provide it)&quot;
+  have g++  || die &quot;g++ missing after install (build-essential should provide it)&quot;
+}
+
+clone_or_update(){
+  if [[ ! -d &quot;$REPODIR/.git&quot; ]]; then
+    log &quot;Cloning: $REPO_URL ($BRANCH)&quot;
+    git clone --branch &quot;$BRANCH&quot; --depth 1 &quot;$REPO_URL&quot; &quot;$REPODIR&quot;
+  else
+    log &quot;Repo exists: $REPODIR&quot;
+    if [[ &quot;$NO_UPDATE&quot; -eq 0 ]]; then
+      log &quot;Updating repo (fetch + reset to origin/$BRANCH)&quot;
+      (cd &quot;$REPODIR&quot; &amp;&amp; git fetch --depth 1 origin &quot;$BRANCH&quot; &amp;&amp; git reset --hard &quot;origin/$BRANCH&quot;)
+    else
+      log &quot;Skipping repo update (--no-update)&quot;
+    fi
+  fi
+}
+
+# Does this libstdc++ provide std::from_chars for double?
+compiler_has_float_from_chars(){
+  local cxx=&quot;$1&quot;
+  local tmpd
+  tmpd=&quot;$(mktemp -d)&quot;
+  cat &gt;&quot;$tmpd/t.cpp&quot; &lt;&lt;&#39;EOF&#39;
+#include &lt;charconv&gt;
+int main(){
+  double x = 0;
+  auto r = std::from_chars(&quot;1.25&quot;, &quot;1.25&quot;+4, x);
+  (void)r;
+}
+EOF
+  &quot;$cxx&quot; -std=c++17 -c &quot;$tmpd/t.cpp&quot; -o &quot;$tmpd/t.o&quot; &gt;/dev/null 2&gt;&amp;1
+  local ok=$?
+  rm -rf &quot;$tmpd&quot;
+  return $ok
+}
+
+# Global outputs from toolchain selection
+CC_PATH=&quot;&quot;
+CXX_PATH=&quot;&quot;
+
+try_pick_toolchain(){
+  local cc=&quot;$1&quot; cxx=&quot;$2&quot;
+  local ccpath cxxpath
+  ccpath=&quot;$(command -v &quot;$cc&quot; 2&gt;/dev/null || true)&quot;
+  cxxpath=&quot;$(command -v &quot;$cxx&quot; 2&gt;/dev/null || true)&quot;
+  [[ -n &quot;$ccpath&quot; &amp;&amp; -n &quot;$cxxpath&quot; ]] || return 1
+  CC_PATH=&quot;$ccpath&quot;
+  CXX_PATH=&quot;$cxxpath&quot;
+  return 0
+}
+
+select_toolchain(){
+  # Always set a working default first.
+  try_pick_toolchain gcc g++ || die &quot;Could not find gcc/g++ in PATH&quot;
+
+  local major
+  major=&quot;$(g++ -dumpversion 2&gt;/dev/null | cut -d. -f1 || echo unknown)&quot;
+  log &quot;Default g++ major: ${major}&quot;
+
+  if compiler_has_float_from_chars &quot;$CXX_PATH&quot;; then
+    log &quot;Toolchain OK: system g++ provides float from_chars&quot;
+    return 0
+  fi
+
+  warn &quot;Current C++ stdlib likely lacks std::from_chars(double). We&#39;ll patch Lobster unless a newer GCC is available.&quot;
+
+  # If user didn&#39;t ask to try installing newer GCC, still prefer an already-installed newer one.
+  for v in 12 11; do
+    if have &quot;g++-$v&quot;; then
+      if compiler_has_float_from_chars &quot;g++-$v&quot;; then
+        log &quot;Using already-installed toolchain: gcc-$v / g++-$v&quot;
+        try_pick_toolchain &quot;gcc-$v&quot; &quot;g++-$v&quot; || true
+        return 0
+      fi
+    fi
+  done
+
+  [[ &quot;$TRY_NEWER_GCC&quot; -eq 1 ]] || return 0
+
+  # Best-effort attempt to install newer GCC. Non-fatal if not available.
+  for v in 11 12; do
+    # Quick check: is there any candidate?
+    if apt-cache policy &quot;g++-$v&quot; 2&gt;/dev/null | grep -q &quot;Candidate:&quot;; then
+      log &quot;Attempting to install gcc-$v/g++-$v (best-effort)&quot;
+
+      if apt_install_targeted bullseye-backports &quot;gcc-$v&quot; &quot;g++-$v&quot;; then
+        true
+      else
+        apt_install &quot;gcc-$v&quot; &quot;g++-$v&quot; || true
+      fi
+
+      if have &quot;g++-$v&quot; &amp;&amp; compiler_has_float_from_chars &quot;g++-$v&quot;; then
+        log &quot;Using toolchain: gcc-$v / g++-$v&quot;
+        try_pick_toolchain &quot;gcc-$v&quot; &quot;g++-$v&quot; || true
+        return 0
+      fi
+    fi
+  done
+
+  warn &quot;Could not obtain a newer GCC via apt. Continuing with system gcc/g++ and Lobster patch.&quot;
+  return 0
+}
+
+configure_cmake(){
+  [[ -n &quot;$CC_PATH&quot; &amp;&amp; -n &quot;$CXX_PATH&quot; ]] || die &quot;Internal error: empty compiler paths&quot;
+  [[ -x &quot;$CC_PATH&quot; &amp;&amp; -x &quot;$CXX_PATH&quot; ]] || die &quot;Compiler not executable: cc=&#39;$CC_PATH&#39; cxx=&#39;$CXX_PATH&#39;&quot;
+
+  if [[ &quot;$CLEAN&quot; -eq 1 ]]; then
+    log &quot;Cleaning build directory: $BUILDDIR&quot;
+    rm -rf &quot;$BUILDDIR&quot;
+  fi
+  mkdir -p &quot;$BUILDDIR&quot;
+
+  local gfx=&quot;$PREFER_GFX&quot;
+  if [[ &quot;$gfx&quot; == &quot;auto&quot; ]]; then
+    if [[ -e /usr/include/EGL/egl.h &amp;&amp; -e /usr/include/GLES2/gl2.h ]]; then gfx=&quot;gles&quot;; else gfx=&quot;gl&quot;; fi
+  fi
+  log &quot;Graphics intent: $gfx&quot;
+
+  local extra_flags=()
+  if [[ &quot;$gfx&quot; == &quot;gles&quot; ]]; then
+    extra_flags+=(&quot;-DwxUSE_GLCANVAS_EGL=ON&quot;)
+  fi
+
+  log &quot;Using CC=$CC_PATH, CXX=$CXX_PATH&quot;
+  log &quot;Configuring CMake (Release)&quot;
+  (
+    cd &quot;$REPODIR&quot;
+    cmake -S . -B &quot;$BUILDDIR&quot; \
+      -G Ninja \
+      -DCMAKE_BUILD_TYPE=Release \
+      -DCMAKE_INSTALL_PREFIX=/usr \
+      -DCPACK_PACKAGING_INSTALL_PREFIX=/usr \
+      -DCMAKE_C_COMPILER=&quot;$CC_PATH&quot; \
+      -DCMAKE_CXX_COMPILER=&quot;$CXX_PATH&quot; \
+      -DwxBUILD_SHARED=OFF \
+      -DwxBUILD_INSTALL=OFF \
+      -DTREESHEETS_VERSION=&quot;$(date +%Y%m%d%H%M)&quot; \
+      &quot;${extra_flags[@]}&quot;
+  )
+}
+
+patch_lobster_if_needed(){
+  [[ &quot;$ALLOW_LOBSTER_PATCH&quot; -eq 1 ]] || return 0
+
+  # If compiler supports float from_chars, no patch.
+  if compiler_has_float_from_chars &quot;$CXX_PATH&quot;; then
+    return 0
+  fi
+
+  local f=&quot;$BUILDDIR/_deps/lobster-src/dev/src/lobster/string_tools.h&quot;
+  if [[ ! -f &quot;$f&quot; ]]; then
+    warn &quot;Lobster header not found yet ($f). If the build fails with from_chars(double), re-run with --clean.&quot;
+    return 0
+  fi
+
+  if grep -q &quot;TREESHEETS_LOCAL_FLOAT_FROM_CHARS_FALLBACK&quot; &quot;$f&quot;; then
+    log &quot;Lobster already patched for float from_chars fallback&quot;
+    return 0
+  fi
+
+  log &quot;Patching Lobster: replace std::from_chars(float/double) with strto*() fallback&quot;
+
+  # Replace the single line in parse_float() that calls from_chars() with a guarded fallback.
+  # This avoids relying on feature-test macros that don&#39;t reliably encode float-from_chars support.
+  perl -0777 -i -pe &#39;s/\Qauto res = from_chars(sv.data(), sv.data() + sv.size(), val);\E/
+\/\/ TREESHEETS_LOCAL_FLOAT_FROM_CHARS_FALLBACK\n#if defined(__GNUC__) &amp;&amp; (__GNUC__ &gt;= 11)\n        auto res = from_chars(sv.data(), sv.data() + sv.size(), val);\n#else\n        \/\/ GCC\/libstdc++ &lt; 11 often lacks std::from_chars for float\/double.\n        \/\/ Fallback: copy to NUL-terminated buffer and use strto*().\n        std::string _tmp(sv);\n        char* _end = nullptr;\n        if constexpr (std::is_same_v&lt;T, float&gt;) {\n            val = std::strtof(_tmp.c_str(), &amp;_end);\n        } else if constexpr (std::is_same_v&lt;T, double&gt;) {\n            val = std::strtod(_tmp.c_str(), &amp;_end);\n        } else {\n            val = (T)std::strtold(_tmp.c_str(), &amp;_end);\n        }\n        std::from_chars_result res{sv.data(), std::errc{}};\n        if (!_end || _end == _tmp.c_str()) {\n            res.ec = std::errc::invalid_argument;\n            res.ptr = sv.data();\n        } else {\n            res.ptr = sv.data() + (size_t)(_end - _tmp.c_str());\n        }\n#endif\n/smg&#39; &quot;$f&quot;
+
+  # Ensure required headers are present (best-effort, non-fatal).
+  if ! grep -q &quot;&lt;cstdlib&gt;&quot; &quot;$f&quot;; then
+    perl -i -pe &#39;if($.==1){print &quot;#include &lt;cstdlib&gt;\n&quot;}&#39; &quot;$f&quot; || true
+  fi
+}
+
+build_and_package(){
+  log &quot;Building + packaging (cmake --build ... --target package), jobs=$JOBS&quot;
+  cmake --build &quot;$BUILDDIR&quot; --target package -j&quot;$JOBS&quot;
+}
+
+collect_artifacts(){
+  log &quot;Collecting artifacts to: $DISTDIR&quot;
+  shopt -s nullglob
+  local debs=(&quot;$BUILDDIR&quot;/treesheets_*.deb)
+  [[ ${#debs[@]} -gt 0 ]] || die &quot;No .deb artifacts found in $BUILDDIR (build likely failed).&quot;
+  rm -f &quot;$DISTDIR&quot;/*.deb &quot;$DISTDIR&quot;/SHA256SUMS 2&gt;/dev/null || true
+  for f in &quot;${debs[@]}&quot;; do cp -av -- &quot;$f&quot; &quot;$DISTDIR/&quot;; done
+  (cd &quot;$DISTDIR&quot; &amp;&amp; sha256sum ./*.deb | tee SHA256SUMS)
+  ls -lh &quot;$DISTDIR&quot;/*.deb
+}
+
+install_artifact(){
+  [[ &quot;$DO_INSTALL&quot; -eq 1 ]] || return 0
+  shopt -s nullglob
+  local newest
+  newest=&quot;$(ls -t &quot;$DISTDIR&quot;/*.deb | head -n1)&quot;
+  log &quot;Installing: $newest&quot;
+  sudo_cmd dpkg -i &quot;$newest&quot; || { warn &quot;dpkg failed; attempting apt-get -f install&quot;; sudo_cmd apt-get -y -f install; }
+}
+
+# Run
+[[ &quot;$NO_DEPS&quot; -eq 1 ]] || install_deps
+clone_or_update
+
+select_toolchain
+[[ -n &quot;$CC_PATH&quot; &amp;&amp; -n &quot;$CXX_PATH&quot; ]] || die &quot;Toolchain selection failed&quot;
+
+configure_cmake
+patch_lobster_if_needed
+build_and_package
+collect_artifacts
+install_artifact
+
+log &quot;Done.&quot;</code>
+</section>
+
+        </div>
+        
+          URL: https://ib.bsb.br/treesheets-build
+        
+      </article>
+      <nav class="post-navigation-combined" aria-label="Post navigation">
+        <!-- Chronological Navigation (always visible at 40vh) -->
+        
+          <div class="nav-arrow chronological prev">
+            <a href="/rk3588-custom/" title="rk3588 custom documentation" rel="prev">
+              <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAC0AAAAtCAYAAAA6GuKaAAAAAXNSR0IArs4c6QAAAxVJREFUaEPt18FqG1cUBuD/nLkzI42UiVInkFLTCAKhS+9KA+3Kq1L8AAHjhR7AKz+ADV55qUfoqhvThTfdmC4KzTKmYJrELshJW9PIlSeKRpqZe88pUtouihvVRknqMNoMzD1zdPXNrzMM4RJ+6BLuGeWm39RdK6VL6VcIlPEo41HG401loJQupS8mUM7pi7md/6p3UtoHUJzf4vVecZb0e0EQfB7H8b0kSeqqummt/eb1buN83SebNsZ8QkQCYHVpaenu/v7+ra2tLRwdHWF1ddWq6hfM3BCRE2b+FcBHACQAHo1E5v9c+5mIhkR0e3z0VQ8LotuqWlXVw/GRmT8QkdMK89McuAOAAfwoIu8z85yIHBPRKRGN1/IAeDx0rul53hivo6psrf2ejDGfEtFOu92u7O3tBWtra2i322g0GhgOh9je3ka325UPax7fCR0iw+lp4aLxr70aeOmgkChTRY3JGSb73EroERD73uB54WpOgdhwZkXNQNQLiVDzOU1yFymAhu+lqZVopIqISQKmPLFS+atHv3A1q8AVQ+lXP/VHRPQx+b6frKysxMvLy1hfX0ez2USv18PCwgLiOEaSJKhWq/jhwQN8dnIfVOS4dsWHqCJ5YREGjBuNEMfd0eTc9WshBqnFYGhRqxrUIoNuLwMT4eb1Cp6dZshywdW6mZzr9QsEPuPmXIhfno3gnGKuEWCUC14MLKoVb1L72+8Zvj3JOl/udZt/S7darUqn0wlarRZ2d3cxPz+PJ8dPsPP1Doq8kIbL+cawjxBIM8MRFAidpBlRpIbhFc55gM2NF5IIQtVBRlRTZgTWZQ4wzvc8spO1NPM4Gr9Wh1bSDIjU98C5E0PIC8OVSX+Rlz08hl+4/LsML6X/menFxcW7BwcHtzY2NvDw8CE21zf/NdMAHskFMs3MT/EfMg3gsTsr02f8byfTo16v3+v3+//f6fGKgXNp5vT5huZbqH4nH+NvwXH6V5bS041mU1FKz8ZxepdSerrRbCpK6dk4Tu9SSk83mk1FKT0bx+ldSunpRrOpuJTSfwBcuImxpyA7XgAAAABJRU5ErkJggg==" alt="Previous article" width="45" height="45" loading="lazy">
+            </a>
+          </div>
+        
+        
+            
+            
+              
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+                  
+                  
+              
+              
+              
+              <!-- Navigation block for tag "scratchpad"; default display for the first tag -->
+              <div class="nav-group tags" id="tag-nav-scratchpad" style="display: block;">
+                <div class="nav-arrow tags prev">
+                  
+                    <a href="/rk3588-custom/" title="rk3588 custom documentation" rel="prev">
+                      <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAC0AAAAtCAYAAAA6GuKaAAAAAXNSR0IArs4c6QAAAxVJREFUaEPt18FqG1cUBuD/nLkzI42UiVInkFLTCAKhS+9KA+3Kq1L8AAHjhR7AKz+ADV55qUfoqhvThTfdmC4KzTKmYJrELshJW9PIlSeKRpqZe88pUtouihvVRknqMNoMzD1zdPXNrzMM4RJ+6BLuGeWm39RdK6VL6VcIlPEo41HG401loJQupS8mUM7pi7md/6p3UtoHUJzf4vVecZb0e0EQfB7H8b0kSeqqummt/eb1buN83SebNsZ8QkQCYHVpaenu/v7+ra2tLRwdHWF1ddWq6hfM3BCRE2b+FcBHACQAHo1E5v9c+5mIhkR0e3z0VQ8LotuqWlXVw/GRmT8QkdMK89McuAOAAfwoIu8z85yIHBPRKRGN1/IAeDx0rul53hivo6psrf2ejDGfEtFOu92u7O3tBWtra2i322g0GhgOh9je3ka325UPax7fCR0iw+lp4aLxr70aeOmgkChTRY3JGSb73EroERD73uB54WpOgdhwZkXNQNQLiVDzOU1yFymAhu+lqZVopIqISQKmPLFS+atHv3A1q8AVQ+lXP/VHRPQx+b6frKysxMvLy1hfX0ez2USv18PCwgLiOEaSJKhWq/jhwQN8dnIfVOS4dsWHqCJ5YREGjBuNEMfd0eTc9WshBqnFYGhRqxrUIoNuLwMT4eb1Cp6dZshywdW6mZzr9QsEPuPmXIhfno3gnGKuEWCUC14MLKoVb1L72+8Zvj3JOl/udZt/S7darUqn0wlarRZ2d3cxPz+PJ8dPsPP1Doq8kIbL+cawjxBIM8MRFAidpBlRpIbhFc55gM2NF5IIQtVBRlRTZgTWZQ4wzvc8spO1NPM4Gr9Wh1bSDIjU98C5E0PIC8OVSX+Rlz08hl+4/LsML6X/menFxcW7BwcHtzY2NvDw8CE21zf/NdMAHskFMs3MT/EfMg3gsTsr02f8byfTo16v3+v3+//f6fGKgXNp5vT5huZbqH4nH+NvwXH6V5bS041mU1FKz8ZxepdSerrRbCpK6dk4Tu9SSk83mk1FKT0bx+ldSunpRrOpuJTSfwBcuImxpyA7XgAAAABJRU5ErkJggg==" alt="Previous in Tag" width="45" height="45" loading="lazy">
+                    </a>
+                  
+                </div>
+                <div class="nav-arrow tags next">
+                  
+                    <a href="javascript:void(0)" class="disabled" aria-disabled="true" title="No next in tag">
+                      <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAC0AAAAtCAYAAAA6GuKaAAAAAXNSR0IArs4c6QAAAxVJREFUaEPt18FqG1cUBuD/nLkzI42UiVInkFLTCAKhS+9KA+3Kq1L8AAHjhR7AKz+ADV55qUfoqhvThTfdmC4KzTKmYJrELshJW9PIlSeKRpqZe88pUtouihvVRknqMNoMzD1zdPXNrzMM4RJ+6BLuGeWm39RdK6VL6VcIlPEo41HG401loJQupS8mUM7pi7md/6p3UtoHUJzf4vVecZb0e0EQfB7H8b0kSeqqummt/eb1buN83SebNsZ8QkQCYHVpaenu/v7+ra2tLRwdHWF1ddWq6hfM3BCRE2b+FcBHACQAHo1E5v9c+5mIhkR0e3z0VQ8LotuqWlXVw/GRmT8QkdMK89McuAOAAfwoIu8z85yIHBPRKRGN1/IAeDx0rul53hivo6psrf2ejDGfEtFOu92u7O3tBWtra2i322g0GhgOh9je3ka325UPax7fCR0iw+lp4aLxr70aeOmgkChTRY3JGSb73EroERD73uB54WpOgdhwZkXNQNQLiVDzOU1yFymAhu+lqZVopIqISQKmPLFS+atHv3A1q8AVQ+lXP/VHRPQx+b6frKysxMvLy1hfX0ez2USv18PCwgLiOEaSJKhWq/jhwQN8dnIfVOS4dsWHqCJ5YREGjBuNEMfd0eTc9WshBqnFYGhRqxrUIoNuLwMT4eb1Cp6dZshywdW6mZzr9QsEPuPmXIhfno3gnGKuEWCUC14MLKoVb1L72+8Zvj3JOl/udZt/S7darUqn0wlarRZ2d3cxPz+PJ8dPsPP1Doq8kIbL+cawjxBIM8MRFAidpBlRpIbhFc55gM2NF5IIQtVBRlRTZgTWZQ4wzvc8spO1NPM4Gr9Wh1bSDIjU98C5E0PIC8OVSX+Rlz08hl+4/LsML6X/menFxcW7BwcHtzY2NvDw8CE21zf/NdMAHskFMs3MT/EfMg3gsTsr02f8byfTo16v3+v3+//f6fGKgXNp5vT5huZbqH4nH+NvwXH6V5bS041mU1FKz8ZxepdSerrRbCpK6dk4Tu9SSk83mk1FKT0bx+ldSunpRrOpuJTSfwBcuImxpyA7XgAAAABJRU5ErkJggg==" alt="No next in Tag" width="45" height="45" loading="lazy">
+                    </a>
+                  
+                </div>
+              </div>
+            
+          
+          <!-- JavaScript to Toggle the Tag-based Navigation -->
+          <script>
+            document.addEventListener("DOMContentLoaded", function(){
+              var tagLinks = document.querySelectorAll('.tag-option');
+              tagLinks.forEach(function(link){
+                link.addEventListener('click', function(event){
+                  event.preventDefault();
+                  // Remove "active" class from all tag options.
+                  tagLinks.forEach(function(el){ el.classList.remove('active'); });
+                  // Add active class to the clicked tag option.
+                  this.classList.add('active');
+                  // Hide all tag navigation blocks.
+                  document.querySelectorAll('.nav-group.tags').forEach(function(block){
+                    block.style.display = 'none';
+                  });
+                  // Show the navigation block corresponding to the selected tag.
+                  var tagSlug = this.getAttribute('data-tag');
+                  var target = document.getElementById('tag-nav-' + tagSlug);
+                  if(target) {
+                    target.style.display = 'block';
+                  }
+                });
+              });
+            });
+          </script>
+      </nav>
+      
+    </main>
+    <footer id="bottom-of-page" class="site-footer">
+      <div class="footer-content">
+        <!-- Back to top link -->
+        <a href="#" aria-label="Back to top" class="back2top-link">
+          <span class="sronly">Back to top</span>
+        </a>
+    
+        <!-- Liquid Time Calculation and Display -->
+        
+        
+        
+        <a href="https://ib.bsb.br/404" aria-label="404">
+          2026-01-09 07:21:32
+        </a>
+        &#x23;
+    
+        <!-- Tag Selector -->
+        <ul class="tag-selector">
+          
+            
+            
+              <li>
+                <a href="#" class="tag-option active" data-tag="scratchpad">
+                  scratchpad
+                </a>
+              </li>
+            
+          
+        </ul>
+        &hArr;
+    
+        <!-- GitHub Link -->
+        <a href="https://github.com/ib-bsb-br/ib-bsb-br.github.io" aria-label="GitHub">
+          &#8505;
+        </a>
+    
+        <!-- Homepage Link -->
+        <a href="/" aria-label="Homepage">
+          infoBAG
+        </a>
+    
+        <!-- Copy All Code Button -->
+        <button id="copyAllButton" aria-label="Copy all code">
+          &copy;
+        </button>
+      </div>
+    </footer>
+    <style>
+      .back2top-link {
+        display: inline-block;
+        width: 32px;
+        height: 32px;
+        background: url("/assets/Rope_(Old).gif") center center no-repeat;
+        background-size: contain;
+        text-decoration: none;
+        vertical-align: middle;
+      }
+      .sronly {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
+    </style>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Article",
+        "mainEntityOfPage": {
+          "@type": "WebPage",
+          "@id": "https://ib.bsb.br/treesheets-build/"
+        },
+        "headline": "TreeSheets Debian 11 arm64 build",
+        "description": "",
+        "datePublished": "2026-01-09T00:00:00+00:00",
+        "dateModified": "2026-01-09T10:15:07+00:00",
+        "author": {
+          "@type": "Person",
+          "name": "Author"
+        },
+        "publisher": {
+          "@type": "Organization",
+          "name": "infoBAG"
+          
+        }
+        
+      }
+    </script>
+    <script src="/assets/js/prism.js" defer></script>
+    <script src="/assets/js/copy-all-code.js"></script>
+  </body>
+</html>

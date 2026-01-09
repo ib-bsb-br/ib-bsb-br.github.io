@@ -1,6 +1,716 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2026-01-08T20:58:33+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">rk3588 custom documentation</title><link href="https://ib.bsb.br/rk3588-custom/" rel="alternate" type="text/html" title="rk3588 custom documentation" /><published>2026-01-08T00:00:00+00:00</published><updated>2026-01-08T20:51:14+00:00</updated><id>https://ib.bsb.br/rk3588-custom</id><content type="html" xml:base="https://ib.bsb.br/rk3588-custom/"><![CDATA[<p>bibref https://tianyongcan.github.io/posts/rk3588log/</p>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2026-01-09T10:21:32+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">TreeSheets Debian 11 arm64 build</title><link href="https://ib.bsb.br/treesheets-build/" rel="alternate" type="text/html" title="TreeSheets Debian 11 arm64 build" /><published>2026-01-09T00:00:00+00:00</published><updated>2026-01-09T10:15:07+00:00</updated><id>https://ib.bsb.br/treesheets-build</id><content type="html" xml:base="https://ib.bsb.br/treesheets-build/"><![CDATA[<section class="code-block-container" role="group" aria-label="Bash Code Block" data-filename="bash_code_block.sh" data-code="#!/usr/bin/env bash
+#
+# TreeSheets local build for Debian 11 (bullseye) on arm64/aarch64.
+#
+# Key constraints (from your environment):
+#   - glibc stays Debian-11-compatible (2.31)
+#   - Prefer hardware OpenGL ES via EGL/GLES (Mali-G610) when GLX/OpenGL is llvmpipe
+#   - Debian 11 default GCC 10 libstdc++ typically lacks std::from_chars(float/double)
+#     which breaks Lobster; we patch Lobster to use strto*() fallback when needed.
+#
+# What this script does:
+#   1) Installs Debian-11-safe deps (idempotent)
+#   2) Clones/updates TreeSheets
+#   3) Selects a C/C++ toolchain robustly (never captures apt output into CC/CXX)
+#        - Uses system gcc/g++ by default
+#        - Optionally tries gcc-11/12 if already installed or installable
+#        - Never fails just because gcc-11/12 are unavailable
+#   4) Configures CMake + prefers EGL/GLES (wxUSE_GLCANVAS_EGL)
+#   5) Patches Lobster if float-from_chars is missing
+#   6) Builds the CPack &#39;package&#39; target to produce a .deb
+#
+# Usage:
+#   chmod +x ./build-treesheets-debian11-arm64.sh
+#   ./build-treesheets-debian11-arm64.sh --clean
+#
+# Options:
+#   --workdir DIR
+#   --clean
+#   --no-update
+#   --no-deps
+#   --prefer-gles | --prefer-gl
+#   --jobs N
+#   --install
+#   --no-lobster-patch
+#   --try-newer-gcc    (attempt to apt-install gcc-11/12 if available; non-fatal)
+#
+set -euo pipefail
+IFS=$&#39;\n\t&#39;
 
-<h1 id="development-board-connection">Development board connection</h1>
+log(){ printf &#39;\n[treesheets] %s\n&#39; &quot;$*&quot; &gt;&amp;2; }
+warn(){ printf &#39;\n[treesheets][WARN] %s\n&#39; &quot;$*&quot; &gt;&amp;2; }
+die(){ printf &#39;\n[treesheets][ERROR] %s\n&#39; &quot;$*&quot; &gt;&amp;2; exit 1; }
+
+have(){ command -v &quot;$1&quot; &gt;/dev/null 2&gt;&amp;1; }
+
+sudo_cmd(){
+  if [[ &quot;${EUID:-$(id -u)}&quot; -eq 0 ]]; then &quot;$@&quot;; else sudo &quot;$@&quot;; fi
+}
+
+# Defaults
+REPO_URL=&quot;https://github.com/aardappel/treesheets.git&quot;
+BRANCH=&quot;master&quot;
+WORKDIR=&quot;&quot;
+CLEAN=0
+NO_UPDATE=0
+NO_DEPS=0
+PREFER_GFX=&quot;auto&quot;   # auto|gles|gl
+ALLOW_LOBSTER_PATCH=1
+JOBS=&quot;$(getconf _NPROCESSORS_ONLN 2&gt;/dev/null || echo 4)&quot;
+DO_INSTALL=0
+TRY_NEWER_GCC=0
+
+while [[ $# -gt 0 ]]; do
+  case &quot;$1&quot; in
+    --workdir) WORKDIR=&quot;$2&quot;; shift 2;;
+    --clean) CLEAN=1; shift;;
+    --no-update) NO_UPDATE=1; shift;;
+    --no-deps) NO_DEPS=1; shift;;
+    --prefer-gles) PREFER_GFX=&quot;gles&quot;; shift;;
+    --prefer-gl) PREFER_GFX=&quot;gl&quot;; shift;;
+    --no-lobster-patch) ALLOW_LOBSTER_PATCH=0; shift;;
+    --jobs) JOBS=&quot;$2&quot;; shift 2;;
+    --install) DO_INSTALL=1; shift;;
+    --try-newer-gcc) TRY_NEWER_GCC=1; shift;;
+    -h|--help)
+      sed -n &#39;1,220p&#39; &quot;$0&quot; | sed &#39;s/^# \{0,1\}//&#39;; exit 0;;
+    *) die &quot;Unknown arg: $1&quot;;;
+  esac
+done
+
+if [[ -z &quot;$WORKDIR&quot; ]]; then
+  if [[ -d /mnt/mSATA ]]; then WORKDIR=/mnt/mSATA/treesheets-local; else WORKDIR=&quot;$HOME/treesheets-local&quot;; fi
+fi
+
+ARCH=&quot;$(uname -m)&quot;
+OS_ID=&quot;$(. /etc/os-release &amp;&amp; echo &quot;${ID:-unknown}&quot;)&quot;
+OS_VER=&quot;$(. /etc/os-release &amp;&amp; echo &quot;${VERSION_ID:-unknown}&quot;)&quot;
+GLIBC_STR=&quot;$(ldd --version 2&gt;/dev/null | head -n1 || true)&quot;
+
+log &quot;Host: $(hostname) | Arch: $ARCH | OS: $OS_ID $OS_VER&quot;
+log &quot;glibc: ${GLIBC_STR:-unknown}&quot;
+log &quot;Workdir: $WORKDIR&quot;
+log &quot;Jobs: $JOBS&quot;
+
+SRCROOT=&quot;$WORKDIR/src&quot;
+REPODIR=&quot;$SRCROOT/treesheets&quot;
+BUILDDIR=&quot;$WORKDIR/_build&quot;
+DISTDIR=&quot;$WORKDIR/dist&quot;
+
+mkdir -p &quot;$SRCROOT&quot; &quot;$DISTDIR&quot;
+
+has_bullseye_backports(){
+  grep -Rqs &quot;bullseye-backports&quot; /etc/apt/sources.list /etc/apt/sources.list.d/*.list 2&gt;/dev/null
+}
+
+apt_install(){
+  sudo_cmd apt-get -o Acquire::Retries=3 install -y &quot;$@&quot;
+}
+
+apt_install_targeted(){
+  local target=&quot;$1&quot;; shift
+  if has_bullseye_backports; then
+    sudo_cmd apt-get -o Acquire::Retries=3 install -y -t &quot;$target&quot; &quot;$@&quot; || return 1
+  else
+    return 1
+  fi
+}
+
+install_deps(){
+  log &quot;Installing dependencies via apt (Debian 11 compatible)&quot;
+  sudo_cmd apt-get -o Acquire::Retries=3 update
+
+  apt_install \
+    ca-certificates git curl file zip unzip \
+    build-essential pkg-config ninja-build fakeroot dpkg-dev \
+    cmake \
+    libcurl4-openssl-dev
+
+  apt_install libgtk-3-dev libxext-dev
+
+  # EGL/GLES headers
+  apt_install libegl-dev libgles-dev libegl1-mesa-dev mesa-common-dev
+
+  # OpenGL dev package can help FindOpenGL on some setups (even if runtime uses GLES)
+  sudo_cmd apt-get -o Acquire::Retries=3 install -y libgl1-mesa-dev || true
+
+  # Optional debug helpers
+  sudo_cmd apt-get -o Acquire::Retries=3 install -y mesa-utils mesa-utils-extra || true
+
+  have cmake || die &quot;cmake missing after install&quot;
+  have git  || die &quot;git missing after install&quot;
+  have gcc  || die &quot;gcc missing after install (build-essential should provide it)&quot;
+  have g++  || die &quot;g++ missing after install (build-essential should provide it)&quot;
+}
+
+clone_or_update(){
+  if [[ ! -d &quot;$REPODIR/.git&quot; ]]; then
+    log &quot;Cloning: $REPO_URL ($BRANCH)&quot;
+    git clone --branch &quot;$BRANCH&quot; --depth 1 &quot;$REPO_URL&quot; &quot;$REPODIR&quot;
+  else
+    log &quot;Repo exists: $REPODIR&quot;
+    if [[ &quot;$NO_UPDATE&quot; -eq 0 ]]; then
+      log &quot;Updating repo (fetch + reset to origin/$BRANCH)&quot;
+      (cd &quot;$REPODIR&quot; &amp;&amp; git fetch --depth 1 origin &quot;$BRANCH&quot; &amp;&amp; git reset --hard &quot;origin/$BRANCH&quot;)
+    else
+      log &quot;Skipping repo update (--no-update)&quot;
+    fi
+  fi
+}
+
+# Does this libstdc++ provide std::from_chars for double?
+compiler_has_float_from_chars(){
+  local cxx=&quot;$1&quot;
+  local tmpd
+  tmpd=&quot;$(mktemp -d)&quot;
+  cat &gt;&quot;$tmpd/t.cpp&quot; &lt;&lt;&#39;EOF&#39;
+#include &lt;charconv&gt;
+int main(){
+  double x = 0;
+  auto r = std::from_chars(&quot;1.25&quot;, &quot;1.25&quot;+4, x);
+  (void)r;
+}
+EOF
+  &quot;$cxx&quot; -std=c++17 -c &quot;$tmpd/t.cpp&quot; -o &quot;$tmpd/t.o&quot; &gt;/dev/null 2&gt;&amp;1
+  local ok=$?
+  rm -rf &quot;$tmpd&quot;
+  return $ok
+}
+
+# Global outputs from toolchain selection
+CC_PATH=&quot;&quot;
+CXX_PATH=&quot;&quot;
+
+try_pick_toolchain(){
+  local cc=&quot;$1&quot; cxx=&quot;$2&quot;
+  local ccpath cxxpath
+  ccpath=&quot;$(command -v &quot;$cc&quot; 2&gt;/dev/null || true)&quot;
+  cxxpath=&quot;$(command -v &quot;$cxx&quot; 2&gt;/dev/null || true)&quot;
+  [[ -n &quot;$ccpath&quot; &amp;&amp; -n &quot;$cxxpath&quot; ]] || return 1
+  CC_PATH=&quot;$ccpath&quot;
+  CXX_PATH=&quot;$cxxpath&quot;
+  return 0
+}
+
+select_toolchain(){
+  # Always set a working default first.
+  try_pick_toolchain gcc g++ || die &quot;Could not find gcc/g++ in PATH&quot;
+
+  local major
+  major=&quot;$(g++ -dumpversion 2&gt;/dev/null | cut -d. -f1 || echo unknown)&quot;
+  log &quot;Default g++ major: ${major}&quot;
+
+  if compiler_has_float_from_chars &quot;$CXX_PATH&quot;; then
+    log &quot;Toolchain OK: system g++ provides float from_chars&quot;
+    return 0
+  fi
+
+  warn &quot;Current C++ stdlib likely lacks std::from_chars(double). We&#39;ll patch Lobster unless a newer GCC is available.&quot;
+
+  # If user didn&#39;t ask to try installing newer GCC, still prefer an already-installed newer one.
+  for v in 12 11; do
+    if have &quot;g++-$v&quot;; then
+      if compiler_has_float_from_chars &quot;g++-$v&quot;; then
+        log &quot;Using already-installed toolchain: gcc-$v / g++-$v&quot;
+        try_pick_toolchain &quot;gcc-$v&quot; &quot;g++-$v&quot; || true
+        return 0
+      fi
+    fi
+  done
+
+  [[ &quot;$TRY_NEWER_GCC&quot; -eq 1 ]] || return 0
+
+  # Best-effort attempt to install newer GCC. Non-fatal if not available.
+  for v in 11 12; do
+    # Quick check: is there any candidate?
+    if apt-cache policy &quot;g++-$v&quot; 2&gt;/dev/null | grep -q &quot;Candidate:&quot;; then
+      log &quot;Attempting to install gcc-$v/g++-$v (best-effort)&quot;
+
+      if apt_install_targeted bullseye-backports &quot;gcc-$v&quot; &quot;g++-$v&quot;; then
+        true
+      else
+        apt_install &quot;gcc-$v&quot; &quot;g++-$v&quot; || true
+      fi
+
+      if have &quot;g++-$v&quot; &amp;&amp; compiler_has_float_from_chars &quot;g++-$v&quot;; then
+        log &quot;Using toolchain: gcc-$v / g++-$v&quot;
+        try_pick_toolchain &quot;gcc-$v&quot; &quot;g++-$v&quot; || true
+        return 0
+      fi
+    fi
+  done
+
+  warn &quot;Could not obtain a newer GCC via apt. Continuing with system gcc/g++ and Lobster patch.&quot;
+  return 0
+}
+
+configure_cmake(){
+  [[ -n &quot;$CC_PATH&quot; &amp;&amp; -n &quot;$CXX_PATH&quot; ]] || die &quot;Internal error: empty compiler paths&quot;
+  [[ -x &quot;$CC_PATH&quot; &amp;&amp; -x &quot;$CXX_PATH&quot; ]] || die &quot;Compiler not executable: cc=&#39;$CC_PATH&#39; cxx=&#39;$CXX_PATH&#39;&quot;
+
+  if [[ &quot;$CLEAN&quot; -eq 1 ]]; then
+    log &quot;Cleaning build directory: $BUILDDIR&quot;
+    rm -rf &quot;$BUILDDIR&quot;
+  fi
+  mkdir -p &quot;$BUILDDIR&quot;
+
+  local gfx=&quot;$PREFER_GFX&quot;
+  if [[ &quot;$gfx&quot; == &quot;auto&quot; ]]; then
+    if [[ -e /usr/include/EGL/egl.h &amp;&amp; -e /usr/include/GLES2/gl2.h ]]; then gfx=&quot;gles&quot;; else gfx=&quot;gl&quot;; fi
+  fi
+  log &quot;Graphics intent: $gfx&quot;
+
+  local extra_flags=()
+  if [[ &quot;$gfx&quot; == &quot;gles&quot; ]]; then
+    extra_flags+=(&quot;-DwxUSE_GLCANVAS_EGL=ON&quot;)
+  fi
+
+  log &quot;Using CC=$CC_PATH, CXX=$CXX_PATH&quot;
+  log &quot;Configuring CMake (Release)&quot;
+  (
+    cd &quot;$REPODIR&quot;
+    cmake -S . -B &quot;$BUILDDIR&quot; \
+      -G Ninja \
+      -DCMAKE_BUILD_TYPE=Release \
+      -DCMAKE_INSTALL_PREFIX=/usr \
+      -DCPACK_PACKAGING_INSTALL_PREFIX=/usr \
+      -DCMAKE_C_COMPILER=&quot;$CC_PATH&quot; \
+      -DCMAKE_CXX_COMPILER=&quot;$CXX_PATH&quot; \
+      -DwxBUILD_SHARED=OFF \
+      -DwxBUILD_INSTALL=OFF \
+      -DTREESHEETS_VERSION=&quot;$(date +%Y%m%d%H%M)&quot; \
+      &quot;${extra_flags[@]}&quot;
+  )
+}
+
+patch_lobster_if_needed(){
+  [[ &quot;$ALLOW_LOBSTER_PATCH&quot; -eq 1 ]] || return 0
+
+  # If compiler supports float from_chars, no patch.
+  if compiler_has_float_from_chars &quot;$CXX_PATH&quot;; then
+    return 0
+  fi
+
+  local f=&quot;$BUILDDIR/_deps/lobster-src/dev/src/lobster/string_tools.h&quot;
+  if [[ ! -f &quot;$f&quot; ]]; then
+    warn &quot;Lobster header not found yet ($f). If the build fails with from_chars(double), re-run with --clean.&quot;
+    return 0
+  fi
+
+  if grep -q &quot;TREESHEETS_LOCAL_FLOAT_FROM_CHARS_FALLBACK&quot; &quot;$f&quot;; then
+    log &quot;Lobster already patched for float from_chars fallback&quot;
+    return 0
+  fi
+
+  log &quot;Patching Lobster: replace std::from_chars(float/double) with strto*() fallback&quot;
+
+  # Replace the single line in parse_float() that calls from_chars() with a guarded fallback.
+  # This avoids relying on feature-test macros that don&#39;t reliably encode float-from_chars support.
+  perl -0777 -i -pe &#39;s/\Qauto res = from_chars(sv.data(), sv.data() + sv.size(), val);\E/
+\/\/ TREESHEETS_LOCAL_FLOAT_FROM_CHARS_FALLBACK\n#if defined(__GNUC__) &amp;&amp; (__GNUC__ &gt;= 11)\n        auto res = from_chars(sv.data(), sv.data() + sv.size(), val);\n#else\n        \/\/ GCC\/libstdc++ &lt; 11 often lacks std::from_chars for float\/double.\n        \/\/ Fallback: copy to NUL-terminated buffer and use strto*().\n        std::string _tmp(sv);\n        char* _end = nullptr;\n        if constexpr (std::is_same_v&lt;T, float&gt;) {\n            val = std::strtof(_tmp.c_str(), &amp;_end);\n        } else if constexpr (std::is_same_v&lt;T, double&gt;) {\n            val = std::strtod(_tmp.c_str(), &amp;_end);\n        } else {\n            val = (T)std::strtold(_tmp.c_str(), &amp;_end);\n        }\n        std::from_chars_result res{sv.data(), std::errc{}};\n        if (!_end || _end == _tmp.c_str()) {\n            res.ec = std::errc::invalid_argument;\n            res.ptr = sv.data();\n        } else {\n            res.ptr = sv.data() + (size_t)(_end - _tmp.c_str());\n        }\n#endif\n/smg&#39; &quot;$f&quot;
+
+  # Ensure required headers are present (best-effort, non-fatal).
+  if ! grep -q &quot;&lt;cstdlib&gt;&quot; &quot;$f&quot;; then
+    perl -i -pe &#39;if($.==1){print &quot;#include &lt;cstdlib&gt;\n&quot;}&#39; &quot;$f&quot; || true
+  fi
+}
+
+build_and_package(){
+  log &quot;Building + packaging (cmake --build ... --target package), jobs=$JOBS&quot;
+  cmake --build &quot;$BUILDDIR&quot; --target package -j&quot;$JOBS&quot;
+}
+
+collect_artifacts(){
+  log &quot;Collecting artifacts to: $DISTDIR&quot;
+  shopt -s nullglob
+  local debs=(&quot;$BUILDDIR&quot;/treesheets_*.deb)
+  [[ ${#debs[@]} -gt 0 ]] || die &quot;No .deb artifacts found in $BUILDDIR (build likely failed).&quot;
+  rm -f &quot;$DISTDIR&quot;/*.deb &quot;$DISTDIR&quot;/SHA256SUMS 2&gt;/dev/null || true
+  for f in &quot;${debs[@]}&quot;; do cp -av -- &quot;$f&quot; &quot;$DISTDIR/&quot;; done
+  (cd &quot;$DISTDIR&quot; &amp;&amp; sha256sum ./*.deb | tee SHA256SUMS)
+  ls -lh &quot;$DISTDIR&quot;/*.deb
+}
+
+install_artifact(){
+  [[ &quot;$DO_INSTALL&quot; -eq 1 ]] || return 0
+  shopt -s nullglob
+  local newest
+  newest=&quot;$(ls -t &quot;$DISTDIR&quot;/*.deb | head -n1)&quot;
+  log &quot;Installing: $newest&quot;
+  sudo_cmd dpkg -i &quot;$newest&quot; || { warn &quot;dpkg failed; attempting apt-get -f install&quot;; sudo_cmd apt-get -y -f install; }
+}
+
+# Run
+[[ &quot;$NO_DEPS&quot; -eq 1 ]] || install_deps
+clone_or_update
+
+select_toolchain
+[[ -n &quot;$CC_PATH&quot; &amp;&amp; -n &quot;$CXX_PATH&quot; ]] || die &quot;Toolchain selection failed&quot;
+
+configure_cmake
+patch_lobster_if_needed
+build_and_package
+collect_artifacts
+install_artifact
+
+log &quot;Done.&quot;" data-download-link="" data-download-label="Download Bash">
+  <code class="language-bash">#!/usr/bin/env bash
+#
+# TreeSheets local build for Debian 11 (bullseye) on arm64/aarch64.
+#
+# Key constraints (from your environment):
+#   - glibc stays Debian-11-compatible (2.31)
+#   - Prefer hardware OpenGL ES via EGL/GLES (Mali-G610) when GLX/OpenGL is llvmpipe
+#   - Debian 11 default GCC 10 libstdc++ typically lacks std::from_chars(float/double)
+#     which breaks Lobster; we patch Lobster to use strto*() fallback when needed.
+#
+# What this script does:
+#   1) Installs Debian-11-safe deps (idempotent)
+#   2) Clones/updates TreeSheets
+#   3) Selects a C/C++ toolchain robustly (never captures apt output into CC/CXX)
+#        - Uses system gcc/g++ by default
+#        - Optionally tries gcc-11/12 if already installed or installable
+#        - Never fails just because gcc-11/12 are unavailable
+#   4) Configures CMake + prefers EGL/GLES (wxUSE_GLCANVAS_EGL)
+#   5) Patches Lobster if float-from_chars is missing
+#   6) Builds the CPack &#39;package&#39; target to produce a .deb
+#
+# Usage:
+#   chmod +x ./build-treesheets-debian11-arm64.sh
+#   ./build-treesheets-debian11-arm64.sh --clean
+#
+# Options:
+#   --workdir DIR
+#   --clean
+#   --no-update
+#   --no-deps
+#   --prefer-gles | --prefer-gl
+#   --jobs N
+#   --install
+#   --no-lobster-patch
+#   --try-newer-gcc    (attempt to apt-install gcc-11/12 if available; non-fatal)
+#
+set -euo pipefail
+IFS=$&#39;\n\t&#39;
+
+log(){ printf &#39;\n[treesheets] %s\n&#39; &quot;$*&quot; &gt;&amp;2; }
+warn(){ printf &#39;\n[treesheets][WARN] %s\n&#39; &quot;$*&quot; &gt;&amp;2; }
+die(){ printf &#39;\n[treesheets][ERROR] %s\n&#39; &quot;$*&quot; &gt;&amp;2; exit 1; }
+
+have(){ command -v &quot;$1&quot; &gt;/dev/null 2&gt;&amp;1; }
+
+sudo_cmd(){
+  if [[ &quot;${EUID:-$(id -u)}&quot; -eq 0 ]]; then &quot;$@&quot;; else sudo &quot;$@&quot;; fi
+}
+
+# Defaults
+REPO_URL=&quot;https://github.com/aardappel/treesheets.git&quot;
+BRANCH=&quot;master&quot;
+WORKDIR=&quot;&quot;
+CLEAN=0
+NO_UPDATE=0
+NO_DEPS=0
+PREFER_GFX=&quot;auto&quot;   # auto|gles|gl
+ALLOW_LOBSTER_PATCH=1
+JOBS=&quot;$(getconf _NPROCESSORS_ONLN 2&gt;/dev/null || echo 4)&quot;
+DO_INSTALL=0
+TRY_NEWER_GCC=0
+
+while [[ $# -gt 0 ]]; do
+  case &quot;$1&quot; in
+    --workdir) WORKDIR=&quot;$2&quot;; shift 2;;
+    --clean) CLEAN=1; shift;;
+    --no-update) NO_UPDATE=1; shift;;
+    --no-deps) NO_DEPS=1; shift;;
+    --prefer-gles) PREFER_GFX=&quot;gles&quot;; shift;;
+    --prefer-gl) PREFER_GFX=&quot;gl&quot;; shift;;
+    --no-lobster-patch) ALLOW_LOBSTER_PATCH=0; shift;;
+    --jobs) JOBS=&quot;$2&quot;; shift 2;;
+    --install) DO_INSTALL=1; shift;;
+    --try-newer-gcc) TRY_NEWER_GCC=1; shift;;
+    -h|--help)
+      sed -n &#39;1,220p&#39; &quot;$0&quot; | sed &#39;s/^# \{0,1\}//&#39;; exit 0;;
+    *) die &quot;Unknown arg: $1&quot;;;
+  esac
+done
+
+if [[ -z &quot;$WORKDIR&quot; ]]; then
+  if [[ -d /mnt/mSATA ]]; then WORKDIR=/mnt/mSATA/treesheets-local; else WORKDIR=&quot;$HOME/treesheets-local&quot;; fi
+fi
+
+ARCH=&quot;$(uname -m)&quot;
+OS_ID=&quot;$(. /etc/os-release &amp;&amp; echo &quot;${ID:-unknown}&quot;)&quot;
+OS_VER=&quot;$(. /etc/os-release &amp;&amp; echo &quot;${VERSION_ID:-unknown}&quot;)&quot;
+GLIBC_STR=&quot;$(ldd --version 2&gt;/dev/null | head -n1 || true)&quot;
+
+log &quot;Host: $(hostname) | Arch: $ARCH | OS: $OS_ID $OS_VER&quot;
+log &quot;glibc: ${GLIBC_STR:-unknown}&quot;
+log &quot;Workdir: $WORKDIR&quot;
+log &quot;Jobs: $JOBS&quot;
+
+SRCROOT=&quot;$WORKDIR/src&quot;
+REPODIR=&quot;$SRCROOT/treesheets&quot;
+BUILDDIR=&quot;$WORKDIR/_build&quot;
+DISTDIR=&quot;$WORKDIR/dist&quot;
+
+mkdir -p &quot;$SRCROOT&quot; &quot;$DISTDIR&quot;
+
+has_bullseye_backports(){
+  grep -Rqs &quot;bullseye-backports&quot; /etc/apt/sources.list /etc/apt/sources.list.d/*.list 2&gt;/dev/null
+}
+
+apt_install(){
+  sudo_cmd apt-get -o Acquire::Retries=3 install -y &quot;$@&quot;
+}
+
+apt_install_targeted(){
+  local target=&quot;$1&quot;; shift
+  if has_bullseye_backports; then
+    sudo_cmd apt-get -o Acquire::Retries=3 install -y -t &quot;$target&quot; &quot;$@&quot; || return 1
+  else
+    return 1
+  fi
+}
+
+install_deps(){
+  log &quot;Installing dependencies via apt (Debian 11 compatible)&quot;
+  sudo_cmd apt-get -o Acquire::Retries=3 update
+
+  apt_install \
+    ca-certificates git curl file zip unzip \
+    build-essential pkg-config ninja-build fakeroot dpkg-dev \
+    cmake \
+    libcurl4-openssl-dev
+
+  apt_install libgtk-3-dev libxext-dev
+
+  # EGL/GLES headers
+  apt_install libegl-dev libgles-dev libegl1-mesa-dev mesa-common-dev
+
+  # OpenGL dev package can help FindOpenGL on some setups (even if runtime uses GLES)
+  sudo_cmd apt-get -o Acquire::Retries=3 install -y libgl1-mesa-dev || true
+
+  # Optional debug helpers
+  sudo_cmd apt-get -o Acquire::Retries=3 install -y mesa-utils mesa-utils-extra || true
+
+  have cmake || die &quot;cmake missing after install&quot;
+  have git  || die &quot;git missing after install&quot;
+  have gcc  || die &quot;gcc missing after install (build-essential should provide it)&quot;
+  have g++  || die &quot;g++ missing after install (build-essential should provide it)&quot;
+}
+
+clone_or_update(){
+  if [[ ! -d &quot;$REPODIR/.git&quot; ]]; then
+    log &quot;Cloning: $REPO_URL ($BRANCH)&quot;
+    git clone --branch &quot;$BRANCH&quot; --depth 1 &quot;$REPO_URL&quot; &quot;$REPODIR&quot;
+  else
+    log &quot;Repo exists: $REPODIR&quot;
+    if [[ &quot;$NO_UPDATE&quot; -eq 0 ]]; then
+      log &quot;Updating repo (fetch + reset to origin/$BRANCH)&quot;
+      (cd &quot;$REPODIR&quot; &amp;&amp; git fetch --depth 1 origin &quot;$BRANCH&quot; &amp;&amp; git reset --hard &quot;origin/$BRANCH&quot;)
+    else
+      log &quot;Skipping repo update (--no-update)&quot;
+    fi
+  fi
+}
+
+# Does this libstdc++ provide std::from_chars for double?
+compiler_has_float_from_chars(){
+  local cxx=&quot;$1&quot;
+  local tmpd
+  tmpd=&quot;$(mktemp -d)&quot;
+  cat &gt;&quot;$tmpd/t.cpp&quot; &lt;&lt;&#39;EOF&#39;
+#include &lt;charconv&gt;
+int main(){
+  double x = 0;
+  auto r = std::from_chars(&quot;1.25&quot;, &quot;1.25&quot;+4, x);
+  (void)r;
+}
+EOF
+  &quot;$cxx&quot; -std=c++17 -c &quot;$tmpd/t.cpp&quot; -o &quot;$tmpd/t.o&quot; &gt;/dev/null 2&gt;&amp;1
+  local ok=$?
+  rm -rf &quot;$tmpd&quot;
+  return $ok
+}
+
+# Global outputs from toolchain selection
+CC_PATH=&quot;&quot;
+CXX_PATH=&quot;&quot;
+
+try_pick_toolchain(){
+  local cc=&quot;$1&quot; cxx=&quot;$2&quot;
+  local ccpath cxxpath
+  ccpath=&quot;$(command -v &quot;$cc&quot; 2&gt;/dev/null || true)&quot;
+  cxxpath=&quot;$(command -v &quot;$cxx&quot; 2&gt;/dev/null || true)&quot;
+  [[ -n &quot;$ccpath&quot; &amp;&amp; -n &quot;$cxxpath&quot; ]] || return 1
+  CC_PATH=&quot;$ccpath&quot;
+  CXX_PATH=&quot;$cxxpath&quot;
+  return 0
+}
+
+select_toolchain(){
+  # Always set a working default first.
+  try_pick_toolchain gcc g++ || die &quot;Could not find gcc/g++ in PATH&quot;
+
+  local major
+  major=&quot;$(g++ -dumpversion 2&gt;/dev/null | cut -d. -f1 || echo unknown)&quot;
+  log &quot;Default g++ major: ${major}&quot;
+
+  if compiler_has_float_from_chars &quot;$CXX_PATH&quot;; then
+    log &quot;Toolchain OK: system g++ provides float from_chars&quot;
+    return 0
+  fi
+
+  warn &quot;Current C++ stdlib likely lacks std::from_chars(double). We&#39;ll patch Lobster unless a newer GCC is available.&quot;
+
+  # If user didn&#39;t ask to try installing newer GCC, still prefer an already-installed newer one.
+  for v in 12 11; do
+    if have &quot;g++-$v&quot;; then
+      if compiler_has_float_from_chars &quot;g++-$v&quot;; then
+        log &quot;Using already-installed toolchain: gcc-$v / g++-$v&quot;
+        try_pick_toolchain &quot;gcc-$v&quot; &quot;g++-$v&quot; || true
+        return 0
+      fi
+    fi
+  done
+
+  [[ &quot;$TRY_NEWER_GCC&quot; -eq 1 ]] || return 0
+
+  # Best-effort attempt to install newer GCC. Non-fatal if not available.
+  for v in 11 12; do
+    # Quick check: is there any candidate?
+    if apt-cache policy &quot;g++-$v&quot; 2&gt;/dev/null | grep -q &quot;Candidate:&quot;; then
+      log &quot;Attempting to install gcc-$v/g++-$v (best-effort)&quot;
+
+      if apt_install_targeted bullseye-backports &quot;gcc-$v&quot; &quot;g++-$v&quot;; then
+        true
+      else
+        apt_install &quot;gcc-$v&quot; &quot;g++-$v&quot; || true
+      fi
+
+      if have &quot;g++-$v&quot; &amp;&amp; compiler_has_float_from_chars &quot;g++-$v&quot;; then
+        log &quot;Using toolchain: gcc-$v / g++-$v&quot;
+        try_pick_toolchain &quot;gcc-$v&quot; &quot;g++-$v&quot; || true
+        return 0
+      fi
+    fi
+  done
+
+  warn &quot;Could not obtain a newer GCC via apt. Continuing with system gcc/g++ and Lobster patch.&quot;
+  return 0
+}
+
+configure_cmake(){
+  [[ -n &quot;$CC_PATH&quot; &amp;&amp; -n &quot;$CXX_PATH&quot; ]] || die &quot;Internal error: empty compiler paths&quot;
+  [[ -x &quot;$CC_PATH&quot; &amp;&amp; -x &quot;$CXX_PATH&quot; ]] || die &quot;Compiler not executable: cc=&#39;$CC_PATH&#39; cxx=&#39;$CXX_PATH&#39;&quot;
+
+  if [[ &quot;$CLEAN&quot; -eq 1 ]]; then
+    log &quot;Cleaning build directory: $BUILDDIR&quot;
+    rm -rf &quot;$BUILDDIR&quot;
+  fi
+  mkdir -p &quot;$BUILDDIR&quot;
+
+  local gfx=&quot;$PREFER_GFX&quot;
+  if [[ &quot;$gfx&quot; == &quot;auto&quot; ]]; then
+    if [[ -e /usr/include/EGL/egl.h &amp;&amp; -e /usr/include/GLES2/gl2.h ]]; then gfx=&quot;gles&quot;; else gfx=&quot;gl&quot;; fi
+  fi
+  log &quot;Graphics intent: $gfx&quot;
+
+  local extra_flags=()
+  if [[ &quot;$gfx&quot; == &quot;gles&quot; ]]; then
+    extra_flags+=(&quot;-DwxUSE_GLCANVAS_EGL=ON&quot;)
+  fi
+
+  log &quot;Using CC=$CC_PATH, CXX=$CXX_PATH&quot;
+  log &quot;Configuring CMake (Release)&quot;
+  (
+    cd &quot;$REPODIR&quot;
+    cmake -S . -B &quot;$BUILDDIR&quot; \
+      -G Ninja \
+      -DCMAKE_BUILD_TYPE=Release \
+      -DCMAKE_INSTALL_PREFIX=/usr \
+      -DCPACK_PACKAGING_INSTALL_PREFIX=/usr \
+      -DCMAKE_C_COMPILER=&quot;$CC_PATH&quot; \
+      -DCMAKE_CXX_COMPILER=&quot;$CXX_PATH&quot; \
+      -DwxBUILD_SHARED=OFF \
+      -DwxBUILD_INSTALL=OFF \
+      -DTREESHEETS_VERSION=&quot;$(date +%Y%m%d%H%M)&quot; \
+      &quot;${extra_flags[@]}&quot;
+  )
+}
+
+patch_lobster_if_needed(){
+  [[ &quot;$ALLOW_LOBSTER_PATCH&quot; -eq 1 ]] || return 0
+
+  # If compiler supports float from_chars, no patch.
+  if compiler_has_float_from_chars &quot;$CXX_PATH&quot;; then
+    return 0
+  fi
+
+  local f=&quot;$BUILDDIR/_deps/lobster-src/dev/src/lobster/string_tools.h&quot;
+  if [[ ! -f &quot;$f&quot; ]]; then
+    warn &quot;Lobster header not found yet ($f). If the build fails with from_chars(double), re-run with --clean.&quot;
+    return 0
+  fi
+
+  if grep -q &quot;TREESHEETS_LOCAL_FLOAT_FROM_CHARS_FALLBACK&quot; &quot;$f&quot;; then
+    log &quot;Lobster already patched for float from_chars fallback&quot;
+    return 0
+  fi
+
+  log &quot;Patching Lobster: replace std::from_chars(float/double) with strto*() fallback&quot;
+
+  # Replace the single line in parse_float() that calls from_chars() with a guarded fallback.
+  # This avoids relying on feature-test macros that don&#39;t reliably encode float-from_chars support.
+  perl -0777 -i -pe &#39;s/\Qauto res = from_chars(sv.data(), sv.data() + sv.size(), val);\E/
+\/\/ TREESHEETS_LOCAL_FLOAT_FROM_CHARS_FALLBACK\n#if defined(__GNUC__) &amp;&amp; (__GNUC__ &gt;= 11)\n        auto res = from_chars(sv.data(), sv.data() + sv.size(), val);\n#else\n        \/\/ GCC\/libstdc++ &lt; 11 often lacks std::from_chars for float\/double.\n        \/\/ Fallback: copy to NUL-terminated buffer and use strto*().\n        std::string _tmp(sv);\n        char* _end = nullptr;\n        if constexpr (std::is_same_v&lt;T, float&gt;) {\n            val = std::strtof(_tmp.c_str(), &amp;_end);\n        } else if constexpr (std::is_same_v&lt;T, double&gt;) {\n            val = std::strtod(_tmp.c_str(), &amp;_end);\n        } else {\n            val = (T)std::strtold(_tmp.c_str(), &amp;_end);\n        }\n        std::from_chars_result res{sv.data(), std::errc{}};\n        if (!_end || _end == _tmp.c_str()) {\n            res.ec = std::errc::invalid_argument;\n            res.ptr = sv.data();\n        } else {\n            res.ptr = sv.data() + (size_t)(_end - _tmp.c_str());\n        }\n#endif\n/smg&#39; &quot;$f&quot;
+
+  # Ensure required headers are present (best-effort, non-fatal).
+  if ! grep -q &quot;&lt;cstdlib&gt;&quot; &quot;$f&quot;; then
+    perl -i -pe &#39;if($.==1){print &quot;#include &lt;cstdlib&gt;\n&quot;}&#39; &quot;$f&quot; || true
+  fi
+}
+
+build_and_package(){
+  log &quot;Building + packaging (cmake --build ... --target package), jobs=$JOBS&quot;
+  cmake --build &quot;$BUILDDIR&quot; --target package -j&quot;$JOBS&quot;
+}
+
+collect_artifacts(){
+  log &quot;Collecting artifacts to: $DISTDIR&quot;
+  shopt -s nullglob
+  local debs=(&quot;$BUILDDIR&quot;/treesheets_*.deb)
+  [[ ${#debs[@]} -gt 0 ]] || die &quot;No .deb artifacts found in $BUILDDIR (build likely failed).&quot;
+  rm -f &quot;$DISTDIR&quot;/*.deb &quot;$DISTDIR&quot;/SHA256SUMS 2&gt;/dev/null || true
+  for f in &quot;${debs[@]}&quot;; do cp -av -- &quot;$f&quot; &quot;$DISTDIR/&quot;; done
+  (cd &quot;$DISTDIR&quot; &amp;&amp; sha256sum ./*.deb | tee SHA256SUMS)
+  ls -lh &quot;$DISTDIR&quot;/*.deb
+}
+
+install_artifact(){
+  [[ &quot;$DO_INSTALL&quot; -eq 1 ]] || return 0
+  shopt -s nullglob
+  local newest
+  newest=&quot;$(ls -t &quot;$DISTDIR&quot;/*.deb | head -n1)&quot;
+  log &quot;Installing: $newest&quot;
+  sudo_cmd dpkg -i &quot;$newest&quot; || { warn &quot;dpkg failed; attempting apt-get -f install&quot;; sudo_cmd apt-get -y -f install; }
+}
+
+# Run
+[[ &quot;$NO_DEPS&quot; -eq 1 ]] || install_deps
+clone_or_update
+
+select_toolchain
+[[ -n &quot;$CC_PATH&quot; &amp;&amp; -n &quot;$CXX_PATH&quot; ]] || die &quot;Toolchain selection failed&quot;
+
+configure_cmake
+patch_lobster_if_needed
+build_and_package
+collect_artifacts
+install_artifact
+
+log &quot;Done.&quot;</code>
+</section>]]></content><author><name></name></author><category term="scratchpad" /></entry><entry><title type="html">rk3588 custom documentation</title><link href="https://ib.bsb.br/rk3588-custom/" rel="alternate" type="text/html" title="rk3588 custom documentation" /><published>2026-01-08T00:00:00+00:00</published><updated>2026-01-08T20:53:35+00:00</updated><id>https://ib.bsb.br/rk3588-custom</id><content type="html" xml:base="https://ib.bsb.br/rk3588-custom/"><![CDATA[<h1 id="development-board-connection">Development board connection</h1>
 
 <p>The board can be started via serial port to access the command line. The command line can then be used to connect to the development board via Wi-Fi. The RK3588 has built-in Wi-Fi, and after connection, SSH can be initiated to connect to the development board terminal, eliminating the need for serial port connection.</p>
 
@@ -3201,356 +3911,4 @@ main() {
 }
 
 main &quot;$@&quot;</code>
-</section>]]></content><author><name></name></author><category term="aid&gt;software&gt;linux&gt;rockchip" /></entry><entry><title type="html">Debian 13 bootable USB setup</title><link href="https://ib.bsb.br/debian13usb/" rel="alternate" type="text/html" title="Debian 13 bootable USB setup" /><published>2025-11-19T00:00:00+00:00</published><updated>2025-11-19T21:47:09+00:00</updated><id>https://ib.bsb.br/debian13usb</id><content type="html" xml:base="https://ib.bsb.br/debian13usb/"><![CDATA[<pre><code class="language-build_debian13_usb.sh">#!/usr/bin/env bash
-# Script to build a Debian 13 (Trixie) amd64 persistent USB image with X11, ratpoison,
-# auto-login, and autostarting TreeSheets and Impala, from a host running Debian 11 arm64.
-# 
-# **IMPORTANT:** Review and adjust configuration variables below (image size, usernames, etc.)
-# before running. Run this script as root on a Debian-based arm64 host.
-# It will create an image file and set up a chroot with a Debian amd64 system.
-# No changes are made to the host system aside from installing required packages (if needed).
-# 
-# The script will prompt for confirmation before overwriting any existing image file or writing to a USB device.
-# All major actions are logged to the console for transparency.
-
-set -euo pipefail
-
-#############################
-# Configuration Variables
-#############################
-DEBIAN_RELEASE="trixie"            # Target Debian release name
-TARGET_ARCH="amd64"               # Target architecture for the USB system
-IMAGE_SIZE="4G"                   # Size of the image file to create (e.g., "4G" for 4 GiB)
-IMAGE_NAME="debian13-${TARGET_ARCH}-usb.img"  # Name of the image file to create
-BUILD_DIR="$PWD/debian_usb_build" # Working directory for mounts and temporary files (created if not exists)
-USERNAME="user"                   # Default username for auto-login
-USERPASSWORD="password"           # Password for the default user (change or leave as desired)
-HOSTNAME="debian-usb"             # Hostname for the new system
-TIMEZONE="Etc/UTC"                # Timezone for the new system (can be changed to user's timezone)
-LOCALE="en_US.UTF-8"              # Locale to generate for the new system
-
-# Package lists for installation in the target system:
-# Base system and utilities
-BASE_PACKAGES="systemd-sysv,systemd,locales,tzdata,dialog"  # core packages (some are normally included by debootstrap second stage)
-# Desktop/X11 and user applications
-X11_PACKAGES="xserver-xorg-core,xserver-xorg-video-fbdev,xserver-xorg-video-vesa,xinit,xterm,ratpoison"
-APP_PACKAGES="treesheets"         # TreeSheets is in Debian repo. Impala might need manual installation (not in Debian).
-NETWORK_PACKAGES="iwd"            # Use iwd for Wi-Fi (Impala requires iwd). Alternatively, could include dhclient or systemd-networkd if needed.
-# Bootloaders and kernel
-BOOT_PACKAGES="grub-efi-amd64,linux-image-amd64,extlinux,syslinux-common" 
-# Note: extlinux (Syslinux for ext filesystems) and syslinux-common provide BIOS boot support; grub-efi-amd64 for UEFI.
-
-#############################
-# Script Setup and Functions
-#############################
-
-# Ensure the working directory exists
-mkdir -p "${BUILD_DIR}"
-# Define mount points relative to working directory
-ROOTFS_DIR="${BUILD_DIR}/rootfs"    # Mount point for the ext4 root filesystem
-EFI_DIR="${BUILD_DIR}/efiboot"      # Mount point for the FAT32 EFI/boot partition
-
-# Trap to cleanup mounts/loop on exit or error
-cleanup() {
-    echo "Cleaning up: Unmounting and detaching loop devices..."
-    # Try to unmount in reverse order of mounting
-    umount -lf "${ROOTFS_DIR}/boot/efi" 2&gt;/dev/null || true
-    umount -lf "${EFI_DIR}" 2&gt;/dev/null || true
-    umount -lf "${ROOTFS_DIR}/dev/pts" 2&gt;/dev/null || true
-    umount -lf "${ROOTFS_DIR}/dev" 2&gt;/dev/null || true
-    umount -lf "${ROOTFS_DIR}/proc" 2&gt;/dev/null || true
-    umount -lf "${ROOTFS_DIR}/sys" 2&gt;/dev/null || true
-    umount -lf "${ROOTFS_DIR}" 2&gt;/dev/null || true
-    if losetup -a | grep -q "$IMAGE_NAME"; then
-        # Detach all loop devices associated with our image
-        LOOP_DEV="$(losetup -j "${BUILD_DIR}/${IMAGE_NAME}" | cut -d: -f1 || true)"
-        if [ -n "${LOOP_DEV}" ]; then
-            losetup -d "${LOOP_DEV}" 2&gt;/dev/null || true
-        fi
-    fi
-}
-trap cleanup EXIT
-
-# Confirm function for dangerous operations
-confirm() {
-    local prompt="$1"
-    read -r -p "$prompt " response
-    case "$response" in
-        [Yy][Ee][Ss]|[Yy]) true ;;
-        *) false ;;
-    esac
-}
-
-# Require root privileges
-if [[ $EUID -ne 0 ]]; then
-    echo "This script must be run as root. Exiting."
-    exit 1
-fi
-
-# Check and install required host tools
-REQUIRED_TOOLS=(debootstrap qemu-user-static parted losetup mkfs.vfat mkfs.ext4)
-MISSING_TOOLS=()
-for tool in "${REQUIRED_TOOLS[@]}"; do
-    if ! command -v "$tool" &amp;&gt;/dev/null; then
-        MISSING_TOOLS+=("$tool")
-    fi
-done
-if (( ${#MISSING_TOOLS[@]} &gt; 0 )); then
-    echo "Installing missing host tools: ${MISSING_TOOLS[*]}..."
-    apt-get update &amp;&amp; apt-get install -y "${MISSING_TOOLS[@]}"
-fi
-
-#############################
-# Create and Partition Image
-#############################
-IMAGE_PATH="${BUILD_DIR}/${IMAGE_NAME}"
-if [[ -f "$IMAGE_PATH" ]]; then
-    echo "Image file $IMAGE_PATH already exists."
-    if ! confirm "Overwrite existing image file? [yes/NO]"; then
-        echo "Aborting to avoid overwriting existing image."
-        exit 1
-    fi
-    rm -f "$IMAGE_PATH"
-fi
-
-echo "&gt;&gt;&gt; Creating blank image file of size $IMAGE_SIZE at $IMAGE_PATH..."
-# Create an empty file of the specified size
-truncate -s "$IMAGE_SIZE" "$IMAGE_PATH"
-
-echo "&gt;&gt;&gt; Partitioning image file..."
-# Create partition table: Partition 1 = FAT32 (for EFI &amp; Syslinux), Partition 2 = ext4 (root)
-parted -s "$IMAGE_PATH" mklabel msdos \
-    mkpart primary fat32 1MiB 300MiB \
-    mkpart primary ext4 300MiB 100% \
-    set 1 boot on
-
-# Set up loop device with partitions
-LOOP_DEV="$(losetup -f --show -P "$IMAGE_PATH")"
-echo "    Loop device $LOOP_DEV created for $IMAGE_PATH"
-# The loop device now has partitions accessible as ${LOOP_DEV}p1 and p2
-LOOP_P1="${LOOP_DEV}p1"
-LOOP_P2="${LOOP_DEV}p2"
-
-echo "&gt;&gt;&gt; Creating filesystems..."
-# Format the EFI/FAT32 partition (partition 1)
-mkfs.vfat -F 32 -n EFI "$LOOP_P1"
-# Format the root ext4 partition (partition 2) with a label
-mkfs.ext4 -L rootfs "$LOOP_P2"
-
-# Create mount points
-mkdir -p "$ROOTFS_DIR" "$EFI_DIR"
-
-echo "&gt;&gt;&gt; Mounting image partitions..."
-mount "$LOOP_P2" "$ROOTFS_DIR"
-mkdir -p "${ROOTFS_DIR}/boot/efi"
-mount "$LOOP_P1" "$ROOTFS_DIR/boot/efi"
-# Also mount the EFI partition separately if needed (not strictly necessary since it's at rootfs/boot/efi)
-mount "$LOOP_P1" "$EFI_DIR"
-
-#############################
-# Debootstrap: Base System
-#############################
-echo "&gt;&gt;&gt; Bootstrapping Debian $DEBIAN_RELEASE ($TARGET_ARCH)..."
-# First stage debootstrap (download and extract base system)
-debootstrap --arch="$TARGET_ARCH" --foreign "$DEBIAN_RELEASE" "$ROOTFS_DIR" http://deb.debian.org/debian
-
-# Enable QEMU for chroot (copy qemu static binary into the new system)
-echo "&gt;&gt;&gt; Copying QEMU static binary for $TARGET_ARCH into chroot..."
-cp "$(which qemu-${TARGET_ARCH}-static)" "${ROOTFS_DIR}/usr/bin/"
-
-# Prepare essential mount points for chroot environment
-echo "&gt;&gt;&gt; Mounting special filesystems for chroot..."
-mount -t proc proc "${ROOTFS_DIR}/proc"
-mount -t sysfs sys "${ROOTFS_DIR}/sys"
-mount -o bind /dev "${ROOTFS_DIR}/dev"
-mount -o bind /dev/pts "${ROOTFS_DIR}/dev/pts"
-# Use a tmpfs for /run inside chroot to avoid interference with host /run
-mount -t tmpfs tmpfs "${ROOTFS_DIR}/run"
-mkdir -p "${ROOTFS_DIR}/run/lock"  # for any lock files
-
-# Second stage debootstrap (configure base system inside chroot)
-echo "&gt;&gt;&gt; Running debootstrap second-stage in chroot..."
-chroot "$ROOTFS_DIR" /debootstrap/debootstrap --second-stage
-
-# Basic system configuration: hostname, hosts, timezone, locale
-echo "&gt;&gt;&gt; Configuring base system (hostname, timezone, locale)..."
-echo "$HOSTNAME" &gt; "${ROOTFS_DIR}/etc/hostname"
-# Set up /etc/hosts with minimal entries
-cat &gt; "${ROOTFS_DIR}/etc/hosts" &lt;&lt;EOF
-127.0.0.1   localhost
-127.0.1.1   ${HOSTNAME}
-EOF
-
-# Timezone
-echo "$TIMEZONE" &gt; "${ROOTFS_DIR}/etc/timezone"
-ln -sf "/usr/share/zoneinfo/$TIMEZONE" "${ROOTFS_DIR}/etc/localtime"
-
-# Locale (generate specified locale)
-chroot "$ROOTFS_DIR" bash -c "echo '$LOCALE UTF-8' &gt; /etc/locale.gen"
-chroot "$ROOTFS_DIR" locale-gen
-
-# Set default LANG
-echo "LANG=$LOCALE" &gt; "${ROOTFS_DIR}/etc/default/locale"
-
-#############################
-# Install Packages in Chroot
-#############################
-echo "&gt;&gt;&gt; Installing required packages in the target system..."
-# Configure apt sources (use default deb.debian.org for stable)
-cat &gt; "${ROOTFS_DIR}/etc/apt/sources.list" &lt;&lt;EOF
-deb http://deb.debian.org/debian $DEBIAN_RELEASE main contrib non-free non-free-firmware
-deb http://deb.debian.org/debian $DEBIAN_RELEASE-updates main contrib non-free non-free-firmware
-deb http://security.debian.org/debian-security $DEBIAN_RELEASE-security main contrib non-free non-free-firmware
-EOF
-
-# Update apt cache and install packages
-chroot "$ROOTFS_DIR" apt-get update
-# Use apt-get in one command to install all desired packages
-chroot "$ROOTFS_DIR" apt-get install -y --no-install-recommends \
-    $BASE_PACKAGES,$X11_PACKAGES,$APP_PACKAGES,$NETWORK_PACKAGES,$BOOT_PACKAGES
-
-# Set the system's timezone and reconfigure tzdata (non-interactively)
-chroot "$ROOTFS_DIR" bash -c "DEBIAN_FRONTEND=noninteractive dpkg-reconfigure tzdata"
-
-#############################
-# User Setup and Autologin
-#############################
-echo "&gt;&gt;&gt; Setting up default user and auto-login..."
-# Create the user with home directory and add to groups (sudo,netdev,audio,video)
-chroot "$ROOTFS_DIR" useradd -m -s /bin/bash "$USERNAME"
-chroot "$ROOTFS_DIR" bash -c "echo '${USERNAME}:${USERPASSWORD}' | chpasswd"
-# Set root password (optional: here we set same as user, or leave locked by not setting)
-chroot "$ROOTFS_DIR" bash -c "echo 'root:${USERPASSWORD}' | chpasswd"
-# Add user to necessary groups
-chroot "$ROOTFS_DIR" usermod -aG sudo,netdev,audio,video "$USERNAME"
-
-# Configure autologin on tty1 via systemd getty override
-AUTOLOGIN_CONF="${ROOTFS_DIR}/etc/systemd/system/getty@tty1.service.d"
-mkdir -p "$AUTOLOGIN_CONF"
-cat &gt; "$AUTOLOGIN_CONF/autologin.conf" &lt;&lt;EOF
-[Service]
-ExecStart=
-ExecStart=-/sbin/agetty --autologin $USERNAME --noclear %I 38400 linux
-EOF
-
-# Set up startx on login (for console auto-login sessions)
-# Add a command to .bash_profile to launch X only for the autologin on tty1
-USER_HOME="${ROOTFS_DIR}/home/${USERNAME}"
-cat &gt;&gt; "${USER_HOME}/.bash_profile" &lt;&lt;'EOF'
-# If logging in on tty1, start X automatically
-if [[ -z $DISPLAY &amp;&amp; $(tty) == "/dev/tty1" ]]; then
-    startx -- -nocursor
-    logout
-fi
-EOF
-chroot "$ROOTFS_DIR" chown "$USERNAME:$USERNAME" "/home/$USERNAME/.bash_profile"
-
-#############################
-# X11 Autostart (ratpoison + apps)
-#############################
-echo "&gt;&gt;&gt; Configuring X11 session (ratpoison) and application autostart..."
-# Create an .xinitrc for the user to start Ratpoison
-cat &gt; "${USER_HOME}/.xinitrc" &lt;&lt;'EOF'
-#!/bin/bash
-# .xinitrc: run Ratpoison window manager
-exec ratpoison
-EOF
-chroot "$ROOTFS_DIR" chown "$USERNAME:$USERNAME" "/home/$USERNAME/.xinitrc"
-chroot "$ROOTFS_DIR" chmod +x "/home/$USERNAME/.xinitrc"
-
-# Configure Ratpoison autostart: .ratpoisonrc to launch TreeSheets and Impala at startup
-cat &gt; "${USER_HOME}/.ratpoisonrc" &lt;&lt;EOF
-# Disable startup message
-startup_message off
-# Set a blank cursor (useful if -nocursor used for X)
-exec xsetroot -cursor_name left_ptr
-# Autostart applications:
-exec treesheets      # launch TreeSheets GUI on start
-exec xterm -e impala # open an xterm and run impala TUI inside it
-EOF
-# Note: impala is not an official Debian package. Ensure the 'impala' binary is installed in the system or adjust this line.
-chroot "$ROOTFS_DIR" chown "$USERNAME:$USERNAME" "/home/$USERNAME/.ratpoisonrc"
-
-#############################
-# Bootloader Setup (Syslinux &amp; GRUB)
-#############################
-echo "&gt;&gt;&gt; Installing and configuring bootloaders (Syslinux for BIOS, GRUB for UEFI)..."
-# 1. EXTLINUX (Syslinux) for BIOS boot:
-# Create extlinux directory
-chroot "$ROOTFS_DIR" mkdir -p /boot/extlinux
-# Copy Syslinux BIOS modules to /boot/extlinux
-chroot "$ROOTFS_DIR" cp -r /usr/lib/syslinux/modules/bios/* /boot/extlinux/ 2&gt;/dev/null || true
-# Install extlinux bootloader on the ext4 partition
-chroot "$ROOTFS_DIR" extlinux --install /boot/extlinux
-
-# Create extlinux configuration file
-ROOT_UUID=$(blkid -s UUID -o value "$LOOP_P2")  # get UUID of root partition
-cat &gt; "${ROOTFS_DIR}/boot/extlinux/extlinux.conf" &lt;&lt;EOF
-DEFAULT linux
-LABEL linux
-    LINUX ../vmlinuz
-    INITRD ../initrd.img
-    APPEND root=UUID=${ROOT_UUID} ro quiet
-EOF
-# The vmlinuz and initrd.img symlinks point to the latest kernel and initrd in /boot.
-# We use '../' because extlinux directory is /boot/extlinux, going up to /boot for the files.
-
-# Ensure the extlinux config and modules are owned by root (should already be)
-chroot "$ROOTFS_DIR" chown -R root:root /boot/extlinux
-
-# 2. GRUB for UEFI boot:
-# Install GRUB EFI (this was already installed via apt in BOOT_PACKAGES)
-# Perform grub-install targeting x86_64 EFI, pointing to the mounted EFI partition.
-chroot "$ROOTFS_DIR" grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=Debian --removable --no-nvram
-# Generate GRUB configuration file
-chroot "$ROOTFS_DIR" update-grub
-
-#############################
-# Finalization
-#############################
-# Remove the QEMU static binary from the target system (not needed on real x86_64 hardware)
-rm -f "${ROOTFS_DIR}/usr/bin/qemu-${TARGET_ARCH}-static"
-
-# Sync data to disk
-sync
-
-echo "&gt;&gt;&gt; Unmounting chroot filesystems..."
-# These will be also handled by the trap on exit, but we unmount explicitly here for clarity:
-umount "${ROOTFS_DIR}/proc" || true
-umount "${ROOTFS_DIR}/sys" || true
-umount "${ROOTFS_DIR}/dev/pts" || true
-umount "${ROOTFS_DIR}/dev" || true
-umount "${ROOTFS_DIR}/run" || true
-umount "${ROOTFS_DIR}/boot/efi" || true
-umount "${EFI_DIR}" || true
-umount "${ROOTFS_DIR}" || true
-
-# Write Syslinux MBR boot code to the image (for BIOS boot).
-# Use dd to write the first 440 bytes from Syslinux's mbr.bin to the image's MBR.
-echo "&gt;&gt;&gt; Writing Syslinux MBR boot code to image..."
-dd if="${ROOTFS_DIR}/usr/lib/SYSLINUX/mbr.bin" of="$LOOP_DEV" bs=440 count=1 conv=notrunc
-
-# Detach loop device
-losetup -d "$LOOP_DEV"
-
-echo "&gt;&gt;&gt; Debian USB image creation completed successfully!"
-echo "Image file: $IMAGE_PATH"
-# Offer to write image to a USB device
-if confirm "Write the image to a USB drive now? (This will destroy contents on the target drive) [yes/NO]"; then
-    read -rp "Enter the device path for the USB (e.g., /dev/sdX): " USBDEV
-    if [[ -n "$USBDEV" ]]; then
-        echo "WARNING: About to overwrite $USBDEV with the image. This will erase all data on $USBDEV."
-        if confirm "Are you absolutely sure? Type 'yes' to continue: "; then
-            echo "&gt;&gt;&gt; Writing image to $USBDEV ... (this may take a while)"
-            dd if="$IMAGE_PATH" of="$USBDEV" bs=4M status=progress conv=fsync
-            echo "&gt;&gt;&gt; Syncing data to $USBDEV..."
-            sync
-            echo "Image written to $USBDEV successfully. You can now boot the USB drive on an x86_64 machine."
-        else
-            echo "Skipped writing image to USB."
-        fi
-    fi
-else
-    echo "Image creation complete. You can write $IMAGE_PATH to a USB device later using 'dd' or a similar tool."
-fi
-</code></pre>]]></content><author><name></name></author><category term="scratchpad" /></entry></feed>
+</section>]]></content><author><name></name></author><category term="aid&gt;software&gt;linux&gt;rockchip" /></entry></feed>
