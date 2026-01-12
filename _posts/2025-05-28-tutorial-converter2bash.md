@@ -38,9 +38,9 @@ title: 'tutorial converter2bash'
   <input_specification>
     <variable>
       <name>[[tutorial_content]]</name>
-      <description>The full text content of the tutorial. This includes all procedures, actions, commands, and tasks to be automated. It may be in plain text, markdown, or include prose descriptions of steps.</description>
+      <description>The full content of the tutorial. This includes all procedures, actions, commands, and tasks to be automated. It may be in plain text, markdown, pdf, urls, attached files, images, etc.</description>
       <type>String (multiline text)</type>
-      <value>"`The full text content of the entire AI ASSISTANT's last response (the response that immediately preceded this request); accessible from this conversation context/chat history.`"</value>
+      <value>"`The full content, attached files, urls, etc., of the entire AI ASSISTANT's last response (the response that immediately preceded this request); accessible from this conversation context/chat history.`"</value>
     </variable>
   </input_specification>
 
