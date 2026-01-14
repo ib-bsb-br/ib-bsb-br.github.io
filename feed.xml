@@ -1,4 +1,373 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2026-01-14T17:23:52+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">solutions VS constraints</title><link href="https://ib.bsb.br/sol2con/" rel="alternate" type="text/html" title="solutions VS constraints" /><published>2026-01-14T00:00:00+00:00</published><updated>2026-01-14T15:44:13+00:00</updated><id>https://ib.bsb.br/sol2con</id><content type="html" xml:base="https://ib.bsb.br/sol2con/"><![CDATA[<section class="code-block-container" role="group" aria-label=" Code Block" data-filename="_code_block.txt" data-code="&lt;purpose&gt;
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2026-01-14T17:55:00+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">MLC-LLM for rk3588</title><link href="https://ib.bsb.br/mlc-llm-rk3588/" rel="alternate" type="text/html" title="MLC-LLM for rk3588" /><published>2026-01-14T00:00:00+00:00</published><updated>2026-01-14T17:15:03+00:00</updated><id>https://ib.bsb.br/mlc-llm_rk3588</id><content type="html" xml:base="https://ib.bsb.br/mlc-llm-rk3588/"><![CDATA[<p>bibref https://llm.mlc.ai/docs
+bibref https://llm.mlc.ai/docs/install/gpu.html
+bibref https://blog.mlc.ai/2024/04/20/GPU-Accelerated-LLM-on-Orange-Pi
+bibref https://github.com/Chrisz236/llm-rk3588</p>
+
+<p>Please open an issue if you find something that can be improved in this guide</p>
+
+<p>See benchmarks for various models I’ve tested <a href="https://github.com/serialscriptr/Orange-PI-5-Pro-MLC-LLM/blob/main/mlc-llm%20benchmarks.md">here</a></p>
+
+<h2 id="prepare-the-hardware">Prepare the hardware</h2>
+<p>While this guide is tailored to the rk3588 it could also be used as a generic guide for other boards using rockchip. Make sure your hardware is properly cooled with a fan and heatsinks as the hardware may overheat or thermal throttle.</p>
+<h2 id="install-ubuntu-for-rockchip">Install Ubuntu for Rockchip</h2>
+<ul>
+  <li>Download the latest version of ubuntu for your device <a href="https://joshua-riek.github.io/ubuntu-rockchip-download/">here</a></li>
+  <li>Burn the OS image to a micro SD card using balenaetcher or any other image writing software</li>
+  <li>Boot the OS on your device. Optionally connect via SSH for convivence. The default username and password is ubuntu/ubuntu. Once you login for the first time you will be forced to change the password</li>
+</ul>
+
+<h2 id="install-os-to-ssd-or-emmc-optional-but-recommended">Install OS to SSD or eMMC (Optional but recommended)</h2>
+<p>In order to not experience disk read/write speed bottlenecks when using mlc-llm I highly recommend using a M.2 SSD or eMMC storage module.</p>
+<ul>
+  <li>Once booted to the OS off the micro SD card run</li>
+</ul>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>fdisk <span class="nt">-l</span>
+</code></pre></div></div>
+<p>to find the storage you will be installing the OS on (Highlighted in red is the eMMC module I will be installing my OS on)
+   <img width="539" alt="Pasted image 20240910125904" src="https://github.com/user-attachments/assets/c1fbc06f-944f-465b-bade-50967160d4f0" /></p>
+
+<ul>
+  <li>Once you found the storage to install the OS on run the following command
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>ubuntu-rockchip-install /dev/mmcblk0
+</code></pre></div>    </div>
+    <p>Where “/dev/mmcblk0” is the storage you wish to install the OS on as shown by fdisk. After the process is done you will need to power off the device, remove the micro SD card and turn the system back on.</p>
+  </li>
+</ul>
+
+<h2 id="install-opencl-gpu-drivers">Install OpenCL GPU Drivers</h2>
+<ul>
+  <li>Download and install <code class="language-plaintext highlighter-rouge">libmali-g610.so</code>
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">cd</span> /usr/lib <span class="o">&amp;&amp;</span> <span class="nb">sudo </span>wget https://github.com/JeffyCN/mirrors/raw/libmali/lib/aarch64-linux-gnu/libmali-valhall-g610-g6p0-x11-wayland-gbm.so
+</code></pre></div>    </div>
+  </li>
+  <li>Check if file <code class="language-plaintext highlighter-rouge">mali_csffw.bin</code> exist under path <code class="language-plaintext highlighter-rouge">/lib/firmware</code>, if not download it with command:
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">cd</span> /lib/firmware <span class="o">&amp;&amp;</span> <span class="nb">sudo </span>wget https://github.com/JeffyCN/mirrors/raw/libmali/firmware/g610/mali_csffw.bin
+</code></pre></div>    </div>
+  </li>
+  <li>Download OpenCL ICD loader and manually add libmali to ICD
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>apt update
+<span class="nb">sudo </span>apt <span class="nb">install </span>mesa-opencl-icd
+<span class="nb">sudo mkdir</span> <span class="nt">-p</span> /etc/OpenCL/vendors
+<span class="nb">echo</span> <span class="s2">"/usr/lib/libmali-valhall-g610-g6p0-x11-wayland-gbm.so"</span> | <span class="nb">sudo tee</span> /etc/OpenCL/vendors/mali.icd
+</code></pre></div>    </div>
+  </li>
+  <li>Download and install <code class="language-plaintext highlighter-rouge">libOpenCL</code>
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>apt <span class="nb">install </span>ocl-icd-opencl-dev
+</code></pre></div>    </div>
+  </li>
+  <li>Download and install dependencies for Mali OpenCL
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>apt <span class="nb">install </span>libxcb-dri2-0 libxcb-dri3-0 libwayland-client0 libwayland-server0 libx11-xcb1
+</code></pre></div>    </div>
+  </li>
+  <li>Download and install clinfo to check if OpenCL successfully installed
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>apt <span class="nb">install </span>clinfo
+</code></pre></div>    </div>
+  </li>
+  <li>Run clinfo and check the results. We are looking for a mali device like shown below.<img src="https://github.com/user-attachments/assets/e9913f73-8d7b-4186-83e2-859bfd2e15f6" alt="Pasted image 20240910132233" /></li>
+</ul>
+
+<h2 id="install-conda---miniconda-optional-but-recommended">Install Conda - miniconda (optional but recommended)</h2>
+<p>While not necessary using conda will make managing dependencies for your build environment much easier.</p>
+<ul>
+  <li>Grab the latest installer script for your hardware <a href="https://docs.anaconda.com/miniconda/">here</a> for the rk3588 I will be using “Miniconda3 Linux-aarch64 64-bit” as the device is using an arm64 CPU.</li>
+  <li>Run the following, change the installer script url accordingly
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">mkdir</span> <span class="nt">-p</span> ~/miniconda3
+wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-aarch64.sh <span class="nt">-O</span> ~/miniconda3/miniconda.sh
+bash ~/miniconda3/miniconda.sh <span class="nt">-b</span> <span class="nt">-u</span> <span class="nt">-p</span> ~/miniconda3
+<span class="nb">rm</span> ~/miniconda3/miniconda.sh
+</code></pre></div>    </div>
+  </li>
+  <li>add/initialize conda in your shell
+ for bash:
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>~/miniconda3/bin/conda init bash
+</code></pre></div>    </div>
+    <p>for zsh:</p>
+    <div class="language-zsh highlighter-rouge"><div class="highlight"><pre class="highlight"><code>~/miniconda3/bin/conda init zsh
+</code></pre></div>    </div>
+  </li>
+  <li>
+    <p>close and restart your shell to activate and start using conda. You should see (base) next to your username <img src="https://github.com/user-attachments/assets/fe7c8885-55a2-417c-9318-69942e9a9fce" alt="Pasted image 20240910134503" /></p>
+  </li>
+  <li>Update conda
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>conda update <span class="nt">--yes</span> <span class="nt">-n</span> base <span class="nt">-c</span> defaults conda
+</code></pre></div>    </div>
+  </li>
+  <li><strong>Set libmamba as the dependency solver.</strong> The default dependency solver in conda could be slow in certain scenarios, and it is always recommended to upgrade it to libmamba, a faster solver. Install:
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>conda <span class="nb">install</span> <span class="nt">--yes</span> <span class="nt">-n</span> base conda-libmamba-solver
+</code></pre></div>    </div>
+    <p>set as default dependency solver:</p>
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>conda config <span class="nt">--set</span> solver libmamba
+</code></pre></div>    </div>
+  </li>
+</ul>
+
+<h2 id="compile-tvm-unity-optional-but-recommended">Compile TVM-Unity (Optional but recommended)</h2>
+<p>See instructions here for up to date instructions: https://llm.mlc.ai/docs/install/tvm.html</p>
+
+<p>mlc-llm provides pre-compiles tvm packages which should be fine for our uses but in my personal testing I was unable to get them to work (specifically on the rk3588). If you skip this section and encounter errors related to the “tvm” module I recommend attempting to compile it yourself.</p>
+
+<h3 id="some-prerequisites">Some prerequisites</h3>
+<p>Since these packages are required when building mlc-llm I install them with apt install but you could optionally install them to your build environment with conda. Either way make sure these packages are install prior to attempting to compile TVM-Unity</p>
+<ul>
+  <li>doxygen</li>
+  <li>graphviz</li>
+  <li>build-essential (ubuntu specific package. Install the equivalent for your OS)</li>
+  <li>zlib1g-dev</li>
+  <li>libfl-dev</li>
+  <li>clang</li>
+  <li>libxml2-dev</li>
+</ul>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>apt <span class="nb">install </span>doxygen graphviz build-essential zlib1g-dev libfl-dev clang libxml2-dev
+</code></pre></div></div>
+
+<h4 id="pip-prerequisites">PIP prerequisites</h4>
+<p>The following python modules are required in order for us to run mlc-llm and test our tvm-unity build. If you are not using conda you will need to install and use python3-pip</p>
+<ul>
+  <li>numpy</li>
+  <li>decorator</li>
+  <li>psutil</li>
+  <li>typing_extensions</li>
+  <li>packaging</li>
+  <li>attrs</li>
+  <li>cython</li>
+</ul>
+
+<p>Using pip</p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>pip <span class="nb">install </span>numpy decorator psutil typing_extensions packaging attrs cython
+</code></pre></div></div>
+<p>Using conda</p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>conda <span class="nb">install </span>numpy decorator psutil typing_extensions packaging attrs cython
+</code></pre></div></div>
+<h3 id="using-conda">Using conda</h3>
+<p>The following commands are for setting up a build environment for compiling TVM-Unity. If you skipped the conda installation you can attempt to install these dependencies using apt install. If manually installing these packages with apt install make sure you are installing the correct versions as by default it will install the latest version of each package.</p>
+
+<p>Run the following to create and setup the conda environment</p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># make sure to start with a fresh environment</span>
+conda <span class="nb">env </span>remove <span class="nt">-n</span> tvm-build-venv
+<span class="c"># create the conda environment with build dependency</span>
+conda create <span class="nt">-n</span> tvm-build-venv <span class="nt">-c</span> conda-forge <span class="se">\</span>
+    <span class="s2">"llvmdev&gt;=15"</span> <span class="se">\</span>
+    <span class="s2">"cmake&gt;=3.24"</span> <span class="se">\</span>
+    git <span class="se">\</span>
+    <span class="nv">python</span><span class="o">=</span>3.11
+<span class="c"># enter the build environment</span>
+conda activate tvm-build-venv
+</code></pre></div></div>
+
+<ul>
+  <li>Clone the github repo for tvm-unity (actually mlc-ai/relax temporarily, check link above to see if tvm-unity is recommended now) I recommend cloning in the home directory (~)
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># clone from GitHub</span>
+git clone <span class="nt">--recursive</span> https://github.com/mlc-ai/relax.git tvm-unity <span class="o">&amp;&amp;</span> <span class="nb">cd </span>tvm-unity
+<span class="c"># create the build directory</span>
+<span class="nb">rm</span> <span class="nt">-rf</span> build <span class="o">&amp;&amp;</span> <span class="nb">mkdir </span>build <span class="o">&amp;&amp;</span> <span class="nb">cd </span>build
+<span class="c"># specify build requirements in `config.cmake`</span>
+<span class="nb">cp</span> ../cmake/config.cmake <span class="nb">.</span>
+</code></pre></div>    </div>
+  </li>
+  <li>configure the cmake.config file which instructs cmake how we want to compile the project. Ensure you are in the build directory created earlier when running these commands.
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">echo</span> <span class="s2">"set(CMAKE_BUILD_TYPE RelWithDebInfo)"</span> <span class="o">&gt;&gt;</span> config.cmake
+<span class="nb">echo</span> <span class="s2">"set(USE_LLVM </span><span class="se">\"</span><span class="s2">llvm-config --ignore-libllvm --link-static</span><span class="se">\"</span><span class="s2">)"</span> <span class="o">&gt;&gt;</span> config.cmake
+<span class="nb">echo</span> <span class="s2">"set(HIDE_PRIVATE_SYMBOLS ON)"</span> <span class="o">&gt;&gt;</span> config.cmake
+</code></pre></div>    </div>
+  </li>
+  <li>Set how mlc-llm will run the llm. The options are Cuda (Nvidia), Metal (Apple), Vulkan (AMD) and OpenCL which is what we will be using. If you are using something other than OpenCL make sure you set that to “ON”
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">echo</span> <span class="s2">"set(USE_OPENCL ON)"</span> <span class="o">&gt;&gt;</span> config.cmake
+</code></pre></div>    </div>
+  </li>
+  <li>once the config.cmake file is created and configured to our liking we can run the following to build the project. Again ensure you are in the build folder from earlier:
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>cmake .. <span class="o">&amp;&amp;</span> cmake <span class="nt">--build</span> <span class="nb">.</span> <span class="nt">--parallel</span> <span class="si">$(</span><span class="nb">nproc</span><span class="si">)</span>
+</code></pre></div>    </div>
+  </li>
+</ul>
+
+<h3 id="verify-tvm-compiled-correct">Verify TVM compiled correct</h3>
+<p>You may see several warnings or errors during compilation but this should be ok as long as the build doesn’t end with several error messages like the screenshot below which is due to missing libfl-dev <img src="https://github.com/user-attachments/assets/6eac5357-e851-4396-ae45-d554505053b3" alt="Pasted image 20240910152125" /></p>
+
+<p>if you encounter any errors such as the error shown above remediate the errors by installing the required packages and restart the process including and following this command in the guide above. Make sure you are in the tvm-unity directory when running the command below.</p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">rm</span> <span class="nt">-rf</span> build <span class="o">&amp;&amp;</span> <span class="nb">mkdir </span>build <span class="o">&amp;&amp;</span> <span class="nb">cd </span>build
+</code></pre></div></div>
+
+<p>Example of output when built successfully: <img src="https://github.com/user-attachments/assets/c51bd9fc-f5b1-425e-9495-1088dc34b98c" alt="Pasted image 20240910170713" /></p>
+
+<p>Add the tvm-unity path to your python path variable. Edit the path if your tvm-unity folder is located somewhere else:</p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">export </span><span class="nv">PYTHONPATH</span><span class="o">=</span>/home/ubuntu/tvm-unity/python:<span class="nv">$PYTHONPATH</span>
+</code></pre></div></div>
+<p>After adding the path to your python path variable run the following. Make sure you have the python modules installed from the pip prerequisites section!</p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>python <span class="nt">-c</span> <span class="s2">"import tvm; print(tvm.__file__)"</span>
+</code></pre></div></div>
+<p>which should output something similar to: <img src="https://github.com/user-attachments/assets/ed4880f6-1e75-4f95-bc7f-244c4a4e838d" alt="Pasted image 20240910173413" /></p>
+
+<p>10/10/24: You may see errors about “-mcpu=apple-latest” this is safe to ignore provided the final output is similar to the output shown above. Ex:</p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">[</span>20:09:46] /home/ubuntu/tvm-unity/src/target/llvm/llvm_instance.cc:226: Error: Using LLVM 19.1.1 with <span class="sb">`</span><span class="nt">-mcpu</span><span class="o">=</span>apple-latest<span class="sb">`</span> is not valid <span class="k">in</span> <span class="sb">`</span><span class="nt">-mtriple</span><span class="o">=</span>arm64-apple-macos<span class="sb">`</span>, using default <span class="sb">`</span><span class="nt">-mcpu</span><span class="o">=</span>generic<span class="sb">`</span>
+<span class="o">[</span>20:09:46] /home/ubuntu/tvm-unity/src/target/llvm/llvm_instance.cc:226: Error: Using LLVM 19.1.1 with <span class="sb">`</span><span class="nt">-mcpu</span><span class="o">=</span>apple-latest<span class="sb">`</span> is not valid <span class="k">in</span> <span class="sb">`</span><span class="nt">-mtriple</span><span class="o">=</span>arm64-apple-macos<span class="sb">`</span>, using default <span class="sb">`</span><span class="nt">-mcpu</span><span class="o">=</span>generic<span class="sb">`</span>
+<span class="o">[</span>20:09:46] /home/ubuntu/tvm-unity/src/target/llvm/llvm_instance.cc:226: Error: Using LLVM 19.1.1 with <span class="sb">`</span><span class="nt">-mcpu</span><span class="o">=</span>apple-latest<span class="sb">`</span> is not valid <span class="k">in</span> <span class="sb">`</span><span class="nt">-mtriple</span><span class="o">=</span>arm64-apple-macos<span class="sb">`</span>, using default <span class="sb">`</span><span class="nt">-mcpu</span><span class="o">=</span>generic<span class="sb">`</span>
+</code></pre></div></div>
+
+<p>Now run the following to check the build options used:</p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>python <span class="nt">-c</span> <span class="s2">"import tvm; print('</span><span class="se">\n</span><span class="s2">'.join(f'{k}: {v}' for k, v in tvm.support.libinfo().items()))"</span>
+</code></pre></div></div>
+<p>We should then be able to see opencl set to “ON”</p>
+
+<p><img width="304" alt="Pasted image 20240910173823" src="https://github.com/user-attachments/assets/e9097e30-664b-4a76-b80e-e13ce060a6f9" /></p>
+
+<h2 id="compile-mlc-llm-from-source">Compile mlc-llm from source</h2>
+
+<h3 id="package-prerequisites">Package prerequisites</h3>
+<p>There is only one other package required here compared to the tvm-unity section. If you installed the packages included in the tvm-unity section then you only need to install git-lfs</p>
+<ul>
+  <li>git-lfs</li>
+  <li>Doxygen</li>
+  <li>Graphviz</li>
+  <li>build-essential (ubuntu specific package. Install the equivalent for your OS)</li>
+  <li>zlib1g-dev</li>
+  <li>libfl-dev</li>
+  <li>clang
+    <h4 id="pip-prerequisites-1">PIP prerequisites</h4>
+    <p>The following python modules are required in order for us to run mlc-llm. If you are not using conda you will need to install and use python3-pip.</p>
+  </li>
+  <li>numpy</li>
+  <li>decorator</li>
+  <li>psutil</li>
+  <li>typing_extensions</li>
+  <li>packaging</li>
+  <li>attrs</li>
+  <li>pydantic</li>
+  <li>shortuuid</li>
+  <li>fastapi</li>
+  <li>requests</li>
+  <li>tqdm</li>
+  <li>prompt_toolkit</li>
+  <li>uvicorn</li>
+  <li>cython</li>
+</ul>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>pip <span class="nb">install </span>numpy decorator psutil typing_extensions packaging attrs pydantic shortuuid fastapi requests tqdm prompt_toolkit uvicorn cython
+</code></pre></div></div>
+
+<h3 id="conda-environment-optional-but-recommended">Conda environment (optional but recommended)</h3>
+<p>If you have conda installed from earlier perform the following to setup a build environment for mlc-llm. Note that if you aren’t using conda you need to have the packages installed on your OS with the recommended versions.</p>
+<ul>
+  <li>Create the environment
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>conda create <span class="nt">-n</span> mlc-chat-venv <span class="nt">-c</span> conda-forge <span class="se">\</span>
+  <span class="s2">"cmake&gt;=3.24"</span> <span class="se">\</span>
+  rust <span class="se">\</span>
+  git <span class="se">\</span>
+  <span class="nv">python</span><span class="o">=</span>3.11
+</code></pre></div>    </div>
+  </li>
+  <li>activate the environment
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>conda activate mlc-chat-venv
+</code></pre></div>    </div>
+  </li>
+</ul>
+
+<h3 id="clone-and-compile">Clone and compile</h3>
+<ul>
+  <li>clone the mlc-llm github repo. I recommend cloning it to your home directory to make things easy:
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>git clone <span class="nt">--recursive</span> https://github.com/mlc-ai/mlc-llm.git <span class="o">&amp;&amp;</span> <span class="nb">cd </span>mlc-llm/
+</code></pre></div>    </div>
+  </li>
+  <li>create the build directory
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">mkdir</span> <span class="nt">-p</span> build <span class="o">&amp;&amp;</span> <span class="nb">cd </span>build
+</code></pre></div>    </div>
+  </li>
+  <li>generate the config.cmake with the following script. Note if you are not using conda you will likely have to replace “python” with “python3”
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>python ../cmake/gen_cmake_config.py
+</code></pre></div>    </div>
+  </li>
+  <li>
+    <p>for the first option of the script, the tvm location, if you followed the compile tvm-unity instructions from earlier you should use that directory here. Otherwise you can attempt to use the default provided and just leave this option blank. Here in the example below I am using a custom compiled tvm <img src="https://github.com/user-attachments/assets/91853fcf-bf9c-4b5d-8688-3bae6e57a229" alt="Pasted image 20240910175631" /></p>
+  </li>
+  <li>Use CUDA should be no</li>
+  <li>Use CUTLASS should be no</li>
+  <li>Use CUBLAS should be no</li>
+  <li>Use ROCm should be no</li>
+  <li>Use Vulkan should be no</li>
+  <li>Use Metal should be no</li>
+  <li>Use OpenCL should be Yes</li>
+  <li>Use OpenCLHostPtr can be yes or no. From what I understand this has something to do with using storage for opencl cache of some kind but dont have a great understanding of what exactly this means/does.</li>
+  <li>Use FlashInfer should be no
+Here is my output after running the script:
+<img src="https://github.com/user-attachments/assets/bb2e8efb-5ca3-4dfb-a824-ce8ae9c987b3" alt="Pasted image 20240910180223" /></li>
+</ul>
+
+<p>Now you are ready to compile. Run the following to build the project. Again keep an eye out for errors and warnings . Warnings and errors may not prevent the project from compiling</p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>cmake .. <span class="o">&amp;&amp;</span> cmake <span class="nt">--build</span> <span class="nb">.</span> <span class="nt">--parallel</span> <span class="si">$(</span><span class="nb">nproc</span><span class="si">)</span> <span class="o">&amp;&amp;</span> <span class="nb">cd</span> ..
+</code></pre></div></div>
+<p>Here is my output after a successful build:
+<img src="https://github.com/user-attachments/assets/18289722-ec4c-4bb3-967a-d75ccb0c60b8" alt="Pasted image 20240910181146" /></p>
+
+<p>After successfully building lets add the mlc-llm path to our pythonpath variable. Change the following to match your paths if you used something different:</p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">export </span><span class="nv">MLC_LLM_SOURCE_DIR</span><span class="o">=</span>/home/ubuntu/mlc-llm
+<span class="nb">export </span><span class="nv">PYTHONPATH</span><span class="o">=</span><span class="nv">$MLC_LLM_SOURCE_DIR</span>/python:<span class="nv">$PYTHONPATH</span>
+</code></pre></div></div>
+<p>And since mlc-llm is ran within python we will make an alias for calling it:</p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">alias </span><span class="nv">mlc_llm</span><span class="o">=</span><span class="s2">"python -m mlc_llm"</span>
+</code></pre></div></div>
+
+<p>now provided you have all the pre-requisites installed you can run the following to test mlc-llm:</p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>python <span class="nt">-c</span> <span class="s2">"import mlc_llm; print(mlc_llm)"</span>
+</code></pre></div></div>
+<p>if successful you should see something along the lines of:</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>&lt;module 'mlc_llm' from '/home/ubuntu/mlc-llm/python/mlc_llm/__init__.py'&gt;
+</code></pre></div></div>
+
+<p>10/10/24: You may see errors about “-mcpu=apple-latest” this is safe to ignore provided the final output is similar to the output shown above. Ex:</p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">[</span>20:09:46] /home/ubuntu/tvm-unity/src/target/llvm/llvm_instance.cc:226: Error: Using LLVM 19.1.1 with <span class="sb">`</span><span class="nt">-mcpu</span><span class="o">=</span>apple-latest<span class="sb">`</span> is not valid <span class="k">in</span> <span class="sb">`</span><span class="nt">-mtriple</span><span class="o">=</span>arm64-apple-macos<span class="sb">`</span>, using default <span class="sb">`</span><span class="nt">-mcpu</span><span class="o">=</span>generic<span class="sb">`</span>
+<span class="o">[</span>20:09:46] /home/ubuntu/tvm-unity/src/target/llvm/llvm_instance.cc:226: Error: Using LLVM 19.1.1 with <span class="sb">`</span><span class="nt">-mcpu</span><span class="o">=</span>apple-latest<span class="sb">`</span> is not valid <span class="k">in</span> <span class="sb">`</span><span class="nt">-mtriple</span><span class="o">=</span>arm64-apple-macos<span class="sb">`</span>, using default <span class="sb">`</span><span class="nt">-mcpu</span><span class="o">=</span>generic<span class="sb">`</span>
+<span class="o">[</span>20:09:46] /home/ubuntu/tvm-unity/src/target/llvm/llvm_instance.cc:226: Error: Using LLVM 19.1.1 with <span class="sb">`</span><span class="nt">-mcpu</span><span class="o">=</span>apple-latest<span class="sb">`</span> is not valid <span class="k">in</span> <span class="sb">`</span><span class="nt">-mtriple</span><span class="o">=</span>arm64-apple-macos<span class="sb">`</span>, using default <span class="sb">`</span><span class="nt">-mcpu</span><span class="o">=</span>generic<span class="sb">`</span>
+</code></pre></div></div>
+
+<h2 id="running-mlc-llm">Running mlc-llm</h2>
+<p>To open the command help information run the following:</p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>mlc_llm chat <span class="nt">-h</span>
+</code></pre></div></div>
+
+<h3 id="selecting-a-device">Selecting a device</h3>
+<p>When attempting to run mlc-llm using opencl on the rk3588 I found that it would default to a generic ARM opencl device rather than the Mali GPU which we setup drivers for earlier in this guide. Because of this I had to specify the device to run mlc-llm on otherwise I would encounter an error preventing mlc-llm from running. I believe the order of the devices is reflected by clinfo but this may just be a coincidence in my case. See examples of specifying the device in the command examples below</p>
+<h3 id="getting-pre-compiled-llms">Getting pre-compiled LLMs</h3>
+<p>To download and utilize some pre-comipled LLM models for mlc-llm we can visit the mlc-ai organization on huggingface https://huggingface.co/mlc-ai
+Available quantization codes are: <code class="language-plaintext highlighter-rouge">q3f16_0</code>, <code class="language-plaintext highlighter-rouge">q4f16_1</code>, <code class="language-plaintext highlighter-rouge">q4f16_2</code>, <code class="language-plaintext highlighter-rouge">q4f32_0</code>, <code class="language-plaintext highlighter-rouge">q0f32</code>, and <code class="language-plaintext highlighter-rouge">q0f16</code></p>
+
+<p>for testing I will be using SmolLM-1.7B-Instruct-q4f16_1-MLC as its a pretty small download and I’ve found it runs decent. To run it as a chat run the following (note that in the future you may need to select a different model or an updated version of this model):</p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>mlc_llm chat HF://mlc-ai/SmolLM-1.7B-Instruct-q4f16_1-MLC <span class="nt">--device</span> opencl:1
+</code></pre></div></div>
+
+<p>If you wanted to run the model as a server you would do the following:</p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>mlc_llm serve HF://mlc-ai/SmolLM-1.7B-Instruct-q4f16_1-MLC <span class="nt">--device</span> opencl:1 <span class="nt">--mode</span> server <span class="nt">--host</span> 0.0.0.0
+</code></pre></div></div>
+<p>This will run mlc-llm as a REST server on opencl device 1 with server mode specified and the host changed from 127.0.0.1 to allow access outside of localhost</p>
+
+<p>You can test if the server is accessible outside of localhost using curl or invoke-restmethod on windows<img src="https://github.com/user-attachments/assets/7a1fda4c-aff6-4e72-bc64-d1c4e927a4b8" alt="Pasted image 20240910185054" /></p>
+
+<h2 id="extras">Extras</h2>
+<h3 id="adding-variables-to-your-shell-configuration">Adding variables to your shell configuration</h3>
+<p>To make the variables and alias we added earlier permanent we can add them to our bash shell config. Note this is unique to the user and not systemwide:
+Modify your shell config (use your text editor of choice):</p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>nano ~/.bashrc
+</code></pre></div></div>
+<p>At the bottom of the file add the following and change accordingly based on the paths you used and if you compiled tvm-unity:</p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">export </span><span class="nv">PYTHONPATH</span><span class="o">=</span>/home/ubuntu/mlc-llm/python:/home/ubuntu/tvm-unity/python
+<span class="nb">alias </span><span class="nv">mlc_llm</span><span class="o">=</span><span class="s2">"python -m mlc_llm"</span>
+</code></pre></div></div>
+<p>Once saved you need to reload your shell in order for the variables to be loaded</p>
+
+<h3 id="compiling-your-own-models">Compiling your own models</h3>
+<p>See the bottom of the following guide for basic instructions on building your own model:
+https://github.com/Chrisz236/llm-rk3588</p>
+
+<h3 id="using-mlc-llm-with-homeassistant">Using mlc-llm with HomeAssistant</h3>
+<p>At the time of writing this HomeAssistant has been adding lots of support for LLMs to utilize as a “Conversation agent” within a custom voice assistant. This allows mlc-llm to act as the brains for whatever you are requesting via your HomeAssistant voice assistant. Currently there is no official integration which allows using mlc-llm with HomeAssistant but there is a custom integration which we can use thanks to mlc-llm Open-AI REST compatibility https://github.com/jekalmin/extended_openai_conversation</p>
+
+<p>The Extended Open-AI conversation integration is a fork of the official Open-AI integration but allows for specifying a custom server address etc. Here is an example of the config options I used when using mlc-llm with HomeAssistant:
+<img src="https://github.com/user-attachments/assets/89a91b00-ff81-41bf-89d0-10a7a56127ff" alt="Pasted image 20240910190953" /></p>
+
+<p>Also make sure you have the correct chat model selected. I entered the model as shown by the mlc-llm server when querying its models.
+<img src="https://github.com/user-attachments/assets/aaddc08d-0305-4539-8405-8bc0c1f3f439" alt="Pasted image 20240910191005" /></p>
+
+<p>Do not expect this to perform well. The config options of this extension are vague and have no documentation so I am not sure if there is anything in HomeAssistant that can be tweaked for better performance. I expect we will need an official implementation of Open-AI compatible servers before we see better performance. This integration also attempts to use functions rather than tools for controlling entities in HomeAssistant, I haven’t had much luck using either and I expect more work is needed to fine tune this.</p>]]></content><author><name></name></author><category term="scratchpad" /></entry><entry><title type="html">solutions VS constraints</title><link href="https://ib.bsb.br/sol2con/" rel="alternate" type="text/html" title="solutions VS constraints" /><published>2026-01-14T00:00:00+00:00</published><updated>2026-01-14T15:44:13+00:00</updated><id>https://ib.bsb.br/sol2con</id><content type="html" xml:base="https://ib.bsb.br/sol2con/"><![CDATA[<section class="code-block-container" role="group" aria-label=" Code Block" data-filename="_code_block.txt" data-code="&lt;purpose&gt;
   You, as the AI ASSISTANT, must take (a) a list of 100 ranked solutions from [[solutions_100]] and (b) the target deployment constraints from [[constraints_text]], then produce a NEW ranking of consolidated “Solution Bundles” (a.k.a. stacks).
 
   Each bundle MUST cover, at least, all four domains:
@@ -14219,275 +14588,4 @@ placeholder
     &lt;process_number&gt;&lt;!-- placeholder_sei --&gt;&lt;/process_number&gt;
     &lt;signer_name&gt;&lt;!-- placeholder_parte --&gt;&lt;/signer_name&gt;
   &lt;/input_data&gt;</code>
-</section>]]></content><author><name></name></author><category term="AI&gt;prompt" /></entry><entry><title type="html">xnedit regex</title><link href="https://ib.bsb.br/xnedit/" rel="alternate" type="text/html" title="xnedit regex" /><published>2026-01-04T00:00:00+00:00</published><updated>2026-01-04T23:51:19+00:00</updated><id>https://ib.bsb.br/xnedit</id><content type="html" xml:base="https://ib.bsb.br/xnedit/"><![CDATA[<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Regular expressions (regex's) are useful as a way to match inexact sequences of characters.  They can be used in the `Find...' and `Replace...' search dialogs and are at the core of Color Syntax Highlighting patterns.  To specify a regular expression in a search dialog, simply click on the `Regular Expression' radio button in the dialog. 
-
-A regex is a specification of a pattern to be matched in the searched text. This pattern consists of a sequence of tokens, each being able to match a single character or a sequence of characters in the text, or assert that a specific position within the text has been reached (the latter is called an anchor.)  Tokens (also called atoms) can be modified by adding one of a number of special quantifier tokens immediately after the token.  A quantifier token specifies how many times the previous token must be matched (see below.) 
-
-Tokens can be grouped together using one of a number of grouping constructs, the most common being plain parentheses.  Tokens that are grouped in this way are also collectively considered to be a regex atom, since this new larger atom may also be modified by a quantifier. 
-
-A regex can also be organized into a list of alternatives by separating each alternative with pipe characters, `|'.  This is called alternation.  A match will be attempted for each alternative listed, in the order specified, until a match results or the list of alternatives is exhausted (see Alternation section below.) 
-
-The 'Any' Character
-
-If a dot (`.') appears in a regex, it means to match any character exactly once.  By default, dot will not match a newline character, but this behavior can be changed (see help topic Parenthetical Constructs, under the heading, Matching Newlines). 
-
-Character Classes
-
-A character class, or range, matches exactly one character of text, but the candidates for matching are limited to those specified by the class.  Classes come in two flavors as described below: 
-
-     [...]   Regular class, match only characters listed.
-     [^...]  Negated class, match only characters not listed.
-
-As with the dot token, by default negated character classes do not match newline, but can be made to do so. 
-
-The characters that are considered special within a class specification are different than the rest of regex syntax as follows. If the first character in a class is the `]' character (second character if the first character is `^') it is a literal character and part of the class character set.  This also applies if the first or last character is `-'.  Outside of these rules, two characters separated by `-' form a character range which includes all the characters between the two characters as well.  For example, `[^f-j]' is the same as `[^fghij]' and means to match any character that is not `f', `g', `h', `i', or `j'. 
-
-Anchors
-
-Anchors are assertions that you are at a very specific position within the search text.  XNEdit regular expressions support the following anchor tokens: 
-
-     ^    Beginning of line
-     $    End of line
-     &lt;    Left word boundary
-     &gt;    Right word boundary
-     \B   Not a word boundary
-
-Note that the \B token ensures that neither the left nor the right character are delimiters, or that both left and right characters are delimiters. The left word anchor checks whether the previous character is a delimiter and the next character is not. The right word anchor works in a similar way. 
-
-Note that word delimiters are user-settable, and defined by the X resource wordDelimiters, cf. X Resources. 
-
-Quantifiers
-
-Quantifiers specify how many times the previous regular expression atom may be matched in the search text.  Some quantifiers can produce a large performance penalty, and can in some instances completely lock up XNEdit.  To prevent this, avoid nested quantifiers, especially those of the maximal matching type (see below.) 
-
-The following quantifiers are maximal matching, or "greedy", in that they match as much text as possible (but don't exclude shorter matches if that is necessary to achieve an overall match). 
-
-     *   Match zero or more
-     +   Match one  or more
-     ?   Match zero or one
-
-The following quantifiers are minimal matching, or "lazy", in that they match as little text as possible (but don't exclude longer matches if that is necessary to achieve an overall match). 
-
-     *?   Match zero or more
-     +?   Match one  or more
-     ??   Match zero or one
-
-One final quantifier is the counting quantifier, or brace quantifier. It takes the following basic form: 
-
-     {min,max}  Match from `min' to `max' times the
-                previous regular expression atom.
-
-If `min' is omitted, it is assumed to be zero.  If `max' is omitted, it is assumed to be infinity.  Whether specified or assumed, `min' must be less than or equal to `max'.  Note that both `min' and `max' are limited to 65535.  If both are omitted, then the construct is the same as `*'.   Note that `{,}' and `{}' are both valid brace constructs.  A single number appearing without a comma, e.g. `{3}' is short for the `{min,min}' construct, or to match exactly `min' number of times. 
-
-The quantifiers `{1}' and `{1,1}' are accepted by the syntax, but are optimized away since they mean to match exactly once, which is redundant information.  Also, for efficiency, certain combinations of `min' and `max' are converted to either `*', `+', or `?' as follows: 
-
-     {} {,} {0,}    *
-     {1,}           +
-     {,1} {0,1}     ?
-
-Note that {0} and {0,0} are meaningless and will generate an error message at regular expression compile time. 
-
-Brace quantifiers can also be "lazy".  For example {2,5}? would try to match 2 times if possible, and will only match 3, 4, or 5 times if that is what is necessary to achieve an overall match. 
-
-Alternation
-
-A series of alternative patterns to match can be specified by separating them with vertical pipes, `|'.  An example of alternation would be `a|be|sea'. This will match `a', or `be', or `sea'. Each alternative can be an arbitrarily complex regular expression. The alternatives are attempted in the order specified.  An empty alternative can be specified if desired, e.g. `a|b|'.  Since an empty alternative can match nothingness (the empty string), this guarantees that the expression will match. 
-
-Comments
-
-Comments are of the form `(?#&lt;comment text&gt;)' and can be inserted anywhere and have no effect on the execution of the regular expression.  They can be handy for documenting very complex regular expressions.  Note that a comment begins with `(?#' and ends at the first occurrence of an ending parenthesis, or the end of the regular expression... period.  Comments do not recognize any escape sequences. 
-
-Escaping Metacharacters
-
-In a regular expression (regex), most ordinary characters match themselves. For example, `ab%' would match anywhere `a' followed by `b' followed by `%' appeared in the text.  Other characters don't match themselves, but are metacharacters. For example, backslash is a special metacharacter which 'escapes' or changes the meaning of the character following it. Thus, to match a literal backslash would require a regular expression to have two backslashes in sequence. XNEdit provides the following escape sequences so that metacharacters that are used by the regex syntax can be specified as ordinary characters. 
-
-     \(  \)  \-  \[  \]  \&lt;  \&gt;  \{  \}
-     \.  \|  \^  \$  \*  \+  \?  \&amp;  \\
-
-Special Control Characters
-
-There are some special characters that are  difficult or impossible to type. Many of these characters can be constructed as a sort of metacharacter or sequence by preceding a literal character with a backslash. XNEdit recognizes the following special character sequences: 
-
-     \a  alert (bell)
-     \b  backspace
-     \e  ASCII escape character (***)
-     \f  form feed (new page)
-     \n  newline
-     \r  carriage return
-     \t  horizontal tab
-     \v  vertical tab
-
-     *** For environments that use the EBCDIC character set,
-         when compiling XNEdit set the EBCDIC_CHARSET compiler
-         symbol to get the EBCDIC equivalent escape
-         character.)
-
-Octal and Hex Escape Sequences
-
-Any ASCII (or EBCDIC) character, except null, can be specified by using either an octal escape or a hexadecimal escape, each beginning with \0 or \x (or \X), respectively.  For example, \052 and \X2A both specify the `*' character.  Escapes for null (\00 or \x0) are not valid and will generate an error message.  Also, any escape that exceeds \0377 or \xFF will either cause an error or have any additional character(s) interpreted literally. For example, \0777 will be interpreted as \077 (a `?' character) followed by `7' since \0777 is greater than \0377. 
-
-An invalid digit will also end an octal or hexadecimal escape.  For example, \091 will cause an error since `9' is not within an octal escape's range of allowable digits (0-7) and truncation before the `9' yields \0 which is invalid. 
-
-Shortcut Escape Sequences
-
-XNEdit defines some escape sequences that are handy shortcuts for commonly used character classes. 
-
-   \d  digits            0-9
-   \l  letters           a-z, A-Z, and locale dependent letters
-   \s  whitespace        \t, \r, \v, \f, and space
-   \w  word characters   letters, digits, and underscore, `_'
-
-\D, \L, \S, and \W are the same as the lowercase versions except that the resulting character class is negated.  For example, \d is equivalent to `[0-9]', while \D is equivalent to `[^0-9]'. 
-
-These escape sequences can also be used within a character class.  For example, `[\l_]' is the same as `[a-zA-Z_]', extended with possible locale dependent letters. The escape sequences for special characters, and octal and hexadecimal escapes are also valid within a class. 
-
-Word Delimiter Tokens
-
-Although not strictly a character class, the following escape sequences behave similarly to character classes: 
-
-     \y   Word delimiter character
-     \Y   Not a word delimiter character
-
-The `\y' token matches any single character that is one of the characters that XNEdit recognizes as a word delimiter character, while the `\Y' token matches any character that is not a word delimiter character.  Word delimiter characters are dynamic in nature, meaning that the user can change them through preference settings.  For this reason, they must be handled differently by the regular expression engine.  As a consequence of this, `\y' and `\Y' cannot be used within a character class specification. 
-
-Capturing Parentheses
-
-Capturing Parentheses are of the form `(&lt;regex&gt;)' and can be used to group arbitrarily complex regular expressions.  Parentheses can be nested, but the total number of parentheses, nested or otherwise, is limited to 50 pairs. The text that is matched by the regular expression between a matched set of parentheses is captured and available for text substitutions and backreferences (see below.)  Capturing parentheses carry a fairly high overhead both in terms of memory used and execution speed, especially if quantified by `*' or `+'. 
-
-Non-Capturing Parentheses
-
-Non-Capturing Parentheses are of the form `(?:&lt;regex&gt;)' and facilitate grouping only and do not incur the overhead of normal capturing parentheses. They should not be counted when determining numbers for capturing parentheses which are used with backreferences and substitutions.  Because of the limit on the number of capturing parentheses allowed in a regex, it is advisable to use non-capturing parentheses when possible. 
-
-Positive Look-Ahead
-
-Positive look-ahead constructs are of the form `(?=&lt;regex&gt;)' and implement a zero width assertion of the enclosed regular expression.  In other words, a match of the regular expression contained in the positive look-ahead construct is attempted.  If it succeeds, control is passed to the next regular expression atom, but the text that was consumed by the positive look-ahead is first unmatched (backtracked) to the place in the text where the positive look-ahead was first encountered. 
-
-One application of positive look-ahead is the manual implementation of a first character discrimination optimization.  You can include a positive look-ahead that contains a character class which lists every character that the following (potentially complex) regular expression could possibly start with.  This will quickly filter out match attempts that cannot possibly succeed. 
-
-Negative Look-Ahead
-
-Negative look-ahead takes the form `(?!&lt;regex&gt;)' and is exactly the same as positive look-ahead except that the enclosed regular expression must NOT match.  This can be particularly useful when you have an expression that is general, and you want to exclude some special cases.  Simply precede the general expression with a negative look-ahead that covers the special cases that need to be filtered out. 
-
-Positive Look-Behind
-
-Positive look-behind constructs are of the form `(?&lt;=&lt;regex&gt;)' and implement a zero width assertion of the enclosed regular expression in front of the current matching position.  It is similar to a positive look-ahead assertion, except for the fact that the match is attempted on the text preceding the current position, possibly even in front of the start of the matching range of the entire regular expression. 
-
-A restriction on look-behind expressions is the fact that the expression must match a string of a bounded size.  In other words, `*', `+', and `{n,}' quantifiers are not allowed inside the look-behind expression. Moreover, matching performance is sensitive to the difference between the upper and lower bound on the matching size.  The smaller the difference, the better the performance.  This is especially important for regular expressions used in highlight patterns. 
-
-Positive look-behind has similar applications as positive look-ahead. 
-
-Negative Look-Behind
-
-Negative look-behind takes the form `(?&lt;!&lt;regex&gt;)' and is exactly the same as positive look-behind except that the enclosed regular expression must not match. The same restrictions apply. 
-
-Note however, that performance is even more sensitive to the distance between the size boundaries: a negative look-behind must not match for any possible size, so the matching engine must check every size. 
-
-Case Sensitivity
-
-There are two parenthetical constructs that control case sensitivity: 
-
-     (?i&lt;regex&gt;)   Case insensitive; `AbcD' and `aBCd' are
-                   equivalent.
-
-     (?I&lt;regex&gt;)   Case sensitive;   `AbcD' and `aBCd' are
-                   different.
-
-Regular expressions are case sensitive by default, that is, `(?I&lt;regex&gt;)' is assumed.  All regular expression token types respond appropriately to case insensitivity including character classes and backreferences.  There is some extra overhead involved when case insensitivity is in effect, but only to the extent of converting each character compared to lower case. 
-
-Matching Newlines
-
-XNEdit regular expressions by default handle the matching of newlines in a way that should seem natural for most editing tasks.  There are situations, however, that require finer control over how newlines are matched by some regular expression tokens. 
-
-By default, XNEdit regular expressions will not match a newline character for the following regex tokens: dot (`.'); a negated character class (`[^...]'); and the following shortcuts for character classes: 
-
-     `\d', `\D', `\l', `\L', `\s', `\S', `\w', `\W', `\Y'
-
-The matching of newlines can be controlled for the `.' token, negated character classes, and the `\s' and `\S' shortcuts by using one of the following parenthetical constructs: 
-
-     (?n&lt;regex&gt;)  `.', `[^...]', `\s', `\S' match newlines
-
-     (?N&lt;regex&gt;)  `.', `[^...]', `\s', `\S' don't match
-                                            newlines
-
-`(?N&lt;regex&gt;)' is the default behavior. 
-
-Notes on New Parenthetical Constructs
-
-Except for plain parentheses, none of the parenthetical constructs capture text.  If that is desired, the construct must be wrapped with capturing parentheses, e.g. `((?i&lt;regex))'. 
-
-All parenthetical constructs can be nested as deeply as desired, except for capturing parentheses which have a limit of 50 sets of parentheses, regardless of nesting level. 
-
-Back References
-
-Backreferences allow you to match text captured by a set of capturing parenthesis at some later position in your regular expression.  A backreference is specified using a single backslash followed by a single digit from 1 to 9 (example: \3).  Backreferences have similar syntax to substitutions (see below), but are different from substitutions in that they appear within the regular expression, not the substitution string. The number specified with a backreference identifies which set of text capturing parentheses the backreference is associated with. The text that was most recently captured by these parentheses is used by the backreference to attempt a match.  As with substitutions, open parentheses are counted from left to right beginning with 1.  So the backreference `\3' will try to match another occurrence of the text most recently matched by the third set of capturing parentheses.  As an example, the regular expression `(\d)\1' could match `22', `33', or `00', but wouldn't match `19' or `01'. 
-
-A backreference must be associated with a parenthetical expression that is complete.  The expression `(\w(\1))' contains an invalid backreference since the first set of parentheses are not complete at the point where the backreference appears. 
-
-Substitution
-
-Substitution strings are used to replace text matched by a set of capturing parentheses.  The substitution string is mostly interpreted as ordinary text except as follows. 
-
-The escape sequences described above for special characters, and octal and hexadecimal escapes are treated the same way by a substitution string. When the substitution string contains the `&amp;' character, XNEdit will substitute the entire string that was matched by the `Find...' operation. Any of the first nine sub-expressions of the match string can also be inserted into the replacement string.  This is done by inserting a `\' followed by a digit from 1 to 9 that represents the string matched by a parenthesized expression within the regular expression.  These expressions are numbered left-to-right in order of their opening parentheses. 
-
-The capitalization of text inserted by `&amp;' or `\1', `\2', ... `\9' can be altered by preceding them with `\U', `\u', `\L', or `\l'.  `\u' and `\l' change only the first character of the inserted entity, while `\U' and `\L' change the entire entity to upper or lower case, respectively. 
-
-Substitutions
-
-Regular expression substitution can be used to program automatic editing operations.  For example, the following are search and replace strings to find occurrences of the `C' language subroutine `get_x', reverse the first and second parameters, add a third parameter of NULL, and change the name to `new_get_x': 
-
-     Search string:   `get_x *\( *([^ ,]*), *([^\)]*)\)'
-     Replace string:  `new_get_x(\2, \1, NULL)'
-
-Ambiguity
-
-If a regular expression could match two different parts of the text, it will match the one which begins earliest.  If both begin in the same place but match different lengths, or match the same length in different ways, life gets messier, as follows. 
-
-In general, the possibilities in a list of alternatives are considered in left-to-right order.  The possibilities for `*', `+', and `?' are considered longest-first, nested constructs are considered from the outermost in, and concatenated constructs are considered leftmost-first. The match that will be chosen is the one that uses the earliest possibility in the first choice that has to be made.  If there is more than one choice, the next will be made in the same manner (earliest possibility) subject to the decision on the first choice.  And so forth. 
-
-For example, `(ab|a)b*c' could match `abc' in one of two ways.  The first choice is between `ab' and `a'; since `ab' is earlier, and does lead to a successful overall match, it is chosen.  Since the `b' is already spoken for, the `b*' must match its last possibility, the empty string, since it must respect the earlier choice. 
-
-In the particular case where no `|'s are present and there is only one `*', `+', or `?', the net effect is that the longest possible match will be chosen.  So `ab*', presented with `xabbbby', will match `abbbb'.  Note that if `ab*' is tried against `xabyabbbz', it will match `ab' just after `x', due to the begins-earliest rule.  (In effect, the decision on where to start the match is the first choice to be made, hence subsequent choices must respect it even if this leads them to less-preferred alternatives.) 
-
-References
-
-An excellent book on the care and feeding of regular expressions is 
-
-          Mastering Regular Expressions, 3rd Edition
-          Jeffrey E. F. Friedl
-          August 2006, O'Reilly &amp; Associates
-          ISBN 0-596-52812-4
-
-The first end second editions of this book are still useful for basic introduction to regexes and contain many useful tips and tricks. 
-
-The following are regular expression examples which will match: 
-
-    * An entire line.
-        ^.*$
-
-    * Blank lines.
-        ^$
-
-    * Whitespace on a line.
-        \s+
-
-    * Whitespace across lines.
-        (?n\s+)
-
-    * Whitespace that spans at least two lines. Note minimal matching `*?' quantifier.
-        (?n\s*?\n\s*)
-
-    * IP address (not robust).
-        (?:\d{1,3}(?:\.\d{1,3}){3})
-
-    * Two character US Postal state abbreviations (includes territories).
-        [ACDF-IK-PR-W][A-Z]
-
-    * Web addresses.
-        (?:http://)?www\.\S+
-
-    * Case insensitive double words across line breaks.
-        (?i(?n&lt;(\S+)\s+\1&gt;))
-
-    * Upper case words with possible punctuation.
-        &lt;[A-Z][^a-z\s]*&gt;
-</code></pre></div></div>]]></content><author><name></name></author><category term="scratchpad" /></entry></feed>
+</section>]]></content><author><name></name></author><category term="AI&gt;prompt" /></entry></feed>
