@@ -1,6 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2026-01-15T12:08:54+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">maim screenshooter debian 11 bash script</title><link href="https://ib.bsb.br/maim/" rel="alternate" type="text/html" title="maim screenshooter debian 11 bash script" /><published>2026-01-15T00:00:00+00:00</published><updated>2026-01-15T11:28:54+00:00</updated><id>https://ib.bsb.br/maim</id><content type="html" xml:base="https://ib.bsb.br/maim/"><![CDATA[<p>bibref https://github.com/naelstrof/maim</p>
-
-<section class="code-block-container" role="group" aria-label="Bash Code Block" data-filename="bash_code_block.sh" data-code="#!/bin/bash
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2026-01-15T13:13:08+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">maim screenshooter debian 11 bash script</title><link href="https://ib.bsb.br/maim/" rel="alternate" type="text/html" title="maim screenshooter debian 11 bash script" /><published>2026-01-15T00:00:00+00:00</published><updated>2026-01-15T12:05:43+00:00</updated><id>https://ib.bsb.br/maim</id><content type="html" xml:base="https://ib.bsb.br/maim/"><![CDATA[<section class="code-block-container" role="group" aria-label="Bash Code Block" data-filename="bash_code_block.sh" data-code="#!/bin/bash
 set -euo pipefail
 
 # ==============================================================================
@@ -437,6 +435,744 @@ fi
 
 echo &quot;&quot;
 echo &quot;Installation process completed.&quot;
+exit 0</code>
+</section>]]></content><author><name></name></author><category term="scratchpad" /></entry><entry><title type="html">nsxiv image viewer debian 11 bash script</title><link href="https://ib.bsb.br/nsxiv/" rel="alternate" type="text/html" title="nsxiv image viewer debian 11 bash script" /><published>2026-01-15T00:00:00+00:00</published><updated>2026-01-15T13:07:54+00:00</updated><id>https://ib.bsb.br/nsxiv</id><content type="html" xml:base="https://ib.bsb.br/nsxiv/"><![CDATA[<section class="code-block-container" role="group" aria-label="Bash Code Block" data-filename="bash_code_block.sh" data-code="#!/bin/bash
+set -euo pipefail
+
+# Script to build and install nsxiv (Neo Simple X Image Viewer)
+# Target: Debian 11 (Bullseye) on ARM64 RK3588
+# Purpose: Automates dependencies, Imlib2 compilation (fixing version issues),
+#          nsxiv compilation (with optimizations), and post-install configuration.
+
+# --- Configuration Variables ---
+BUILD_DIR=&quot;$HOME/build&quot;
+NSXIV_REPO_URL=&quot;https://codeberg.org/nsxiv/nsxiv.git&quot;
+NSXIV_DIR=&quot;$BUILD_DIR/nsxiv&quot;
+CONFIG_DIR=&quot;$HOME/.config/nsxiv/exec&quot;
+IMLIB2_VERSION=&quot;1.12.6&quot;
+IMLIB2_URL=&quot;https://downloads.sourceforge.net/enlightenment/imlib2-${IMLIB2_VERSION}.tar.xz&quot;
+IMLIB2_DIR=&quot;$BUILD_DIR/imlib2-${IMLIB2_VERSION}&quot;
+LD_CONF_FILE=&quot;/etc/ld.so.conf.d/local-libs.conf&quot;
+
+# --- Helper Functions ---
+
+# Function to check if a command exists and install its package if missing
+ensure_tool_installed() {
+    local tool_name=&quot;$1&quot;
+    local package_name=&quot;${2:-$tool_name}&quot; # Use second arg as package name if provided, else tool_name
+    if ! command -v &quot;$tool_name&quot; &gt;/dev/null 2&gt;&amp;1; then
+        echo &quot;Tool &#39;$tool_name&#39; not found. Installing &#39;$package_name&#39;...&quot;
+        if ! sudo apt install -y &quot;$package_name&quot;; then
+            echo &quot;Error: Failed to install &#39;$package_name&#39;.&quot; &gt;&amp;2
+            exit 1
+        fi
+        echo &quot;&#39;$package_name&#39; installed successfully.&quot;
+    else
+        echo &quot;Tool &#39;$tool_name&#39; is already installed.&quot;
+    fi
+}
+
+# Setup trap for cleanup on exit
+trap &#39;echo &quot;Script execution finished or interrupted.&quot;&#39; EXIT SIGINT SIGTERM
+
+# --- Main Script ---
+
+echo &quot;Starting nsxiv build and installation script for RK3588...&quot;
+
+# --- Phase 1: Preparation &amp; Dependencies ---
+
+echo &quot;Updating package lists...&quot;
+if ! sudo apt update; then
+    echo &quot;Error: Failed to update package lists.&quot; &gt;&amp;2
+    exit 1
+fi
+echo &quot;Package lists updated.&quot;
+
+echo &quot;Installing build dependencies and required tools...&quot;
+# Core build tools
+ensure_tool_installed &quot;git&quot;
+ensure_tool_installed &quot;make&quot; &quot;build-essential&quot;
+ensure_tool_installed &quot;gcc&quot;
+ensure_tool_installed &quot;wget&quot;
+
+# Specific library development headers and runtime tools
+# Note: &#39;gimp&#39; and &#39;rawtherapee&#39; are added because the default key-handler script uses them.
+PACKAGES_TO_INSTALL=(
+    &quot;libx11-dev&quot;
+    &quot;libimlib2-dev&quot; # Needed initially for dependencies, will be overridden by custom build
+    &quot;libxft-dev&quot;
+    &quot;libexif-dev&quot;
+    &quot;libfontconfig1-dev&quot;
+    &quot;xclip&quot;
+    &quot;libjpeg-progs&quot;
+    &quot;imagemagick&quot;
+    &quot;exiv2&quot;
+    &quot;gimp&quot;
+    &quot;rawtherapee&quot;
+    &quot;libjpeg-dev&quot;
+    &quot;libpng-dev&quot;
+    &quot;libtiff-dev&quot;
+    &quot;libgif-dev&quot;
+    &quot;libwebp-dev&quot;
+    &quot;libfreetype6-dev&quot;
+    &quot;libxext-dev&quot;
+    &quot;libxcb1-dev&quot;
+)
+
+echo &quot;Installing packages: ${PACKAGES_TO_INSTALL[*]}&quot;
+if ! sudo apt install -y &quot;${PACKAGES_TO_INSTALL[@]}&quot;; then
+    echo &quot;Error: Failed to install dependencies.&quot; &gt;&amp;2
+    exit 1
+fi
+echo &quot;Dependencies installed successfully.&quot;
+
+# --- Phase 2: Handling Imlib2 Version Issue ---
+
+echo &quot;Checking Imlib2 version requirements...&quot;
+# Debian 11 has an old Imlib2. We need to build a newer one.
+# Remove system libimlib2-dev to avoid conflicts during build
+if dpkg -s libimlib2-dev &gt;/dev/null 2&gt;&amp;1; then
+    echo &quot;Removing system libimlib2-dev to prevent conflicts with custom build...&quot;
+    if ! sudo apt remove -y libimlib2-dev; then
+        echo &quot;Error: Failed to remove libimlib2-dev.&quot; &gt;&amp;2
+        exit 1
+    fi
+    echo &quot;System libimlib2-dev removed.&quot;
+fi
+
+# Create build directory
+if [ ! -d &quot;$BUILD_DIR&quot; ]; then
+    mkdir -p &quot;$BUILD_DIR&quot;
+    echo &quot;Created build directory: $BUILD_DIR&quot;
+fi
+
+# Download and Extract Imlib2
+if [ ! -d &quot;$IMLIB2_DIR&quot; ]; then
+    echo &quot;Downloading Imlib2 ${IMLIB2_VERSION}...&quot;
+    cd &quot;$BUILD_DIR&quot;
+    if ! wget &quot;$IMLIB2_URL&quot;; then
+        echo &quot;Error: Failed to download Imlib2.&quot; &gt;&amp;2
+        exit 1
+    fi
+    
+    echo &quot;Extracting Imlib2...&quot;
+    if ! tar -xf &quot;imlib2-${IMLIB2_VERSION}.tar.xz&quot;; then
+        echo &quot;Error: Failed to extract Imlib2.&quot; &gt;&amp;2
+        exit 1
+    fi
+else
+    echo &quot;Imlib2 source directory already exists. Skipping download.&quot;
+fi
+
+echo &quot;Configuring and compiling Imlib2...&quot;
+cd &quot;$IMLIB2_DIR&quot;
+
+# Clean previous builds if any
+if [ -f &quot;Makefile&quot; ]; then
+    make clean || true
+fi
+
+# Configure with specific flags to avoid issues with old system libs (avif, heif, jxl)
+# We install to /usr/local to keep it separate from system packages
+if ! ./configure --prefix=/usr/local --without-avif --without-heif --without-jxl; then
+    echo &quot;Error: Imlib2 configuration failed.&quot; &gt;&amp;2
+    exit 1
+fi
+
+echo &quot;Compiling Imlib2 (this may take a while)...&quot;
+if ! make -j$(nproc); then
+    echo &quot;Error: Imlib2 compilation failed.&quot; &gt;&amp;2
+    exit 1
+fi
+
+echo &quot;Installing Imlib2...&quot;
+if ! sudo make install; then
+    echo &quot;Error: Imlib2 installation failed.&quot; &gt;&amp;2
+    exit 1
+fi
+
+echo &quot;Updating library cache...&quot;
+# Ensure /usr/local/lib is in the linker search path
+if [ ! -f &quot;$LD_CONF_FILE&quot; ]; then
+    echo &quot;Creating linker config file $LD_CONF_FILE...&quot;
+    echo &quot;/usr/local/lib&quot; | sudo tee &quot;$LD_CONF_FILE&quot; &gt; /dev/null
+else
+    # Check if it already contains the path
+    if ! grep -q &quot;/usr/local/lib&quot; &quot;$LD_CONF_FILE&quot;; then
+        echo &quot;/usr/local/lib&quot; | sudo tee -a &quot;$LD_CONF_FILE&quot; &gt; /dev/null
+        echo &quot;Added /usr/local/lib to $LD_CONF_FILE&quot;
+    fi
+fi
+
+if ! sudo ldconfig; then
+    echo &quot;Error: Failed to update library cache with ldconfig.&quot; &gt;&amp;2
+    exit 1
+fi
+echo &quot;Imlib2 installed and library cache updated.&quot;
+
+# --- Phase 3: Downloading and Building nsxiv ---
+
+echo &quot;Preparing to build nsxiv...&quot;
+if [ ! -d &quot;$NSXIV_DIR&quot; ]; then
+    echo &quot;Cloning nsxiv repository...&quot;
+    cd &quot;$BUILD_DIR&quot;
+    if ! git clone &quot;$NSXIV_REPO_URL&quot;; then
+        echo &quot;Error: Failed to clone nsxiv repository.&quot; &gt;&amp;2
+        exit 1
+    fi
+else
+    echo &quot;nsxiv repository already exists. Pulling latest changes...&quot;
+    cd &quot;$NSXIV_DIR&quot;
+    git pull
+fi
+
+cd &quot;$NSXIV_DIR&quot;
+
+# Clean previous builds
+make clean || true
+
+# Configure config.mk for RK3588 optimization
+echo &quot;Configuring config.mk for ARM64 optimization...&quot;
+# Replace CFLAGS with optimized version for Cortex-A76/A55
+if [ -f &quot;config.mk&quot; ]; then
+    sed -i &#39;s/^CFLAGS = -Wall -pedantic -O2 -DNDEBUG/CFLAGS = -Wall -pedantic -O3 -mcpu=native -DNDEBUG/&#39; config.mk
+    echo &quot;config.mk updated.&quot;
+else
+    echo &quot;Error: config.mk not found in nsxiv directory.&quot; &gt;&amp;2
+    exit 1
+fi
+
+# Generate config.h
+echo &quot;Generating config.h...&quot;
+if ! make config.h; then
+    echo &quot;Error: Failed to generate config.h.&quot; &gt;&amp;2
+    exit 1
+fi
+
+# Edit config.h settings
+echo &quot;Applying custom settings to config.h...&quot;
+# Increase cache size to 10% (using flexible regex for whitespace)
+sed -i &#39;s/static const int CACHE_SIZE_MEM_PERCENTAGE[[:space:]]*=[[:space:]]*3;/static const int CACHE_SIZE_MEM_PERCENTAGE = 10;/&#39; config.h
+
+# Change font to monospace-10 (using flexible regex)
+# Matches: static const char *BAR_FONT[] = { &quot;Nsxiv.bar.font&quot;, &quot;monospace-8&quot; };
+sed -i &#39;s/static const char \*BAR_FONT\[\][[:space:]]*=[[:space:]]*{[[:space:]]*&quot;Nsxiv.bar.font&quot;,[[:space:]]*&quot;monospace-8&quot;[[:space:]]*};/static const char *BAR_FONT[] = { &quot;Nsxiv.bar.font&quot;, &quot;monospace-10&quot; };/&#39; config.h
+
+echo &quot;config.h updated.&quot;
+
+# Set environment variables to ensure compiler finds the new Imlib2 headers/libs
+export CPATH=&quot;/usr/local/include:${CPATH:-}&quot;
+export LIBRARY_PATH=&quot;/usr/local/lib:${LIBRARY_PATH:-}&quot;
+export LD_LIBRARY_PATH=&quot;/usr/local/lib:${LD_LIBRARY_PATH:-}&quot;
+
+echo &quot;Compiling nsxiv...&quot;
+if ! make; then
+    echo &quot;Error: nsxiv compilation failed.&quot; &gt;&amp;2
+    exit 1
+fi
+
+echo &quot;Installing nsxiv...&quot;
+if ! sudo make install-all; then
+    echo &quot;Error: nsxiv installation failed.&quot; &gt;&amp;2
+    exit 1
+fi
+echo &quot;nsxiv installed successfully.&quot;
+
+# --- Phase 4: Post-Install Integration ---
+
+echo &quot;Setting up post-install scripts and configuration...&quot;
+
+# Create config directory
+if [ ! -d &quot;$CONFIG_DIR&quot; ]; then
+    mkdir -p &quot;$CONFIG_DIR&quot;
+    echo &quot;Created configuration directory: $CONFIG_DIR&quot;
+fi
+
+# Copy example scripts
+echo &quot;Copying example scripts...&quot;
+if cp etc/examples/* &quot;$CONFIG_DIR/&quot;; then
+    echo &quot;Scripts copied.&quot;
+else
+    echo &quot;Error: Failed to copy example scripts.&quot; &gt;&amp;2
+    exit 1
+fi
+
+# Make scripts executable
+chmod +x &quot;$CONFIG_DIR&quot;/*
+echo &quot;Scripts made executable.&quot;
+
+# Fix key-handler script for Alacritty/Zutty support
+KEY_HANDLER_SCRIPT=&quot;$CONFIG_DIR/key-handler&quot;
+echo &quot;Modifying key-handler script for terminal compatibility...&quot;
+
+# Overwrite key-handler with the corrected content
+cat &lt;&lt; &#39;EOF&#39; &gt; &quot;$KEY_HANDLER_SCRIPT&quot;
+#!/bin/sh
+
+# Example for $XDG_CONFIG_HOME/nsxiv/exec/key-handler
+# Called by nsxiv(1) after the external prefix key (C-x by default) is pressed.
+# The next key combo is passed as its first argument. Passed via stdin are the
+# images to act upon: all marked images, if in thumbnail mode and at least one
+# image has been marked, otherwise the current image. nsxiv(1) will block until
+# the handler terminates. It then checks which images have been modified and
+# reloads them.
+
+# The key combo argument has the following form: &quot;[C-][M-][S-]KEY&quot;,
+# where C/M/S indicate Ctrl/Meta(Alt)/Shift modifier states and KEY is the X
+# keysym as listed in /usr/include/X11/keysymdef.h without the &quot;XK_&quot; prefix.
+# If KEY has an uppercase equivalent, S-KEY is resolved into it. For instance,
+# K replaces S-k and Scedilla replaces S-scedilla, but S-Delete is sent as-is.
+
+# By default nsxiv(1) will send one image per-line to stdin, however when using
+# -0 the image list will be NULL separated and the environment variable
+# &quot;$NSXIV_USING_NULL&quot; will be set to 1.
+
+[ &quot;$NSXIV_USING_NULL&quot; = 1 ] &amp;&amp; DELIM=&#39;\0&#39; || DELIM=&#39;\n&#39;
+
+rotate() {
+	tr &quot;$DELIM&quot; &#39;\0&#39; | xargs -0 realpath -z | sort -z -u | xargs -0 -I {} sh -c &#39;
+		degree=&quot;$1&quot;
+		case &quot;$(file -b -i &quot;{}&quot;)&quot; in
+		image/jpeg*) jpegtran -rotate &quot;$degree&quot; -copy all -outfile &quot;{}&quot; &quot;{}&quot; ;;
+		*)           mogrify  -rotate &quot;$degree&quot; &quot;{}&quot; ;;
+		esac
+	&#39; -- &quot;$1&quot;
+}
+
+spawn_term() {
+  title=$1
+  shift
+
+  # If you set PREF_TERM, we&#39;ll honor it *if available*.
+  if [ &quot;${PREF_TERM:-}&quot; = &quot;alacritty&quot; ] &amp;&amp; command -v alacritty &gt;/dev/null 2&gt;&amp;1; then
+    alacritty -T &quot;$title&quot; -e &quot;$@&quot;
+    return
+  fi
+  if [ &quot;${PREF_TERM:-}&quot; = &quot;zutty&quot; ] &amp;&amp; command -v zutty &gt;/dev/null 2&gt;&amp;1; then
+    zutty -bg &quot;#444&quot; -fg &quot;#eee&quot; -saveLines 0 -title &quot;$title&quot; -e &quot;$@&quot;
+    return
+  fi
+
+  # Auto-select. If both exist, this prefers alacritty; swap the order if you prefer zutty.
+  if command -v alacritty &gt;/dev/null 2&gt;&amp;1; then
+    alacritty -T &quot;$title&quot; -e &quot;$@&quot;
+  elif command -v zutty &gt;/dev/null 2&gt;&amp;1; then
+    zutty -bg &quot;#444&quot; -fg &quot;#eee&quot; -saveLines 0 -title &quot;$title&quot; -e &quot;$@&quot;
+  else
+    printf &gt;&amp;2 &#39;No supported terminal found (need alacritty and/or zutty)\n&#39;
+    return 127
+  fi
+}
+
+case &quot;$1&quot; in
+&quot;C-x&quot;)      xclip -in -filter | tr &#39;\n&#39; &#39; &#39; | xclip -in -selection clipboard ;;
+&quot;C-c&quot;)      while read file; do xclip -selection clipboard -target image/png &quot;$file&quot;; done ;;
+&quot;C-e&quot;)      if [ &quot;${PREF_TERM:-}&quot; = &quot;alacritty&quot; ] &amp;&amp; command -v alacritty &gt;/dev/null 2&gt;&amp;1; then T=alacritty; elif [ &quot;${PREF_TERM:-}&quot; = &quot;zutty&quot; ] &amp;&amp; command -v zutty &gt;/dev/null 2&gt;&amp;1; then T=zutty; elif command -v alacritty &gt;/dev/null 2&gt;&amp;1; then T=alacritty; elif command -v zutty &gt;/dev/null 2&gt;&amp;1; then T=zutty; else T=; printf &gt;&amp;2 &#39;No supported terminal found (need alacritty and/or zutty)\n&#39;; fi; if [ -n &quot;$T&quot; ]; then while IFS= read -r file; do if [ &quot;$T&quot; = alacritty ]; then alacritty -T &quot;$file&quot; -e sh -c &#39;exiv2 -q -pa pr &quot;$1&quot; | less&#39; sh &quot;$file&quot; &amp; else zutty -bg &quot;#444&quot; -fg &quot;#eee&quot; -saveLines 0 -title &quot;$file&quot; -e sh -c &#39;exiv2 -q -pa pr &quot;$1&quot; | less&#39; sh &quot;$file&quot; &amp; fi; done; fi ;;
+&quot;C-g&quot;)      tr &#39;\n&#39; &#39;\0&#39; | xargs -0 gimp &amp; ;;
+&quot;C-r&quot;)      while read file; do rawtherapee &quot;$file&quot; &amp; done ;;
+&quot;C-comma&quot;)  rotate 270 ;;
+&quot;C-period&quot;) rotate  90 ;;
+&quot;C-slash&quot;)  rotate 180 ;;
+esac
+EOF
+
+echo &quot;key-handler script updated.&quot;
+
+# --- Phase 5: Verification ---
+
+echo &quot;Verifying installation...&quot;
+if nsxiv -v; then
+    echo &quot;nsxiv version check passed.&quot;
+else
+    echo &quot;Error: nsxiv version check failed.&quot; &gt;&amp;2
+    exit 1
+fi
+
+echo &quot;Checking library linking...&quot;
+if ldd &quot;$(which nsxiv)&quot; | grep -q &quot;/usr/local/lib/libImlib2.so&quot;; then
+    echo &quot;Library linking check passed: nsxiv is using the correct Imlib2.&quot;
+else
+    echo &quot;Warning: nsxiv might be linking to the wrong Imlib2 library.&quot;
+    echo &quot;Current link:&quot;
+    ldd &quot;$(which nsxiv)&quot; | grep Imlib2
+    echo &quot;Please verify manually.&quot;
+fi
+
+echo &quot;----------------------------------------------------------------&quot;
+echo &quot;Installation Complete!&quot;
+echo &quot;You can now use &#39;nsxiv&#39; to view images.&quot;
+echo &quot;Example: nsxiv ~/Pictures&quot;
+echo &quot;----------------------------------------------------------------&quot;
+
+exit 0" data-download-link="" data-download-label="Download Bash">
+  <code class="language-bash">#!/bin/bash
+set -euo pipefail
+
+# Script to build and install nsxiv (Neo Simple X Image Viewer)
+# Target: Debian 11 (Bullseye) on ARM64 RK3588
+# Purpose: Automates dependencies, Imlib2 compilation (fixing version issues),
+#          nsxiv compilation (with optimizations), and post-install configuration.
+
+# --- Configuration Variables ---
+BUILD_DIR=&quot;$HOME/build&quot;
+NSXIV_REPO_URL=&quot;https://codeberg.org/nsxiv/nsxiv.git&quot;
+NSXIV_DIR=&quot;$BUILD_DIR/nsxiv&quot;
+CONFIG_DIR=&quot;$HOME/.config/nsxiv/exec&quot;
+IMLIB2_VERSION=&quot;1.12.6&quot;
+IMLIB2_URL=&quot;https://downloads.sourceforge.net/enlightenment/imlib2-${IMLIB2_VERSION}.tar.xz&quot;
+IMLIB2_DIR=&quot;$BUILD_DIR/imlib2-${IMLIB2_VERSION}&quot;
+LD_CONF_FILE=&quot;/etc/ld.so.conf.d/local-libs.conf&quot;
+
+# --- Helper Functions ---
+
+# Function to check if a command exists and install its package if missing
+ensure_tool_installed() {
+    local tool_name=&quot;$1&quot;
+    local package_name=&quot;${2:-$tool_name}&quot; # Use second arg as package name if provided, else tool_name
+    if ! command -v &quot;$tool_name&quot; &gt;/dev/null 2&gt;&amp;1; then
+        echo &quot;Tool &#39;$tool_name&#39; not found. Installing &#39;$package_name&#39;...&quot;
+        if ! sudo apt install -y &quot;$package_name&quot;; then
+            echo &quot;Error: Failed to install &#39;$package_name&#39;.&quot; &gt;&amp;2
+            exit 1
+        fi
+        echo &quot;&#39;$package_name&#39; installed successfully.&quot;
+    else
+        echo &quot;Tool &#39;$tool_name&#39; is already installed.&quot;
+    fi
+}
+
+# Setup trap for cleanup on exit
+trap &#39;echo &quot;Script execution finished or interrupted.&quot;&#39; EXIT SIGINT SIGTERM
+
+# --- Main Script ---
+
+echo &quot;Starting nsxiv build and installation script for RK3588...&quot;
+
+# --- Phase 1: Preparation &amp; Dependencies ---
+
+echo &quot;Updating package lists...&quot;
+if ! sudo apt update; then
+    echo &quot;Error: Failed to update package lists.&quot; &gt;&amp;2
+    exit 1
+fi
+echo &quot;Package lists updated.&quot;
+
+echo &quot;Installing build dependencies and required tools...&quot;
+# Core build tools
+ensure_tool_installed &quot;git&quot;
+ensure_tool_installed &quot;make&quot; &quot;build-essential&quot;
+ensure_tool_installed &quot;gcc&quot;
+ensure_tool_installed &quot;wget&quot;
+
+# Specific library development headers and runtime tools
+# Note: &#39;gimp&#39; and &#39;rawtherapee&#39; are added because the default key-handler script uses them.
+PACKAGES_TO_INSTALL=(
+    &quot;libx11-dev&quot;
+    &quot;libimlib2-dev&quot; # Needed initially for dependencies, will be overridden by custom build
+    &quot;libxft-dev&quot;
+    &quot;libexif-dev&quot;
+    &quot;libfontconfig1-dev&quot;
+    &quot;xclip&quot;
+    &quot;libjpeg-progs&quot;
+    &quot;imagemagick&quot;
+    &quot;exiv2&quot;
+    &quot;gimp&quot;
+    &quot;rawtherapee&quot;
+    &quot;libjpeg-dev&quot;
+    &quot;libpng-dev&quot;
+    &quot;libtiff-dev&quot;
+    &quot;libgif-dev&quot;
+    &quot;libwebp-dev&quot;
+    &quot;libfreetype6-dev&quot;
+    &quot;libxext-dev&quot;
+    &quot;libxcb1-dev&quot;
+)
+
+echo &quot;Installing packages: ${PACKAGES_TO_INSTALL[*]}&quot;
+if ! sudo apt install -y &quot;${PACKAGES_TO_INSTALL[@]}&quot;; then
+    echo &quot;Error: Failed to install dependencies.&quot; &gt;&amp;2
+    exit 1
+fi
+echo &quot;Dependencies installed successfully.&quot;
+
+# --- Phase 2: Handling Imlib2 Version Issue ---
+
+echo &quot;Checking Imlib2 version requirements...&quot;
+# Debian 11 has an old Imlib2. We need to build a newer one.
+# Remove system libimlib2-dev to avoid conflicts during build
+if dpkg -s libimlib2-dev &gt;/dev/null 2&gt;&amp;1; then
+    echo &quot;Removing system libimlib2-dev to prevent conflicts with custom build...&quot;
+    if ! sudo apt remove -y libimlib2-dev; then
+        echo &quot;Error: Failed to remove libimlib2-dev.&quot; &gt;&amp;2
+        exit 1
+    fi
+    echo &quot;System libimlib2-dev removed.&quot;
+fi
+
+# Create build directory
+if [ ! -d &quot;$BUILD_DIR&quot; ]; then
+    mkdir -p &quot;$BUILD_DIR&quot;
+    echo &quot;Created build directory: $BUILD_DIR&quot;
+fi
+
+# Download and Extract Imlib2
+if [ ! -d &quot;$IMLIB2_DIR&quot; ]; then
+    echo &quot;Downloading Imlib2 ${IMLIB2_VERSION}...&quot;
+    cd &quot;$BUILD_DIR&quot;
+    if ! wget &quot;$IMLIB2_URL&quot;; then
+        echo &quot;Error: Failed to download Imlib2.&quot; &gt;&amp;2
+        exit 1
+    fi
+    
+    echo &quot;Extracting Imlib2...&quot;
+    if ! tar -xf &quot;imlib2-${IMLIB2_VERSION}.tar.xz&quot;; then
+        echo &quot;Error: Failed to extract Imlib2.&quot; &gt;&amp;2
+        exit 1
+    fi
+else
+    echo &quot;Imlib2 source directory already exists. Skipping download.&quot;
+fi
+
+echo &quot;Configuring and compiling Imlib2...&quot;
+cd &quot;$IMLIB2_DIR&quot;
+
+# Clean previous builds if any
+if [ -f &quot;Makefile&quot; ]; then
+    make clean || true
+fi
+
+# Configure with specific flags to avoid issues with old system libs (avif, heif, jxl)
+# We install to /usr/local to keep it separate from system packages
+if ! ./configure --prefix=/usr/local --without-avif --without-heif --without-jxl; then
+    echo &quot;Error: Imlib2 configuration failed.&quot; &gt;&amp;2
+    exit 1
+fi
+
+echo &quot;Compiling Imlib2 (this may take a while)...&quot;
+if ! make -j$(nproc); then
+    echo &quot;Error: Imlib2 compilation failed.&quot; &gt;&amp;2
+    exit 1
+fi
+
+echo &quot;Installing Imlib2...&quot;
+if ! sudo make install; then
+    echo &quot;Error: Imlib2 installation failed.&quot; &gt;&amp;2
+    exit 1
+fi
+
+echo &quot;Updating library cache...&quot;
+# Ensure /usr/local/lib is in the linker search path
+if [ ! -f &quot;$LD_CONF_FILE&quot; ]; then
+    echo &quot;Creating linker config file $LD_CONF_FILE...&quot;
+    echo &quot;/usr/local/lib&quot; | sudo tee &quot;$LD_CONF_FILE&quot; &gt; /dev/null
+else
+    # Check if it already contains the path
+    if ! grep -q &quot;/usr/local/lib&quot; &quot;$LD_CONF_FILE&quot;; then
+        echo &quot;/usr/local/lib&quot; | sudo tee -a &quot;$LD_CONF_FILE&quot; &gt; /dev/null
+        echo &quot;Added /usr/local/lib to $LD_CONF_FILE&quot;
+    fi
+fi
+
+if ! sudo ldconfig; then
+    echo &quot;Error: Failed to update library cache with ldconfig.&quot; &gt;&amp;2
+    exit 1
+fi
+echo &quot;Imlib2 installed and library cache updated.&quot;
+
+# --- Phase 3: Downloading and Building nsxiv ---
+
+echo &quot;Preparing to build nsxiv...&quot;
+if [ ! -d &quot;$NSXIV_DIR&quot; ]; then
+    echo &quot;Cloning nsxiv repository...&quot;
+    cd &quot;$BUILD_DIR&quot;
+    if ! git clone &quot;$NSXIV_REPO_URL&quot;; then
+        echo &quot;Error: Failed to clone nsxiv repository.&quot; &gt;&amp;2
+        exit 1
+    fi
+else
+    echo &quot;nsxiv repository already exists. Pulling latest changes...&quot;
+    cd &quot;$NSXIV_DIR&quot;
+    git pull
+fi
+
+cd &quot;$NSXIV_DIR&quot;
+
+# Clean previous builds
+make clean || true
+
+# Configure config.mk for RK3588 optimization
+echo &quot;Configuring config.mk for ARM64 optimization...&quot;
+# Replace CFLAGS with optimized version for Cortex-A76/A55
+if [ -f &quot;config.mk&quot; ]; then
+    sed -i &#39;s/^CFLAGS = -Wall -pedantic -O2 -DNDEBUG/CFLAGS = -Wall -pedantic -O3 -mcpu=native -DNDEBUG/&#39; config.mk
+    echo &quot;config.mk updated.&quot;
+else
+    echo &quot;Error: config.mk not found in nsxiv directory.&quot; &gt;&amp;2
+    exit 1
+fi
+
+# Generate config.h
+echo &quot;Generating config.h...&quot;
+if ! make config.h; then
+    echo &quot;Error: Failed to generate config.h.&quot; &gt;&amp;2
+    exit 1
+fi
+
+# Edit config.h settings
+echo &quot;Applying custom settings to config.h...&quot;
+# Increase cache size to 10% (using flexible regex for whitespace)
+sed -i &#39;s/static const int CACHE_SIZE_MEM_PERCENTAGE[[:space:]]*=[[:space:]]*3;/static const int CACHE_SIZE_MEM_PERCENTAGE = 10;/&#39; config.h
+
+# Change font to monospace-10 (using flexible regex)
+# Matches: static const char *BAR_FONT[] = { &quot;Nsxiv.bar.font&quot;, &quot;monospace-8&quot; };
+sed -i &#39;s/static const char \*BAR_FONT\[\][[:space:]]*=[[:space:]]*{[[:space:]]*&quot;Nsxiv.bar.font&quot;,[[:space:]]*&quot;monospace-8&quot;[[:space:]]*};/static const char *BAR_FONT[] = { &quot;Nsxiv.bar.font&quot;, &quot;monospace-10&quot; };/&#39; config.h
+
+echo &quot;config.h updated.&quot;
+
+# Set environment variables to ensure compiler finds the new Imlib2 headers/libs
+export CPATH=&quot;/usr/local/include:${CPATH:-}&quot;
+export LIBRARY_PATH=&quot;/usr/local/lib:${LIBRARY_PATH:-}&quot;
+export LD_LIBRARY_PATH=&quot;/usr/local/lib:${LD_LIBRARY_PATH:-}&quot;
+
+echo &quot;Compiling nsxiv...&quot;
+if ! make; then
+    echo &quot;Error: nsxiv compilation failed.&quot; &gt;&amp;2
+    exit 1
+fi
+
+echo &quot;Installing nsxiv...&quot;
+if ! sudo make install-all; then
+    echo &quot;Error: nsxiv installation failed.&quot; &gt;&amp;2
+    exit 1
+fi
+echo &quot;nsxiv installed successfully.&quot;
+
+# --- Phase 4: Post-Install Integration ---
+
+echo &quot;Setting up post-install scripts and configuration...&quot;
+
+# Create config directory
+if [ ! -d &quot;$CONFIG_DIR&quot; ]; then
+    mkdir -p &quot;$CONFIG_DIR&quot;
+    echo &quot;Created configuration directory: $CONFIG_DIR&quot;
+fi
+
+# Copy example scripts
+echo &quot;Copying example scripts...&quot;
+if cp etc/examples/* &quot;$CONFIG_DIR/&quot;; then
+    echo &quot;Scripts copied.&quot;
+else
+    echo &quot;Error: Failed to copy example scripts.&quot; &gt;&amp;2
+    exit 1
+fi
+
+# Make scripts executable
+chmod +x &quot;$CONFIG_DIR&quot;/*
+echo &quot;Scripts made executable.&quot;
+
+# Fix key-handler script for Alacritty/Zutty support
+KEY_HANDLER_SCRIPT=&quot;$CONFIG_DIR/key-handler&quot;
+echo &quot;Modifying key-handler script for terminal compatibility...&quot;
+
+# Overwrite key-handler with the corrected content
+cat &lt;&lt; &#39;EOF&#39; &gt; &quot;$KEY_HANDLER_SCRIPT&quot;
+#!/bin/sh
+
+# Example for $XDG_CONFIG_HOME/nsxiv/exec/key-handler
+# Called by nsxiv(1) after the external prefix key (C-x by default) is pressed.
+# The next key combo is passed as its first argument. Passed via stdin are the
+# images to act upon: all marked images, if in thumbnail mode and at least one
+# image has been marked, otherwise the current image. nsxiv(1) will block until
+# the handler terminates. It then checks which images have been modified and
+# reloads them.
+
+# The key combo argument has the following form: &quot;[C-][M-][S-]KEY&quot;,
+# where C/M/S indicate Ctrl/Meta(Alt)/Shift modifier states and KEY is the X
+# keysym as listed in /usr/include/X11/keysymdef.h without the &quot;XK_&quot; prefix.
+# If KEY has an uppercase equivalent, S-KEY is resolved into it. For instance,
+# K replaces S-k and Scedilla replaces S-scedilla, but S-Delete is sent as-is.
+
+# By default nsxiv(1) will send one image per-line to stdin, however when using
+# -0 the image list will be NULL separated and the environment variable
+# &quot;$NSXIV_USING_NULL&quot; will be set to 1.
+
+[ &quot;$NSXIV_USING_NULL&quot; = 1 ] &amp;&amp; DELIM=&#39;\0&#39; || DELIM=&#39;\n&#39;
+
+rotate() {
+	tr &quot;$DELIM&quot; &#39;\0&#39; | xargs -0 realpath -z | sort -z -u | xargs -0 -I {} sh -c &#39;
+		degree=&quot;$1&quot;
+		case &quot;$(file -b -i &quot;{}&quot;)&quot; in
+		image/jpeg*) jpegtran -rotate &quot;$degree&quot; -copy all -outfile &quot;{}&quot; &quot;{}&quot; ;;
+		*)           mogrify  -rotate &quot;$degree&quot; &quot;{}&quot; ;;
+		esac
+	&#39; -- &quot;$1&quot;
+}
+
+spawn_term() {
+  title=$1
+  shift
+
+  # If you set PREF_TERM, we&#39;ll honor it *if available*.
+  if [ &quot;${PREF_TERM:-}&quot; = &quot;alacritty&quot; ] &amp;&amp; command -v alacritty &gt;/dev/null 2&gt;&amp;1; then
+    alacritty -T &quot;$title&quot; -e &quot;$@&quot;
+    return
+  fi
+  if [ &quot;${PREF_TERM:-}&quot; = &quot;zutty&quot; ] &amp;&amp; command -v zutty &gt;/dev/null 2&gt;&amp;1; then
+    zutty -bg &quot;#444&quot; -fg &quot;#eee&quot; -saveLines 0 -title &quot;$title&quot; -e &quot;$@&quot;
+    return
+  fi
+
+  # Auto-select. If both exist, this prefers alacritty; swap the order if you prefer zutty.
+  if command -v alacritty &gt;/dev/null 2&gt;&amp;1; then
+    alacritty -T &quot;$title&quot; -e &quot;$@&quot;
+  elif command -v zutty &gt;/dev/null 2&gt;&amp;1; then
+    zutty -bg &quot;#444&quot; -fg &quot;#eee&quot; -saveLines 0 -title &quot;$title&quot; -e &quot;$@&quot;
+  else
+    printf &gt;&amp;2 &#39;No supported terminal found (need alacritty and/or zutty)\n&#39;
+    return 127
+  fi
+}
+
+case &quot;$1&quot; in
+&quot;C-x&quot;)      xclip -in -filter | tr &#39;\n&#39; &#39; &#39; | xclip -in -selection clipboard ;;
+&quot;C-c&quot;)      while read file; do xclip -selection clipboard -target image/png &quot;$file&quot;; done ;;
+&quot;C-e&quot;)      if [ &quot;${PREF_TERM:-}&quot; = &quot;alacritty&quot; ] &amp;&amp; command -v alacritty &gt;/dev/null 2&gt;&amp;1; then T=alacritty; elif [ &quot;${PREF_TERM:-}&quot; = &quot;zutty&quot; ] &amp;&amp; command -v zutty &gt;/dev/null 2&gt;&amp;1; then T=zutty; elif command -v alacritty &gt;/dev/null 2&gt;&amp;1; then T=alacritty; elif command -v zutty &gt;/dev/null 2&gt;&amp;1; then T=zutty; else T=; printf &gt;&amp;2 &#39;No supported terminal found (need alacritty and/or zutty)\n&#39;; fi; if [ -n &quot;$T&quot; ]; then while IFS= read -r file; do if [ &quot;$T&quot; = alacritty ]; then alacritty -T &quot;$file&quot; -e sh -c &#39;exiv2 -q -pa pr &quot;$1&quot; | less&#39; sh &quot;$file&quot; &amp; else zutty -bg &quot;#444&quot; -fg &quot;#eee&quot; -saveLines 0 -title &quot;$file&quot; -e sh -c &#39;exiv2 -q -pa pr &quot;$1&quot; | less&#39; sh &quot;$file&quot; &amp; fi; done; fi ;;
+&quot;C-g&quot;)      tr &#39;\n&#39; &#39;\0&#39; | xargs -0 gimp &amp; ;;
+&quot;C-r&quot;)      while read file; do rawtherapee &quot;$file&quot; &amp; done ;;
+&quot;C-comma&quot;)  rotate 270 ;;
+&quot;C-period&quot;) rotate  90 ;;
+&quot;C-slash&quot;)  rotate 180 ;;
+esac
+EOF
+
+echo &quot;key-handler script updated.&quot;
+
+# --- Phase 5: Verification ---
+
+echo &quot;Verifying installation...&quot;
+if nsxiv -v; then
+    echo &quot;nsxiv version check passed.&quot;
+else
+    echo &quot;Error: nsxiv version check failed.&quot; &gt;&amp;2
+    exit 1
+fi
+
+echo &quot;Checking library linking...&quot;
+if ldd &quot;$(which nsxiv)&quot; | grep -q &quot;/usr/local/lib/libImlib2.so&quot;; then
+    echo &quot;Library linking check passed: nsxiv is using the correct Imlib2.&quot;
+else
+    echo &quot;Warning: nsxiv might be linking to the wrong Imlib2 library.&quot;
+    echo &quot;Current link:&quot;
+    ldd &quot;$(which nsxiv)&quot; | grep Imlib2
+    echo &quot;Please verify manually.&quot;
+fi
+
+echo &quot;----------------------------------------------------------------&quot;
+echo &quot;Installation Complete!&quot;
+echo &quot;You can now use &#39;nsxiv&#39; to view images.&quot;
+echo &quot;Example: nsxiv ~/Pictures&quot;
+echo &quot;----------------------------------------------------------------&quot;
+
 exit 0</code>
 </section>]]></content><author><name></name></author><category term="scratchpad" /></entry><entry><title type="html">MLC-LLM for rk3588</title><link href="https://ib.bsb.br/mlc-llm-rk3588/" rel="alternate" type="text/html" title="MLC-LLM for rk3588" /><published>2026-01-14T00:00:00+00:00</published><updated>2026-01-14T21:56:32+00:00</updated><id>https://ib.bsb.br/mlc-llm_rk3588</id><content type="html" xml:base="https://ib.bsb.br/mlc-llm-rk3588/"><![CDATA[<p>Please open an issue if you find something that can be improved in this guide</p>
 
@@ -14209,354 +14945,4 @@ cp /mnt/usb/ORB_SLAM3-master.zip ~/projects/
 #Uninstall USB drive
 umount /mnt/usb
 
-</code></pre></div></div>]]></content><author><name></name></author><category term="scratchpad" /></entry><entry><title type="html">codex system-prompt</title><link href="https://ib.bsb.br/codex-system/" rel="alternate" type="text/html" title="codex system-prompt" /><published>2026-01-07T00:00:00+00:00</published><updated>2026-01-11T05:30:45+00:00</updated><id>https://ib.bsb.br/codex-system</id><content type="html" xml:base="https://ib.bsb.br/codex-system/"><![CDATA[<section class="code-block-container" role="group" aria-label=" Code Block" data-filename="_code_block.txt" data-code="&lt;purpose&gt;
-  You are a terminal-safe coding agent. Complete [[task_request]] while guaranteeing that no single line written to stdout/stderr exceeds 4096 bytes (hard limit). Prevent session resets by wrapping, chunking, paging, or redirecting output before any potentially long print.
-&lt;/purpose&gt;
-
-&lt;context&gt;
-  &lt;environment&gt;
-    &lt;terminal_output_limit_bytes&gt;4096&lt;/terminal_output_limit_bytes&gt;
-    &lt;failure_mode&gt;Any single output line above the limit crashes the session and resets state.&lt;/failure_mode&gt;
-    &lt;note_on_bytes_vs_chars&gt;
-      The limit is in bytes; assume worst-case and use a conservative wrap width (e.g., 1200–1500 characters) to stay well below 4096.
-    &lt;/note_on_bytes_vs_chars&gt;
-  &lt;/environment&gt;
-
-  &lt;constraints&gt;
-    &lt;constraint&gt;Hard invariant: never emit a line that could exceed 4096 bytes.&lt;/constraint&gt;
-    &lt;constraint&gt;All shell command output MUST be piped as: `[[command]] 2&gt;&amp;1 | fold -w 1500`.&lt;/constraint&gt;
-    &lt;constraint&gt;If output may include very long tokens (minified files, base64, JSON one-liners), redirect to a file first, then inspect in small slices, folded.&lt;/constraint&gt;
-    &lt;constraint&gt;For remote content, do not dump via curl/wget; fetch programmatically (Python) and hard-wrap before printing.&lt;/constraint&gt;
-    &lt;constraint&gt;Chunk/paginate large outputs; never dump entire large documents in one go.&lt;/constraint&gt;
-    &lt;constraint&gt;Install any needed Python libraries only inside .venv using: `uv pip install &lt;pkg&gt;`.&lt;/constraint&gt;
-    &lt;constraint&gt;Do not print secrets (tokens/keys/private material). If detected, redact or omit.&lt;/constraint&gt;
-  &lt;/constraints&gt;
-
-  &lt;domain_notes&gt;
-    &lt;note&gt;Common crash sources: minified JS/CSS/HTML, JSON printed in compact form, stack traces with giant embedded payloads, long single-line logs, base64 blobs.&lt;/note&gt;
-    &lt;note&gt;Safer defaults beat cleverness: when uncertain, wrap + redirect + slice.&lt;/note&gt;
-  &lt;/domain_notes&gt;
-&lt;/context&gt;
-
-&lt;variables&gt;
-  &lt;variable name=&quot;[[task_request]]&quot; required=&quot;true&quot;&gt;
-    &lt;description&gt;Natural-language description of the task to complete.&lt;/description&gt;
-  &lt;/variable&gt;
-  &lt;variable name=&quot;[[command]]&quot; required=&quot;false&quot;&gt;
-    &lt;description&gt;A shell command to run. If multiple commands, run one at a time with safe wrapping.&lt;/description&gt;
-  &lt;/variable&gt;
-  &lt;variable name=&quot;[[file_path]]&quot; required=&quot;false&quot;&gt;
-    &lt;description&gt;Local file to inspect safely (logs, JSON, build artifacts).&lt;/description&gt;
-  &lt;/variable&gt;
-  &lt;variable name=&quot;[[url]]&quot; required=&quot;false&quot;&gt;
-    &lt;description&gt;Remote resource to fetch; must be retrieved via Python then wrapped.&lt;/description&gt;
-  &lt;/variable&gt;
-&lt;/variables&gt;
-
-&lt;instructions&gt;
-  &lt;instruction&gt;1. Restate [[task_request]] as a single, concrete goal statement.&lt;/instruction&gt;
-
-  &lt;instruction&gt;2. Before running any shell command [[command]], rewrite it into a safe form that captures stderr and wraps output: &lt;code&gt;[[command]] 2&gt;&amp;1 | fold -w 1500&lt;/code&gt;.&lt;/instruction&gt;
-
-  &lt;instruction&gt;3. If [[file_path]] is provided, inspect safely:
-    (a) size/lines via &lt;code&gt;wc -c&lt;/code&gt; and &lt;code&gt;wc -l&lt;/code&gt;;
-    (b) preview with &lt;code&gt;head&lt;/code&gt;/&lt;code&gt;tail&lt;/code&gt;;
-    (c) search with &lt;code&gt;rg -n&lt;/code&gt;;
-    (d) always pipe through fold.
-  &lt;/instruction&gt;
-
-  &lt;instruction&gt;4. If [[url]] is provided, fetch programmatically (Python). Strip HTML if applicable, then hard-wrap text (e.g., 3500–4000 chars max) and print only a bounded slice or a limited number of wrapped lines.&lt;/instruction&gt;
-
-  &lt;instruction&gt;5. If any output could still be huge after wrapping, redirect to a file and page through it (small slices). Do not print the entire content.&lt;/instruction&gt;
-
-  &lt;instruction&gt;6. If you need Python dependencies (requests, beautifulsoup4), install them inside .venv using &lt;code&gt;uv pip install&lt;/code&gt; before importing.&lt;/instruction&gt;
-
-  &lt;instruction&gt;7. Final self-check before responding: verify every emitted block is wrapped/chunked, no secrets are present, and no line plausibly exceeds 4096 bytes.&lt;/instruction&gt;
-&lt;/instructions&gt;
-
-&lt;output_format_specification&gt;
-  &lt;format&gt;Plain text&lt;/format&gt;
-  &lt;requirements&gt;
-    &lt;requirement&gt;Commands must be presented in copy/paste-ready form, already made safe.&lt;/requirement&gt;
-    &lt;requirement&gt;Response must be both thorough, comprehensive, exhaustive, complete, and in-depth in its detail, as well as wide-ranging, broad, vast, widespread, and far-reaching in its scope.&lt;/requirement&gt;
-    &lt;requirement&gt;Never output unwrapped large data; use slices.&lt;/requirement&gt;
-  &lt;/requirements&gt;
-&lt;/output_format_specification&gt;
-
-&lt;examples&gt;
-  &lt;example&gt;
-    &lt;input_data&gt;
-      &lt;task_request&gt;Run a build command safely and preserve full logs.&lt;/task_request&gt;
-      &lt;command&gt;./build&lt;/command&gt;
-    &lt;/input_data&gt;
-    &lt;output&gt;
-      ./build 2&gt;&amp;1 | fold -w 1500
-
-      If output is large, redirect first:
-      ./build 2&gt;&amp;1 | fold -w 1500 &gt; build.log
-      wc -l build.log 2&gt;&amp;1 | fold -w 1500
-      tail -n 200 build.log 2&gt;&amp;1 | fold -w 1500
-    &lt;/output&gt;
-  &lt;/example&gt;
-
-  &lt;example&gt;
-    &lt;input_data&gt;
-      &lt;task_request&gt;Pretty-print JSON safely (avoid single-line JSON).&lt;/task_request&gt;
-      &lt;file_path&gt;data.json&lt;/file_path&gt;
-    &lt;/input_data&gt;
-    &lt;output&gt;
-      wc -c data.json 2&gt;&amp;1 | fold -w 1500
-      jq . data.json 2&gt;&amp;1 | fold -w 1500 | sed -n &#39;1,200p&#39;
-    &lt;/output&gt;
-  &lt;/example&gt;
-
-  &lt;example&gt;
-    &lt;input_data&gt;
-      &lt;task_request&gt;Fetch a large HTML documentation page without crashing the session.&lt;/task_request&gt;
-      &lt;url&gt;https://example.com/big-doc&lt;/url&gt;
-    &lt;/input_data&gt;
-    &lt;output&gt;
-      python - &lt;&lt;&#39;PY&#39;
-      import requests, textwrap
-      from bs4 import BeautifulSoup
-
-      url = &quot;https://example.com/big-doc&quot;
-      html = requests.get(url, timeout=15).text
-      text = BeautifulSoup(html, &quot;html.parser&quot;).get_text(&quot;\n&quot;)
-      wrapped = &quot;\n&quot;.join(textwrap.wrap(text, width=3500))
-      print(wrapped[:20000])  # bounded slice
-      PY
-    &lt;/output&gt;
-  &lt;/example&gt;
-
-  &lt;example&gt;
-    &lt;input_data&gt;
-      &lt;task_request&gt;Investigate a huge log for exceptions and show only the relevant region.&lt;/task_request&gt;
-      &lt;file_path&gt;server.log&lt;/file_path&gt;
-    &lt;/input_data&gt;
-    &lt;output&gt;
-      rg -n &quot;ERROR|Exception&quot; server.log 2&gt;&amp;1 | fold -w 1500 | head -n 50
-      # After identifying line numbers, print a tight range:
-      sed -n &#39;1200,1300p&#39; server.log 2&gt;&amp;1 | fold -w 1500
-    &lt;/output&gt;
-  &lt;/example&gt;
-
-  &lt;example&gt;
-    &lt;input_data&gt;
-      &lt;task_request&gt;Handle base64 or minified one-liners (worst-case line length).&lt;/task_request&gt;
-      &lt;file_path&gt;payload.txt&lt;/file_path&gt;
-    &lt;/input_data&gt;
-    &lt;output&gt;
-      # Never cat directly. Redirect/transform then fold:
-      wc -c payload.txt 2&gt;&amp;1 | fold -w 1500
-      fold -w 1200 payload.txt 2&gt;&amp;1 | sed -n &#39;1,80p&#39;
-    &lt;/output&gt;
-  &lt;/example&gt;
-&lt;/examples&gt;
-
-&lt;self_check&gt;
-  &lt;checklist&gt;
-    &lt;item&gt;Did I rewrite every shell command to include: 2&gt;&amp;1 | fold -w 1500?&lt;/item&gt;
-    &lt;item&gt;Did I avoid printing full large blobs and instead use slices?&lt;/item&gt;
-    &lt;item&gt;For remote pages, did I fetch via Python and hard-wrap before printing?&lt;/item&gt;
-    &lt;item&gt;Did I redact or avoid any secrets?&lt;/item&gt;
-    &lt;item&gt;Would any produced line plausibly exceed 4096 bytes?&lt;/item&gt;
-  &lt;/checklist&gt;
-&lt;/self_check&gt;
-
-&lt;evaluation_notes&gt;
-  &lt;test_cases&gt;
-    &lt;case&gt;Minified JS/CSS/HTML file inspection&lt;/case&gt;
-    &lt;case&gt;Large compact JSON (single-line) handling&lt;/case&gt;
-    &lt;case&gt;Stack trace containing embedded payloads&lt;/case&gt;
-    &lt;case&gt;Binary-ish or base64-heavy logs&lt;/case&gt;
-  &lt;/test_cases&gt;
-  &lt;success_definition&gt;Session does not reset due to long lines; relevant context is still retrievable via safe slicing.&lt;/success_definition&gt;
-&lt;/evaluation_notes&gt;
-
-&lt;documentation&gt;
-  &lt;usage&gt;
-    &lt;step&gt;Replace placeholders with real task/command/url/file values gathered from the USER&#39;s queries.&lt;/step&gt;
-    &lt;step&gt;Follow the safe rewrite patterns exactly; default to redirect+slice when uncertain.&lt;/step&gt;
-  &lt;/usage&gt;
-  &lt;known_limitations&gt;
-    &lt;limitation&gt;Byte vs character encoding can be tricky; conservative fold widths reduce risk.&lt;/limitation&gt;
-    &lt;limitation&gt;Some outputs include control characters; redirect to file and inspect with safe tools.&lt;/limitation&gt;
-  &lt;/known_limitations&gt;
-&lt;/documentation&gt;" data-download-link="" data-download-label="Download ">
-  <code class="language-">&lt;purpose&gt;
-  You are a terminal-safe coding agent. Complete [[task_request]] while guaranteeing that no single line written to stdout/stderr exceeds 4096 bytes (hard limit). Prevent session resets by wrapping, chunking, paging, or redirecting output before any potentially long print.
-&lt;/purpose&gt;
-
-&lt;context&gt;
-  &lt;environment&gt;
-    &lt;terminal_output_limit_bytes&gt;4096&lt;/terminal_output_limit_bytes&gt;
-    &lt;failure_mode&gt;Any single output line above the limit crashes the session and resets state.&lt;/failure_mode&gt;
-    &lt;note_on_bytes_vs_chars&gt;
-      The limit is in bytes; assume worst-case and use a conservative wrap width (e.g., 1200–1500 characters) to stay well below 4096.
-    &lt;/note_on_bytes_vs_chars&gt;
-  &lt;/environment&gt;
-
-  &lt;constraints&gt;
-    &lt;constraint&gt;Hard invariant: never emit a line that could exceed 4096 bytes.&lt;/constraint&gt;
-    &lt;constraint&gt;All shell command output MUST be piped as: `[[command]] 2&gt;&amp;1 | fold -w 1500`.&lt;/constraint&gt;
-    &lt;constraint&gt;If output may include very long tokens (minified files, base64, JSON one-liners), redirect to a file first, then inspect in small slices, folded.&lt;/constraint&gt;
-    &lt;constraint&gt;For remote content, do not dump via curl/wget; fetch programmatically (Python) and hard-wrap before printing.&lt;/constraint&gt;
-    &lt;constraint&gt;Chunk/paginate large outputs; never dump entire large documents in one go.&lt;/constraint&gt;
-    &lt;constraint&gt;Install any needed Python libraries only inside .venv using: `uv pip install &lt;pkg&gt;`.&lt;/constraint&gt;
-    &lt;constraint&gt;Do not print secrets (tokens/keys/private material). If detected, redact or omit.&lt;/constraint&gt;
-  &lt;/constraints&gt;
-
-  &lt;domain_notes&gt;
-    &lt;note&gt;Common crash sources: minified JS/CSS/HTML, JSON printed in compact form, stack traces with giant embedded payloads, long single-line logs, base64 blobs.&lt;/note&gt;
-    &lt;note&gt;Safer defaults beat cleverness: when uncertain, wrap + redirect + slice.&lt;/note&gt;
-  &lt;/domain_notes&gt;
-&lt;/context&gt;
-
-&lt;variables&gt;
-  &lt;variable name=&quot;[[task_request]]&quot; required=&quot;true&quot;&gt;
-    &lt;description&gt;Natural-language description of the task to complete.&lt;/description&gt;
-  &lt;/variable&gt;
-  &lt;variable name=&quot;[[command]]&quot; required=&quot;false&quot;&gt;
-    &lt;description&gt;A shell command to run. If multiple commands, run one at a time with safe wrapping.&lt;/description&gt;
-  &lt;/variable&gt;
-  &lt;variable name=&quot;[[file_path]]&quot; required=&quot;false&quot;&gt;
-    &lt;description&gt;Local file to inspect safely (logs, JSON, build artifacts).&lt;/description&gt;
-  &lt;/variable&gt;
-  &lt;variable name=&quot;[[url]]&quot; required=&quot;false&quot;&gt;
-    &lt;description&gt;Remote resource to fetch; must be retrieved via Python then wrapped.&lt;/description&gt;
-  &lt;/variable&gt;
-&lt;/variables&gt;
-
-&lt;instructions&gt;
-  &lt;instruction&gt;1. Restate [[task_request]] as a single, concrete goal statement.&lt;/instruction&gt;
-
-  &lt;instruction&gt;2. Before running any shell command [[command]], rewrite it into a safe form that captures stderr and wraps output: &lt;code&gt;[[command]] 2&gt;&amp;1 | fold -w 1500&lt;/code&gt;.&lt;/instruction&gt;
-
-  &lt;instruction&gt;3. If [[file_path]] is provided, inspect safely:
-    (a) size/lines via &lt;code&gt;wc -c&lt;/code&gt; and &lt;code&gt;wc -l&lt;/code&gt;;
-    (b) preview with &lt;code&gt;head&lt;/code&gt;/&lt;code&gt;tail&lt;/code&gt;;
-    (c) search with &lt;code&gt;rg -n&lt;/code&gt;;
-    (d) always pipe through fold.
-  &lt;/instruction&gt;
-
-  &lt;instruction&gt;4. If [[url]] is provided, fetch programmatically (Python). Strip HTML if applicable, then hard-wrap text (e.g., 3500–4000 chars max) and print only a bounded slice or a limited number of wrapped lines.&lt;/instruction&gt;
-
-  &lt;instruction&gt;5. If any output could still be huge after wrapping, redirect to a file and page through it (small slices). Do not print the entire content.&lt;/instruction&gt;
-
-  &lt;instruction&gt;6. If you need Python dependencies (requests, beautifulsoup4), install them inside .venv using &lt;code&gt;uv pip install&lt;/code&gt; before importing.&lt;/instruction&gt;
-
-  &lt;instruction&gt;7. Final self-check before responding: verify every emitted block is wrapped/chunked, no secrets are present, and no line plausibly exceeds 4096 bytes.&lt;/instruction&gt;
-&lt;/instructions&gt;
-
-&lt;output_format_specification&gt;
-  &lt;format&gt;Plain text&lt;/format&gt;
-  &lt;requirements&gt;
-    &lt;requirement&gt;Commands must be presented in copy/paste-ready form, already made safe.&lt;/requirement&gt;
-    &lt;requirement&gt;Response must be both thorough, comprehensive, exhaustive, complete, and in-depth in its detail, as well as wide-ranging, broad, vast, widespread, and far-reaching in its scope.&lt;/requirement&gt;
-    &lt;requirement&gt;Never output unwrapped large data; use slices.&lt;/requirement&gt;
-  &lt;/requirements&gt;
-&lt;/output_format_specification&gt;
-
-&lt;examples&gt;
-  &lt;example&gt;
-    &lt;input_data&gt;
-      &lt;task_request&gt;Run a build command safely and preserve full logs.&lt;/task_request&gt;
-      &lt;command&gt;./build&lt;/command&gt;
-    &lt;/input_data&gt;
-    &lt;output&gt;
-      ./build 2&gt;&amp;1 | fold -w 1500
-
-      If output is large, redirect first:
-      ./build 2&gt;&amp;1 | fold -w 1500 &gt; build.log
-      wc -l build.log 2&gt;&amp;1 | fold -w 1500
-      tail -n 200 build.log 2&gt;&amp;1 | fold -w 1500
-    &lt;/output&gt;
-  &lt;/example&gt;
-
-  &lt;example&gt;
-    &lt;input_data&gt;
-      &lt;task_request&gt;Pretty-print JSON safely (avoid single-line JSON).&lt;/task_request&gt;
-      &lt;file_path&gt;data.json&lt;/file_path&gt;
-    &lt;/input_data&gt;
-    &lt;output&gt;
-      wc -c data.json 2&gt;&amp;1 | fold -w 1500
-      jq . data.json 2&gt;&amp;1 | fold -w 1500 | sed -n &#39;1,200p&#39;
-    &lt;/output&gt;
-  &lt;/example&gt;
-
-  &lt;example&gt;
-    &lt;input_data&gt;
-      &lt;task_request&gt;Fetch a large HTML documentation page without crashing the session.&lt;/task_request&gt;
-      &lt;url&gt;https://example.com/big-doc&lt;/url&gt;
-    &lt;/input_data&gt;
-    &lt;output&gt;
-      python - &lt;&lt;&#39;PY&#39;
-      import requests, textwrap
-      from bs4 import BeautifulSoup
-
-      url = &quot;https://example.com/big-doc&quot;
-      html = requests.get(url, timeout=15).text
-      text = BeautifulSoup(html, &quot;html.parser&quot;).get_text(&quot;\n&quot;)
-      wrapped = &quot;\n&quot;.join(textwrap.wrap(text, width=3500))
-      print(wrapped[:20000])  # bounded slice
-      PY
-    &lt;/output&gt;
-  &lt;/example&gt;
-
-  &lt;example&gt;
-    &lt;input_data&gt;
-      &lt;task_request&gt;Investigate a huge log for exceptions and show only the relevant region.&lt;/task_request&gt;
-      &lt;file_path&gt;server.log&lt;/file_path&gt;
-    &lt;/input_data&gt;
-    &lt;output&gt;
-      rg -n &quot;ERROR|Exception&quot; server.log 2&gt;&amp;1 | fold -w 1500 | head -n 50
-      # After identifying line numbers, print a tight range:
-      sed -n &#39;1200,1300p&#39; server.log 2&gt;&amp;1 | fold -w 1500
-    &lt;/output&gt;
-  &lt;/example&gt;
-
-  &lt;example&gt;
-    &lt;input_data&gt;
-      &lt;task_request&gt;Handle base64 or minified one-liners (worst-case line length).&lt;/task_request&gt;
-      &lt;file_path&gt;payload.txt&lt;/file_path&gt;
-    &lt;/input_data&gt;
-    &lt;output&gt;
-      # Never cat directly. Redirect/transform then fold:
-      wc -c payload.txt 2&gt;&amp;1 | fold -w 1500
-      fold -w 1200 payload.txt 2&gt;&amp;1 | sed -n &#39;1,80p&#39;
-    &lt;/output&gt;
-  &lt;/example&gt;
-&lt;/examples&gt;
-
-&lt;self_check&gt;
-  &lt;checklist&gt;
-    &lt;item&gt;Did I rewrite every shell command to include: 2&gt;&amp;1 | fold -w 1500?&lt;/item&gt;
-    &lt;item&gt;Did I avoid printing full large blobs and instead use slices?&lt;/item&gt;
-    &lt;item&gt;For remote pages, did I fetch via Python and hard-wrap before printing?&lt;/item&gt;
-    &lt;item&gt;Did I redact or avoid any secrets?&lt;/item&gt;
-    &lt;item&gt;Would any produced line plausibly exceed 4096 bytes?&lt;/item&gt;
-  &lt;/checklist&gt;
-&lt;/self_check&gt;
-
-&lt;evaluation_notes&gt;
-  &lt;test_cases&gt;
-    &lt;case&gt;Minified JS/CSS/HTML file inspection&lt;/case&gt;
-    &lt;case&gt;Large compact JSON (single-line) handling&lt;/case&gt;
-    &lt;case&gt;Stack trace containing embedded payloads&lt;/case&gt;
-    &lt;case&gt;Binary-ish or base64-heavy logs&lt;/case&gt;
-  &lt;/test_cases&gt;
-  &lt;success_definition&gt;Session does not reset due to long lines; relevant context is still retrievable via safe slicing.&lt;/success_definition&gt;
-&lt;/evaluation_notes&gt;
-
-&lt;documentation&gt;
-  &lt;usage&gt;
-    &lt;step&gt;Replace placeholders with real task/command/url/file values gathered from the USER&#39;s queries.&lt;/step&gt;
-    &lt;step&gt;Follow the safe rewrite patterns exactly; default to redirect+slice when uncertain.&lt;/step&gt;
-  &lt;/usage&gt;
-  &lt;known_limitations&gt;
-    &lt;limitation&gt;Byte vs character encoding can be tricky; conservative fold widths reduce risk.&lt;/limitation&gt;
-    &lt;limitation&gt;Some outputs include control characters; redirect to file and inspect with safe tools.&lt;/limitation&gt;
-  &lt;/known_limitations&gt;
-&lt;/documentation&gt;</code>
-</section>]]></content><author><name></name></author><category term="AI&gt;prompt" /></entry></feed>
+</code></pre></div></div>]]></content><author><name></name></author><category term="scratchpad" /></entry></feed>
