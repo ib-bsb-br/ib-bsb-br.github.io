@@ -1,4 +1,444 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2026-01-15T11:44:34+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">MLC-LLM for rk3588</title><link href="https://ib.bsb.br/mlc-llm-rk3588/" rel="alternate" type="text/html" title="MLC-LLM for rk3588" /><published>2026-01-14T00:00:00+00:00</published><updated>2026-01-14T21:56:32+00:00</updated><id>https://ib.bsb.br/mlc-llm_rk3588</id><content type="html" xml:base="https://ib.bsb.br/mlc-llm-rk3588/"><![CDATA[<p>Please open an issue if you find something that can be improved in this guide</p>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2026-01-15T12:08:54+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">maim screenshooter debian 11 bash script</title><link href="https://ib.bsb.br/maim/" rel="alternate" type="text/html" title="maim screenshooter debian 11 bash script" /><published>2026-01-15T00:00:00+00:00</published><updated>2026-01-15T11:28:54+00:00</updated><id>https://ib.bsb.br/maim</id><content type="html" xml:base="https://ib.bsb.br/maim/"><![CDATA[<p>bibref https://github.com/naelstrof/maim</p>
+
+<section class="code-block-container" role="group" aria-label="Bash Code Block" data-filename="bash_code_block.sh" data-code="#!/bin/bash
+set -euo pipefail
+
+# ==============================================================================
+# Script Name: install_maim_rk3588.sh
+# Purpose: Automates the build and installation of &#39;maim&#39; and &#39;slop&#39; on Debian 11.
+# Target System: ARM64 Rockchip RK3588 (Bare-metal)
+# Execution Context: User home directory
+# Tutorial Source: VPC-3588 Maim Installation Guide
+# ==============================================================================
+
+# --- Configuration Variables ---
+SLOP_REPO_URL=&quot;https://github.com/naelstrof/slop.git&quot;
+MAIM_REPO_URL=&quot;https://github.com/naelstrof/maim.git&quot;
+INSTALL_PREFIX=&quot;/usr/local&quot;  # Tutorial specifies /usr/local (Note: Overwrites system files)
+CPU_CORES=8            # RK3588 has 8 cores
+
+# --- Helper Functions ---
+
+# Function: cleanup
+# Description: Removes temporary build directories on script exit.
+cleanup() {
+    local exit_code=$?
+    echo &quot;----------------------------------------------------------------&quot;
+    if [ -n &quot;${TEMP_BUILD_DIR:-}&quot; ] &amp;&amp; [ -d &quot;$TEMP_BUILD_DIR&quot; ]; then
+        echo &quot;Cleaning up temporary directory: $TEMP_BUILD_DIR&quot;
+        rm -rf &quot;$TEMP_BUILD_DIR&quot;
+    fi
+    
+    if [ $exit_code -eq 0 ]; then
+        echo &quot;Script finished successfully.&quot;
+    else
+        echo &quot;Script failed with exit code $exit_code.&quot;
+    fi
+}
+
+# Trap cleanup on EXIT, SIGINT (Ctrl+C), and SIGTERM
+trap cleanup EXIT SIGINT SIGTERM
+
+# Function: ensure_package_installed
+# Description: Checks if a package is installed; installs it if missing.
+ensure_package_installed() {
+    local package_name=&quot;$1&quot;
+    if ! dpkg -s &quot;$package_name&quot; &gt;/dev/null 2&gt;&amp;1; then
+        echo &quot;Package &#39;$package_name&#39; is missing. Installing...&quot;
+        if ! sudo apt install -y &quot;$package_name&quot;; then
+            echo &quot;Error: Failed to install package &#39;$package_name&#39;.&quot; &gt;&amp;2
+            exit 1
+        fi
+    else
+        echo &quot;Package &#39;$package_name&#39; is already installed.&quot;
+    fi
+}
+
+# --- Main Script Execution ---
+
+echo &quot;================================================================&quot;
+echo &quot;   Maim &amp; Slop Build/Install Script for RK3588 (Debian 11)      &quot;
+echo &quot;================================================================&quot;
+
+# 1. Critical Safety Confirmation
+echo &quot;WARNING: This script compiles software and installs it directly to &#39;$INSTALL_PREFIX&#39;.&quot;
+echo &quot;This action:&quot;
+echo &quot;  - Requires sudo privileges.&quot;
+echo &quot;  - May overwrite files managed by the system package manager.&quot;
+echo &quot;  - Is based on the specific VPC-3588 tutorial provided.&quot;
+echo &quot;&quot;
+
+if command -v maim &gt;/dev/null 2&gt;&amp;1; then
+    echo &quot;NOTICE: &#39;maim&#39; is already installed at $(command -v maim).&quot;
+    echo &quot;Proceeding will overwrite the existing installation.&quot;
+    echo &quot;&quot;
+fi
+
+read -r -p &quot;Do you want to proceed with the installation? (yes/NO): &quot; confirmation
+if [[ &quot;$confirmation&quot; != &quot;yes&quot; ]]; then
+    echo &quot;Operation cancelled by user.&quot; &gt;&amp;2
+    exit 1
+fi
+
+# 2. Create Temporary Build Directory
+# Using mktemp as per best practices for secure temporary directory creation
+TEMP_BUILD_DIR=$(mktemp -d -t maim_build.XXXXXX)
+echo &quot;Created temporary build directory: $TEMP_BUILD_DIR&quot;
+
+# 3. Phase 1: Install Build Dependencies
+echo &quot;&quot;
+echo &quot;&gt;&gt;&gt; Phase 1: Installing Build Dependencies...&quot;
+
+echo &quot;Updating package lists...&quot;
+if ! sudo apt update; then
+    echo &quot;Error: Failed to update package lists.&quot; &gt;&amp;2
+    exit 1
+fi
+
+# List of dependencies from the tutorial
+DEPENDENCIES=(
+    &quot;build-essential&quot;
+    &quot;git&quot;
+    &quot;cmake&quot;
+    &quot;libx11-dev&quot;
+    &quot;libxext-dev&quot;
+    &quot;libxfixes-dev&quot;
+    &quot;libxrandr-dev&quot;
+    &quot;libxrender-dev&quot;
+    &quot;libxcomposite-dev&quot;
+    &quot;libglm-dev&quot;
+    &quot;libpng-dev&quot;
+    &quot;libjpeg62-turbo-dev&quot;
+    &quot;libwebp-dev&quot;
+    &quot;libicu-dev&quot;
+)
+
+for dep in &quot;${DEPENDENCIES[@]}&quot;; do
+    ensure_package_installed &quot;$dep&quot;
+done
+
+# 4. Phase 2: Build and Install &#39;slop&#39; (Prerequisite)
+echo &quot;&quot;
+echo &quot;&gt;&gt;&gt; Phase 2: Building and Installing &#39;slop&#39;...&quot;
+
+# Navigate to temp dir
+cd &quot;$TEMP_BUILD_DIR&quot;
+
+echo &quot;Cloning slop repository...&quot;
+if ! git clone &quot;$SLOP_REPO_URL&quot;; then
+    echo &quot;Error: Failed to clone slop repository.&quot; &gt;&amp;2
+    exit 1
+fi
+
+cd slop
+
+echo &quot;Configuring slop (CMake)...&quot;
+# Tutorial specifies in-source build with /usr/local prefix
+if ! cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=&quot;$INSTALL_PREFIX&quot; ./; then
+    echo &quot;Error: CMake configuration for slop failed.&quot; &gt;&amp;2
+    exit 1
+fi
+
+echo &quot;Compiling slop (Jobs: $CPU_CORES)...&quot;
+if ! make -j&quot;$CPU_CORES&quot;; then
+    echo &quot;Error: Compilation of slop failed.&quot; &gt;&amp;2
+    exit 1
+fi
+
+echo &quot;Installing slop...&quot;
+if ! sudo make install; then
+    echo &quot;Error: Installation of slop failed.&quot; &gt;&amp;2
+    exit 1
+fi
+
+# 5. Phase 3: Build and Install &#39;maim&#39;
+echo &quot;&quot;
+echo &quot;&gt;&gt;&gt; Phase 3: Building and Installing &#39;maim&#39;...&quot;
+
+# Return to temp root
+cd &quot;$TEMP_BUILD_DIR&quot;
+
+echo &quot;Cloning maim repository...&quot;
+if ! git clone &quot;$MAIM_REPO_URL&quot;; then
+    echo &quot;Error: Failed to clone maim repository.&quot; &gt;&amp;2
+    exit 1
+fi
+
+cd maim
+
+echo &quot;Configuring maim (CMake)...&quot;
+# CMake should find the SLOP library installed in the previous step
+if ! cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=&quot;$INSTALL_PREFIX&quot; ./; then
+    echo &quot;Error: CMake configuration for maim failed.&quot; &gt;&amp;2
+    exit 1
+fi
+
+echo &quot;Compiling maim (Jobs: $CPU_CORES)...&quot;
+if ! make -j&quot;$CPU_CORES&quot;; then
+    echo &quot;Error: Compilation of maim failed.&quot; &gt;&amp;2
+    exit 1
+fi
+
+echo &quot;Installing maim...&quot;
+if ! sudo make install; then
+    echo &quot;Error: Installation of maim failed.&quot; &gt;&amp;2
+    exit 1
+fi
+
+echo &quot;Updating shared library cache (ldconfig)...&quot;
+if ! sudo ldconfig; then
+    echo &quot;Warning: &#39;ldconfig&#39; command failed. Shared libraries might not be linked correctly.&quot; &gt;&amp;2
+fi
+
+# 6. Phase 4: Verification
+echo &quot;&quot;
+echo &quot;&gt;&gt;&gt; Phase 4: Verification...&quot;
+
+if command -v maim &gt;/dev/null 2&gt;&amp;1; then
+    INSTALLED_VERSION=$(maim --version)
+    echo &quot;Success! &#39;maim&#39; has been installed.&quot;
+    echo &quot;Detected Version: $INSTALLED_VERSION&quot;
+    
+    # Check for X11 Display before attempting screenshot
+    if [ -n &quot;${DISPLAY:-}&quot; ]; then
+        TEST_FILE=&quot;$HOME/maim_test_$(date +%s).png&quot;
+        echo &quot;Taking a test screenshot to: $TEST_FILE&quot;
+        if maim &quot;$TEST_FILE&quot;; then
+            echo &quot;Screenshot successful.&quot;
+        else
+            echo &quot;Warning: Test screenshot failed. Ensure X11 is running correctly.&quot; &gt;&amp;2
+        fi
+    else
+        echo &quot;Skipping screenshot test: DISPLAY environment variable not set (Headless environment?).&quot;
+    fi
+else
+    echo &quot;Error: &#39;maim&#39; command not found in PATH after installation.&quot; &gt;&amp;2
+    exit 1
+fi
+
+echo &quot;&quot;
+echo &quot;Installation process completed.&quot;
+exit 0" data-download-link="" data-download-label="Download Bash">
+  <code class="language-bash">#!/bin/bash
+set -euo pipefail
+
+# ==============================================================================
+# Script Name: install_maim_rk3588.sh
+# Purpose: Automates the build and installation of &#39;maim&#39; and &#39;slop&#39; on Debian 11.
+# Target System: ARM64 Rockchip RK3588 (Bare-metal)
+# Execution Context: User home directory
+# Tutorial Source: VPC-3588 Maim Installation Guide
+# ==============================================================================
+
+# --- Configuration Variables ---
+SLOP_REPO_URL=&quot;https://github.com/naelstrof/slop.git&quot;
+MAIM_REPO_URL=&quot;https://github.com/naelstrof/maim.git&quot;
+INSTALL_PREFIX=&quot;/usr/local&quot;  # Tutorial specifies /usr/local (Note: Overwrites system files)
+CPU_CORES=8            # RK3588 has 8 cores
+
+# --- Helper Functions ---
+
+# Function: cleanup
+# Description: Removes temporary build directories on script exit.
+cleanup() {
+    local exit_code=$?
+    echo &quot;----------------------------------------------------------------&quot;
+    if [ -n &quot;${TEMP_BUILD_DIR:-}&quot; ] &amp;&amp; [ -d &quot;$TEMP_BUILD_DIR&quot; ]; then
+        echo &quot;Cleaning up temporary directory: $TEMP_BUILD_DIR&quot;
+        rm -rf &quot;$TEMP_BUILD_DIR&quot;
+    fi
+    
+    if [ $exit_code -eq 0 ]; then
+        echo &quot;Script finished successfully.&quot;
+    else
+        echo &quot;Script failed with exit code $exit_code.&quot;
+    fi
+}
+
+# Trap cleanup on EXIT, SIGINT (Ctrl+C), and SIGTERM
+trap cleanup EXIT SIGINT SIGTERM
+
+# Function: ensure_package_installed
+# Description: Checks if a package is installed; installs it if missing.
+ensure_package_installed() {
+    local package_name=&quot;$1&quot;
+    if ! dpkg -s &quot;$package_name&quot; &gt;/dev/null 2&gt;&amp;1; then
+        echo &quot;Package &#39;$package_name&#39; is missing. Installing...&quot;
+        if ! sudo apt install -y &quot;$package_name&quot;; then
+            echo &quot;Error: Failed to install package &#39;$package_name&#39;.&quot; &gt;&amp;2
+            exit 1
+        fi
+    else
+        echo &quot;Package &#39;$package_name&#39; is already installed.&quot;
+    fi
+}
+
+# --- Main Script Execution ---
+
+echo &quot;================================================================&quot;
+echo &quot;   Maim &amp; Slop Build/Install Script for RK3588 (Debian 11)      &quot;
+echo &quot;================================================================&quot;
+
+# 1. Critical Safety Confirmation
+echo &quot;WARNING: This script compiles software and installs it directly to &#39;$INSTALL_PREFIX&#39;.&quot;
+echo &quot;This action:&quot;
+echo &quot;  - Requires sudo privileges.&quot;
+echo &quot;  - May overwrite files managed by the system package manager.&quot;
+echo &quot;  - Is based on the specific VPC-3588 tutorial provided.&quot;
+echo &quot;&quot;
+
+if command -v maim &gt;/dev/null 2&gt;&amp;1; then
+    echo &quot;NOTICE: &#39;maim&#39; is already installed at $(command -v maim).&quot;
+    echo &quot;Proceeding will overwrite the existing installation.&quot;
+    echo &quot;&quot;
+fi
+
+read -r -p &quot;Do you want to proceed with the installation? (yes/NO): &quot; confirmation
+if [[ &quot;$confirmation&quot; != &quot;yes&quot; ]]; then
+    echo &quot;Operation cancelled by user.&quot; &gt;&amp;2
+    exit 1
+fi
+
+# 2. Create Temporary Build Directory
+# Using mktemp as per best practices for secure temporary directory creation
+TEMP_BUILD_DIR=$(mktemp -d -t maim_build.XXXXXX)
+echo &quot;Created temporary build directory: $TEMP_BUILD_DIR&quot;
+
+# 3. Phase 1: Install Build Dependencies
+echo &quot;&quot;
+echo &quot;&gt;&gt;&gt; Phase 1: Installing Build Dependencies...&quot;
+
+echo &quot;Updating package lists...&quot;
+if ! sudo apt update; then
+    echo &quot;Error: Failed to update package lists.&quot; &gt;&amp;2
+    exit 1
+fi
+
+# List of dependencies from the tutorial
+DEPENDENCIES=(
+    &quot;build-essential&quot;
+    &quot;git&quot;
+    &quot;cmake&quot;
+    &quot;libx11-dev&quot;
+    &quot;libxext-dev&quot;
+    &quot;libxfixes-dev&quot;
+    &quot;libxrandr-dev&quot;
+    &quot;libxrender-dev&quot;
+    &quot;libxcomposite-dev&quot;
+    &quot;libglm-dev&quot;
+    &quot;libpng-dev&quot;
+    &quot;libjpeg62-turbo-dev&quot;
+    &quot;libwebp-dev&quot;
+    &quot;libicu-dev&quot;
+)
+
+for dep in &quot;${DEPENDENCIES[@]}&quot;; do
+    ensure_package_installed &quot;$dep&quot;
+done
+
+# 4. Phase 2: Build and Install &#39;slop&#39; (Prerequisite)
+echo &quot;&quot;
+echo &quot;&gt;&gt;&gt; Phase 2: Building and Installing &#39;slop&#39;...&quot;
+
+# Navigate to temp dir
+cd &quot;$TEMP_BUILD_DIR&quot;
+
+echo &quot;Cloning slop repository...&quot;
+if ! git clone &quot;$SLOP_REPO_URL&quot;; then
+    echo &quot;Error: Failed to clone slop repository.&quot; &gt;&amp;2
+    exit 1
+fi
+
+cd slop
+
+echo &quot;Configuring slop (CMake)...&quot;
+# Tutorial specifies in-source build with /usr/local prefix
+if ! cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=&quot;$INSTALL_PREFIX&quot; ./; then
+    echo &quot;Error: CMake configuration for slop failed.&quot; &gt;&amp;2
+    exit 1
+fi
+
+echo &quot;Compiling slop (Jobs: $CPU_CORES)...&quot;
+if ! make -j&quot;$CPU_CORES&quot;; then
+    echo &quot;Error: Compilation of slop failed.&quot; &gt;&amp;2
+    exit 1
+fi
+
+echo &quot;Installing slop...&quot;
+if ! sudo make install; then
+    echo &quot;Error: Installation of slop failed.&quot; &gt;&amp;2
+    exit 1
+fi
+
+# 5. Phase 3: Build and Install &#39;maim&#39;
+echo &quot;&quot;
+echo &quot;&gt;&gt;&gt; Phase 3: Building and Installing &#39;maim&#39;...&quot;
+
+# Return to temp root
+cd &quot;$TEMP_BUILD_DIR&quot;
+
+echo &quot;Cloning maim repository...&quot;
+if ! git clone &quot;$MAIM_REPO_URL&quot;; then
+    echo &quot;Error: Failed to clone maim repository.&quot; &gt;&amp;2
+    exit 1
+fi
+
+cd maim
+
+echo &quot;Configuring maim (CMake)...&quot;
+# CMake should find the SLOP library installed in the previous step
+if ! cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=&quot;$INSTALL_PREFIX&quot; ./; then
+    echo &quot;Error: CMake configuration for maim failed.&quot; &gt;&amp;2
+    exit 1
+fi
+
+echo &quot;Compiling maim (Jobs: $CPU_CORES)...&quot;
+if ! make -j&quot;$CPU_CORES&quot;; then
+    echo &quot;Error: Compilation of maim failed.&quot; &gt;&amp;2
+    exit 1
+fi
+
+echo &quot;Installing maim...&quot;
+if ! sudo make install; then
+    echo &quot;Error: Installation of maim failed.&quot; &gt;&amp;2
+    exit 1
+fi
+
+echo &quot;Updating shared library cache (ldconfig)...&quot;
+if ! sudo ldconfig; then
+    echo &quot;Warning: &#39;ldconfig&#39; command failed. Shared libraries might not be linked correctly.&quot; &gt;&amp;2
+fi
+
+# 6. Phase 4: Verification
+echo &quot;&quot;
+echo &quot;&gt;&gt;&gt; Phase 4: Verification...&quot;
+
+if command -v maim &gt;/dev/null 2&gt;&amp;1; then
+    INSTALLED_VERSION=$(maim --version)
+    echo &quot;Success! &#39;maim&#39; has been installed.&quot;
+    echo &quot;Detected Version: $INSTALLED_VERSION&quot;
+    
+    # Check for X11 Display before attempting screenshot
+    if [ -n &quot;${DISPLAY:-}&quot; ]; then
+        TEST_FILE=&quot;$HOME/maim_test_$(date +%s).png&quot;
+        echo &quot;Taking a test screenshot to: $TEST_FILE&quot;
+        if maim &quot;$TEST_FILE&quot;; then
+            echo &quot;Screenshot successful.&quot;
+        else
+            echo &quot;Warning: Test screenshot failed. Ensure X11 is running correctly.&quot; &gt;&amp;2
+        fi
+    else
+        echo &quot;Skipping screenshot test: DISPLAY environment variable not set (Headless environment?).&quot;
+    fi
+else
+    echo &quot;Error: &#39;maim&#39; command not found in PATH after installation.&quot; &gt;&amp;2
+    exit 1
+fi
+
+echo &quot;&quot;
+echo &quot;Installation process completed.&quot;
+exit 0</code>
+</section>]]></content><author><name></name></author><category term="scratchpad" /></entry><entry><title type="html">MLC-LLM for rk3588</title><link href="https://ib.bsb.br/mlc-llm-rk3588/" rel="alternate" type="text/html" title="MLC-LLM for rk3588" /><published>2026-01-14T00:00:00+00:00</published><updated>2026-01-14T21:56:32+00:00</updated><id>https://ib.bsb.br/mlc-llm_rk3588</id><content type="html" xml:base="https://ib.bsb.br/mlc-llm-rk3588/"><![CDATA[<p>Please open an issue if you find something that can be improved in this guide</p>
 
 <p>See benchmarks for various models I’ve tested <a href="https://github.com/serialscriptr/Orange-PI-5-Pro-MLC-LLM/blob/main/mlc-llm%20benchmarks.md">here</a></p>
 
@@ -14119,354 +14559,4 @@ umount /mnt/usb
     &lt;limitation&gt;Some outputs include control characters; redirect to file and inspect with safe tools.&lt;/limitation&gt;
   &lt;/known_limitations&gt;
 &lt;/documentation&gt;</code>
-</section>]]></content><author><name></name></author><category term="AI&gt;prompt" /></entry><entry><title type="html">compare</title><link href="https://ib.bsb.br/compare/" rel="alternate" type="text/html" title="compare" /><published>2026-01-07T00:00:00+00:00</published><updated>2026-01-07T22:20:25+00:00</updated><id>https://ib.bsb.br/compare</id><content type="html" xml:base="https://ib.bsb.br/compare/"><![CDATA[<section class="code-block-container" role="group" aria-label=" Code Block" data-filename="_code_block.txt" data-code="You are an evaluator. You will be given (1) a user request and (2) multiple candidate LLM outputs responding to that request. Your job is to compare the candidates and determine which is the most effective for the user’s request.
-
-Core goal: Select the best candidate (the default winner) using a transparent, context-aware methodology. If different priorities would change the winner, state “best for X / best for Y” but still name a default winner under the most reasonable interpretation of the user’s priorities.
-
-Non-negotiable rules:
-- Do not fabricate facts or details not present in the user request or the candidates.
-- If something cannot be verified from the provided material, explicitly label it as uncertain.
-- Apply the same standards to all candidates.
-- Do not reveal hidden chain-of-thought. Give brief, checkable justifications only.
-- Respect safety boundaries and refuse disallowed content.
-
-# METHOD
-A) Task extraction and constraints:
-&quot;&quot;&quot;
-1) Identify MUST-HAVES from the user request:
-   - Required content (what must be included)
-   - Required format (e.g., “exactly three sections”, “JSON”, “table”, “bullets”, “tone”, “language”)
-   - Prohibited elements (e.g., “no placeholders”, “no web browsing”, “no opinions”)
-2) Identify NICE-TO-HAVES (optional improvements) and label them as assumptions.
-3) Determine stakes and risk:
-   - Low-stakes: creative/brainstorming/casual info
-   - Medium-stakes: professional/technical guidance with moderate consequences
-   - High-stakes: medical/legal/financial/safety/security-sensitive
-   If unclear, treat as one level higher (more conservative).
-&quot;&quot;&quot;
-
-B) Hard-constraint check (disqualifiers):
-&quot;&quot;&quot;
-Before scoring, check each candidate for violations that make it unacceptable:
-- Wrong language or ignores required structure/format
-- Hallucinates critical details as fact (when the task requires fidelity)
-- Provides unsafe or policy-violating guidance
-- Violates explicit user constraints (e.g., includes placeholders when forbidden)
-If a candidate is disqualified, mark it as such and exclude it from winning (but still briefly note any strengths).
-&quot;&quot;&quot;
-
-C) Criteria-based evaluation (general-purpose):
-&quot;&quot;&quot;
-Evaluate each non-disqualified candidate across the criteria below; mark N/A where truly irrelevant, with one sentence why:
-&#39;&#39;&#39;
-1) Instruction fit and deliverable fidelity
-- Does it follow the user’s instructions, formatting, tone, length, and audience?
-- Does it produce a “ready-to-use” deliverable when requested?
-
-2) Groundedness to the provided context
-- Does it stay faithful to what the user provided (and avoid inventing missing context)?
-- When information is missing, does it handle that responsibly (state uncertainty or request the minimum needed info)?
-
-3) Correctness and factual integrity
-- Are its claims accurate given the provided material?
-- Does it avoid false precision and clearly separate facts from assumptions?
-
-4) Robustness (handles variability and edge cases)
-- Does it anticipate ambiguity, edge cases, conflicting constraints, or failure modes?
-- Does it specify conditions under which the answer would change?
-- Does it avoid brittle steps dependent on unstated prerequisites?
-
-5) Usefulness / capability coverage (the generalized “featurefulness”)
-- Does it cover the problem comprehensively without unnecessary bloat?
-- Are recommendations actionable (steps, checks, examples) when appropriate?
-- Does it offer sensible alternatives or customization when helpful?
-
-6) Clarity and communication quality
-- Logical organization, scannability, and readability
-- Clear definitions for key terms; minimal ambiguity; consistent terminology
-
-7) Reasoning quality (briefly justified)
-- Internally consistent; tradeoffs acknowledged where important
-- Conclusions follow from stated premises and constraints
-
-8) Safety, privacy, and harm minimization
-- Avoids disallowed content and high-risk instructions
-- Uses appropriate caution for high-stakes topics
-- Respects privacy/security boundaries
-
-9) Bias/fairness and framing (when applicable)
-- Avoids stereotyping and one-sided framing on social topics
-- Notes major viewpoints or uncertainties when the domain is contested
-
-10) Citation/verification discipline (when required or when citations appear)
-- If the task requires sources: does it provide them or explicitly note inability?
-- If it includes citations: are they relevant and not used to launder unsupported claims?
-&#39;&#39;&#39;
-&quot;&quot;&quot;
-
-D) Scoring and weighting (context-aware):
-&quot;&quot;&quot;
-Use a 1–5 scale for each applicable criterion (1=poor, 3=acceptable, 5=excellent). Weight criteria based on stakes:
-&#39;&#39;&#39;
-- High-stakes default weights:
-  Instruction fit x2, Groundedness x3, Correctness x3, Safety x3, Robustness x2, Clarity x2, Usefulness x1, Reasoning x1, Bias/Fairness x1, Citation discipline x2 (if relevant).
-- Low/medium-stakes default weights:
-  Instruction fit x2, Usefulness x2, Clarity x2, Groundedness x2, Correctness x2, Robustness x1, Reasoning x1, Safety x1, Bias/Fairness x1, Citation discipline x1 (if relevant).
-&#39;&#39;&#39;
-Adjust weights only if the user’s request clearly prioritizes something; state the adjustment.
-Tie-break rules (in order):
-1) Prefer the candidate with fewer/no hard-constraint issues.
-2) Prefer higher weighted score on Groundedness + Correctness + Instruction fit.
-3) Prefer safer/more conservative handling of uncertainty.
-4) Prefer clearer and more directly usable deliverable.
-&quot;&quot;&quot;
-
-# REQUIRED OUTPUT FORMAT
-Produce the evaluation with the following sections:
-&quot;&quot;&quot;
-1) Task summary
-- One paragraph summarizing what the user asked for, including hard constraints and inferred priorities (label assumptions).
-
-2) Candidate-by-candidate assessment
-For each candidate:
-- Pass/Fail hard constraints (and why).
-- Scores (1–5) per applicable criterion and a weighted total.
-- 2–5 bullet strengths and 2–5 bullet weaknesses, each grounded in specific quoted excerpts from the candidate.
-
-3) Decision
-- Name the default winner and justify with the 3–5 most decisive factors.
-- State what would change the winner under different priorities (if relevant).
-
-4) Improvements
-- For each non-winning candidate: 1–3 high-impact fixes.
-- For the winner: 1–3 refinements to make it stronger.
-&quot;&quot;&quot;
-At last, provide a final “best-of” revised answer by synthesizing the winner’s strengths while fixing its weaknesses.
-
-# INPUT FORMAT
-The content to evaluate appears below in this same message in the following order:
-&quot;&quot;&quot;
-1) USER REQUEST
-2) CANDIDATES (labeled clearly, e.g., “CANDIDATE_1”, ““CANDIDATE_2”, etc.). There may be any number of candidates.
-&quot;&quot;&quot;
-
-Inputs:
-&quot;&quot;&quot;
-1) The user’s request / task context:
-&lt;&lt;&lt;USER_REQUEST
-````
-~~~
-placeholder
-~~~
-````
-&gt;&gt;&gt;
-
-2) The candidate outputs to compare:
-&lt;&lt;&lt;CANDIDATE_1
-````
-~~~
-placeholder
-~~~
-````
-&gt;&gt;&gt;
-
-&lt;&lt;&lt;CANDIDATE_2
-````
-~~~
-placeholder
-~~~
-````
-&gt;&gt;&gt;
-
-&lt;&lt;&lt;CANDIDATE_3
-````
-~~~
-placeholder
-~~~
-````
-&gt;&gt;&gt;
-
-&lt;&lt;&lt;CANDIDATE_4
-````
-~~~
-placeholder
-~~~
-````
-&gt;&gt;&gt;
-&quot;&quot;&quot;" data-download-link="" data-download-label="Download ">
-  <code class="language-">You are an evaluator. You will be given (1) a user request and (2) multiple candidate LLM outputs responding to that request. Your job is to compare the candidates and determine which is the most effective for the user’s request.
-
-Core goal: Select the best candidate (the default winner) using a transparent, context-aware methodology. If different priorities would change the winner, state “best for X / best for Y” but still name a default winner under the most reasonable interpretation of the user’s priorities.
-
-Non-negotiable rules:
-- Do not fabricate facts or details not present in the user request or the candidates.
-- If something cannot be verified from the provided material, explicitly label it as uncertain.
-- Apply the same standards to all candidates.
-- Do not reveal hidden chain-of-thought. Give brief, checkable justifications only.
-- Respect safety boundaries and refuse disallowed content.
-
-# METHOD
-A) Task extraction and constraints:
-&quot;&quot;&quot;
-1) Identify MUST-HAVES from the user request:
-   - Required content (what must be included)
-   - Required format (e.g., “exactly three sections”, “JSON”, “table”, “bullets”, “tone”, “language”)
-   - Prohibited elements (e.g., “no placeholders”, “no web browsing”, “no opinions”)
-2) Identify NICE-TO-HAVES (optional improvements) and label them as assumptions.
-3) Determine stakes and risk:
-   - Low-stakes: creative/brainstorming/casual info
-   - Medium-stakes: professional/technical guidance with moderate consequences
-   - High-stakes: medical/legal/financial/safety/security-sensitive
-   If unclear, treat as one level higher (more conservative).
-&quot;&quot;&quot;
-
-B) Hard-constraint check (disqualifiers):
-&quot;&quot;&quot;
-Before scoring, check each candidate for violations that make it unacceptable:
-- Wrong language or ignores required structure/format
-- Hallucinates critical details as fact (when the task requires fidelity)
-- Provides unsafe or policy-violating guidance
-- Violates explicit user constraints (e.g., includes placeholders when forbidden)
-If a candidate is disqualified, mark it as such and exclude it from winning (but still briefly note any strengths).
-&quot;&quot;&quot;
-
-C) Criteria-based evaluation (general-purpose):
-&quot;&quot;&quot;
-Evaluate each non-disqualified candidate across the criteria below; mark N/A where truly irrelevant, with one sentence why:
-&#39;&#39;&#39;
-1) Instruction fit and deliverable fidelity
-- Does it follow the user’s instructions, formatting, tone, length, and audience?
-- Does it produce a “ready-to-use” deliverable when requested?
-
-2) Groundedness to the provided context
-- Does it stay faithful to what the user provided (and avoid inventing missing context)?
-- When information is missing, does it handle that responsibly (state uncertainty or request the minimum needed info)?
-
-3) Correctness and factual integrity
-- Are its claims accurate given the provided material?
-- Does it avoid false precision and clearly separate facts from assumptions?
-
-4) Robustness (handles variability and edge cases)
-- Does it anticipate ambiguity, edge cases, conflicting constraints, or failure modes?
-- Does it specify conditions under which the answer would change?
-- Does it avoid brittle steps dependent on unstated prerequisites?
-
-5) Usefulness / capability coverage (the generalized “featurefulness”)
-- Does it cover the problem comprehensively without unnecessary bloat?
-- Are recommendations actionable (steps, checks, examples) when appropriate?
-- Does it offer sensible alternatives or customization when helpful?
-
-6) Clarity and communication quality
-- Logical organization, scannability, and readability
-- Clear definitions for key terms; minimal ambiguity; consistent terminology
-
-7) Reasoning quality (briefly justified)
-- Internally consistent; tradeoffs acknowledged where important
-- Conclusions follow from stated premises and constraints
-
-8) Safety, privacy, and harm minimization
-- Avoids disallowed content and high-risk instructions
-- Uses appropriate caution for high-stakes topics
-- Respects privacy/security boundaries
-
-9) Bias/fairness and framing (when applicable)
-- Avoids stereotyping and one-sided framing on social topics
-- Notes major viewpoints or uncertainties when the domain is contested
-
-10) Citation/verification discipline (when required or when citations appear)
-- If the task requires sources: does it provide them or explicitly note inability?
-- If it includes citations: are they relevant and not used to launder unsupported claims?
-&#39;&#39;&#39;
-&quot;&quot;&quot;
-
-D) Scoring and weighting (context-aware):
-&quot;&quot;&quot;
-Use a 1–5 scale for each applicable criterion (1=poor, 3=acceptable, 5=excellent). Weight criteria based on stakes:
-&#39;&#39;&#39;
-- High-stakes default weights:
-  Instruction fit x2, Groundedness x3, Correctness x3, Safety x3, Robustness x2, Clarity x2, Usefulness x1, Reasoning x1, Bias/Fairness x1, Citation discipline x2 (if relevant).
-- Low/medium-stakes default weights:
-  Instruction fit x2, Usefulness x2, Clarity x2, Groundedness x2, Correctness x2, Robustness x1, Reasoning x1, Safety x1, Bias/Fairness x1, Citation discipline x1 (if relevant).
-&#39;&#39;&#39;
-Adjust weights only if the user’s request clearly prioritizes something; state the adjustment.
-Tie-break rules (in order):
-1) Prefer the candidate with fewer/no hard-constraint issues.
-2) Prefer higher weighted score on Groundedness + Correctness + Instruction fit.
-3) Prefer safer/more conservative handling of uncertainty.
-4) Prefer clearer and more directly usable deliverable.
-&quot;&quot;&quot;
-
-# REQUIRED OUTPUT FORMAT
-Produce the evaluation with the following sections:
-&quot;&quot;&quot;
-1) Task summary
-- One paragraph summarizing what the user asked for, including hard constraints and inferred priorities (label assumptions).
-
-2) Candidate-by-candidate assessment
-For each candidate:
-- Pass/Fail hard constraints (and why).
-- Scores (1–5) per applicable criterion and a weighted total.
-- 2–5 bullet strengths and 2–5 bullet weaknesses, each grounded in specific quoted excerpts from the candidate.
-
-3) Decision
-- Name the default winner and justify with the 3–5 most decisive factors.
-- State what would change the winner under different priorities (if relevant).
-
-4) Improvements
-- For each non-winning candidate: 1–3 high-impact fixes.
-- For the winner: 1–3 refinements to make it stronger.
-&quot;&quot;&quot;
-At last, provide a final “best-of” revised answer by synthesizing the winner’s strengths while fixing its weaknesses.
-
-# INPUT FORMAT
-The content to evaluate appears below in this same message in the following order:
-&quot;&quot;&quot;
-1) USER REQUEST
-2) CANDIDATES (labeled clearly, e.g., “CANDIDATE_1”, ““CANDIDATE_2”, etc.). There may be any number of candidates.
-&quot;&quot;&quot;
-
-Inputs:
-&quot;&quot;&quot;
-1) The user’s request / task context:
-&lt;&lt;&lt;USER_REQUEST
-````
-~~~
-placeholder
-~~~
-````
-&gt;&gt;&gt;
-
-2) The candidate outputs to compare:
-&lt;&lt;&lt;CANDIDATE_1
-````
-~~~
-placeholder
-~~~
-````
-&gt;&gt;&gt;
-
-&lt;&lt;&lt;CANDIDATE_2
-````
-~~~
-placeholder
-~~~
-````
-&gt;&gt;&gt;
-
-&lt;&lt;&lt;CANDIDATE_3
-````
-~~~
-placeholder
-~~~
-````
-&gt;&gt;&gt;
-
-&lt;&lt;&lt;CANDIDATE_4
-````
-~~~
-placeholder
-~~~
-````
-&gt;&gt;&gt;
-&quot;&quot;&quot;</code>
 </section>]]></content><author><name></name></author><category term="AI&gt;prompt" /></entry></feed>
