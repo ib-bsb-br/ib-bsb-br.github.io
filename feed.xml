@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2026-01-21T22:10:29+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">enforce rotation + compression + size caps in logrotate/rsyslog on Debian</title><link href="https://ib.bsb.br/logs-rotation-deb/" rel="alternate" type="text/html" title="enforce rotation + compression + size caps in logrotate/rsyslog on Debian" /><published>2026-01-21T00:00:00+00:00</published><updated>2026-01-21T21:55:21+00:00</updated><id>https://ib.bsb.br/logs-rotation_deb</id><content type="html" xml:base="https://ib.bsb.br/logs-rotation-deb/"><![CDATA[<p>You want two layers: (1) rotate/compress aggressively enough, and (2) reduce the log volume at the source.</p>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2026-01-21T22:24:30+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">enforce rotation + compression + size caps in logrotate/rsyslog on Debian</title><link href="https://ib.bsb.br/logs-rotation-deb/" rel="alternate" type="text/html" title="enforce rotation + compression + size caps in logrotate/rsyslog on Debian" /><published>2026-01-21T00:00:00+00:00</published><updated>2026-01-21T22:19:04+00:00</updated><id>https://ib.bsb.br/logs-rotation_deb</id><content type="html" xml:base="https://ib.bsb.br/logs-rotation-deb/"><![CDATA[<p>You want two layers: (1) rotate/compress aggressively enough, and (2) reduce the log volume at the source.</p>
 
 <p>C1) Strengthen logrotate policy for syslog + daemon.log
 Edit <code class="language-plaintext highlighter-rouge">/etc/logrotate.d/rsyslog</code> and ensure both files are covered with:</p>
@@ -94,7 +94,144 @@ Even if <code class="language-plaintext highlighter-rouge">/var/log/syslog</code
 <ul>
   <li>Check usage: <code class="language-plaintext highlighter-rouge">journalctl --disk-usage</code></li>
   <li>If needed, cap retention via <code class="language-plaintext highlighter-rouge">/etc/systemd/journald.conf</code> and vacuum old entries.</li>
-</ul>]]></content><author><name></name></author><category term="scratchpad" /></entry><entry><title type="html">maim screenshooter debian 11 bash script</title><link href="https://ib.bsb.br/maim/" rel="alternate" type="text/html" title="maim screenshooter debian 11 bash script" /><published>2026-01-15T00:00:00+00:00</published><updated>2026-01-15T12:05:43+00:00</updated><id>https://ib.bsb.br/maim</id><content type="html" xml:base="https://ib.bsb.br/maim/"><![CDATA[<section class="code-block-container" role="group" aria-label="Bash Code Block" data-filename="bash_code_block.sh" data-code="#!/bin/bash
+</ul>
+
+<h1 id="etclogrotatedrsyslog">/etc/logrotate.d/rsyslog</h1>
+<section class="code-block-container" role="group" aria-label=" Code Block" data-filename="_code_block.txt" data-code="/var/log/syslog
+/var/log/daemon.log
+/var/log/kern.log
+/var/log/auth.log
+/var/log/messages
+{
+	# Rotate these frequently to prevent multi-GB growth
+	hourly
+
+	# Keep up to 7 days of hourly history (24*7 = 168)
+	rotate 168
+	maxage 7
+
+	missingok
+	notifempty
+
+	# Size guardrails:
+	# - minsize prevents rotating tiny files every hour
+	# - maxsize forces rotation at next run even if time interval hasn&#39;t elapsed
+	minsize 1M
+	maxsize 50M
+
+	compress
+	delaycompress
+
+	# Hour-stamped rotated filenames (avoids collisions with hourly)
+	dateext
+	dateformat -%Y%m%d-%H
+	datehourago
+
+	sharedscripts
+	postrotate
+		/usr/lib/rsyslog/rsyslog-rotate
+	endscript
+}
+
+/var/log/mail.info
+/var/log/mail.warn
+/var/log/mail.err
+/var/log/mail.log
+/var/log/user.log
+/var/log/lpr.log
+/var/log/cron.log
+/var/log/debug
+{
+	# These typically don&#39;t need hourly rotation; still protected by size caps.
+	daily
+
+	# Keep ~30 days
+	rotate 30
+	maxage 30
+
+	missingok
+	notifempty
+
+	minsize 100k
+	maxsize 20M
+
+	compress
+	delaycompress
+
+	dateext
+	sharedscripts
+	postrotate
+		/usr/lib/rsyslog/rsyslog-rotate
+	endscript
+}" data-download-link="" data-download-label="Download ">
+  <code class="language-">/var/log/syslog
+/var/log/daemon.log
+/var/log/kern.log
+/var/log/auth.log
+/var/log/messages
+{
+	# Rotate these frequently to prevent multi-GB growth
+	hourly
+
+	# Keep up to 7 days of hourly history (24*7 = 168)
+	rotate 168
+	maxage 7
+
+	missingok
+	notifempty
+
+	# Size guardrails:
+	# - minsize prevents rotating tiny files every hour
+	# - maxsize forces rotation at next run even if time interval hasn&#39;t elapsed
+	minsize 1M
+	maxsize 50M
+
+	compress
+	delaycompress
+
+	# Hour-stamped rotated filenames (avoids collisions with hourly)
+	dateext
+	dateformat -%Y%m%d-%H
+	datehourago
+
+	sharedscripts
+	postrotate
+		/usr/lib/rsyslog/rsyslog-rotate
+	endscript
+}
+
+/var/log/mail.info
+/var/log/mail.warn
+/var/log/mail.err
+/var/log/mail.log
+/var/log/user.log
+/var/log/lpr.log
+/var/log/cron.log
+/var/log/debug
+{
+	# These typically don&#39;t need hourly rotation; still protected by size caps.
+	daily
+
+	# Keep ~30 days
+	rotate 30
+	maxage 30
+
+	missingok
+	notifempty
+
+	minsize 100k
+	maxsize 20M
+
+	compress
+	delaycompress
+
+	dateext
+	sharedscripts
+	postrotate
+		/usr/lib/rsyslog/rsyslog-rotate
+	endscript
+}</code>
+</section>]]></content><author><name></name></author><category term="scratchpad" /></entry><entry><title type="html">maim screenshooter debian 11 bash script</title><link href="https://ib.bsb.br/maim/" rel="alternate" type="text/html" title="maim screenshooter debian 11 bash script" /><published>2026-01-15T00:00:00+00:00</published><updated>2026-01-15T12:05:43+00:00</updated><id>https://ib.bsb.br/maim</id><content type="html" xml:base="https://ib.bsb.br/maim/"><![CDATA[<section class="code-block-container" role="group" aria-label="Bash Code Block" data-filename="bash_code_block.sh" data-code="#!/bin/bash
 set -euo pipefail
 
 # ==============================================================================
