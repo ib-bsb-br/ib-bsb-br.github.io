@@ -8,7 +8,7 @@ date: '2026-01-21'
 type: post
 layout: post
 published: true
-sha: 6aa8e2f1285f28800f92abc8196fc8ae2de95945
+sha: 7ca7a7ddfa5631500127f8e8ce9da818aa8ea593
 slug: logs-rotation_deb
 title: 'enforce rotation + compression + size caps in logrotate/rsyslog on Debian'
 ---
@@ -75,3 +75,74 @@ Even if `/var/log/syslog` is your main problem, Debian systems also keep the sys
 
 * Check usage: `journalctl --disk-usage`
 * If needed, cap retention via `/etc/systemd/journald.conf` and vacuum old entries.
+
+# /etc/logrotate.d/rsyslog
+{% codeblock %}
+/var/log/syslog
+/var/log/daemon.log
+/var/log/kern.log
+/var/log/auth.log
+/var/log/messages
+{
+	# Rotate these frequently to prevent multi-GB growth
+	hourly
+
+	# Keep up to 7 days of hourly history (24*7 = 168)
+	rotate 168
+	maxage 7
+
+	missingok
+	notifempty
+
+	# Size guardrails:
+	# - minsize prevents rotating tiny files every hour
+	# - maxsize forces rotation at next run even if time interval hasn't elapsed
+	minsize 1M
+	maxsize 50M
+
+	compress
+	delaycompress
+
+	# Hour-stamped rotated filenames (avoids collisions with hourly)
+	dateext
+	dateformat -%Y%m%d-%H
+	datehourago
+
+	sharedscripts
+	postrotate
+		/usr/lib/rsyslog/rsyslog-rotate
+	endscript
+}
+
+/var/log/mail.info
+/var/log/mail.warn
+/var/log/mail.err
+/var/log/mail.log
+/var/log/user.log
+/var/log/lpr.log
+/var/log/cron.log
+/var/log/debug
+{
+	# These typically don't need hourly rotation; still protected by size caps.
+	daily
+
+	# Keep ~30 days
+	rotate 30
+	maxage 30
+
+	missingok
+	notifempty
+
+	minsize 100k
+	maxsize 20M
+
+	compress
+	delaycompress
+
+	dateext
+	sharedscripts
+	postrotate
+		/usr/lib/rsyslog/rsyslog-rotate
+	endscript
+}
+{% endcodeblock %}
