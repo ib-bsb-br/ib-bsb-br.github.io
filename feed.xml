@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2026-01-21T22:24:30+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">enforce rotation + compression + size caps in logrotate/rsyslog on Debian</title><link href="https://ib.bsb.br/logs-rotation-deb/" rel="alternate" type="text/html" title="enforce rotation + compression + size caps in logrotate/rsyslog on Debian" /><published>2026-01-21T00:00:00+00:00</published><updated>2026-01-21T22:19:04+00:00</updated><id>https://ib.bsb.br/logs-rotation_deb</id><content type="html" xml:base="https://ib.bsb.br/logs-rotation-deb/"><![CDATA[<p>You want two layers: (1) rotate/compress aggressively enough, and (2) reduce the log volume at the source.</p>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2026-01-21T22:41:33+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">rotation + compression + size caps in logrotate/rsyslog on Debian</title><link href="https://ib.bsb.br/logs-rotation-deb/" rel="alternate" type="text/html" title="rotation + compression + size caps in logrotate/rsyslog on Debian" /><published>2026-01-21T00:00:00+00:00</published><updated>2026-01-21T22:24:52+00:00</updated><id>https://ib.bsb.br/logs-rotation_deb</id><content type="html" xml:base="https://ib.bsb.br/logs-rotation-deb/"><![CDATA[<p>You want two layers: (1) rotate/compress aggressively enough, and (2) reduce the log volume at the source.</p>
 
 <p>C1) Strengthen logrotate policy for syslog + daemon.log
 Edit <code class="language-plaintext highlighter-rouge">/etc/logrotate.d/rsyslog</code> and ensure both files are covered with:</p>
@@ -231,7 +231,66 @@ Even if <code class="language-plaintext highlighter-rouge">/var/log/syslog</code
 		/usr/lib/rsyslog/rsyslog-rotate
 	endscript
 }</code>
-</section>]]></content><author><name></name></author><category term="scratchpad" /></entry><entry><title type="html">maim screenshooter debian 11 bash script</title><link href="https://ib.bsb.br/maim/" rel="alternate" type="text/html" title="maim screenshooter debian 11 bash script" /><published>2026-01-15T00:00:00+00:00</published><updated>2026-01-15T12:05:43+00:00</updated><id>https://ib.bsb.br/maim</id><content type="html" xml:base="https://ib.bsb.br/maim/"><![CDATA[<section class="code-block-container" role="group" aria-label="Bash Code Block" data-filename="bash_code_block.sh" data-code="#!/bin/bash
+</section>
+
+<p>Why this structure works:</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">hourly</code> is a real directive in bullseye logrotate. ([manpages.debian.org][1])</li>
+  <li><code class="language-plaintext highlighter-rouge">minsize</code>/<code class="language-plaintext highlighter-rouge">maxsize</code> behave exactly the way you want for “don’t rotate tiny files, but never let them explode”. ([manpages.debian.org][1])</li>
+  <li><code class="language-plaintext highlighter-rouge">dateext</code> + an hour-bearing <code class="language-plaintext highlighter-rouge">dateformat</code> + <code class="language-plaintext highlighter-rouge">datehourago</code> prevents name collisions and makes the timestamp match the hour the logs cover. ([manpages.debian.org][1])</li>
+</ul>
+
+<h2 id="make-logrotate-actually-run-hourly-required">Make logrotate actually run hourly (required)</h2>
+
+<p>Logrotate configs don’t schedule themselves. You must run logrotate hourly via <strong>systemd timer</strong> or <strong>cron</strong>.</p>
+
+<h1 id="systemd-timer-cleanest-if-you-have-it">systemd timer (cleanest if you have it)</h1>
+
+<p>Check if it exists:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>systemctl status logrotate.timer 2&gt;/dev/null
+systemctl list-timers | <span class="nb">grep</span> <span class="nt">-i</span> logrotate <span class="o">||</span> <span class="nb">true</span>
+</code></pre></div></div>
+
+<p>If <code class="language-plaintext highlighter-rouge">logrotate.timer</code> exists, override it to hourly. The important trick is: when overriding <code class="language-plaintext highlighter-rouge">OnCalendar=</code>, you should first reset it by assigning an empty value (systemd supports “empty string resets the list”). ([manpages.debian.org][3])</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>systemctl edit logrotate.timer
+</code></pre></div></div>
+
+<p>Put this in the editor:</p>
+
+<div class="language-ini highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nn">[Timer]</span>
+<span class="py">OnCalendar</span><span class="p">=</span>
+<span class="py">OnCalendar</span><span class="p">=</span><span class="s">hourly</span>
+<span class="py">Persistent</span><span class="p">=</span><span class="s">true</span>
+</code></pre></div></div>
+
+<p>Then:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>systemctl daemon-reload
+<span class="nb">sudo </span>systemctl restart logrotate.timer
+systemctl list-timers logrotate.timer
+</code></pre></div></div>
+
+<h2 id="validate-safely">Validate safely</h2>
+
+<p>Dry-run the specific policy:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>logrotate <span class="nt">-d</span> /etc/logrotate.d/rsyslog
+</code></pre></div></div>
+
+<p>Force one rotation to confirm naming/permissions (do this once, not repeatedly):</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>logrotate <span class="nt">-f</span> /etc/logrotate.d/rsyslog
+</code></pre></div></div>
+
+<p>Watch whether the files stop ballooning:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">ls</span> <span class="nt">-lh</span> /var/log/syslog /var/log/daemon.log
+</code></pre></div></div>
+
+<p>One pragmatic warning: hourly rotation + very noisy logs can still generate lots of compressed archives. If that happens, tighten <code class="language-plaintext highlighter-rouge">maxage</code> (e.g., 3) or reduce <code class="language-plaintext highlighter-rouge">rotate</code>, or increase compression aggressiveness later.</p>]]></content><author><name></name></author><category term="scratchpad" /></entry><entry><title type="html">maim screenshooter debian 11 bash script</title><link href="https://ib.bsb.br/maim/" rel="alternate" type="text/html" title="maim screenshooter debian 11 bash script" /><published>2026-01-15T00:00:00+00:00</published><updated>2026-01-15T12:05:43+00:00</updated><id>https://ib.bsb.br/maim</id><content type="html" xml:base="https://ib.bsb.br/maim/"><![CDATA[<section class="code-block-container" role="group" aria-label="Bash Code Block" data-filename="bash_code_block.sh" data-code="#!/bin/bash
 set -euo pipefail
 
 # ==============================================================================
