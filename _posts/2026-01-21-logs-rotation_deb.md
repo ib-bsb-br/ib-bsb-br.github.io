@@ -8,9 +8,9 @@ date: '2026-01-21'
 type: post
 layout: post
 published: true
-sha: 7ca7a7ddfa5631500127f8e8ce9da818aa8ea593
+sha: 7f5c7931780b23cbed61d78f2ab143eff11e617a
 slug: logs-rotation_deb
-title: 'enforce rotation + compression + size caps in logrotate/rsyslog on Debian'
+title: 'rotation + compression + size caps in logrotate/rsyslog on Debian'
 ---
 You want two layers: (1) rotate/compress aggressively enough, and (2) reduce the log volume at the source.
 
@@ -146,3 +146,67 @@ Even if `/var/log/syslog` is your main problem, Debian systems also keep the sys
 	endscript
 }
 {% endcodeblock %}
+
+Why this structure works:
+
+* `hourly` is a real directive in bullseye logrotate. ([manpages.debian.org][1])
+* `minsize`/`maxsize` behave exactly the way you want for “don’t rotate tiny files, but never let them explode”. ([manpages.debian.org][1])
+* `dateext` + an hour-bearing `dateformat` + `datehourago` prevents name collisions and makes the timestamp match the hour the logs cover. ([manpages.debian.org][1])
+
+## Make logrotate actually run hourly (required)
+
+Logrotate configs don’t schedule themselves. You must run logrotate hourly via **systemd timer** or **cron**.
+
+# systemd timer (cleanest if you have it)
+
+Check if it exists:
+
+```bash
+systemctl status logrotate.timer 2>/dev/null
+systemctl list-timers | grep -i logrotate || true
+```
+
+If `logrotate.timer` exists, override it to hourly. The important trick is: when overriding `OnCalendar=`, you should first reset it by assigning an empty value (systemd supports “empty string resets the list”). ([manpages.debian.org][3])
+
+```bash
+sudo systemctl edit logrotate.timer
+```
+
+Put this in the editor:
+
+```ini
+[Timer]
+OnCalendar=
+OnCalendar=hourly
+Persistent=true
+```
+
+Then:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl restart logrotate.timer
+systemctl list-timers logrotate.timer
+```
+
+## Validate safely
+
+Dry-run the specific policy:
+
+```bash
+sudo logrotate -d /etc/logrotate.d/rsyslog
+```
+
+Force one rotation to confirm naming/permissions (do this once, not repeatedly):
+
+```bash
+sudo logrotate -f /etc/logrotate.d/rsyslog
+```
+
+Watch whether the files stop ballooning:
+
+```bash
+ls -lh /var/log/syslog /var/log/daemon.log
+```
+
+One pragmatic warning: hourly rotation + very noisy logs can still generate lots of compressed archives. If that happens, tighten `maxage` (e.g., 3) or reduce `rotate`, or increase compression aggressiveness later.
