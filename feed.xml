@@ -1,4 +1,100 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2026-01-21T21:58:17+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">maim screenshooter debian 11 bash script</title><link href="https://ib.bsb.br/maim/" rel="alternate" type="text/html" title="maim screenshooter debian 11 bash script" /><published>2026-01-15T00:00:00+00:00</published><updated>2026-01-15T12:05:43+00:00</updated><id>https://ib.bsb.br/maim</id><content type="html" xml:base="https://ib.bsb.br/maim/"><![CDATA[<section class="code-block-container" role="group" aria-label="Bash Code Block" data-filename="bash_code_block.sh" data-code="#!/bin/bash
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://ib.bsb.br/feed.xml" rel="self" type="application/atom+xml" /><link href="https://ib.bsb.br/" rel="alternate" type="text/html" /><updated>2026-01-21T22:10:29+00:00</updated><id>https://ib.bsb.br/feed.xml</id><title type="html">infoBAG</title><entry><title type="html">enforce rotation + compression + size caps in logrotate/rsyslog on Debian</title><link href="https://ib.bsb.br/logs-rotation-deb/" rel="alternate" type="text/html" title="enforce rotation + compression + size caps in logrotate/rsyslog on Debian" /><published>2026-01-21T00:00:00+00:00</published><updated>2026-01-21T21:55:21+00:00</updated><id>https://ib.bsb.br/logs-rotation_deb</id><content type="html" xml:base="https://ib.bsb.br/logs-rotation-deb/"><![CDATA[<p>You want two layers: (1) rotate/compress aggressively enough, and (2) reduce the log volume at the source.</p>
+
+<p>C1) Strengthen logrotate policy for syslog + daemon.log
+Edit <code class="language-plaintext highlighter-rouge">/etc/logrotate.d/rsyslog</code> and ensure both files are covered with:</p>
+
+<ul>
+  <li>compression enabled</li>
+  <li>a retention count (rotate N)</li>
+  <li>a size cap (<code class="language-plaintext highlighter-rouge">maxsize</code> or <code class="language-plaintext highlighter-rouge">size</code>)</li>
+  <li>a postrotate hook that reopens logs via the rsyslog helper (or HUP)</li>
+</ul>
+
+<p>Example policy (conservative, “stop the bleeding”):</p>
+
+<ul>
+  <li>rotate daily</li>
+  <li>keep 14 rotations</li>
+  <li>compress, with delaycompress</li>
+  <li>rotate early if it exceeds 100 MB</li>
+</ul>
+
+<p>Conceptually:</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">maxsize</code> is useful when you still want a time schedule (daily) but also want rotation triggered by size.</li>
+  <li><code class="language-plaintext highlighter-rouge">size</code> is similar but is mutually exclusive with time intervals and rotates purely based on size. ([Linux Die][8])</li>
+</ul>
+
+<p>Important operational detail: size-based triggers only take effect when logrotate runs. If logrotate runs once per day, “maxsize 100M” will only be checked once per day, and a runaway log can still grow very large within that day. This is why the logrotate docs note you must run it more frequently (e.g., hourly) if you truly need small, frequent rotations. ([man7.org][9])</p>
+
+<p>C2) If growth is extreme, run logrotate more frequently
+If you’re seeing multi-GB growth in hours, consider executing logrotate hourly via a systemd timer override or a cron.hourly job. The key idea is not distro-specific: logrotate must be invoked more frequently to enforce frequent size-based rotation. ([man7.org][9])</p>
+
+<p>D. Reduce the log volume: find what’s flooding syslog/daemon.log
+Rotation is containment; the real fix is stopping the spammer.</p>
+
+<ol>
+  <li>Identify top “talkers” (fast triage)</li>
+</ol>
+
+<ul>
+  <li>
+    <p>Count by program tag (approximate, but often enough to find the culprit):</p>
+
+    <ul>
+      <li><code class="language-plaintext highlighter-rouge">sudo awk '{print $5}' /var/log/syslog | sed 's/\[.*\]://' | sort | uniq -c | sort -nr | head -30</code></li>
+    </ul>
+  </li>
+  <li>
+    <p>Then inspect that program’s last messages:</p>
+
+    <ul>
+      <li><code class="language-plaintext highlighter-rouge">sudo grep -F 'programname' /var/log/syslog | tail -n 200</code>
+Do the same for <code class="language-plaintext highlighter-rouge">/var/log/daemon.log</code>.</li>
+    </ul>
+  </li>
+</ul>
+
+<ol>
+  <li>Confirm if a single repeating line is exploding volume</li>
+</ol>
+
+<ul>
+  <li>
+    <p>Quickly spot repetition:</p>
+
+    <ul>
+      <li><code class="language-plaintext highlighter-rouge">sudo tail -n 5000 /var/log/syslog | sort | uniq -c | sort -nr | head -20</code></li>
+    </ul>
+  </li>
+</ul>
+
+<ol>
+  <li>Fix at the source
+Typical “log floods” come from:</li>
+</ol>
+
+<ul>
+  <li>a failing service retry-loop (network DNS failures, storage errors, authentication failures, crashing + systemd restart loops)</li>
+  <li>debug logging accidentally enabled</li>
+  <li>hardware/driver chatter (kernel/udev messages routed onward)
+The correct fix depends on the service you find; but once you identify the top talker, you almost always have a direct knob: reduce log level or fix the underlying error condition.</li>
+</ul>
+
+<ol>
+  <li>Consider rsyslog repeated-message reduction only with eyes open
+rsyslog supports “Last line repeated n times” behavior via <code class="language-plaintext highlighter-rouge">$RepeatedMsgReduction</code>. Upstream docs describe it as legacy and many modern workflows consider it a misfeature because it can hide event granularity that tools expect. ([GitHub][5])
+So treat this as a last resort for purely identical spam where you accept the loss of detail.</li>
+</ol>
+
+<p>E. Optional: ensure systemd-journald isn’t also consuming disk
+Even if <code class="language-plaintext highlighter-rouge">/var/log/syslog</code> is your main problem, Debian systems also keep the systemd journal, and it has configurable disk caps like <code class="language-plaintext highlighter-rouge">SystemMaxUse=</code> / <code class="language-plaintext highlighter-rouge">RuntimeMaxUse=</code>. ([Debian Sources][4])</p>
+
+<ul>
+  <li>Check usage: <code class="language-plaintext highlighter-rouge">journalctl --disk-usage</code></li>
+  <li>If needed, cap retention via <code class="language-plaintext highlighter-rouge">/etc/systemd/journald.conf</code> and vacuum old entries.</li>
+</ul>]]></content><author><name></name></author><category term="scratchpad" /></entry><entry><title type="html">maim screenshooter debian 11 bash script</title><link href="https://ib.bsb.br/maim/" rel="alternate" type="text/html" title="maim screenshooter debian 11 bash script" /><published>2026-01-15T00:00:00+00:00</published><updated>2026-01-15T12:05:43+00:00</updated><id>https://ib.bsb.br/maim</id><content type="html" xml:base="https://ib.bsb.br/maim/"><![CDATA[<section class="code-block-container" role="group" aria-label="Bash Code Block" data-filename="bash_code_block.sh" data-code="#!/bin/bash
 set -euo pipefail
 
 # ==============================================================================
@@ -14224,725 +14320,4 @@ collect_artifacts
 install_artifact
 
 log &quot;Done.&quot;</code>
-</section>]]></content><author><name></name></author><category term="scratchpad" /></entry><entry><title type="html">rk3588 custom documentation</title><link href="https://ib.bsb.br/rk3588-custom/" rel="alternate" type="text/html" title="rk3588 custom documentation" /><published>2026-01-08T00:00:00+00:00</published><updated>2026-01-08T20:53:35+00:00</updated><id>https://ib.bsb.br/rk3588-custom</id><content type="html" xml:base="https://ib.bsb.br/rk3588-custom/"><![CDATA[<h1 id="development-board-connection">Development board connection</h1>
-
-<p>The board can be started via serial port to access the command line. The command line can then be used to connect to the development board via Wi-Fi. The RK3588 has built-in Wi-Fi, and after connection, SSH can be initiated to connect to the development board terminal, eliminating the need for serial port connection.</p>
-
-<p>When connecting to the laboratory network, the IP address is fixed.</p>
-
-<p>To connect to the development board via SSH from your PC, ensure that both computers are on the same network. If the connection fails, try pinging each other’s IP addresses. Also, check your PC’s firewall settings; try disabling it and trying again. If you can ping successfully with the firewall disabled, you can configure firewall rules to open SSH port 22.</p>
-
-<p>SSH connections may be unstable due to network fluctuations; using a serial port for board-side connection is the most stable solution.</p>
-
-<h1 id="adb-transfer">adb transfer</h1>
-<p>ADB transfer requires changing the connection port.
-The current development approach involves compiling on a server, transmitting the data back to the PC, and then using ADB to connect to the board and push the data.
-After the model is transferred using adb, the executable file needs to be granted execute permissions.</p>
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>chmod +x rknn_yolov5_cam
-</code></pre></div></div>
-
-<h1 id="sdk-compilation">SDK compilation</h1>
-<p>The SDK compilation requires an Ubuntu 20.04 environment. However, due to the server environment being Ubuntu 22.04, numerous Linux environment issues arose during the compilation process. Therefore, Docker was used to create the environment instead.</p>
-
-<h1 id="docker-usage">Docker usage</h1>
-<p>The process of building a Docker container is as follows:
-Create a new folder to store our Dockerfile.</p>
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>mkdir -p ~/rk3588_build_env cd ~/rk3588_build_env
-</code></pre></div></div>
-<p><strong>Create a Dockerfile</strong></p>
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>vim Dockerfile
-</code></pre></div></div>
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code># Using the official Ubuntu 20.04 as the base
-FROM ubuntu:20.04
-
-# Set environment variables to avoid interactive prompts during installation.
-ENV DEBIAN_FRONTEND=noninteractive
-
-# Update apt repositories and install all dependencies required by the manual.
-# Note: We will not install Bison here; we will manually install a specific version later.
-Run apt-get update &amp;&amp; \
-    apt-get install -y --no-install-recommends \
-    git ssh make gcc libssl-dev liblz4-tool expect expect-dev g++ patchelf \
-    chrpath gawk texinfo diffstat binfmt-support qemu-user-static live-build \
-    flex fakeroot cmake gcc-multilib g++-multilib unzip device-tree-compiler \
-    ncurses-dev bzip2 expat gpgv2 cpp-aarch64-linux-gnu libgmp-dev libmpc-dev \
-    bc python-is-python3 python2 wget \
-    &amp;&amp; rm -rf /var/lib/apt/lists/*
-
-# Manually download and install an older version of Bison (3.5.1) that is known to work.
-Run apt-get update &amp;&amp; \
-    apt-get install -y wget &amp;&amp; \
-    wget http://archive.ubuntu.com/ubuntu/pool/main/b/bison/bison_3.5.1+dfsg-1_amd64.deb &amp;&amp; \
-    dpkg -i bison_3.5.1+dfsg-1_amd64.deb &amp;&amp; \
-    rm bison_3.5.1+dfsg-1_amd64.deb &amp;&amp; \
-    apt-mark hold bison &amp;&amp; \
-    rm -rf /var/lib/apt/lists/*
-
-# Create a non-root working user; this is safer and better suits the SDK script's expectations.
-# Also add the user to the sudo group for easy temporary privilege escalation within the container.
-RUN useradd -ms /bin/bash user &amp;&amp; \
-    adduser user sudo &amp;&amp; \
-    echo "user ALL=(ALL) NOPASSWD:ALL" &gt;&gt; /etc/sudoers
-
-# Switch to this new user
-USER user
-WORKDIR /home/user
-
-# Set the default command to provide a bash terminal when the container starts.
-CMD ["/bin/bash"]
-</code></pre></div></div>
-
-<p>Building a Docker image requires modifying the Docker image download source; refer to Bilibili for details.</p>
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>docker build -t rk3588-build-env .
-</code></pre></div></div>
-<p>Create a container</p>
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>docker run -it --name rk3588-compiler \ -v /data/user/rk3D/rk3588_linux_sdk:/home/user/rk3588_linux_sdk \ rk3588-build-env
-</code></pre></div></div>
-
-<p>| Command | Function | Example |
-| ————- | ———– | —————————– |
-| docker ps | List currently running containers |
-| docker start | Start an existing container | docker start rk3588-compiler |
-| docker attach | Enter container terminal | docker attach rk3588-compiler |
-| exit | Stop container | |</p>
-<h1 id="save-docker-image">Save Docker image</h1>
-<h2 id="method-1-dockerfile">Method 1: Dockerfile</h2>
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code># Using the official Ubuntu 20.04 as the base
-FROM ubuntu:20.04
-
-# Set environment variables to avoid interactive prompts during installation.
-ENV DEBIAN_FRONTEND=noninteractive
-
-# Update apt sources and install all known dependencies at once
-Run apt-get update &amp;&amp; \
-    apt-get install -y --no-install-recommends \
-    git ssh make gcc libssl-dev liblz4-tool expect expect-dev g++ patchelf \
-    chrpath gawk texinfo diffstat binfmt-support qemu-user-static live-build \
-    flex fakeroot cmake gcc-multilib g++-multilib unzip device-tree-compiler \
-    ncurses-dev bzip2 expat gpgv2 cpp-aarch64-linux-gnu libgmp-dev libmpc-dev \
-    bc python-is-python3 python2 wget sudo \
-    time file rsync patch vim-common ca-certificates \
-    &amp;&amp; rm -rf /var/lib/apt/lists/*
-
-# Manually download and install an older version of Bison (3.5.1) that is known to work.
-Run apt-get update &amp;&amp; \
-    apt-get install -y wget &amp;&amp; \
-    wget http://archive.ubuntu.com/ubuntu/pool/main/b/bison/bison_3.5.1+dfsg-1_amd64.deb &amp;&amp; \
-    dpkg -i bison_3.5.1+dfsg-1_amd64.deb &amp;&amp; \
-    rm bison_3.5.1+dfsg-1_amd64.deb &amp;&amp; \
-    apt-mark hold bison &amp;&amp; \
-    rm -rf /var/lib/apt/lists/*
-
-# Create a non-root working user and grant it sudo passwordless privileges.
-RUN useradd -ms /bin/bash user &amp;&amp; \
-    adduser user sudo &amp;&amp; \
-    echo "user ALL=(ALL) NOPASSWD:ALL" &gt;&gt; /etc/sudoers
-
-# Switch to this new user
-USER user
-WORKDIR /home/user
-
-# Set default command
-CMD ["/bin/bash"]
-</code></pre></div></div>
-<p>The above files can be used to create an image.</p>
-<h2 id="method-2-snapshot">Method 2: Snapshot</h2>
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>docker commit rk3588-compiler rk3588-build-env:snapshot
-</code></pre></div></div>
-
-<h1 id="fix-buildsh-bug">Fix build.sh bug</h1>
-<p>The compilation and packaging script has a problem. After successful compilation, it generates a symbolic link in the corresponding folder, but the actual files are stored in the location corresponding to the symbolic link.
-To facilitate the burning process, I wrote a script to compile the corresponding files into the output img folder.
-Run the following command in the sdk directory.</p>
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>./collect_images.sh
-</code></pre></div></div>
-
-<h1 id="mirror-modification">Mirror Modification</h1>
-<p>Developing with Ubuntu requires installing an Ubuntu system image. Previously, the image I burned was a build image, which is unusable for development.
-For details, please refer to 31 [Zhengdian Atom] ATK-DLRK3588 Factory Image Burning Guide V1.1.pdf</p>
-
-<h1 id="development-environment-selection">Development Environment Selection</h1>
-<p>We currently face two options: the first is to use BuildRoot for cross-compilation and development, which is technically strongly recommended.
-Secondly, find a compatible Linux system image, such as Ubuntu or Debian, and conduct development work on that environment. One option is to use a pre-prepared image, and the other is to compile it using an SDK.</p>
-
-<h1 id="attempting-to-port-the-ubuntu-system-environment">Attempting to port the Ubuntu system environment</h1>
-
-<h2 id="wifi-repair">WiFi Repair</h2>
-<p>buildroot/output/rockchip_atk_dlrk3588/target$ find -name “8733*”<br />
-./usr/lib/modules/8733bu.ko<br />
-Copy the target/lib/firmware folder as well.
-First, copy the firmware and drivers from the SDK to the development board. You can use a USB flash drive to connect.</p>
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code># Create the mount directory (if it hasn't been created before) mkdir -p /mnt/usb
-# Mount the USB drive partition sda1 to this directory: mount /dev/sda1 /mnt/usb
-
-ls /mnt/usb
-
-
-
-
-
-
-# 1. Ensure the target folder exists: `mkdir -p /lib/modules/5.10.160/kernel/drivers/net/wireless/realtek/`
-
-# 2. Copy the driver file: cp /mnt/usb/modules/8733bu.ko /lib/modules/5.10.160/kernel/drivers/net/wireless/realtek/
-
-# 1. Copy the WiFi firmware to the system firmware root directory
-cp /mnt/usb/firmware/rtl8733bu_fw /lib/firmware/
-cp /mnt/usb/firmware/rtl8733bu_config /lib/firmware/
-
-# 2. To double-check: Make another copy with the .bin extension (many drivers default to looking for this name).
-cp /lib/firmware/rtl8733bu_fw /lib/firmware/rtl8733bu_fw.bin
-
-# 3. Copy the Bluetooth firmware (and fix the Bluetooth while you're at it).
-# Create the rtlbt directory if it doesn't exist on your system.
-mkdir -p /lib/firmware/rtlbt
-# Copy the contents of the rtlbt folder from the USB drive to the USB drive
-cp -r /mnt/usb/firmware/rtlbt/* /lib/firmware/rtlbt/
-
-# 1. Update dependencies
-depmod -a
-
-# 2. Load the driver
-modprobe 8733bu
-
-#Check mapping
-modprobe 8733bu
-
-# 1. Check the kernel log (look for "8733" or "RTW" in the last few lines) dmesg | tail -n 20
-
-# 2. View the network card list (IP link)
-
-# Note that you need to replace the network adapter name with your long IP address. link set wlx4ca38f7b416c up
-
-nmcli dev wifi list
-
-nmcli dev wifi connect "H155-381_2AC8" password "fangwei123"
-
-# 1. Add the module name to the /etc/modules file: echo "8733bu" &gt;&gt; /etc/modules
-
-# 2. Perform dependency updates again (to ensure it can be found on the next boot) `depmod -a`
-
-resize2fs /dev/mmcblk0p6
-
-df -h
-
-
-# 1. Clear previous cache
-rm -rf /var/lib/apt/lists/*
-apt clean
-
-# 2. Update the list again
-apt update
-
-# 3. Install commonly used tools
-apt install nano -y
-</code></pre></div></div>
-
-<h2 id="verifying-the-npu">Verifying the NPU</h2>
-
-<p>There is still one problem.
-Your system (crippled version) has removed the kernel header files and the index file (modules.order), so depmod will issue an alert when it cannot find the “roster” when building dependencies.<br />
-Consequence: Upon startup, the system may be unable to automatically load drivers via modprobe because it doesn’t know where the drivers are located. This issue remains unresolved.</p>
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>root@ATK-DLRK3588-Ubuntu:/# ls -l /dev/rknpu*  
-ls: cannot access '/dev/rknpu*': No such file or directory  
-root@ATK-DLRK3588-Ubuntu:/#
-
-  
-
-User
-
-root@ATK-DLRK3588-Ubuntu:/# dmesg | grep -i npu  
-[ 2.108275] rk_gmac-dwmac fe1c0000.ethernet: clock input or output? (output).  
-[ 2.243501] rk_gmac-dwmac fe1b0000.ethernet: clock input or output? (output).  
-[ 2.542590] input: rk805 pwrkey as /devices/platform/feb20000.spi/spi_master/spi2/spi2.0/rk805-pwrkey.9. auto/input/input0  
-[2.563404] vdd_npu_s0: supplied by vcc5v0_sys  
-[3.241478] input: gsensor as /devices/platform/feac0000.i2c/i2c-4/4-0036/input/input1  
-[3.297882] rkisp_hw fdcb0000.rkisp: max input:0x0@0fps  
-[3.298504] rkisp_hw fdcc0000.rkisp: max input:0x0@0fps  
-[ 3.385103] input: rockchip-hdmi0 rockchip-hdmi0 as /devices/platform/hdmi0-sound/sound/card0/input2  
-[ 3.386012] input: rockchip-hdmi1 rockchip-hdmi1 as /devices/platform/hdmi1-sound/sound/card1/input3  
-[ 3.386712] input: rockchip-dp0 rockchip-dp0 as /devices/platform/dp0-sound/sound/card2/input4  
-[ 3.387703] input: rockchip-dp1 rockchip-dp1 as /devices/platform/dp1-sound/sound/card3/input5  
-[ 3.400180] input: rockchip,hdmiin rockchip,hdmiin as /devices/platform/hdmiin-sound/sound/card4/input6  
-[3.401390] input: headset-keys as /devices/platform/es8388-sound/input/input7  
-[3.462053] input: rockchip-es8388 Headset as /devices/platform/es8388-sound/sound/card5/input8  
-[3.468113] input: gyro as /devices/platform/feac0000.i2c/i2c-4/4-0036-1/input/input9  
-[ 3.700570] input: adc-keys as /devices/platform/adc-keys/input/input10  
-[4.023509] RKNPU fdab0000.npu: Adding to iommu group 0  
-[ 4.023766] RKNPU fdab0000.npu: RKNPU: rknpu iommu is enabled, using iommu mode  
-[4.025274] RKNPU fdab0000.npu: can't request region for resource [mem 0xfdab0000-0xfdabffff]  
-[4.025312] RKNPU fdab0000.npu: can't request region for resource [mem 0xfdac0000-0xfdacffff]  
-[4.025342] RKNPU fdab0000.npu: can't request region for resource [mem 0xfdad0000-0xfdadffff]  
-[ 4.025958] [drm] Initialized rknpu 0.9.2 20231018 for fdab0000.npu on minor 1  
-[ 4.030384] RKNPU fdab0000.npu: RKNPU: bin=0  
-[ 4.030606] RKNPU fdab0000.npu: leakage=7  
-[ 4.030745] debugfs: Directory 'fdab0000.npu-rknpu' with parent 'vdd_npu_s0' already present!  
-[ 4.038385] RKNPU fdab0000.npu: pvtm=867  
-[ 4.043403] RKNPU fdab0000.npu: pvtm-volt-sel=3  
-[ 4.046005] RKNPU fdab0000.npu: avs=0  
-[ 4.046480] RKNPU fdab0000.npu: l=10000 h=85000 hyst=5000 l_limit=0 h_limit=800000000 h_table=0  
-[4.056763] RKNPU fdab0000.npu: failed to find power_model node  
-[ 4.056849] RKNPU fdab0000.npu: RKNPU: failed to initialize power model  
-[ 4.056874] RKNPU fdab0000.npu: RKNPU: failed to get dynamic-coefficient  
-root@ATK-DLRK3588-Ubuntu:/#
-</code></pre></div></div>
-
-<h2 id="usb-flash-drive-mounting">USB flash drive mounting</h2>
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>#View device name
-lsblk
-
-#Mount
-mount /dev/sda1 /mnt/usb
-
-#View file
-ls /mnt/usb
-
-#Remove USB drive
-cd / # Exit the USB drive directory first, otherwise you will get the message "target is busy".
-umount /mnt/usb
-
-
-</code></pre></div></div>
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>#Driver loading
-sudo insmod /root/wifi_driver/8733bu.ko
-
-# 1. Disconnect the current connection
-nmcli dev disconnect wlx4ca38f7b416c
-# 1. Scan to confirm signal availability (optional)
- nmcli dev wifi list
-# 2. Connect to WiFi (using the information you provided earlier)
-nmcli dev wifi connect "Xiaomi 14" password "6410165tyc"
-nmcli dev wifi connect "H155-381_2AC8" password "fangwei123"
-</code></pre></div></div>
-
-<p>Fantastic! The environmental validation results are perfect.</p>
-
-<p>Based on the logs you provided, your Debian system is in excellent health.</p>
-
-<ol>
-  <li>
-    <p><strong>NPU driver</strong>: <code class="language-plaintext highlighter-rouge">v0.9.2</code> is loaded, and the device node <code class="language-plaintext highlighter-rouge">/dev/dri/renderD129</code> has correct permissions.</p>
-  </li>
-  <li>
-    <p><strong>NPU runtime library</strong>: <code class="language-plaintext highlighter-rouge">/usr/lib/librknnrt.so</code> is already in place (this is pre-installed on Debian systems, so we don’t need to do it manually).</p>
-  </li>
-  <li>
-    <p><strong>GPU Driver</strong>: The <code class="language-plaintext highlighter-rouge">Mali G610 (g18p0)</code> driver has been loaded, which is crucial for backend acceleration of subsequent SLAM runs.</p>
-  </li>
-</ol>
-
-<p>You have now escaped the “environment hell” and can directly enter the <strong>application deployment phase</strong>.</p>
-
-<p>Based on your goal (SLAM + YOLO), we need to complete the final two steps of software layer verification before we can begin deployment.</p>
-
-<hr />
-
-<h3 id="phase-1-verifying-the-python-npu-interface-yolo-pre-processor">Phase 1: Verifying the Python NPU Interface (YOLO Pre-processor)</h3>
-
-<p>Although we have the underlying library (<code class="language-plaintext highlighter-rouge">.so</code>), we need to confirm whether the Python interface (<code class="language-plaintext highlighter-rouge">rknn-toolkit-lite2</code>) is pre-installed and whether the version matches.</p>
-
-<p><strong>1. Check Python library status</strong> Please execute the following command in the terminal:</p>
-
-<p>Bash</p>
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>pip3 list | grep rknn
-</code></pre></div></div>
-
-<ul>
-  <li><strong>Expected result</strong>: It should display <code class="language-plaintext highlighter-rouge">rknn-toolkit-lite2 xxx</code>.</li>
-</ul>
-
-<p><strong>If nothing is displayed:</strong> This means the system does not have the Python package pre-installed. Given that your driver is <code class="language-plaintext highlighter-rouge">0.9.2</code>, we recommend installing the <code class="language-plaintext highlighter-rouge">v1.5.2</code> package we used before (for best compatibility).</p>
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Bash
-
-```
-# If pip list is empty, execute this command to install (assuming it's still on the USB drive).
-pip3 install /mnt/usb/rknn_toolkit_lite2-1.5.2-cp38-cp38-linux_aarch64.whl
-```
-</code></pre></div></div>
-
-<p><strong>2. Run “Hello World” (Final Handshake)</strong> As long as this step prints <code class="language-plaintext highlighter-rouge">[0]</code>, YOLO will run 100% of the time.</p>
-
-<p>Bash</p>
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>python3 -c "from rknnlite.api import RKNNLite; r=RKNNLite(); r.list_devices(); print('&gt;&gt;&gt; NPU Ready!')"
-</code></pre></div></div>
-
-<hr />
-
-<h3 id="phase-two-deploying-the-slam-development-environment-leveraging-debians-advantages">Phase Two: Deploying the SLAM Development Environment (Leveraging Debian’s Advantages)</h3>
-
-<p>The biggest advantage of deploying SLAM (such as ORB-SLAM3) on Debian is that most math libraries can be installed via <code class="language-plaintext highlighter-rouge">apt</code>, <strong>without having to compile them yourself for several hours like on Ubuntu</strong>.</p>
-
-<p>Please copy and execute the following command to configure the entire SLAM suite in one click:</p>
-
-<p>Bash</p>
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code># 1. Update software sources
-sudo apt update
-
-# 2. Install basic compilation tools
-sudo apt install -y build-essential cmake git pkg-config
-
-# 3. Install the SLAM core math library (Eigen3, Sophus dependency)
-sudo apt install -y libeigen3-dev
-
-# 4. Install OpenCV (OpenCV from the Debian repository usually already supports hardware acceleration)
-This is several hours faster than compiling it yourself!
-sudo apt install -y libopencv-dev python3-opencv
-
-# 5. Install Pangolin dependencies (visual window)
-sudo apt install -y libglew-dev libpython3-dev libpangolin-dev
-</code></pre></div></div>
-
-<hr />
-
-<h3 id="phase-three-next-step-start-working">Phase Three: Next Step (Start Working)</h3>
-
-<p>Environment verification is now complete, and the system is ready. Your next step is:</p>
-
-<ol>
-  <li>
-    <p><strong>YOLO Section</strong>:</p>
-
-    <ul>
-      <li>You need to export the trained YOLO model (<code class="language-plaintext highlighter-rouge">.pt</code>) from your computer as an <strong>ONNX</strong> file.</li>
-    </ul>
-
-    <p>Then use <code class="language-plaintext highlighter-rouge">rknn-toolkit2</code> on your computer to convert ONNX to an <strong>RKNN</strong> file.</p>
-
-    <p>Only RKNN files can run on the board’s NPU.</p>
-  </li>
-  <li>
-    <p><strong>SLAM Section</strong>:</p>
-
-    <ul>
-      <li>You can directly pull the ORB-SLAM3 code to start compiling, since the dependency libraries have already been installed.</li>
-    </ul>
-  </li>
-</ol>
-
-<p>Do you want to run YOLO first or SLAM first?</p>
-
-<ul>
-  <li>
-    <p><strong>Choose YOLO:</strong> I can give you a <strong>PC-side model conversion script</strong> and a <strong>board-side inference code</strong> template.</p>
-  </li>
-  <li>
-    <p><strong>Choose SLAM</strong>: I can guide you on how to modify the <code class="language-plaintext highlighter-rouge">CMakeLists.txt</code> of ORB-SLAM3 to adapt to the OpenCV path of RK3588.</p>
-  </li>
-</ul>
-
-<h1 id="debian-system-development">Debian System Development</h1>
-
-<h2 id="environment-verification">Environment Verification</h2>
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>root@ATK-DLRK3588:~# cat /sys/kernel/debug/rknpu/version
-
-RKNPU driver: v0.9.2
-
-root@ATK-DLRK3588:~# ls -l /dev/dri/renderD129
-
-crw-rw----+ 1 root render 226, 129 November 25 06:13 /dev/dri/renderD129
-
-root@ATK-DLRK3588:~# cat /sys/kernel/debug/rknpu/load
-
-NPU load: Core0: 0%, Core1: 0%, Core2: 0%,
-
-root@ATK-DLRK3588:~# ^C
-
-root@ATK-DLRK3588:~# # Check the location of library files (Debian usually pre-installs them in the system directory)
-
-find /usr -name "librknnrt.so"
-
-# Expected output: /usr/lib/aarch64-linux-gnu/librknnrt.so (or a similar path)
-
-/usr/lib/librknnrt.so
-
-root@ATK-DLRK3588:~# # Check if the Mali GPU driver is loaded
-
-dmesg | grep -i mali
-
-# Expected output: You should see successful initialization logs related to Mali g610.
-
-[3.620969] mali fb000000.gpu: Kernel DDK version g18p0-01eac0
-
-[ 3.624197] mali fb000000.gpu: bin=0
-
-[ 3.624386] mali fb000000.gpu: leakage=12
-
-[ 3.628891] debugfs: Directory 'fb000000.gpu-mali' with parent 'vdd_gpu_s0' already present!
-
-[ 3.630762] mali fb000000.gpu: pvtm=872
-
-[ 3.631076] mali fb000000.gpu: pvtm-volt-sel=3
-
-[ 3.632441] mali fb000000.gpu: avs=0
-
-[ 3.632493] W : [File] : drivers/gpu/arm/bifrost/platform/rk/mali_kbase_config_rk.c; [Line] : 143; [Func] : kbase_platform_rk_init(); power-off-delay-ms not available.
-
-[3.646887] mali fb000000.gpu: r0p0 status 5 not found in HW issues table;
-
-[ 3.646907] mali fb000000.gpu: falling back to closest match: r0p0 status 0
-
-[3.646912] mali fb000000.gpu: Execution proceeding normally with fallback match
-
-[3.646918] mali fb000000.gpu: GPU identified as 0x7 arch 10.8.6 r0p0 status 0
-
-[3.646951] mali fb000000.gpu: No priority control manager is configured
-
-[3.647131] mali fb000000.gpu: No memory group manager is configured
-
-[3.647151] mali fb000000.gpu: Protected memory allocator not available
-
-[3.647749] mali fb000000.gpu: Capping CSF_FIRMWARE_TIMEOUT to CSF_FIRMWARE_PING_TIMEOUT
-
-[ 3.648187] mali fb000000.gpu: l=10000 h=85000 hyst=5000 l_limit=0 h_limit=800000000 h_table=0
-
-[3.662649] mali fb000000.gpu: Probed as mali0
-
-[ 4.046678] I : [File] : drivers/gpu/arm/mali400/mali/linux/mali_kernel_linux.c; [Line] : 406; [Func] : mali_module_init(); svn_rev_string_from_arm of this mali_ko is '', rk_ko_ver is '5', built at '15:45:38', on 'Jul 8 2024'.
-
-[ 4.047010] Mali:
-
-[4.047014] Mali device driver loaded
-
-[32.221646] mali fb000000.gpu: Loading Mali firmware 0x1010000
-
-[ 32.224685] mali fb000000.gpu: Mali firmware git_sha: ee476db42870778306fa8d559a605a73f13e455c
-
-
-
-root@ATK-DLRK3588:~#
-
-Fantastic! The environmental validation results are perfect.
-
-Based on the logs you provided, your Debian system is in excellent health.
-
-1. **NPU driver**: `v0.9.2` is loaded, and the device node `/dev/dri/renderD129` has correct permissions.
-    
-2. **NPU runtime library**: `/usr/lib/librknnrt.so` is already in place (this is pre-installed on Debian systems, so we don't need to do it manually).
-    
-3. **GPU Driver**: The `Mali G610 (g18p0)` driver has been loaded, which is crucial for backend acceleration of subsequent SLAM runs.
-    
-
-You have now escaped the "environment hell" and can directly enter the **application deployment phase**.
-
-
-</code></pre></div></div>
-
-<p>The environment looks okay, but there’s been a problem checking the NPU driver interface (which must be visible [0]). However, the test script works fine. Let’s ignore this problem for now.</p>
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>python3 -c "from rknnlite.api import RKNNLite; r=RKNNLite(); print('NPU devices:', r.list_devices())"
-
-
-
-- **What did it read?** The logs show that the program read the configuration file: `/usr/local/lib/python3.9/dist-packages/rknnlite/config/cpu_npu_mapper.yml`. This is the NPU library's **"family register"**, which records the names of all the boards it recognizes.
-    
-What judgment did it make? After reading the configuration, it immediately accessed: `/sys/bus/platform/devices/ffbc0000.npu`. `ffbc0000` is the address of the RK3568!
-    
-- **Conclusion:** When the NPU library was checking the "family register," it found that your current name (whether fake or real) was not in the list of `rk3588`. So it used an incorrect default logic and treated you as **RK3568**, resulting in it looking for the wrong name.
-  
-  
-# 1. Navigate to the test directory: cd /rockchip-test/npu2/ # 2. Run the demo script: ./rknn_demo.sh
-  
-  
-</code></pre></div></div>
-
-<h2 id="network-settings">Network Settings</h2>
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code># 1. Create firmware directory
-mkdir -p /lib/firmware/rtl8733bu
-
-# 2. Copy the firmware (assuming the firmware is located at /mnt/usb/firmware/)
-cp /mnt/usb/firmware/rtl8733bu_fw /lib/firmware/
-cp /mnt/usb/firmware/rtl8733bu_config /lib/firmware/
-
-# 3. Create a double-protection symbolic link (to prevent the driver from searching for files with the .bin extension).
-cp /lib/firmware/rtl8733bu_fw /lib/firmware/rtl8733bu_fw.bin
-cp /lib/firmware/rtl8733bu_config /lib/firmware/rtl8733bu_config.bin
-
-# Attempt to insert kernel module
-insmod /mnt/usb/modules/8733bu.ko
-
-# 1. Scan to confirm signal availability (optional)
-nmcli dev wifi list
-
-# 2. Connect to WiFi (using the information you provided earlier)
-nmcli dev wifi connect "H155-381_2AC8" password "fangwei123"
-
-ping -c 4 baidu.com
-
-# 1. Create a folder to store the drivers.
-mkdir -p /root/wifi_driver
-
-# 2. Copy the drivers from the USB drive (assuming the USB drive is still mounted).
-cp /mnt/usb/modules/8733bu.ko /root/wifi_driver/
-
-# 3. Confirm that the file has been copied successfully.
-ls -l /root/wifi_driver/8733bu.ko
-
-
-
-sudo insmod /root/wifi_driver/8733bu.ko
-
-sudo nmcli connection up "Xiaomi 14"
-
-</code></pre></div></div>
-
-<h2 id="slam-environment-deployment-test">SLAM Environment Deployment Test</h2>
-<p>Attempt to perform SLAM verification on this system.</p>
-
-<p>First, compile and install the prerequisite projects for SLAM.</p>
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
-#Manage project files, create folders, and download source code.
-
-mkdir -p projects/slam_libs
-cd projects/slam_libs
-git clone https://github.com/stevenlovegrove/Pangolin.git
-cd Pangolin
-
-
-
-
-#Error when modifying file placement
-
-nano CMakeLists.txt
-
-- Press `Ctrl + W` to enter search mode, type `-Werror` and press Enter.
-    
-You should find a line like this: `add_compile_options(-Wall -Wextra -Werror)` or `set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Werror")`
-    
-- **Operation:** Use the arrow keys on the keyboard to move the cursor, and use the `Delete` or `Backspace` key to delete only the words `-Werror`.
-    
-**Result:** This line should become something like `add_compile_options(-Wall -Wextra)`
-  
-  
-  
-  
-  # Attempt to compile
-  mkdir build &amp;&amp; cd build
-cmake ..
-make -j4
-
-
-
-#Install after successful compilation.
-# 1. Copy the compiled files to the /usr/local/ directory.
-sudo make install
-
-# 2. Refresh the system's dynamic library cache (this step is very important, otherwise the system may not be able to find the library).
-sudo ldconfig
-
-# Check if the header file exists to verify the installation.
-ls /usr/local/include/pangolin/
-
-
-#Download ORB-SLAM3 source code
-cd ~/projects
-# 1. Pull the source code (it may be very slow without a faster mirror; it is recommended to use this GitHub acceleration address).
-git clone https://github.com/UZ-SLAMLab/ORB_SLAM3.git
-# 2. Enter the directory
-cd ORB_SLAM3
-
-#Unzip the file
-cd ~/projects
-# 1. Unzip
-unzip ORB_SLAM3-master.zip
-# 2. Rename
-mv ORB_SLAM3-master ORB_SLAM3
-# 3. Enter the directory
-cd ORB_SLAM3
-
-#Compilation files
-#Add script permissions
-chmod +x build.sh
-#Start compilation, modify the number of memory cores
-# Use the sed command to temporarily change make -j in the script to make -j4
-sed -i 's/make -j/make -j4/g' build.sh
-# Run script
-./build.sh
-
-#Update some dependencies and modify/upgrade the compilation standard
-
-nano CMakeLists.txt
-# Check C++14 or C++0x support
-include(CheckCXXCompilerFlag)
-CHECK_CXX_COMPILER_FLAG("-std=c++14" COMPILER_SUPPORTS_CXX14)
-CHECK_CXX_COMPILER_FLAG("-std=c++0x" COMPILER_SUPPORTS_CXX0X)
-if(COMPILER_SUPPORTS_CXX14)
-   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
-   add_definitions(-DCOMPILEDWITHC11)
-   message(STATUS "Using flag -std=c++14.")
-elseif(COMPILER_SUPPORTS_CXX0X)
-   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
-   add_definitions(-DCOMPILEDWITHC0X)
-   message(STATUS "Using flag -std=c++0x.")
-else()
-   message(FATAL_ERROR "The compiler ${CMAKE_CXX_COMPILER} has no C++11 support&gt;
-endif()
-
-
-#Compilation crash due to memory overflow
-
-#Using virtual memory
-# 1. Create a 4GB empty file
-fallocate -l 4G /swapfile
-
-# 2. Set permissions
-chmod 600 /swapfile
-
-# 3. Format as a Swap partition
-mkswap /swapfile
-
-# 4. Enable Swap
-swapon /swapfile
-
-# 5. Confirm if it's effective (check if the Swap line shows 4096M).
-free -m
-
-
-
-#Single-core compilation test
-# Ensure it's still in the build directory
-cd ~/projects/ORB_SLAM3/build
-# Continue compiling
-make -j1
-
-#Compilation successful
-
-#Download SLAM test dataset
-http://robotics.ethz.ch/~asl-datasets/ijrr_euroc_mav_dataset/machine_hall/MH_01_easy/MH_01_easy.zip
-
-#Using adb for file transfer
-
-#Unzip and debug files
-#Algorithm ran successfully, generating trajectory data
-#Next step: Visualization
-
-</code></pre></div></div>
-
-<h2 id="ssh-testing-and-troubleshooting-for-board-network-issues">SSH testing and troubleshooting for board network issues</h2>
-<p>There seems to be some hardware issue with using SSH for file transfer, resulting in very slow SSH transfer speeds. I’m using a USB drive for file transfer instead.</p>
-
-<h2 id="using-a-usb-flash-drive-for-file-transfer">Using a USB flash drive for file transfer</h2>
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>#Find the device
-fdisk -l
-
-# Create a folder to mount
-mkdir -p /mnt/usb
-# Mount the USB drive (make sure to replace sda1)
-mount /dev/sda1 /mnt/usb
-
-# 2. Copy Files (Completes Instantly)
-cp /mnt/usb/ORB_SLAM3-master.zip ~/projects/
-
-#Uninstall USB drive
-umount /mnt/usb
-
-</code></pre></div></div>]]></content><author><name></name></author><category term="scratchpad" /></entry></feed>
+</section>]]></content><author><name></name></author><category term="scratchpad" /></entry></feed>
