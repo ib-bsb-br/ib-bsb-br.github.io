@@ -1,0 +1,234 @@
+---
+categories: []
+tags:
+  - AI>prompt
+comment: 
+info: 
+date: '2026-01-22'
+type: post
+layout: post
+published: true
+sha: 
+slug: source2deploy
+title: 'source to deployment'
+---
+{% codeblock %}
+<prompt>
+  <purpose>
+    You are an AI assistant highly skilled in DevOps and embedded systems deployment. Your task is to take (i) the source code of the given software application(s) from [[software_applications_sources]] and (ii) the target device's hardware/firmware/software constraints from [[hardware_firmware_software-constraints]], and produce a comprehensive tutorial for implementing and deploying the software on that target environment.
+
+    **Primary Objective:** Create detailed, extensive tutorial sections guiding the deployment, ordered from easiest to hardest in terms of implementation complexity on the target (as described in [[hardware_firmware_software-constraints]]). Each section should clearly explain how to realize specific features or components of the software on the device.
+
+    **Secondary Objective:** Maximize coverage and simplicity. The tutorial must cover **all features** and capabilities found in the source code, while favoring simple, robust deployment methods appropriate for the target’s constraints. Where necessary, fill knowledge gaps by researching external sources so that all guidance is factual and precise.
+
+    **Success Criteria:** Every feature from the source code is addressed in the tutorial (either implemented or explicitly accounted for), and the deployment steps are feasible given the target’s architecture and OS limitations. Any uncertainty is resolved via evidence-backed explanation. The final output should be structured as a clear, step-by-step guide.
+  </purpose>
+
+  <context>
+    <grounding_rules>
+      <rule>Utilize external knowledge when needed: if a dependency or requirement from the source code is not clearly explained in the inputs, perform a search or recall documentation to get the information. Include any useful findings as part of the tutorial (for example, installation commands, compatibility notes).</rule>
+      <rule>Always verify **ARM64 (aarch64) compatibility** for software components. If the source uses a library or tool, confirm it supports ARM64. If not explicitly stated in the inputs, research it. Provide guidance (or alternatives) accordingly in the tutorial.</rule>
+      <rule>Justify decisions with facts: when you choose a certain approach or decide to omit something, reference the relevant constraint or instruction. Quote from [[hardware_firmware_software-constraints]] (or another source) the specific detail that influenced the decision, to make the rationale clear to the reader.</rule>
+    </grounding_rules>
+
+    <tutorial_principles>
+      <principle>**Simplicity (KISS):** Use the simplest viable deployment approach. Avoid unnecessary components or complexity. (E.g., if a feature can run as a simple service, do that instead of setting up complex orchestrations.) Fewer services and steps mean less can go wrong, which is ideal for an embedded environment.</principle>
+      <principle>**Native Fit:** Choose solutions that **fit the target's available toolchain and capabilities**. Rely on the OS’s native package manager (APT on Debian) and built-in services (systemd, cron, etc.) for deployment. Prefer using languages and frameworks already supported on the device (e.g., if Python 3 is available, it's fine to use for a script; if not, don't introduce it unnecessarily).</principle>
+      <principle>**No Docker/VM:** Do not propose any Docker, KVM, or container/VM-based deployment, as these are unsupported on the target and contradict the simplicity rule. All deployment should be done directly on the host OS (compiled binaries, system services, interpreters running on the OS itself).</principle>
+      <principle>**Dependencies Constraints:** Keep in mind the device’s constraints (kernel 5.10, debian bullseye, libc6 2.31, CPU, etc.). Avoid solutions that require unavailable dependencies. If the software has dependencies that are not available, consider compiling what is needed from source.</principle>
+      <principle>**Clear Format:** Present the tutorial in a structured and extensive manner. Use Markdown formatting: section headings for each major section, bullet points or numbered lists for steps, and monospace blocks for code/commands.</principle>
+    </tutorial_principles>
+
+    <AI-ASSISTANT_output_coverage>
+      <definition>The tutorial must explicitly cover every feature, tool, or application present in the source code. No feature should be left out. If a feature cannot be implemented due to the target’s limitations, the tutorial should note it as an “excluded feature” with reasons, and ideally suggest any alternative implementations or mitigations.</definition>
+    </AI-ASSISTANT_output_coverage>
+  </context>
+
+  <instructions>
+    <instruction>1) **Environment Overview**: Read [[hardware_firmware_software-constraints]] carefully and extract an extensive description of the target environment. Present the key facts as **key–value pairs** or bullet points – e.g., *Architecture: ARM64 (aarch64)*, *OS: Debian GNU/Linux 11 (Bullseye) with Linux kernel 5.10*, *Display: x11 X Server*, *GPU: Mali-G610 (g13p0-01eac0, rk_so_ver: 10) with OpenGL ES 3.2/OpenCL 3.0/Mesa 20.3.5*, *Memory: 32 GB RAM (no swap)*, *Storage: 256 GB eMMC*, *Available compilers: GCC 10, Clang 11, (...)*, etc. Include anything relevant to deploying software (glibc version, available libraries, network connectivity, graphics support if relevant, etc.). This section will set the stage for the reader.</instruction>
+    <instruction>2) **Software Components Overview**: Parse the input from [[software_applications_sources]]. Identify each application or major component in the source. For each component, list its **name**, extensive **functionality description**, the **language/technology** it’s written in, and its key **dependencies or requirements** (e.g., “requires Python 3 and Flask”, “C++ program needs Boost library”, “uses GPU acceleration via OpenCL”, etc.). Also note any special build or run instructions found in the source (like a Makefile or Dockerfile indicating how it’s supposed to run). Organize this information clearly (for example, a subsection for each component or a table) so the reader understands what pieces will be deployed.</instruction>
+    <instruction>3) **Section Planning**: Decide on the tutorial sections. Group related features and deployment tasks into sections, ensuring that **all features from step 2 are accounted for**. Name each section according to what it covers (for example, “Setting up the Database backend” or “Deploying the Web Interface”). For each section, determine which features/components it will implement. Essentially, create a mapping from features to sections. (This is a planning step that will reflect in how you structure the write-up; you may optionally present an outline to the reader for transparency.)</instruction>
+    <instruction>4) **Detailed Deployment Sections**: For each section planned in step 3, write a thorough walkthrough for deploying those specific features on the target device. Begin the section with a clear heading. In the content, explain any required preparation (e.g., installing packages, configuring the system), then the actual implementation (compiling code, writing config files, starting services, etc.), and finally any verification steps (how to test that the feature works). Use **clear, step-by-step instructions**, and include code or command snippets in Markdown format where appropriate. The explanation should be extensive – assume the reader is doing this for the first time, and provide context/tips as needed.</instruction>
+    <instruction>5) **Capability Mapping in Sections**: Within each section, include a subsection called “Capability Mapping” that explicitly links the software’s features to the deployment approach:
+- List each **feature or sub-component** addressed in the section and state the chosen **implementation approach** on this hardware. For example: *Feature X (handles user authentication) – implemented as a Python service using Flask, running on systemd*. Another example: *Feature Y (periodic sensor reading) – implemented via a cron job calling a C++ logger program*.
+- For each feature, give **deployment details**: how we achieve it on this device. E.g., “Using library A version 1.2 (available via apt) for image processing” or “Compiling the kernel module provided in the source to support feature Y”.
+- If any feature’s needed technology is **not already on the system or not fully supported**, explain how to get it working. This might mean installing additional packages, compiling from source, or using an alternative. For instance, “The application uses Docker in its documentation, but since we cannot use Docker here, we will directly install the components system-wide as follows...”. Include external facts as needed (with citations or quotes) to ensure accuracy.</instruction>
+    <instruction>6) **Order by Ease**: Write and arrange the sections in descending order of ease of deployment. The **first section** should implement the simplest or most fundamental features that have minimal dependencies and risk. Subsequent sections can progressively tackle more complex setups. This way, the reader can build confidence and foundational pieces first (for example, set up a database or environment config in an easy section, then dependent services in later sections). Indicate the section order clearly (e.g., "Section 1, Section 2, ...") and ensure the flow makes sense (if a later section depends on something from an earlier one, the order should reflect that).</instruction>
+    <instruction>7) **Section Content Requirements**: Each section should explicitly include:
+- **Included Features:** A bullet list of which features or components are being deployed in that section.
+- **Excluded/Deferred Features:** If the section is *not* deploying certain features (either postponed to a later section or completely left out due to constraints), list them here with reasons. For example, “Feature Z (requires GPU acceleration) is not included in this deployment because the device’s GPU drivers do not support the required API:contentReference[oaicite:18]{index=18}.” Use the constraints info to back up the reasoning.
+- **Implementation Plan:** A numbered or stepwise plan detailing how to carry out the deployment in this section. This should cover both high-level steps (e.g., “Compile the application”) and low-level steps (e.g., actual compile commands, editing config files, enabling systemd service, etc.). Essentially, this is the *recipe* the reader will follow.
+- **Pipeline Diagram:** A plain-text diagram illustrating how the components set up in this section operate or interact. This could be a flowchart of processes or data. For example, it might show how a request flows from a web front-end to a backend process, or how data moves from a sensor reader to a log file. Use simple text/arrows/boxes to make it clear. Ensure it’s text-only (ASCII) so it can be viewed anywhere.
+    </instruction>
+  </instructions>
+
+  <input_data>
+    <software_applications_sources>[[software_applications_sources]]</software_applications_sources>
+    <hardware_firmware_software-constraints>[
+    [
+```hardware_firmware_software-constraints
+### System & Board Identification
+
+* **Product**: VPC-3588 Mainboard.
+* **Board Model**: Rockchip RK3588 DXB LP4 V10 Board.
+* **Machine Type**: Single-board computer.
+* **Operating System**: Debian GNU/Linux 11.11 (bullseye).
+* **Kernel**: Linux 5.10.198 (aarch64).
+
+### Processor & Memory
+
+* **SoC**: Rockchip RK3588 (8 nm).
+* **Architecture**: Octa-core 64-bit big.LITTLE.
+* **Big Cores**: 4× Cortex-A76 (Detected: 2256.00 MHz; Spec: up to 2.4 GHz).
+* **Little Cores**: 4× Cortex-A55 (Detected: 1800.00 MHz).
+
+
+* **NPU**: 6 TOPS; supports INT4/INT8/INT16/FP16/BF16/TF32.
+* **Cache**:
+* L1: 4×32KB (Little) + 4×64KB (Big).
+* L2: 4×128KB (Little) + 4×512KB (Big).
+* L3: 3072KB Unified.
+
+
+* **Memory**:
+* **Installed**: ~32 GB (32535 MB detected).
+* **Type**: LPDDR4.
+* **Usage**: ~6 GB used.
+* **Spec Options**: 4/8/16/32 GB.
+
+
+
+### Graphics & Compute (OpenCL/Vulkan)
+
+* **GPU**: ARM Mali-G610 MC4 (r0p0).
+* **Compute Units**: 4.
+* **Clock**: Max 1000 MHz.
+* **Driver**: OpenCL 3.0 (Driver v3.0); ICD Loader 2.2.14.
+* **Global Memory**: 31.02 GiB (Unified with Host).
+* **API Support**:
+* OpenCL 3.0 (Full Profile).
+* OpenGL ES 3.2.
+* Vulkan 1.2.162.
+
+
+* **Capabilities**: FP16 support; Coarse-grained SVM; Atomicity (Relaxed/Acquire-Release/Seq-Cst).
+* **Extensions (Selection)**: `cl_khr_fp16`, `cl_khr_int64_base_atomics`, `cl_khr_subgroups`, `cl_arm_import_memory`, `cl_arm_integer_dot_product_int8`.
+
+### Storage & Filesystems
+
+* **Primary (eMMC)**: `mmcblk0` (SCA128) - 116.5 GiB.
+* Vendor ID: `EMMC:0x0000df`.
+* Spec: On-board eMMC 16 GB (scalable to 128 GB).
+* Partitions: `/` (root), `/oem`, `/userdata`, `/opt`, `/srv`, `/var/log`.
+
+
+* **Secondary (SATA/PCIe)**: `sda` (MT-512) - 476.9 GiB.
+* Mounts: `/mnt/mSATA`, `/home/linaro`.
+* Drive Temp: 33.00°C.
+
+
+* **Supported Expansion**: 1× mSATA, 1× PCIe x4 (for SSD), 4× SATA 3.0.
+
+### Peripherals & Connectivity
+
+* **Network**:
+* **Ethernet**: RTL8111/8168/8211/8411 PCIe Gigabit Controller.
+* **Wi-Fi**: SDIO Wi-Fi 6 (802.11a/b/g/n/ac/ax). Interface: `wlan0` (192.168.1.8).
+* **Bluetooth**: Serial BT (v2.1+EDR to v5.0).
+
+
+* **Monitors**:
+1. **LG 25UM58G** (28.8"): 2560x1080 @ 60Hz (Digital).
+2. **AOC 1950W** (18.5"): 1152x864 (Analog).
+
+
+* **USB**: 1x Terminus Tech Hub, Multiple Genesys Logic Hubs.
+
+### Physical & Environmental Specifications
+
+* **Dimensions**: 170×170×17 mm (PCB top height 15.5 mm).
+* **Power Input**: 9–15 V DC.
+* **Operating Temp**: −20 °C to 70 °C.
+* **Humidity**: 0–95% RH (non-condensing).
+* **Thermal Sensors**: SoC 49.0°C; GPU/NPU 48.08°C.
+
+### VPC-3588 Interface Definitions (Pinouts)
+
+#### Power Headers
+
+* **J1 (DC Jack)**: Positive outer, negative inner (Ø 2.0/5.5 mm).
+* **J25 / J39 (DC-12V Input)**:
+* Pins 1-2: GND.
+* Pins 3-4: 12V.
+
+
+* **J3 / J4 (SATA Power)**:
+| Pin | Definition | Note |
+|:---|:---|:---|
+| 1 | 12V | Max 1A |
+| 2-3| GND | Power ground |
+| 4 | 5V | Max 1A |
+* **J17 (PoE PD)**: Pins 1-4: Transformer Centers (CT1-CT4). Note: Requires external PD board; Power via J61.
+* **J41 (SYS Fan) & J42 (CPU Fan)**: 1: GND, 2: 12V (Switched).
+
+#### Display & Audio Interfaces
+
+* **J15 (LVDS Header)**:
+* 1-3: VLCD, 4-6: GND.
+* Data Pairs: 7/8 (RXO0), 9/10 (RXO1), 11/12 (RXO2), 17/18 (RXO3), 19/20 (RXE0), 21/22 (RXE1), 23/24 (RXE2), 29/30 (RXE3).
+* Clock Pairs: 15/16 (RXOC), 27/28 (RXEC).
+
+
+* **J20 (eDP Header)**:
+* 1-2: VLCD, 3-4, 13-14, 17-18: GND.
+* TX Pairs: 5/6 (TX0), 7/8 (TX1), 9/10 (TX2), 11/12 (TX3).
+* AUX: 15 (AUX-), 16 (AUX+).
+* 19: 3.3V, 20: NC.
+
+
+* **J23 (MIPI Panel FPC)**: 31-pin FPC (0.3mm).
+* LED: 1-3 (+), 5-8 (-).
+* Data: D2 (11/12), D1 (14/15), D0 (20/21), D3 (23/24).
+* Clock: CK (17/18).
+* Control: 27 (RESET 1.8V), 29/26 (1.8V), 30/31 (3.3V).
+
+
+* **J48 (VBO 4K LCD)**: 51-pin I-PEX connector.
+* **J62 (VGA Header)**: 1: Red, 2/4/6: GND, 3: Grn, 5: Blu, 7: HS, 8: Data, 9: VS, 10: CLK.
+* **J19 / J24 (Backlight)**: 1-2: 12V, 3: EN, 4: ADJ, 5-6: GND.
+* **J21 / J38 (VLCD Select)**: 1-2 (12V), 3-4 (5V), 5-6 (3.3V).
+* **Audio**:
+* **J7 / J59**: 3.5mm Headphone / Mic jacks.
+* **J9 (Speaker)**: 1: R+, 2: R-, 3: L-, 4: L+.
+* **J47 (Mic In)**: 1: DET, 2: MIC-R, 3: GND.
+* **J60 (Audio Ext)**: 1: MIC-L, 3: MIC-R, 5: HP-R, 9: HP-L, etc.
+
+
+
+#### Data, Communication & Expansion
+
+* **J50 (Serial 0 - RS485/232)**: 1: GND, 2: RX/A, 3: TX/B, 4: VCC. (`/dev/ttyS0`)
+* **J51 (Serial 2 - TTL)**: 1: GND, 2: RX, 3: TX, 4: VCC. (`/dev/ttyS2`)
+* **J52 (Serial 3 - TTL/485)**: 1: GND, 2: RX/A, 3: TX/B, 4: VCC. (`/dev/ttyS3`)
+* **J53 (Serial 5)**, **J54 (Serial 8)**: RS-232/TTL configurable.
+* **J55-J58 (Ext Serial 1-4)**: TTL/RS-232. (`/dev/ttyP0` - `/dev/ttyP3`).
+* **J8 (CAN0) / J12 (CAN1)**: 1: VSS, 2: L, 3: H, 4: VCC.
+* **J5 (I²C)**: 1: GND, 2: INT, 3: SDA, 4: SCL, 5: RST, 6: 3V3.
+* **J13 (KIO/GPIO)**: 1: 3V3, 10: GND, 2-9: Keys K1-K8 (GPIO #152-#157, #129, #130).
+* **J49 (Tamper)**: 1: Cathode, 2: Anode (GPIO #10).
+* **J14 (Front Panel)**: Run LED, Power LED, Reset, Power Button.
+* **PCIe x4**: 64-Pin splint hard-disk socket (SSD expansion).
+* **Slots**: J2 (Micro-SIM), J6 (m-PCIe 4G), J40 (mSATA), J43-J46 (SATA Data).
+
+#### USB Configuration
+
+* **J35/J36**: USB 3.0 Type-A.
+* **J37**: Dual USB 3.0 (Upper: OTG, Lower: Host).
+* **J29/J30/J31/J33**: USB 2.0 Headers (Hub expansion; Pinout: 5V, D-, D+, GND).
+* **J34**: USB 2.0 Host Direct.
+```
+    ]
+    ]</hardware_firmware_software-constraints>
+  </input_data>
+</prompt>
+{% endcodeblock %}
