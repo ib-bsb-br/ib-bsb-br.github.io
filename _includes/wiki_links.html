@@ -1,0 +1,199 @@
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const contentArea = document.querySelector('.post-content-body');
+    if (!contentArea) return;
+
+    const slugify = (value) => {
+      return value
+        .toString()
+        .trim()
+        .toLowerCase()
+        .replace(/[_\s]+/g, '-')
+        .replace(/[^a-z0-9-]/g, '')
+        .replace(/-{2,}/g, '-')
+        .replace(/^-+|-+$/g, '');
+    };
+
+    const notes = [
+      {%- for post in site.posts -%}
+        {
+          title: {{ (post.title | default: post.slug) | escape | jsonify }},
+          slug: {{ post.slug | jsonify }},
+          url: {{ post.url | relative_url | jsonify }},
+          excerpt: {{ post.content | strip_html | normalize_whitespace | truncatewords: 20 | escape | jsonify }}
+        }{%- unless forloop.last -%},{%- endunless -%}
+      {%- endfor -%}
+    ];
+
+    const normalizedNotes = notes.map((note) => ({
+      ...note,
+      normalizedSlug: slugify(note.slug || note.title),
+      normalizedTitle: slugify(note.title)
+    }));
+
+    const noteIndex = new Map();
+    normalizedNotes.forEach((note) => {
+      if (note.normalizedSlug && !noteIndex.has(note.normalizedSlug)) {
+        noteIndex.set(note.normalizedSlug, note);
+      }
+      if (note.normalizedTitle && !noteIndex.has(note.normalizedTitle)) {
+        noteIndex.set(note.normalizedTitle, note);
+      }
+    });
+
+    const findNote = (text) => {
+      const target = slugify(text);
+      return noteIndex.get(target);
+    };
+
+    const isSafeUrl = (url) => {
+      const trimmed = url.trim();
+      if (trimmed.startsWith('/')) return true;
+      const lower = trimmed.toLowerCase();
+      return lower.startsWith('http://') || lower.startsWith('https://') || lower.startsWith('./') || lower.startsWith('../');
+    };
+
+    const parseWikiTarget = (raw) => {
+      // Handle external style [[label::https://...]] early to preserve previous behavior
+      if (raw.includes('::')) {
+        const idx = raw.indexOf('::');
+        const label = raw.slice(0, idx);
+        const url = raw.slice(idx + 2);
+        return { type: 'external', label: label.trim(), url: url.trim() };
+      }
+
+      let display = raw;
+      let target = raw;
+      let fragment = '';
+
+      if (raw.includes('|')) {
+        const [ref, alias] = raw.split('|');
+        target = ref.trim();
+        display = alias.trim() || target;
+      }
+
+      if (target.includes('#')) {
+        const parts = target.split('#');
+        target = parts.shift().trim();
+        fragment = parts.join('#').trim();
+      }
+
+      return { type: 'internal', target, display, fragment };
+    };
+
+    const showPreview = (link, title, excerpt) => {
+      hidePreview();
+      const preview = document.createElement('div');
+      preview.className = 'link-preview';
+
+      const previewContent = document.createElement('div');
+      previewContent.className = 'preview-content';
+
+      const heading = document.createElement('strong');
+      heading.textContent = title;
+
+      const paragraph = document.createElement('p');
+      paragraph.textContent = excerpt;
+
+      previewContent.appendChild(heading);
+      previewContent.appendChild(paragraph);
+      preview.appendChild(previewContent);
+
+      document.body.appendChild(preview);
+      const rect = link.getBoundingClientRect();
+      preview.style.left = `${rect.left}px`;
+      preview.style.top = `${rect.bottom + 5}px`;
+    };
+
+    const hidePreview = () => {
+      const preview = document.querySelector('.link-preview');
+      if (preview) preview.remove();
+    };
+
+    const processNode = (node) => {
+      if (node.nodeType === Node.TEXT_NODE) {
+        let ancestor = node.parentElement;
+        while (ancestor) {
+          if (['CODE', 'PRE'].includes(ancestor.tagName) || ancestor.classList.contains('highlighter-rouge') || ancestor.classList.contains('highlight')) {
+            return;
+          }
+          ancestor = ancestor.parentElement;
+        }
+
+        const text = node.textContent;
+        const wikiLinkRegex = /\[\[([^\]]+)\]\]/g;
+        let match;
+        let lastIndex = 0;
+        const fragments = [];
+
+        while ((match = wikiLinkRegex.exec(text)) !== null) {
+          if (match.index > lastIndex) {
+            fragments.push(document.createTextNode(text.slice(lastIndex, match.index)));
+          }
+
+          const linkText = match[1];
+          const parsed = parseWikiTarget(linkText);
+          const wrapper = document.createElement('span');
+          if (parsed.type === 'external') {
+            const anchor = document.createElement('a');
+            anchor.textContent = parsed.label;
+
+            const safeUrl = parsed.url.trim();
+            if (isSafeUrl(safeUrl)) {
+              anchor.href = safeUrl;
+              anchor.target = '_blank';
+              anchor.rel = 'noopener';
+            } else {
+              anchor.href = '#';
+              anchor.className = 'stale-link';
+              anchor.title = `Invalid URL: ${safeUrl}`;
+              anchor.setAttribute('aria-disabled', 'true');
+              anchor.addEventListener('click', (event) => event.preventDefault());
+            }
+
+            wrapper.appendChild(anchor);
+          } else {
+            const targetNote = findNote(parsed.target);
+            const anchor = document.createElement('a');
+
+            const displayText = parsed.display || parsed.target;
+
+            if (targetNote) {
+              anchor.href = `${targetNote.url}${parsed.fragment ? '#' + slugify(parsed.fragment) : ''}`;
+              anchor.textContent = displayText;
+              anchor.className = 'wiki-link';
+              anchor.addEventListener('mouseenter', () => showPreview(anchor, targetNote.title, targetNote.excerpt));
+              anchor.addEventListener('mouseleave', hidePreview);
+            } else {
+              anchor.href = '#';
+              anchor.textContent = displayText;
+              anchor.className = 'stale-link';
+              anchor.title = `Note not found: ${displayText}`;
+              anchor.setAttribute('aria-disabled', 'true');
+              anchor.addEventListener('click', (event) => event.preventDefault());
+            }
+
+            wrapper.appendChild(anchor);
+          }
+
+          fragments.push(wrapper);
+          lastIndex = match.index + match[0].length;
+        }
+
+        if (lastIndex < text.length) {
+          fragments.push(document.createTextNode(text.slice(lastIndex)));
+        }
+
+        if (fragments.length > 0) {
+          const parent = node.parentNode;
+          fragments.forEach((fragment) => parent.insertBefore(fragment, node));
+          parent.removeChild(node);
+        }
+      } else if (node.nodeType === Node.ELEMENT_NODE) {
+        Array.from(node.childNodes).forEach(processNode);
+      }
+    };
+
+    processNode(contentArea);
+  });
+</script>

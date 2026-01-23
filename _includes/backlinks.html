@@ -1,0 +1,45 @@
+{%- assign search_keys = '' | split: ',' -%}
+{%- if page.title %}
+  {%- assign title_slug = page.title | slugify: 'default' -%}
+  {%- assign search_keys = search_keys | push: page.title | push: title_slug -%}
+{%- endif %}
+{%- if page.slug %}
+  {%- assign slugified_slug = page.slug | slugify: 'default' -%}
+  {%- assign search_keys = search_keys | push: page.slug | push: slugified_slug -%}
+{%- endif %}
+{%- assign search_keys = search_keys | uniq -%}
+
+{%- assign backlink_count = 0 -%}
+{%- capture backlink_list -%}
+  <ul class="backlinks-list">
+  {%- for post in site.posts -%}
+    {%- if post.url != page.url -%}
+      {%- assign post_content = post.content | downcase -%}
+      {%- assign matched = false -%}
+      {%- for key in search_keys -%}
+        {%- assign key_lc = key | downcase -%}
+        {%- assign exact = '[[' | append: key_lc | append: ']]' -%}
+        {%- assign alias = '[[' | append: key_lc | append: '|' -%}
+        {%- assign heading = '[[' | append: key_lc | append: '#' -%}
+        {%- if post_content contains exact or post_content contains alias or post_content contains heading -%}
+          {%- assign matched = true -%}
+          {%- break -%}
+        {%- endif -%}
+      {%- endfor -%}
+      {%- if matched -%}
+        {%- assign backlink_count = backlink_count | plus: 1 -%}
+        <li class="backlink-item">
+          <a href="{{ post.url | relative_url }}" class="backlink-link">{{ post.title | default: post.slug }}</a>
+        </li>
+      {%- endif -%}
+    {%- endif -%}
+  {%- endfor -%}
+  </ul>
+{%- endcapture -%}
+
+{%- if backlink_count > 0 -%}
+<div class="backlinks">
+  <div class="backlinks-header">Links to this note</div>
+  {{ backlink_list }}
+</div>
+{%- endif -%}
