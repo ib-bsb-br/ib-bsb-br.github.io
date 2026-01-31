@@ -1,17 +1,11 @@
 ---
-categories: []
-tags:
-  - scratchpad
-comment: 
-info: 
+tags: scratchpad
 date: '2026-01-09'
 type: post
 layout: post
 published: true
-sha: 
 slug: treesheets-build
 title: 'TreeSheets Debian 11 arm64 build'
-
 ---
 {% codeblock bash %}
 #!/usr/bin/env bash
@@ -36,9 +30,8 @@ title: 'TreeSheets Debian 11 arm64 build'
 #   6) Builds the CPack 'package' target to produce a .deb
 #
 # Usage:
-#   chmod +x ./build-treesheets-debian11-arm64.sh
-#   ./build-treesheets-debian11-arm64.sh --clean
-#
+#   chmod +x ./build-treesheets.sh
+#   sudo bash build-treesheets.sh --clean --prefer-gles --workdir /mnt/mSATA/3shits --install --jobs 7
 # Options:
 #   --workdir DIR
 #   --clean
@@ -66,14 +59,14 @@ sudo_cmd(){
 # Defaults
 REPO_URL="https://github.com/aardappel/treesheets.git"
 BRANCH="master"
-WORKDIR=""
-CLEAN=0
+WORKDIR="/mnt/mSATA/3shits"
+CLEAN=1
 NO_UPDATE=0
 NO_DEPS=0
-PREFER_GFX="auto"   # auto|gles|gl
+PREFER_GFX="gles"   # auto|gles|gl
 ALLOW_LOBSTER_PATCH=1
 JOBS="$(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 4)"
-DO_INSTALL=0
+DO_INSTALL=1
 TRY_NEWER_GCC=0
 
 while [[ $# -gt 0 ]]; do
