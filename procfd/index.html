@@ -1,0 +1,1657 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>
+      
+        Build and install procfd (Rust lsof-like tool) on Debian 11 (Bullseye) ARM64 (RK3588) - infoBAG
+      
+    </title>
+    <meta name="title" content="Build and install procfd (Rust lsof-like tool) on Debian 11 (Bullseye) ARM64 (RK3588) - infoBAG" />
+    <meta name="description" content="">
+    <meta property="og:type" content="article">
+    <meta property="og:url" content="https://ib.bsb.br/procfd/">
+    <meta property="og:title" content="Build and install procfd (Rust lsof-like tool) on Debian 11 (Bullseye) ARM64 (RK3588) - infoBAG">
+    <meta property="og:description" content="">
+    <meta property="og:image" content="/favicon.ico">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:url" content="https://ib.bsb.br/procfd/">
+    <meta name="twitter:title" content="Build and install procfd (Rust lsof-like tool) on Debian 11 (Bullseye) ARM64 (RK3588) - infoBAG">
+    <meta name="twitter:description" content="">
+    <meta name="twitter:image" content="/favicon.ico">
+    <link rel="canonical" href="https://ib.bsb.br/procfd/">
+    <link rel="alternate" type="application/rss+xml" title="infoBAG" href="https://ib.bsb.br/rss.xml">
+    
+      <meta name="keywords" content="scratchpad">
+      
+        <meta property="article:tag" content="scratchpad">
+      
+    
+    <link rel="icon" href="/favicon.ico" type="image/x-icon">
+    <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon">
+    
+    <link rel="stylesheet" href="/style.css">
+  </head>
+  <body class="post-content-body">
+    <header class="header-container">
+      <nav aria-label="Main navigation" class="header-content">
+        <a href="/" aria-label="Home">
+          <img src="/favicon.ico" alt="Home" class="favicon search-link" width="32" height="32" loading="lazy">
+        </a>
+        <a href="/tags" aria-label="Tags">
+          <img src="/assets/Label.gif" alt="Tags" class="favicon search-link" width="32" height="32" loading="lazy">
+        </a>
+        <a href="/send" aria-label="send">
+          <img src="/assets/rot.gif" alt="send" class="favicon search-link" width="32" height="32" loading="lazy">
+        </a> 
+        <a href="/created" aria-label="archive created">
+          <img src="/assets/Loose_Stone_Pile.gif" alt="archive created" class="favicon search-link" width="32" height="32" loading="lazy">
+        </a>
+        <a href="/events" aria-label="Events">
+          <img src="/assets/Paralyse_Rune.gif" alt="Events" class="favicon search-link" width="32" height="32" loading="lazy">
+        </a>
+        <a href="/modified" aria-label="archive modified">
+          <img src="/assets/Hole_(Rock).gif" alt="archive modified" class="favicon search-link" width="32" height="32" loading="lazy">
+        </a>
+    </nav>
+      <h5 class="post-title">
+        <a href="#bottom-of-page" aria-label="Go to bottom">
+          Build and install procfd (Rust lsof-like tool) on Debian 11 (Bullseye) ARM64 (RK3588)
+        </a>
+      </h5>
+      <div class="post-meta">
+        <time datetime="2026-01-31T00:00:00+00:00" class="post-date">
+          31 Jan 2026
+        </time>
+        
+          <span class="post-updated">
+            ↣
+            <time datetime="2026-01-31T18:52:35+00:00">
+              31 Jan 2026
+            </time>
+          </span>
+        
+        
+          <p class="post-slug">
+            Slug: <a href="https://ib.bsb.br/procfd" class="tag">procfd</a>
+          </p>
+        
+        
+          <p class="post-tags">
+            Tags:
+            
+              <a href="https://ib.bsb.br/tags/#scratchpad" class="tag">scratchpad</a>
+            
+          </p>
+        
+      </div>
+      <div class="post-actions">
+        <div class="page-stats mt-3" role="status" aria-label="Page statistics">
+      
+      <span class="badge bg-primary">
+        18862 characters
+      </span>
+        <span class="separator mx-2" aria-hidden="true">•</span>
+        <span class="badge bg-primary">
+        1889 words
+      </span>
+      </div>
+        <div class="action-buttons d-flex flex-wrap gap-2">
+          
+            
+              <form action="https://github.com/ib-bsb-br/ib-bsb-br.github.io/edit/main/_posts/2026-01-31-procfd.md"
+                    method="GET"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="d-inline-block">
+                <button type="submit" class="btn btn-danger" aria-label="Edit page content">
+                  Improve this page
+                </button>
+              </form>
+            
+            <form action="https://github.com/ib-bsb-br/ib-bsb-br.github.io/commits/main/_posts/2026-01-31-procfd.md"
+                  method="GET"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="d-inline-block">
+              <button type="submit" class="btn btn-danger" aria-label="View page revision history">
+                View revision history
+              </button>
+            </form>
+          
+        </div>
+      </div>
+    </header>
+    <main class="content">
+      <article class="post-wrapper">
+        <div class="post-content-body">
+          
+
+          <section class="code-block-container" role="group" aria-label="Bash Code Block" data-filename="bash_code_block.sh" data-code="#!/bin/bash
+set -euo pipefail
+
+# install-procfd-rk3588-debian11.sh
+#
+# Builds + installs procfd on Debian 11 (Bullseye) ARM64 (RK3588), and patches procfd
+# to add a CLI flag:
+#   --no-unix-peers
+# that skips UNIX socket peer endpoint lookup via sock_diag/unix_diag.
+#
+# Why: Some vendor kernels (including yours) lack unix_diag/CONFIG_UNIX_DIAG, causing
+# procfd to fail while collecting UNIX peer endpoints. This flag provides an explicit,
+# reliable user-controlled fallback.
+#
+# Run: execute as a normal user from within ~/ (or any subdirectory under it). Requires sudo.
+
+# ----------------------------
+# Config
+# ----------------------------
+SRC_DIR_DEFAULT=&quot;$HOME/deshaw-procfd&quot;
+SRC_REPO_URL=&quot;https://github.com/deshaw/procfd.git&quot;
+INSTALL_PATH=&quot;/usr/local/bin/procfd&quot;
+RUSTUP_INIT_URL_AARCH64=&quot;https://static.rust-lang.org/rustup/dist/aarch64-unknown-linux-gnu/rustup-init&quot;
+
+RUST_2021_MIN_MAJOR=1
+RUST_2021_MIN_MINOR=56
+
+SRC_DIR=&quot;$SRC_DIR_DEFAULT&quot;
+DO_CLONE_IF_MISSING=&quot;yes&quot;
+DO_VERIFY=&quot;yes&quot;
+
+# ----------------------------
+# Helpers
+# ----------------------------
+log()  { echo &quot;[INFO] $*&quot;; }
+warn() { echo &quot;[WARN] $*&quot;; }
+die()  { echo &quot;[ERROR] $*&quot; &gt;&amp;2; exit 1; }
+
+confirm_yes() {
+  local prompt=&quot;$1&quot;
+  local confirmation
+  read -r -p &quot;$prompt (yes/NO): &quot; confirmation
+  [[ &quot;$confirmation&quot; == &quot;yes&quot; ]] || die &quot;Operation cancelled by user.&quot;
+}
+
+run_or_die() {
+  local desc=&quot;$1&quot;; shift
+  log &quot;$desc&quot;
+  if ! &quot;$@&quot;; then
+    die &quot;Failed: $desc&quot;
+  fi
+}
+
+run_or_warn() {
+  local desc=&quot;$1&quot;; shift
+  log &quot;$desc&quot;
+  if ! &quot;$@&quot;; then
+    warn &quot;Non-fatal check failed: $desc&quot;
+    return 0
+  fi
+}
+
+ensure_in_home_tree() {
+  if [[ &quot;${PWD}&quot; != &quot;${HOME}&quot;* ]]; then
+    die &quot;Please run this script from within your home directory tree (~/...). Current dir: ${PWD}&quot;
+  fi
+}
+
+ensure_not_root() {
+  if [[ &quot;$(id -u)&quot; -eq 0 ]]; then
+    die &quot;Do not run this script as root. Run as a normal user with sudo privileges.&quot;
+  fi
+}
+
+ensure_sudo_works() {
+  command -v sudo &gt;/dev/null 2&gt;&amp;1 || die &quot;sudo is required but not found.&quot;
+  run_or_die &quot;Validating sudo access (you may be prompted for your password)&quot; sudo -v
+}
+
+ensure_debian11_arm64() {
+  local os_id os_version arch uname_m
+  os_id=&quot;$(. /etc/os-release &amp;&amp; echo &quot;${ID:-}&quot;)&quot;
+  os_version=&quot;$(. /etc/os-release &amp;&amp; echo &quot;${VERSION_ID:-}&quot;)&quot;
+  arch=&quot;$(dpkg --print-architecture)&quot;
+  uname_m=&quot;$(uname -m)&quot;
+
+  [[ &quot;$os_id&quot; == &quot;debian&quot; ]] || die &quot;Unsupported OS: expected Debian, got ID=$os_id&quot;
+  [[ &quot;$os_version&quot; == 11* ]] || die &quot;Unsupported Debian version: expected 11.x (Bullseye), got VERSION_ID=$os_version&quot;
+  if [[ &quot;$arch&quot; != &quot;arm64&quot; &amp;&amp; &quot;$uname_m&quot; != &quot;aarch64&quot; ]]; then
+    die &quot;Unsupported architecture: expected arm64/aarch64, got dpkg=$arch uname=$uname_m&quot;
+  fi
+}
+
+is_pkg_installed() {
+  local pkg=&quot;$1&quot;
+  dpkg -s &quot;$pkg&quot; &gt;/dev/null 2&gt;&amp;1
+}
+
+apt_install_if_missing() {
+  local pkgs_to_install=()
+  local pkg
+  for pkg in &quot;$@&quot;; do
+    if is_pkg_installed &quot;$pkg&quot;; then
+      log &quot;Package already installed: $pkg&quot;
+    else
+      pkgs_to_install+=(&quot;$pkg&quot;)
+    fi
+  done
+
+  if [[ &quot;${#pkgs_to_install[@]}&quot; -gt 0 ]]; then
+    run_or_die &quot;Updating apt package lists&quot; sudo apt-get update
+    run_or_die &quot;Installing packages: ${pkgs_to_install[*]}&quot; sudo apt-get install -y &quot;${pkgs_to_install[@]}&quot;
+  fi
+}
+
+ensure_command() {
+  local cmd=&quot;$1&quot;
+  local pkg=&quot;$2&quot;
+  if ! command -v &quot;$cmd&quot; &gt;/dev/null 2&gt;&amp;1; then
+    apt_install_if_missing &quot;$pkg&quot;
+  fi
+  command -v &quot;$cmd&quot; &gt;/dev/null 2&gt;&amp;1 || die &quot;Tool &#39;$cmd&#39; still not available after installing &#39;$pkg&#39;.&quot;
+}
+
+TEMP_DIR=&quot;&quot;
+cleanup() {
+  if [[ -n &quot;${TEMP_DIR}&quot; &amp;&amp; -d &quot;${TEMP_DIR}&quot; ]]; then
+    rm -rf &quot;${TEMP_DIR}&quot;
+  fi
+}
+trap cleanup EXIT SIGINT SIGTERM
+
+usage() {
+  cat &lt;&lt;&#39;EOF&#39;
+Usage: ./install-procfd-rk3588-debian11.sh [options]
+
+Options:
+  --src-dir PATH    Use an existing procfd source directory (default: ~/deshaw-procfd)
+  --no-clone        Do not clone if source dir is missing (offline-friendly; will error instead)
+  --skip-verify     Skip post-install verification commands
+  -h, --help        Show this help
+EOF
+}
+
+while [[ &quot;${#}&quot; -gt 0 ]]; do
+  case &quot;$1&quot; in
+    --src-dir)
+      shift
+      [[ &quot;${1:-}&quot; ]] || die &quot;--src-dir requires a path&quot;
+      SRC_DIR=&quot;$1&quot;
+      ;;
+    --no-clone)
+      DO_CLONE_IF_MISSING=&quot;no&quot;
+      ;;
+    --skip-verify)
+      DO_VERIFY=&quot;no&quot;
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      die &quot;Unknown option: $1&quot;
+      ;;
+  esac
+  shift
+done
+
+# ----------------------------
+# Rust toolchain helpers
+# ----------------------------
+parse_rustc_version() {
+  if ! command -v rustc &gt;/dev/null 2&gt;&amp;1; then
+    return 1
+  fi
+  local v
+  v=&quot;$(rustc --version 2&gt;/dev/null | awk &#39;{print $2}&#39;)&quot;
+  [[ -n &quot;$v&quot; ]] || return 1
+  local major minor patch
+  major=&quot;$(echo &quot;$v&quot; | cut -d. -f1)&quot;
+  minor=&quot;$(echo &quot;$v&quot; | cut -d. -f2)&quot;
+  patch=&quot;$(echo &quot;$v&quot; | cut -d. -f3 | sed &#39;s/[^0-9].*$//&#39;)&quot;
+  [[ -n &quot;$major&quot; &amp;&amp; -n &quot;$minor&quot; &amp;&amp; -n &quot;$patch&quot; ]] || return 1
+  echo &quot;$major $minor $patch&quot;
+}
+
+rustc_is_new_enough_for_2021() {
+  local major minor patch
+  if ! read -r major minor patch &lt; &lt;(parse_rustc_version); then
+    return 1
+  fi
+  if (( major &gt; RUST_2021_MIN_MAJOR )); then
+    return 0
+  fi
+  if (( major &lt; RUST_2021_MIN_MAJOR )); then
+    return 1
+  fi
+  (( minor &gt;= RUST_2021_MIN_MINOR ))
+}
+
+source_cargo_env_if_present() {
+  if [[ -f &quot;$HOME/.cargo/env&quot; ]]; then
+    # shellcheck disable=SC1090
+    source &quot;$HOME/.cargo/env&quot;
+  fi
+  export PATH=&quot;$HOME/.cargo/bin:/usr/local/bin:$PATH&quot;
+}
+
+install_rust_toolchain_if_needed() {
+  source_cargo_env_if_present
+
+  if rustc_is_new_enough_for_2021; then
+    log &quot;Found rustc new enough for Rust 2021: $(rustc --version)&quot;
+    return 0
+  fi
+
+  if command -v rustc &gt;/dev/null 2&gt;&amp;1; then
+    warn &quot;Found rustc, but it may be too old for Rust 2021: $(rustc --version)&quot;
+    warn &quot;Will install/update Rust via rustup to ensure compatibility.&quot;
+  else
+    log &quot;rustc not found; will install Rust via rustup.&quot;
+  fi
+
+  ensure_command curl curl
+
+  local rustup_init_bin=&quot;$TEMP_DIR/rustup-init&quot;
+  run_or_die &quot;Downloading rustup-init (aarch64) to $rustup_init_bin&quot; curl -Lfo &quot;$rustup_init_bin&quot; &quot;$RUSTUP_INIT_URL_AARCH64&quot;
+  [[ -s &quot;$rustup_init_bin&quot; ]] || die &quot;Downloaded rustup-init is empty or missing.&quot;
+  run_or_die &quot;Marking rustup-init executable&quot; chmod +x &quot;$rustup_init_bin&quot;
+
+  confirm_yes &quot;WARNING: This will execute the downloaded Rust installer &#39;$rustup_init_bin&#39; and install/update Rust in your home directory (~/.cargo, ~/.rustup). Continue?&quot;
+  run_or_die &quot;Running rustup-init installer&quot; &quot;$rustup_init_bin&quot; -y --no-modify-path
+
+  source_cargo_env_if_present
+  command -v rustup &gt;/dev/null 2&gt;&amp;1 || die &quot;rustup not found after installation.&quot;
+  run_or_die &quot;Installing stable Rust toolchain&quot; rustup toolchain install stable
+  run_or_die &quot;Setting stable as default toolchain&quot; rustup default stable
+
+  run_or_die &quot;Printing rustc version&quot; rustc --version
+  rustc_is_new_enough_for_2021 || die &quot;rustc is still not new enough for Rust 2021 after rustup install.&quot;
+}
+
+# ----------------------------
+# Source tree
+# ----------------------------
+ensure_source_tree() {
+  if [[ -d &quot;$SRC_DIR&quot; &amp;&amp; -f &quot;$SRC_DIR/Cargo.toml&quot; ]]; then
+    log &quot;Using existing source directory: $SRC_DIR&quot;
+    return 0
+  fi
+
+  if [[ &quot;$DO_CLONE_IF_MISSING&quot; != &quot;yes&quot; ]]; then
+    die &quot;Source directory not found at &#39;$SRC_DIR&#39; and cloning is disabled (--no-clone).&quot;
+  fi
+
+  ensure_command git git
+
+  log &quot;Source directory not found. Cloning procfd from upstream into: $SRC_DIR&quot;
+  if [[ -e &quot;$SRC_DIR&quot; &amp;&amp; ! -d &quot;$SRC_DIR&quot; ]]; then
+    die &quot;Path exists but is not a directory: $SRC_DIR&quot;
+  fi
+
+  run_or_die &quot;Cloning repository&quot; git clone &quot;$SRC_REPO_URL&quot; &quot;$SRC_DIR&quot;
+  [[ -f &quot;$SRC_DIR/Cargo.toml&quot; ]] || die &quot;Clone completed but Cargo.toml not found in $SRC_DIR&quot;
+}
+
+# ----------------------------
+# Patch: add --no-unix-peers flag and skip peer lookup
+# ----------------------------
+patch_add_no_unix_peers_flag_in_place() {
+  log &quot;Patching source in-place to add --no-unix-peers&quot;
+
+  [[ -n &quot;$TEMP_DIR&quot; &amp;&amp; -d &quot;$TEMP_DIR&quot; ]] || die &quot;Internal error: TEMP_DIR not initialized.&quot;
+
+  ensure_command python3 python3
+
+  # Idempotency checks
+  if grep -q &quot;pub no_unix_peers: bool&quot; &quot;$SRC_DIR/src/opts.rs&quot; 2&gt;/dev/null &amp;&amp; grep -q &quot;args.no_unix_peers&quot; &quot;$SRC_DIR/src/lib.rs&quot; 2&gt;/dev/null; then
+    log &quot;Patch already present (opts.rs + lib.rs).&quot;
+    return 0
+  fi
+
+  # Backups
+  local ts
+  ts=&quot;$(date +%Y%m%d-%H%M%S)&quot;
+  run_or_die &quot;Backing up src/opts.rs&quot; cp -a &quot;$SRC_DIR/src/opts.rs&quot; &quot;$SRC_DIR/src/opts.rs.bak.$ts&quot;
+  run_or_die &quot;Backing up src/lib.rs&quot;  cp -a &quot;$SRC_DIR/src/lib.rs&quot;  &quot;$SRC_DIR/src/lib.rs.bak.$ts&quot;
+
+  local py=&quot;$TEMP_DIR/patch_no_unix_peers.py&quot;
+
+  cat &gt; &quot;$py&quot; &lt;&lt;&#39;PY&#39;
+from pathlib import Path
+import sys
+
+root = Path(sys.argv[1])
+opts_path = root / &quot;src&quot; / &quot;opts.rs&quot;
+lib_path  = root / &quot;src&quot; / &quot;lib.rs&quot;
+
+if not opts_path.exists():
+    raise SystemExit(f&quot;Missing {opts_path}&quot;)
+if not lib_path.exists():
+    raise SystemExit(f&quot;Missing {lib_path}&quot;)
+
+opts = opts_path.read_text(encoding=&quot;utf-8&quot;)
+lib  = lib_path.read_text(encoding=&quot;utf-8&quot;)
+
+# ---- Patch opts.rs: add no_unix_peers flag ----
+if &quot;pub no_unix_peers: bool&quot; not in opts:
+    anchor = &quot;pub pid_only: bool,&quot;
+    idx = opts.find(anchor)
+    if idx != -1:
+        line_end = opts.find(&quot;\n&quot;, idx)
+        if line_end == -1:
+            raise SystemExit(&quot;Unexpected opts.rs format (no newline after pid_only).&quot;)
+        insert = (
+            &quot;\n\n    #[clap(\n&quot;
+            &quot;        long = \&quot;no-unix-peers\&quot;,\n&quot;
+            &quot;        display_order = 17,\n&quot;
+            &quot;        help = \&quot;Skip UNIX socket peer endpoint lookup via sock_diag (useful on kernels without unix_diag)\&quot;\n&quot;
+            &quot;    )]\n&quot;
+            &quot;    pub no_unix_peers: bool,\n&quot;
+        )
+        opts = opts[:line_end+1] + insert + opts[line_end+1:]
+    else:
+        # Fallback: insert before the final closing brace of the struct.
+        # This is less precise but avoids failing hard if formatting changes.
+        struct_start = opts.find(&quot;pub struct Args&quot;)
+        if struct_start == -1:
+            raise SystemExit(&quot;Could not find &#39;pub struct Args&#39; in src/opts.rs&quot;)
+        # Find the last occurrence of a standalone &#39;}&#39; after struct start.
+        closing = opts.rfind(&quot;}\n&quot;)
+        if closing == -1 or closing &lt; struct_start:
+            raise SystemExit(&quot;Could not find struct closing brace in src/opts.rs&quot;)
+        insert = (
+            &quot;\n    #[clap(\n&quot;
+            &quot;        long = \&quot;no-unix-peers\&quot;,\n&quot;
+            &quot;        display_order = 17,\n&quot;
+            &quot;        help = \&quot;Skip UNIX socket peer endpoint lookup via sock_diag (useful on kernels without unix_diag)\&quot;\n&quot;
+            &quot;    )]\n&quot;
+            &quot;    pub no_unix_peers: bool,\n&quot;
+        )
+        opts = opts[:closing] + insert + opts[closing:]
+
+# ---- Patch lib.rs: guard update_unix_map_with_peer with !args.no_unix_peers ----
+needle = &quot;if fd_filter.query_fds() &amp;&amp; fd_filter.query_unix_entry(None) {&quot;
+replacement = &quot;if !args.no_unix_peers &amp;&amp; fd_filter.query_fds() &amp;&amp; fd_filter.query_unix_entry(None) {&quot;
+
+if &quot;args.no_unix_peers&quot; not in lib:
+    if needle not in lib:
+        raise SystemExit(&quot;Could not find expected unix peer lookup &#39;if&#39; line in src/lib.rs to patch.&quot;)
+    lib = lib.replace(needle, replacement, 1)
+
+opts_path.write_text(opts, encoding=&quot;utf-8&quot;)
+lib_path.write_text(lib, encoding=&quot;utf-8&quot;)
+PY
+
+  run_or_die &quot;Applying in-place patch via python3&quot; python3 &quot;$py&quot; &quot;$SRC_DIR&quot;
+
+  grep -q &quot;pub no_unix_peers: bool&quot; &quot;$SRC_DIR/src/opts.rs&quot; || die &quot;Patch failed: no_unix_peers not found in src/opts.rs&quot;
+  grep -q &quot;args.no_unix_peers&quot; &quot;$SRC_DIR/src/lib.rs&quot; || die &quot;Patch failed: args.no_unix_peers not found in src/lib.rs&quot;
+  log &quot;Patch applied successfully. Backups: src/opts.rs.bak.$ts, src/lib.rs.bak.$ts&quot;
+}
+
+# ----------------------------
+# Build + install + verify
+# ----------------------------
+build_procfd() {
+  log &quot;Building procfd (release)&quot;
+  source_cargo_env_if_present
+  command -v cargo &gt;/dev/null 2&gt;&amp;1 || die &quot;cargo not found; Rust toolchain not available.&quot;
+
+  (cd &quot;$SRC_DIR&quot; &amp;&amp; run_or_die &quot;Running cargo build --release&quot; cargo build --release)
+  [[ -x &quot;$SRC_DIR/target/release/procfd&quot; ]] || die &quot;Build did not produce expected binary at target/release/procfd&quot;
+}
+
+install_procfd_binary() {
+  local built_bin=&quot;$SRC_DIR/target/release/procfd&quot;
+
+  if [[ -e &quot;$INSTALL_PATH&quot; ]]; then
+    log &quot;Existing install detected: $INSTALL_PATH&quot;
+    run_or_warn &quot;Existing procfd version (best-effort)&quot; &quot;$INSTALL_PATH&quot; --version
+    confirm_yes &quot;WARNING: &#39;$INSTALL_PATH&#39; already exists and will be overwritten. Continue?&quot;
+  fi
+
+  run_or_die &quot;Installing procfd to $INSTALL_PATH&quot; sudo install -m 0755 &quot;$built_bin&quot; &quot;$INSTALL_PATH&quot;
+  run_or_die &quot;Verifying installed procfd is runnable&quot; &quot;$INSTALL_PATH&quot; --help &gt;/dev/null
+}
+
+detect_base_flags_for_kernel() {
+  # Returns either &quot;&quot; or &quot;--no-unix-peers&quot; based on a real probe run.
+  local errf=&quot;$TEMP_DIR/procfd_probe_stderr.txt&quot;
+  : &gt; &quot;$errf&quot;
+
+  set +e
+  &quot;$INSTALL_PATH&quot; --pid &quot;$$&quot; &gt;/dev/null 2&gt;&quot;$errf&quot;
+  local rc=$?
+  set -e
+
+  if [[ $rc -eq 0 ]]; then
+    echo &quot;&quot;
+    return 0
+  fi
+
+  # If the failure smells like the known unix peer lookup issue, fall back.
+  if grep -qiE &quot;Error collecting socket peer data|diagnostic socket|sock_diag|No such file or directory\s*\(os error 2\)&quot; &quot;$errf&quot;; then
+    warn &quot;Kernel appears to lack UNIX sock_diag support; will use --no-unix-peers by default.&quot;
+    echo &quot;--no-unix-peers&quot;
+    return 0
+  fi
+
+  # Unknown failure: print stderr and fail.
+  echo &quot;--- procfd probe failed (stderr) ---&quot; &gt;&amp;2
+  cat &quot;$errf&quot; &gt;&amp;2
+  echo &quot;-----------------------------------&quot; &gt;&amp;2
+  die &quot;procfd failed during probe for an unexpected reason.&quot;
+}
+
+verify_procfd() {
+  if [[ &quot;$DO_VERIFY&quot; != &quot;yes&quot; ]]; then
+    warn &quot;Skipping verification as requested (--skip-verify).&quot;
+    return 0
+  fi
+
+  log &quot;Running procfd verification commands...&quot;
+
+  local base_flags
+  base_flags=&quot;$(detect_base_flags_for_kernel)&quot;
+
+  local errf=&quot;$TEMP_DIR/procfd_verify_stderr.txt&quot;
+
+  # Basic run
+  : &gt; &quot;$errf&quot;
+  set +e
+  &quot;$INSTALL_PATH&quot; $base_flags --pid &quot;$$&quot; &gt;/dev/null 2&gt;&quot;$errf&quot;
+  local rc=$?
+  set -e
+  if [[ $rc -ne 0 ]]; then
+    echo &quot;--- Basic verification failed (stderr) ---&quot; &gt;&amp;2
+    cat &quot;$errf&quot; &gt;&amp;2
+    echo &quot;----------------------------------------&quot; &gt;&amp;2
+    die &quot;Basic verification failed.&quot;
+  fi
+
+  # JSON output
+  : &gt; &quot;$errf&quot;
+  set +e
+  &quot;$INSTALL_PATH&quot; $base_flags --pid &quot;$$&quot; --json | head -c 200 &gt;/dev/null 2&gt;&quot;$errf&quot;
+  rc=$?
+  set -e
+  if [[ $rc -ne 0 ]]; then
+    echo &quot;--- JSON verification failed (stderr) ---&quot; &gt;&amp;2
+    cat &quot;$errf&quot; &gt;&amp;2
+    echo &quot;----------------------------------------&quot; &gt;&amp;2
+    die &quot;JSON verification failed.&quot;
+  fi
+
+  # PID-only
+  : &gt; &quot;$errf&quot;
+  set +e
+  &quot;$INSTALL_PATH&quot; $base_flags --cmd &#39;/bash/&#39; --pid-only &gt;/dev/null 2&gt;&quot;$errf&quot;
+  rc=$?
+  set -e
+  if [[ $rc -ne 0 ]]; then
+    echo &quot;--- PID-only verification failed (stderr) ---&quot; &gt;&amp;2
+    cat &quot;$errf&quot; &gt;&amp;2
+    echo &quot;--------------------------------------------&quot; &gt;&amp;2
+    die &quot;PID-only verification failed.&quot;
+  fi
+
+  # Best-effort filters
+  run_or_warn &quot;socket-type tcp (no DNS) (best-effort)&quot; bash -c &quot;\&quot;$INSTALL_PATH\&quot; $base_flags --no-dns --socket-type tcp &gt;/dev/null&quot;
+  run_or_warn &quot;socket-domain unix (no DNS) (best-effort)&quot; bash -c &quot;\&quot;$INSTALL_PATH\&quot; $base_flags --no-dns --socket-domain unix &gt;/dev/null&quot;
+
+  log &quot;Verification complete.&quot;
+  log &quot;Recommended run on this device: $INSTALL_PATH $base_flags --pid $$&quot;
+}
+
+# ----------------------------
+# Main
+# ----------------------------
+main() {
+  log &quot;Starting procfd install + patch (--no-unix-peers) for Debian 11 ARM64&quot;
+
+  ensure_not_root
+  ensure_in_home_tree
+  ensure_debian11_arm64
+  ensure_sudo_works
+
+  TEMP_DIR=&quot;$(mktemp -d)&quot;
+
+  apt_install_if_missing ca-certificates curl build-essential pkg-config git python3
+
+  install_rust_toolchain_if_needed
+  ensure_source_tree
+
+  patch_add_no_unix_peers_flag_in_place
+  build_procfd
+  install_procfd_binary
+  verify_procfd
+
+  log &quot;Done.&quot;
+}
+
+main &quot;$@&quot;" data-download-link="" data-download-label="Download Bash">
+  <code class="language-bash">#!/bin/bash
+set -euo pipefail
+
+# install-procfd-rk3588-debian11.sh
+#
+# Builds + installs procfd on Debian 11 (Bullseye) ARM64 (RK3588), and patches procfd
+# to add a CLI flag:
+#   --no-unix-peers
+# that skips UNIX socket peer endpoint lookup via sock_diag/unix_diag.
+#
+# Why: Some vendor kernels (including yours) lack unix_diag/CONFIG_UNIX_DIAG, causing
+# procfd to fail while collecting UNIX peer endpoints. This flag provides an explicit,
+# reliable user-controlled fallback.
+#
+# Run: execute as a normal user from within ~/ (or any subdirectory under it). Requires sudo.
+
+# ----------------------------
+# Config
+# ----------------------------
+SRC_DIR_DEFAULT=&quot;$HOME/deshaw-procfd&quot;
+SRC_REPO_URL=&quot;https://github.com/deshaw/procfd.git&quot;
+INSTALL_PATH=&quot;/usr/local/bin/procfd&quot;
+RUSTUP_INIT_URL_AARCH64=&quot;https://static.rust-lang.org/rustup/dist/aarch64-unknown-linux-gnu/rustup-init&quot;
+
+RUST_2021_MIN_MAJOR=1
+RUST_2021_MIN_MINOR=56
+
+SRC_DIR=&quot;$SRC_DIR_DEFAULT&quot;
+DO_CLONE_IF_MISSING=&quot;yes&quot;
+DO_VERIFY=&quot;yes&quot;
+
+# ----------------------------
+# Helpers
+# ----------------------------
+log()  { echo &quot;[INFO] $*&quot;; }
+warn() { echo &quot;[WARN] $*&quot;; }
+die()  { echo &quot;[ERROR] $*&quot; &gt;&amp;2; exit 1; }
+
+confirm_yes() {
+  local prompt=&quot;$1&quot;
+  local confirmation
+  read -r -p &quot;$prompt (yes/NO): &quot; confirmation
+  [[ &quot;$confirmation&quot; == &quot;yes&quot; ]] || die &quot;Operation cancelled by user.&quot;
+}
+
+run_or_die() {
+  local desc=&quot;$1&quot;; shift
+  log &quot;$desc&quot;
+  if ! &quot;$@&quot;; then
+    die &quot;Failed: $desc&quot;
+  fi
+}
+
+run_or_warn() {
+  local desc=&quot;$1&quot;; shift
+  log &quot;$desc&quot;
+  if ! &quot;$@&quot;; then
+    warn &quot;Non-fatal check failed: $desc&quot;
+    return 0
+  fi
+}
+
+ensure_in_home_tree() {
+  if [[ &quot;${PWD}&quot; != &quot;${HOME}&quot;* ]]; then
+    die &quot;Please run this script from within your home directory tree (~/...). Current dir: ${PWD}&quot;
+  fi
+}
+
+ensure_not_root() {
+  if [[ &quot;$(id -u)&quot; -eq 0 ]]; then
+    die &quot;Do not run this script as root. Run as a normal user with sudo privileges.&quot;
+  fi
+}
+
+ensure_sudo_works() {
+  command -v sudo &gt;/dev/null 2&gt;&amp;1 || die &quot;sudo is required but not found.&quot;
+  run_or_die &quot;Validating sudo access (you may be prompted for your password)&quot; sudo -v
+}
+
+ensure_debian11_arm64() {
+  local os_id os_version arch uname_m
+  os_id=&quot;$(. /etc/os-release &amp;&amp; echo &quot;${ID:-}&quot;)&quot;
+  os_version=&quot;$(. /etc/os-release &amp;&amp; echo &quot;${VERSION_ID:-}&quot;)&quot;
+  arch=&quot;$(dpkg --print-architecture)&quot;
+  uname_m=&quot;$(uname -m)&quot;
+
+  [[ &quot;$os_id&quot; == &quot;debian&quot; ]] || die &quot;Unsupported OS: expected Debian, got ID=$os_id&quot;
+  [[ &quot;$os_version&quot; == 11* ]] || die &quot;Unsupported Debian version: expected 11.x (Bullseye), got VERSION_ID=$os_version&quot;
+  if [[ &quot;$arch&quot; != &quot;arm64&quot; &amp;&amp; &quot;$uname_m&quot; != &quot;aarch64&quot; ]]; then
+    die &quot;Unsupported architecture: expected arm64/aarch64, got dpkg=$arch uname=$uname_m&quot;
+  fi
+}
+
+is_pkg_installed() {
+  local pkg=&quot;$1&quot;
+  dpkg -s &quot;$pkg&quot; &gt;/dev/null 2&gt;&amp;1
+}
+
+apt_install_if_missing() {
+  local pkgs_to_install=()
+  local pkg
+  for pkg in &quot;$@&quot;; do
+    if is_pkg_installed &quot;$pkg&quot;; then
+      log &quot;Package already installed: $pkg&quot;
+    else
+      pkgs_to_install+=(&quot;$pkg&quot;)
+    fi
+  done
+
+  if [[ &quot;${#pkgs_to_install[@]}&quot; -gt 0 ]]; then
+    run_or_die &quot;Updating apt package lists&quot; sudo apt-get update
+    run_or_die &quot;Installing packages: ${pkgs_to_install[*]}&quot; sudo apt-get install -y &quot;${pkgs_to_install[@]}&quot;
+  fi
+}
+
+ensure_command() {
+  local cmd=&quot;$1&quot;
+  local pkg=&quot;$2&quot;
+  if ! command -v &quot;$cmd&quot; &gt;/dev/null 2&gt;&amp;1; then
+    apt_install_if_missing &quot;$pkg&quot;
+  fi
+  command -v &quot;$cmd&quot; &gt;/dev/null 2&gt;&amp;1 || die &quot;Tool &#39;$cmd&#39; still not available after installing &#39;$pkg&#39;.&quot;
+}
+
+TEMP_DIR=&quot;&quot;
+cleanup() {
+  if [[ -n &quot;${TEMP_DIR}&quot; &amp;&amp; -d &quot;${TEMP_DIR}&quot; ]]; then
+    rm -rf &quot;${TEMP_DIR}&quot;
+  fi
+}
+trap cleanup EXIT SIGINT SIGTERM
+
+usage() {
+  cat &lt;&lt;&#39;EOF&#39;
+Usage: ./install-procfd-rk3588-debian11.sh [options]
+
+Options:
+  --src-dir PATH    Use an existing procfd source directory (default: ~/deshaw-procfd)
+  --no-clone        Do not clone if source dir is missing (offline-friendly; will error instead)
+  --skip-verify     Skip post-install verification commands
+  -h, --help        Show this help
+EOF
+}
+
+while [[ &quot;${#}&quot; -gt 0 ]]; do
+  case &quot;$1&quot; in
+    --src-dir)
+      shift
+      [[ &quot;${1:-}&quot; ]] || die &quot;--src-dir requires a path&quot;
+      SRC_DIR=&quot;$1&quot;
+      ;;
+    --no-clone)
+      DO_CLONE_IF_MISSING=&quot;no&quot;
+      ;;
+    --skip-verify)
+      DO_VERIFY=&quot;no&quot;
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      die &quot;Unknown option: $1&quot;
+      ;;
+  esac
+  shift
+done
+
+# ----------------------------
+# Rust toolchain helpers
+# ----------------------------
+parse_rustc_version() {
+  if ! command -v rustc &gt;/dev/null 2&gt;&amp;1; then
+    return 1
+  fi
+  local v
+  v=&quot;$(rustc --version 2&gt;/dev/null | awk &#39;{print $2}&#39;)&quot;
+  [[ -n &quot;$v&quot; ]] || return 1
+  local major minor patch
+  major=&quot;$(echo &quot;$v&quot; | cut -d. -f1)&quot;
+  minor=&quot;$(echo &quot;$v&quot; | cut -d. -f2)&quot;
+  patch=&quot;$(echo &quot;$v&quot; | cut -d. -f3 | sed &#39;s/[^0-9].*$//&#39;)&quot;
+  [[ -n &quot;$major&quot; &amp;&amp; -n &quot;$minor&quot; &amp;&amp; -n &quot;$patch&quot; ]] || return 1
+  echo &quot;$major $minor $patch&quot;
+}
+
+rustc_is_new_enough_for_2021() {
+  local major minor patch
+  if ! read -r major minor patch &lt; &lt;(parse_rustc_version); then
+    return 1
+  fi
+  if (( major &gt; RUST_2021_MIN_MAJOR )); then
+    return 0
+  fi
+  if (( major &lt; RUST_2021_MIN_MAJOR )); then
+    return 1
+  fi
+  (( minor &gt;= RUST_2021_MIN_MINOR ))
+}
+
+source_cargo_env_if_present() {
+  if [[ -f &quot;$HOME/.cargo/env&quot; ]]; then
+    # shellcheck disable=SC1090
+    source &quot;$HOME/.cargo/env&quot;
+  fi
+  export PATH=&quot;$HOME/.cargo/bin:/usr/local/bin:$PATH&quot;
+}
+
+install_rust_toolchain_if_needed() {
+  source_cargo_env_if_present
+
+  if rustc_is_new_enough_for_2021; then
+    log &quot;Found rustc new enough for Rust 2021: $(rustc --version)&quot;
+    return 0
+  fi
+
+  if command -v rustc &gt;/dev/null 2&gt;&amp;1; then
+    warn &quot;Found rustc, but it may be too old for Rust 2021: $(rustc --version)&quot;
+    warn &quot;Will install/update Rust via rustup to ensure compatibility.&quot;
+  else
+    log &quot;rustc not found; will install Rust via rustup.&quot;
+  fi
+
+  ensure_command curl curl
+
+  local rustup_init_bin=&quot;$TEMP_DIR/rustup-init&quot;
+  run_or_die &quot;Downloading rustup-init (aarch64) to $rustup_init_bin&quot; curl -Lfo &quot;$rustup_init_bin&quot; &quot;$RUSTUP_INIT_URL_AARCH64&quot;
+  [[ -s &quot;$rustup_init_bin&quot; ]] || die &quot;Downloaded rustup-init is empty or missing.&quot;
+  run_or_die &quot;Marking rustup-init executable&quot; chmod +x &quot;$rustup_init_bin&quot;
+
+  confirm_yes &quot;WARNING: This will execute the downloaded Rust installer &#39;$rustup_init_bin&#39; and install/update Rust in your home directory (~/.cargo, ~/.rustup). Continue?&quot;
+  run_or_die &quot;Running rustup-init installer&quot; &quot;$rustup_init_bin&quot; -y --no-modify-path
+
+  source_cargo_env_if_present
+  command -v rustup &gt;/dev/null 2&gt;&amp;1 || die &quot;rustup not found after installation.&quot;
+  run_or_die &quot;Installing stable Rust toolchain&quot; rustup toolchain install stable
+  run_or_die &quot;Setting stable as default toolchain&quot; rustup default stable
+
+  run_or_die &quot;Printing rustc version&quot; rustc --version
+  rustc_is_new_enough_for_2021 || die &quot;rustc is still not new enough for Rust 2021 after rustup install.&quot;
+}
+
+# ----------------------------
+# Source tree
+# ----------------------------
+ensure_source_tree() {
+  if [[ -d &quot;$SRC_DIR&quot; &amp;&amp; -f &quot;$SRC_DIR/Cargo.toml&quot; ]]; then
+    log &quot;Using existing source directory: $SRC_DIR&quot;
+    return 0
+  fi
+
+  if [[ &quot;$DO_CLONE_IF_MISSING&quot; != &quot;yes&quot; ]]; then
+    die &quot;Source directory not found at &#39;$SRC_DIR&#39; and cloning is disabled (--no-clone).&quot;
+  fi
+
+  ensure_command git git
+
+  log &quot;Source directory not found. Cloning procfd from upstream into: $SRC_DIR&quot;
+  if [[ -e &quot;$SRC_DIR&quot; &amp;&amp; ! -d &quot;$SRC_DIR&quot; ]]; then
+    die &quot;Path exists but is not a directory: $SRC_DIR&quot;
+  fi
+
+  run_or_die &quot;Cloning repository&quot; git clone &quot;$SRC_REPO_URL&quot; &quot;$SRC_DIR&quot;
+  [[ -f &quot;$SRC_DIR/Cargo.toml&quot; ]] || die &quot;Clone completed but Cargo.toml not found in $SRC_DIR&quot;
+}
+
+# ----------------------------
+# Patch: add --no-unix-peers flag and skip peer lookup
+# ----------------------------
+patch_add_no_unix_peers_flag_in_place() {
+  log &quot;Patching source in-place to add --no-unix-peers&quot;
+
+  [[ -n &quot;$TEMP_DIR&quot; &amp;&amp; -d &quot;$TEMP_DIR&quot; ]] || die &quot;Internal error: TEMP_DIR not initialized.&quot;
+
+  ensure_command python3 python3
+
+  # Idempotency checks
+  if grep -q &quot;pub no_unix_peers: bool&quot; &quot;$SRC_DIR/src/opts.rs&quot; 2&gt;/dev/null &amp;&amp; grep -q &quot;args.no_unix_peers&quot; &quot;$SRC_DIR/src/lib.rs&quot; 2&gt;/dev/null; then
+    log &quot;Patch already present (opts.rs + lib.rs).&quot;
+    return 0
+  fi
+
+  # Backups
+  local ts
+  ts=&quot;$(date +%Y%m%d-%H%M%S)&quot;
+  run_or_die &quot;Backing up src/opts.rs&quot; cp -a &quot;$SRC_DIR/src/opts.rs&quot; &quot;$SRC_DIR/src/opts.rs.bak.$ts&quot;
+  run_or_die &quot;Backing up src/lib.rs&quot;  cp -a &quot;$SRC_DIR/src/lib.rs&quot;  &quot;$SRC_DIR/src/lib.rs.bak.$ts&quot;
+
+  local py=&quot;$TEMP_DIR/patch_no_unix_peers.py&quot;
+
+  cat &gt; &quot;$py&quot; &lt;&lt;&#39;PY&#39;
+from pathlib import Path
+import sys
+
+root = Path(sys.argv[1])
+opts_path = root / &quot;src&quot; / &quot;opts.rs&quot;
+lib_path  = root / &quot;src&quot; / &quot;lib.rs&quot;
+
+if not opts_path.exists():
+    raise SystemExit(f&quot;Missing {opts_path}&quot;)
+if not lib_path.exists():
+    raise SystemExit(f&quot;Missing {lib_path}&quot;)
+
+opts = opts_path.read_text(encoding=&quot;utf-8&quot;)
+lib  = lib_path.read_text(encoding=&quot;utf-8&quot;)
+
+# ---- Patch opts.rs: add no_unix_peers flag ----
+if &quot;pub no_unix_peers: bool&quot; not in opts:
+    anchor = &quot;pub pid_only: bool,&quot;
+    idx = opts.find(anchor)
+    if idx != -1:
+        line_end = opts.find(&quot;\n&quot;, idx)
+        if line_end == -1:
+            raise SystemExit(&quot;Unexpected opts.rs format (no newline after pid_only).&quot;)
+        insert = (
+            &quot;\n\n    #[clap(\n&quot;
+            &quot;        long = \&quot;no-unix-peers\&quot;,\n&quot;
+            &quot;        display_order = 17,\n&quot;
+            &quot;        help = \&quot;Skip UNIX socket peer endpoint lookup via sock_diag (useful on kernels without unix_diag)\&quot;\n&quot;
+            &quot;    )]\n&quot;
+            &quot;    pub no_unix_peers: bool,\n&quot;
+        )
+        opts = opts[:line_end+1] + insert + opts[line_end+1:]
+    else:
+        # Fallback: insert before the final closing brace of the struct.
+        # This is less precise but avoids failing hard if formatting changes.
+        struct_start = opts.find(&quot;pub struct Args&quot;)
+        if struct_start == -1:
+            raise SystemExit(&quot;Could not find &#39;pub struct Args&#39; in src/opts.rs&quot;)
+        # Find the last occurrence of a standalone &#39;}&#39; after struct start.
+        closing = opts.rfind(&quot;}\n&quot;)
+        if closing == -1 or closing &lt; struct_start:
+            raise SystemExit(&quot;Could not find struct closing brace in src/opts.rs&quot;)
+        insert = (
+            &quot;\n    #[clap(\n&quot;
+            &quot;        long = \&quot;no-unix-peers\&quot;,\n&quot;
+            &quot;        display_order = 17,\n&quot;
+            &quot;        help = \&quot;Skip UNIX socket peer endpoint lookup via sock_diag (useful on kernels without unix_diag)\&quot;\n&quot;
+            &quot;    )]\n&quot;
+            &quot;    pub no_unix_peers: bool,\n&quot;
+        )
+        opts = opts[:closing] + insert + opts[closing:]
+
+# ---- Patch lib.rs: guard update_unix_map_with_peer with !args.no_unix_peers ----
+needle = &quot;if fd_filter.query_fds() &amp;&amp; fd_filter.query_unix_entry(None) {&quot;
+replacement = &quot;if !args.no_unix_peers &amp;&amp; fd_filter.query_fds() &amp;&amp; fd_filter.query_unix_entry(None) {&quot;
+
+if &quot;args.no_unix_peers&quot; not in lib:
+    if needle not in lib:
+        raise SystemExit(&quot;Could not find expected unix peer lookup &#39;if&#39; line in src/lib.rs to patch.&quot;)
+    lib = lib.replace(needle, replacement, 1)
+
+opts_path.write_text(opts, encoding=&quot;utf-8&quot;)
+lib_path.write_text(lib, encoding=&quot;utf-8&quot;)
+PY
+
+  run_or_die &quot;Applying in-place patch via python3&quot; python3 &quot;$py&quot; &quot;$SRC_DIR&quot;
+
+  grep -q &quot;pub no_unix_peers: bool&quot; &quot;$SRC_DIR/src/opts.rs&quot; || die &quot;Patch failed: no_unix_peers not found in src/opts.rs&quot;
+  grep -q &quot;args.no_unix_peers&quot; &quot;$SRC_DIR/src/lib.rs&quot; || die &quot;Patch failed: args.no_unix_peers not found in src/lib.rs&quot;
+  log &quot;Patch applied successfully. Backups: src/opts.rs.bak.$ts, src/lib.rs.bak.$ts&quot;
+}
+
+# ----------------------------
+# Build + install + verify
+# ----------------------------
+build_procfd() {
+  log &quot;Building procfd (release)&quot;
+  source_cargo_env_if_present
+  command -v cargo &gt;/dev/null 2&gt;&amp;1 || die &quot;cargo not found; Rust toolchain not available.&quot;
+
+  (cd &quot;$SRC_DIR&quot; &amp;&amp; run_or_die &quot;Running cargo build --release&quot; cargo build --release)
+  [[ -x &quot;$SRC_DIR/target/release/procfd&quot; ]] || die &quot;Build did not produce expected binary at target/release/procfd&quot;
+}
+
+install_procfd_binary() {
+  local built_bin=&quot;$SRC_DIR/target/release/procfd&quot;
+
+  if [[ -e &quot;$INSTALL_PATH&quot; ]]; then
+    log &quot;Existing install detected: $INSTALL_PATH&quot;
+    run_or_warn &quot;Existing procfd version (best-effort)&quot; &quot;$INSTALL_PATH&quot; --version
+    confirm_yes &quot;WARNING: &#39;$INSTALL_PATH&#39; already exists and will be overwritten. Continue?&quot;
+  fi
+
+  run_or_die &quot;Installing procfd to $INSTALL_PATH&quot; sudo install -m 0755 &quot;$built_bin&quot; &quot;$INSTALL_PATH&quot;
+  run_or_die &quot;Verifying installed procfd is runnable&quot; &quot;$INSTALL_PATH&quot; --help &gt;/dev/null
+}
+
+detect_base_flags_for_kernel() {
+  # Returns either &quot;&quot; or &quot;--no-unix-peers&quot; based on a real probe run.
+  local errf=&quot;$TEMP_DIR/procfd_probe_stderr.txt&quot;
+  : &gt; &quot;$errf&quot;
+
+  set +e
+  &quot;$INSTALL_PATH&quot; --pid &quot;$$&quot; &gt;/dev/null 2&gt;&quot;$errf&quot;
+  local rc=$?
+  set -e
+
+  if [[ $rc -eq 0 ]]; then
+    echo &quot;&quot;
+    return 0
+  fi
+
+  # If the failure smells like the known unix peer lookup issue, fall back.
+  if grep -qiE &quot;Error collecting socket peer data|diagnostic socket|sock_diag|No such file or directory\s*\(os error 2\)&quot; &quot;$errf&quot;; then
+    warn &quot;Kernel appears to lack UNIX sock_diag support; will use --no-unix-peers by default.&quot;
+    echo &quot;--no-unix-peers&quot;
+    return 0
+  fi
+
+  # Unknown failure: print stderr and fail.
+  echo &quot;--- procfd probe failed (stderr) ---&quot; &gt;&amp;2
+  cat &quot;$errf&quot; &gt;&amp;2
+  echo &quot;-----------------------------------&quot; &gt;&amp;2
+  die &quot;procfd failed during probe for an unexpected reason.&quot;
+}
+
+verify_procfd() {
+  if [[ &quot;$DO_VERIFY&quot; != &quot;yes&quot; ]]; then
+    warn &quot;Skipping verification as requested (--skip-verify).&quot;
+    return 0
+  fi
+
+  log &quot;Running procfd verification commands...&quot;
+
+  local base_flags
+  base_flags=&quot;$(detect_base_flags_for_kernel)&quot;
+
+  local errf=&quot;$TEMP_DIR/procfd_verify_stderr.txt&quot;
+
+  # Basic run
+  : &gt; &quot;$errf&quot;
+  set +e
+  &quot;$INSTALL_PATH&quot; $base_flags --pid &quot;$$&quot; &gt;/dev/null 2&gt;&quot;$errf&quot;
+  local rc=$?
+  set -e
+  if [[ $rc -ne 0 ]]; then
+    echo &quot;--- Basic verification failed (stderr) ---&quot; &gt;&amp;2
+    cat &quot;$errf&quot; &gt;&amp;2
+    echo &quot;----------------------------------------&quot; &gt;&amp;2
+    die &quot;Basic verification failed.&quot;
+  fi
+
+  # JSON output
+  : &gt; &quot;$errf&quot;
+  set +e
+  &quot;$INSTALL_PATH&quot; $base_flags --pid &quot;$$&quot; --json | head -c 200 &gt;/dev/null 2&gt;&quot;$errf&quot;
+  rc=$?
+  set -e
+  if [[ $rc -ne 0 ]]; then
+    echo &quot;--- JSON verification failed (stderr) ---&quot; &gt;&amp;2
+    cat &quot;$errf&quot; &gt;&amp;2
+    echo &quot;----------------------------------------&quot; &gt;&amp;2
+    die &quot;JSON verification failed.&quot;
+  fi
+
+  # PID-only
+  : &gt; &quot;$errf&quot;
+  set +e
+  &quot;$INSTALL_PATH&quot; $base_flags --cmd &#39;/bash/&#39; --pid-only &gt;/dev/null 2&gt;&quot;$errf&quot;
+  rc=$?
+  set -e
+  if [[ $rc -ne 0 ]]; then
+    echo &quot;--- PID-only verification failed (stderr) ---&quot; &gt;&amp;2
+    cat &quot;$errf&quot; &gt;&amp;2
+    echo &quot;--------------------------------------------&quot; &gt;&amp;2
+    die &quot;PID-only verification failed.&quot;
+  fi
+
+  # Best-effort filters
+  run_or_warn &quot;socket-type tcp (no DNS) (best-effort)&quot; bash -c &quot;\&quot;$INSTALL_PATH\&quot; $base_flags --no-dns --socket-type tcp &gt;/dev/null&quot;
+  run_or_warn &quot;socket-domain unix (no DNS) (best-effort)&quot; bash -c &quot;\&quot;$INSTALL_PATH\&quot; $base_flags --no-dns --socket-domain unix &gt;/dev/null&quot;
+
+  log &quot;Verification complete.&quot;
+  log &quot;Recommended run on this device: $INSTALL_PATH $base_flags --pid $$&quot;
+}
+
+# ----------------------------
+# Main
+# ----------------------------
+main() {
+  log &quot;Starting procfd install + patch (--no-unix-peers) for Debian 11 ARM64&quot;
+
+  ensure_not_root
+  ensure_in_home_tree
+  ensure_debian11_arm64
+  ensure_sudo_works
+
+  TEMP_DIR=&quot;$(mktemp -d)&quot;
+
+  apt_install_if_missing ca-certificates curl build-essential pkg-config git python3
+
+  install_rust_toolchain_if_needed
+  ensure_source_tree
+
+  patch_add_no_unix_peers_flag_in_place
+  build_procfd
+  install_procfd_binary
+  verify_procfd
+
+  log &quot;Done.&quot;
+}
+
+main &quot;$@&quot;</code>
+</section>
+
+        </div>
+        
+          URL: https://ib.bsb.br/procfd
+        
+      </article>
+      <nav class="post-navigation-combined" aria-label="Post navigation">
+        <!-- Chronological Navigation (always visible at 40vh) -->
+        
+          <div class="nav-arrow chronological prev">
+            <a href="/source2contract/" title="behavioral contract from source" rel="prev">
+              <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAC0AAAAtCAYAAAA6GuKaAAAAAXNSR0IArs4c6QAAAxVJREFUaEPt18FqG1cUBuD/nLkzI42UiVInkFLTCAKhS+9KA+3Kq1L8AAHjhR7AKz+ADV55qUfoqhvThTfdmC4KzTKmYJrELshJW9PIlSeKRpqZe88pUtouihvVRknqMNoMzD1zdPXNrzMM4RJ+6BLuGeWm39RdK6VL6VcIlPEo41HG401loJQupS8mUM7pi7md/6p3UtoHUJzf4vVecZb0e0EQfB7H8b0kSeqqummt/eb1buN83SebNsZ8QkQCYHVpaenu/v7+ra2tLRwdHWF1ddWq6hfM3BCRE2b+FcBHACQAHo1E5v9c+5mIhkR0e3z0VQ8LotuqWlXVw/GRmT8QkdMK89McuAOAAfwoIu8z85yIHBPRKRGN1/IAeDx0rul53hivo6psrf2ejDGfEtFOu92u7O3tBWtra2i322g0GhgOh9je3ka325UPax7fCR0iw+lp4aLxr70aeOmgkChTRY3JGSb73EroERD73uB54WpOgdhwZkXNQNQLiVDzOU1yFymAhu+lqZVopIqISQKmPLFS+atHv3A1q8AVQ+lXP/VHRPQx+b6frKysxMvLy1hfX0ez2USv18PCwgLiOEaSJKhWq/jhwQN8dnIfVOS4dsWHqCJ5YREGjBuNEMfd0eTc9WshBqnFYGhRqxrUIoNuLwMT4eb1Cp6dZshywdW6mZzr9QsEPuPmXIhfno3gnGKuEWCUC14MLKoVb1L72+8Zvj3JOl/udZt/S7darUqn0wlarRZ2d3cxPz+PJ8dPsPP1Doq8kIbL+cawjxBIM8MRFAidpBlRpIbhFc55gM2NF5IIQtVBRlRTZgTWZQ4wzvc8spO1NPM4Gr9Wh1bSDIjU98C5E0PIC8OVSX+Rlz08hl+4/LsML6X/menFxcW7BwcHtzY2NvDw8CE21zf/NdMAHskFMs3MT/EfMg3gsTsr02f8byfTo16v3+v3+//f6fGKgXNp5vT5huZbqH4nH+NvwXH6V5bS041mU1FKz8ZxepdSerrRbCpK6dk4Tu9SSk83mk1FKT0bx+ldSunpRrOpuJTSfwBcuImxpyA7XgAAAABJRU5ErkJggg==" alt="Previous article" width="45" height="45" loading="lazy">
+            </a>
+          </div>
+        
+        
+          <div class="nav-arrow chronological next">
+            <a href="/7zip/" title="7-Zip-zstd on RK3588 debian bullseye" rel="next">
+              <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAC0AAAAtCAYAAAA6GuKaAAAAAXNSR0IArs4c6QAAAwdJREFUaEPtl01rG1cUht9z7p070ijKWLVS3I9YULtNMBRn2UIXxZtuvCjedNWfoKVXBvsHeOUfoIUx5AeY0pVXXSR052UxBJSi0kDiRplII83HvadI9CMtOFjCmBjubC7cc8+Zc555eYdLuIEP3cCe4Zu+rq/mSXvSbyHg5eHl4eVxXRrwpD3p+Qh4n56P2+xZnvTszC7MCAAUF0XfOdJa62+IaCeO40GSJA/zPP8RwB9vDjBtWmv9JRE5ImpZawdVpbo58CkAIyJnIrLAzEvOuXNm/h3AfQDOAGdj5z5m5gXn3G9ENCKilckaiDwpiFZEpCoiTyYrM3/knOtXmHs58BkABvCLc+4DZl6cxIjoh4ODA728vIzt7W2sra09PT4+fgTgQES4LMvHZIy5LyI/f/dJvfK6FKMJqAdqmBS2ZgWINY9zJyZ1whUiRJrTfmGjybSxUemwcFEmghqT1UxlUrpQEXD7jRq3NWelEz10okIi1AJOX+U2EgALgUrT0kVnmcKvQ+uazSZvbW2hWq2i3++j3W5jf38f6+vrebvdHovI5pT09+vN7teLYev990K8GpQYjS1u1TQqhnHez6EU4cM7FTw7z5AXDo16ACcyPRsaxp2FEM9ejKd7zUaIYVpiOCpRq2rUIo0XLzMwEZaaFTzvZ8hyh/iWnu69fF1AAoOfFr/A5w8eYDQaIY5jJEmC09NTNBoNdLtd7O3t4ejoCIeHh8k/pL8KUSkCZcg6hCLDjLk2ufYGpRuXAuOMYiosQiDNNEcQILQuzYgi0QxVWKuAMtcqJPdXDaKaMMOUNrOAtoFSVE5jaaY4mtQPS5dmQPS8WkdfGReYgDe/3cTdpbvo9XrY2NhAp9NBq9XKO53Ov6T/r2mlVBeX0DSAMzeHppm5h7doemdvR99buYfd3V2srq4+PTk5+a+mr9CmrqTU3+5Rr9cHg8HgYve4krddbZGb5dOXmf2d+7n4pi9D4LrOeHl40v42fl0a8KQ96fkIeJ+ej9vsWZ707Mzmy/Ck5+M2e9afhmuAz1BhwewAAAAASUVORK5CYII=" alt="Next article" width="45" height="45" loading="lazy">
+            </a>
+          </div>
+        
+            
+            
+              
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+              
+                
+                  
+                  
+              
+              
+              
+              <!-- Navigation block for tag "scratchpad"; default display for the first tag -->
+              <div class="nav-group tags" id="tag-nav-scratchpad" style="display: block;">
+                <div class="nav-arrow tags prev">
+                  
+                    <a href="/logs-rotation-deb/" title="rotation + compression + size caps in logrotate/rsyslog on Debian" rel="prev">
+                      <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAC0AAAAtCAYAAAA6GuKaAAAAAXNSR0IArs4c6QAAAxVJREFUaEPt18FqG1cUBuD/nLkzI42UiVInkFLTCAKhS+9KA+3Kq1L8AAHjhR7AKz+ADV55qUfoqhvThTfdmC4KzTKmYJrELshJW9PIlSeKRpqZe88pUtouihvVRknqMNoMzD1zdPXNrzMM4RJ+6BLuGeWm39RdK6VL6VcIlPEo41HG401loJQupS8mUM7pi7md/6p3UtoHUJzf4vVecZb0e0EQfB7H8b0kSeqqummt/eb1buN83SebNsZ8QkQCYHVpaenu/v7+ra2tLRwdHWF1ddWq6hfM3BCRE2b+FcBHACQAHo1E5v9c+5mIhkR0e3z0VQ8LotuqWlXVw/GRmT8QkdMK89McuAOAAfwoIu8z85yIHBPRKRGN1/IAeDx0rul53hivo6psrf2ejDGfEtFOu92u7O3tBWtra2i322g0GhgOh9je3ka325UPax7fCR0iw+lp4aLxr70aeOmgkChTRY3JGSb73EroERD73uB54WpOgdhwZkXNQNQLiVDzOU1yFymAhu+lqZVopIqISQKmPLFS+atHv3A1q8AVQ+lXP/VHRPQx+b6frKysxMvLy1hfX0ez2USv18PCwgLiOEaSJKhWq/jhwQN8dnIfVOS4dsWHqCJ5YREGjBuNEMfd0eTc9WshBqnFYGhRqxrUIoNuLwMT4eb1Cp6dZshywdW6mZzr9QsEPuPmXIhfno3gnGKuEWCUC14MLKoVb1L72+8Zvj3JOl/udZt/S7darUqn0wlarRZ2d3cxPz+PJ8dPsPP1Doq8kIbL+cawjxBIM8MRFAidpBlRpIbhFc55gM2NF5IIQtVBRlRTZgTWZQ4wzvc8spO1NPM4Gr9Wh1bSDIjU98C5E0PIC8OVSX+Rlz08hl+4/LsML6X/menFxcW7BwcHtzY2NvDw8CE21zf/NdMAHskFMs3MT/EfMg3gsTsr02f8byfTo16v3+v3+//f6fGKgXNp5vT5huZbqH4nH+NvwXH6V5bS041mU1FKz8ZxepdSerrRbCpK6dk4Tu9SSk83mk1FKT0bx+ldSunpRrOpuJTSfwBcuImxpyA7XgAAAABJRU5ErkJggg==" alt="Previous in Tag" width="45" height="45" loading="lazy">
+                    </a>
+                  
+                </div>
+                <div class="nav-arrow tags next">
+                  
+                    <a href="/srch-mv/" title="find and move in bulk - srch tool" rel="next">
+                      <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAC0AAAAtCAYAAAA6GuKaAAAAAXNSR0IArs4c6QAAAwdJREFUaEPtl01rG1cUht9z7p070ijKWLVS3I9YULtNMBRn2UIXxZtuvCjedNWfoKVXBvsHeOUfoIUx5AeY0pVXXSR052UxBJSi0kDiRplII83HvadI9CMtOFjCmBjubC7cc8+Zc555eYdLuIEP3cCe4Zu+rq/mSXvSbyHg5eHl4eVxXRrwpD3p+Qh4n56P2+xZnvTszC7MCAAUF0XfOdJa62+IaCeO40GSJA/zPP8RwB9vDjBtWmv9JRE5ImpZawdVpbo58CkAIyJnIrLAzEvOuXNm/h3AfQDOAGdj5z5m5gXn3G9ENCKilckaiDwpiFZEpCoiTyYrM3/knOtXmHs58BkABvCLc+4DZl6cxIjoh4ODA728vIzt7W2sra09PT4+fgTgQES4LMvHZIy5LyI/f/dJvfK6FKMJqAdqmBS2ZgWINY9zJyZ1whUiRJrTfmGjybSxUemwcFEmghqT1UxlUrpQEXD7jRq3NWelEz10okIi1AJOX+U2EgALgUrT0kVnmcKvQ+uazSZvbW2hWq2i3++j3W5jf38f6+vrebvdHovI5pT09+vN7teLYev990K8GpQYjS1u1TQqhnHez6EU4cM7FTw7z5AXDo16ACcyPRsaxp2FEM9ejKd7zUaIYVpiOCpRq2rUIo0XLzMwEZaaFTzvZ8hyh/iWnu69fF1AAoOfFr/A5w8eYDQaIY5jJEmC09NTNBoNdLtd7O3t4ejoCIeHh8k/pL8KUSkCZcg6hCLDjLk2ufYGpRuXAuOMYiosQiDNNEcQILQuzYgi0QxVWKuAMtcqJPdXDaKaMMOUNrOAtoFSVE5jaaY4mtQPS5dmQPS8WkdfGReYgDe/3cTdpbvo9XrY2NhAp9NBq9XKO53Ov6T/r2mlVBeX0DSAMzeHppm5h7doemdvR99buYfd3V2srq4+PTk5+a+mr9CmrqTU3+5Rr9cHg8HgYve4krddbZGb5dOXmf2d+7n4pi9D4LrOeHl40v42fl0a8KQ96fkIeJ+ej9vsWZ707Mzmy/Ck5+M2e9afhmuAz1BhwewAAAAASUVORK5CYII=" alt="Next in Tag" width="45" height="45" loading="lazy">
+                    </a>
+                  
+                </div>
+              </div>
+            
+          
+          <!-- JavaScript to Toggle the Tag-based Navigation -->
+          <script>
+            document.addEventListener("DOMContentLoaded", function(){
+              var tagLinks = document.querySelectorAll('.tag-option');
+              tagLinks.forEach(function(link){
+                link.addEventListener('click', function(event){
+                  event.preventDefault();
+                  // Remove "active" class from all tag options.
+                  tagLinks.forEach(function(el){ el.classList.remove('active'); });
+                  // Add active class to the clicked tag option.
+                  this.classList.add('active');
+                  // Hide all tag navigation blocks.
+                  document.querySelectorAll('.nav-group.tags').forEach(function(block){
+                    block.style.display = 'none';
+                  });
+                  // Show the navigation block corresponding to the selected tag.
+                  var tagSlug = this.getAttribute('data-tag');
+                  var target = document.getElementById('tag-nav-' + tagSlug);
+                  if(target) {
+                    target.style.display = 'block';
+                  }
+                });
+              });
+            });
+          </script>
+      </nav>
+      
+    </main>
+    <footer id="bottom-of-page" class="site-footer">
+      <div class="footer-content">
+        <!-- Back to top link -->
+        <a href="#" aria-label="Back to top" class="back2top-link">
+          <span class="sronly">Back to top</span>
+        </a>
+    
+        <!-- Liquid Time Calculation and Display -->
+        
+        
+        
+        <a href="https://ib.bsb.br/404" aria-label="404">
+          2026-03-04 22:32:47
+        </a>
+        &#x23;
+    
+        <!-- Tag Selector -->
+        <ul class="tag-selector">
+          
+            
+            
+              <li>
+                <a href="#" class="tag-option active" data-tag="scratchpad">
+                  scratchpad
+                </a>
+              </li>
+            
+          
+        </ul>
+        &hArr;
+    
+        <!-- GitHub Link -->
+        <a href="https://github.com/ib-bsb-br/ib-bsb-br.github.io" aria-label="GitHub">
+          &#8505;
+        </a>
+    
+        <!-- Homepage Link -->
+        <a href="/" aria-label="Homepage">
+          infoBAG
+        </a>
+    
+        <!-- Copy All Code Button -->
+        <button id="copyAllButton" aria-label="Copy all code">
+          &copy;
+        </button>
+      </div>
+    </footer>
+    <style>
+      .back2top-link {
+        display: inline-block;
+        width: 32px;
+        height: 32px;
+        background: url("/assets/Rope_(Old).gif") center center no-repeat;
+        background-size: contain;
+        text-decoration: none;
+        vertical-align: middle;
+      }
+      .sronly {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
+    </style>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Article",
+        "mainEntityOfPage": {
+          "@type": "WebPage",
+          "@id": "https://ib.bsb.br/procfd/"
+        },
+        "headline": "Build and install procfd (Rust lsof-like tool) on Debian 11 (Bullseye) ARM64 (RK3588)",
+        "description": "",
+        "datePublished": "2026-01-31T00:00:00+00:00",
+        "dateModified": "2026-01-31T18:52:35+00:00",
+        "author": {
+          "@type": "Person",
+          "name": "Author"
+        },
+        "publisher": {
+          "@type": "Organization",
+          "name": "infoBAG"
+          
+        }
+        
+      }
+    </script>
+    <script src="/assets/js/prism.js" defer></script>
+    <script src="/assets/js/copy-all-code.js"></script>
+  </body>
+</html>
