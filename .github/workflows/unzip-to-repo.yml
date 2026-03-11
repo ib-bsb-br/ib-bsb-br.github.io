@@ -1,4 +1,4 @@
-name: Unzip and Create Repository (Git Method)
+name: Import Archive and Create Repository (Git Method)
 
 on:
   workflow_dispatch:
@@ -6,15 +6,22 @@ on:
       repo_name:
         description: 'Name for the new repository (must be unique)'
         required: true
-        default: 'unzipped-content'
-      zip_url:
-        description: 'URL of the ZIP file to download'
+        default: 'imported-content'
+      source_type:
+        description: 'Source archive type'
         required: true
-        default: 'https://x0.at/XS2C.zip'
+        type: choice
+        options:
+          - zip
+          - xml
+        default: zip
+      source_url:
+        description: 'URL of the source archive'
+        required: true
       repo_description:
         description: 'Description for the new repository'
         required: false
-        default: 'Repository created from ZIP file extraction'
+        default: 'Repository created from imported ZIP or XML archive'
       private_repo:
         description: 'Make repository private?'
         required: true
@@ -22,10 +29,11 @@ on:
         default: false
 
 jobs:
-  create-repo-from-zip:
+  create-repo-from-archive:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     env:
-      # Prevent git from prompting for credentials
       GIT_TERMINAL_PROMPT: 0
 
     steps:
@@ -36,7 +44,8 @@ jobs:
           set -euo pipefail
           echo "🔍 Validating inputs..."
           echo "Repository name: ${{ inputs.repo_name }}"
-          echo "ZIP URL: ${{ inputs.zip_url }}"
+          echo "Source type: ${{ inputs.source_type }}"
+          echo "Source URL: ${{ inputs.source_url }}"
           echo "Private: ${{ inputs.private_repo }}"
 
           if [[ -z "${REPO_CREATE_TOKEN:-}" ]]; then
@@ -49,27 +58,122 @@ jobs:
             exit 1
           fi
 
-      - name: Download ZIP file
+          source_url_trimmed="$(printf '%s' "${{ inputs.source_url }}" | xargs)"
+          if [[ -z "$source_url_trimmed" ]]; then
+            echo "❌ Error: source_url cannot be empty"
+            exit 1
+          fi
+
+      - name: Download source archive
+        id: source
         run: |
           set -euo pipefail
-          echo "📥 Downloading ZIP file from ${{ inputs.zip_url }}"
+          source_type="${{ inputs.source_type }}"
+          source_url="$(printf '%s' "${{ inputs.source_url }}" | xargs)"
 
-          if ! curl -L -f -o archive.zip --max-time 300 "${{ inputs.zip_url }}"; then
-            echo "❌ Failed to download ZIP file"
-            exit 1
-          fi
+          case "$source_type" in
+            zip)
+              echo "📥 Downloading ZIP archive from $source_url"
+              curl --fail --location --retry 3 --retry-all-errors --connect-timeout 30 --max-time 300 -o archive.zip "$source_url"
+              [[ -s archive.zip ]] || { echo "❌ Downloaded ZIP file is empty"; exit 1; }
+              echo "✅ Downloaded ZIP file ($(du -h archive.zip | cut -f1))"
+              ;;
+            xml)
+              echo "📥 Downloading XML archive from $source_url"
+              curl --fail --location --retry 3 --retry-all-errors --connect-timeout 30 --max-time 300 -o archive.xml "$source_url"
+              [[ -s archive.xml ]] || { echo "❌ Downloaded XML file is empty"; exit 1; }
+              echo "✅ Downloaded XML file ($(du -h archive.xml | cut -f1))"
+              ;;
+          esac
 
-          if [ ! -s archive.zip ]; then
-            echo "❌ Downloaded file is empty"
-            exit 1
-          fi
+          printf 'source_type=%s\n' "$source_type" >> "$GITHUB_OUTPUT"
+          printf 'source_url=%s\n' "$source_url" >> "$GITHUB_OUTPUT"
 
-          echo "✅ Downloaded $(du -h archive.zip | cut -f1) file"
+      - name: Build XML-to-ZIP converter
+        if: steps.source.outputs.source_type == 'xml'
+        run: |
+          set -euo pipefail
+          cat > xml_to_zip_stream.py <<'PY'
+          #!/usr/bin/env python3
+          import argparse
+          import io
+          import re
+          import sys
+          import zipfile
+          from pathlib import Path
+
+          OPEN_RE = re.compile(r'^\ufeff?<file path="([^"]+)">\r?\n?$')
+          CLOSE_TAG = "</file>"
+
+          def stream_xml_to_zip(xml_path: Path, zip_path: Path) -> int:
+              current_path = None
+              buffer = None
+              count = 0
+
+              with xml_path.open("r", encoding="utf-8", errors="surrogateescape", newline="") as src, \
+                   zipfile.ZipFile(zip_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+                  for line in src:
+                      if current_path is None:
+                          match = OPEN_RE.match(line)
+                          if match:
+                              current_path = match.group(1)
+                              buffer = io.StringIO()
+                          continue
+
+                      if line.rstrip("\r\n") == CLOSE_TAG:
+                          data = buffer.getvalue()
+                          if data.startswith("\r\n"):
+                              data = data[2:]
+                          elif data.startswith("\n"):
+                              data = data[1:]
+                          zf.writestr(current_path, data.encode("utf-8", errors="surrogateescape"))
+                          current_path = None
+                          buffer = None
+                          count += 1
+                      else:
+                          buffer.write(line)
+
+              if current_path is not None:
+                  raise RuntimeError(f"Unclosed <file> block for {current_path!r}")
+
+              return count
+
+          def main() -> int:
+              parser = argparse.ArgumentParser(description="Convert a line-oriented XML file archive into a ZIP archive.")
+              parser.add_argument("xml_path")
+              parser.add_argument("zip_path")
+              args = parser.parse_args()
+
+              xml_path = Path(args.xml_path)
+              zip_path = Path(args.zip_path)
+
+              if not xml_path.is_file():
+                  print(f"Input XML file not found: {xml_path}", file=sys.stderr)
+                  return 1
+
+              count = stream_xml_to_zip(xml_path, zip_path)
+              print(f"✅ Wrote {count} files to {zip_path}")
+              return 0
+
+          if __name__ == "__main__":
+              raise SystemExit(main())
+          PY
+          chmod +x xml_to_zip_stream.py
+
+      - name: Convert XML archive to ZIP
+        if: steps.source.outputs.source_type == 'xml'
+        run: |
+          set -euo pipefail
+          echo "🛠️ Converting XML archive to ZIP..."
+          python3 xml_to_zip_stream.py archive.xml archive.zip
+          [[ -s archive.zip ]] || { echo "❌ Generated ZIP file is empty"; exit 1; }
+          echo "✅ Generated ZIP file ($(du -h archive.zip | cut -f1))"
 
       - name: Extract ZIP contents
         run: |
           set -euo pipefail
           echo "📦 Extracting ZIP file..."
+          rm -rf extracted_content
           mkdir -p extracted_content
 
           if ! unzip -q archive.zip -d extracted_content; then
@@ -77,9 +181,9 @@ jobs:
             exit 1
           fi
 
-          file_count=$(find extracted_content -type f | wc -l)
-          if [ "$file_count" -eq 0 ]; then
-            echo "❌ No files found in ZIP archive"
+          file_count=$(find extracted_content -type f | wc -l | tr -d ' ')
+          if [[ "$file_count" -eq 0 ]]; then
+            echo "❌ No files found in archive"
             exit 1
           fi
 
@@ -151,10 +255,8 @@ jobs:
           set -euo pipefail
           cd extracted_content
 
-          if [ -d .git ]; then
-            echo "🧹 Removing existing git metadata from extracted content..."
-            rm -rf .git
-          fi
+          echo "🧹 Removing any embedded git metadata..."
+          find . -type d -name .git -prune -exec rm -rf {} +
 
           echo "📋 Initializing repository..."
           git init -b main
@@ -166,13 +268,14 @@ jobs:
           echo "* text=auto" > .gitattributes
 
           echo "➕ Adding all files..."
-          git add .
+          git add --all
 
           echo "💾 Creating initial commit..."
           COMMIT_TS="$(date -u +"%Y-%m-%d %H:%M:%S UTC")"
           git commit \
-            -m "Initial commit: Add files from ZIP archive" \
-            -m "Source: ${{ inputs.zip_url }}" \
+            -m "Initial commit: Add files from imported archive" \
+            -m "Source type: ${{ steps.source.outputs.source_type }}" \
+            -m "Source: ${{ steps.source.outputs.source_url }}" \
             -m "Extracted: ${COMMIT_TS}" \
             -m "Workflow: ${{ github.repository }}@${{ github.sha }}"
 
@@ -189,21 +292,31 @@ jobs:
         env:
           REPO_URL: ${{ steps.create-repo.outputs.html_url }}
         run: |
-          echo "## ✅ Workflow Completed Successfully!" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Repository Details" >> $GITHUB_STEP_SUMMARY
-          echo "- **Name:** ${{ inputs.repo_name }}" >> $GITHUB_STEP_SUMMARY
+          set -euo pipefail
           REPO_URL_SANITIZED=$(echo "$REPO_URL" | sed 's/^"\(.*\)"$/\1/')
-          echo "- **URL:** [View Repository](${REPO_URL_SANITIZED%.git})" >> $GITHUB_STEP_SUMMARY
-          echo "- **Visibility:** ${{ inputs.private_repo == 'true' && 'Private' || 'Public' }}" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Source" >> $GITHUB_STEP_SUMMARY
-          echo "- **ZIP URL:** ${{ inputs.zip_url }}" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "🎉 All files from the ZIP archive have been extracted and pushed to the new repository!" >> $GITHUB_STEP_SUMMARY
+          if [[ "${{ inputs.private_repo }}" == "true" ]]; then
+            VISIBILITY="Private"
+          else
+            VISIBILITY="Public"
+          fi
+
+          {
+            echo "## ✅ Workflow Completed Successfully!"
+            echo
+            echo "### Repository Details"
+            echo "- **Name:** ${{ inputs.repo_name }}"
+            echo "- **URL:** [View Repository](${REPO_URL_SANITIZED%.git})"
+            echo "- **Visibility:** ${VISIBILITY}"
+            echo
+            echo "### Source"
+            echo "- **Type:** ${{ steps.source.outputs.source_type }}"
+            echo "- **URL:** ${{ steps.source.outputs.source_url }}"
+            echo
+            echo "🎉 All files from the provided archive have been imported and pushed to the new repository!"
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Cleanup failure
-        if: failure()
+        if: failure() && steps.create-repo.outcome == 'success'
         uses: actions/github-script@v8
         env:
           REPO_NAME: ${{ inputs.repo_name }}
@@ -219,8 +332,8 @@ jobs:
                 repo: repoName
               });
 
-              console.log(`⚠️ Repository ${user.login}/${repoName} was created but workflow failed.`);
-              console.log(`Consider deleting it manually if it's empty: https://github.com/${user.login}/${repoName}/settings`);
+              console.log(`⚠️ Repository ${user.login}/${repoName} was created but workflow failed later.`);
+              console.log(`Consider deleting it manually if needed: https://github.com/${user.login}/${repoName}/settings`);
             } catch (error) {
               console.log('No repository cleanup needed.');
             }
