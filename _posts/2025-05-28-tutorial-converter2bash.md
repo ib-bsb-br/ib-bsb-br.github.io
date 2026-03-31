@@ -15,7 +15,78 @@ title: 'tutorial converter2bash'
     <system_environment>
       <operating_system>Debian 11 (Bullseye)</operating_system>
       <architecture>ARM64</architecture>
-      <hardware_platform>RK3588 Rockchip (bare-metal)</hardware_platform>
+      <hardware_platform>
+~~~target_platform
+### System & Board Identification
+
+* **Product**: VPC-3588 Mainboard.
+* **Board Model**: Rockchip RK3588 DXB LP4 V10 Board.
+* **Machine Type**: Single-board computer.
+* **Operating System**: Debian GNU/Linux 11.11 (bullseye).
+* **Kernel**: Linux 5.10.198 (aarch64).
+
+### Processor & Memory
+
+* **SoC**: Rockchip RK3588 (8 nm).
+* **Architecture**: Octa-core 64-bit big.LITTLE.
+* **Big Cores**: 4× Cortex-A76 (Detected: 2256.00 MHz; Spec: up to 2.4 GHz).
+* **Little Cores**: 4× Cortex-A55 (Detected: 1800.00 MHz).
+
+
+* **NPU**: 6 TOPS; supports INT4/INT8/INT16/FP16/BF16/TF32.
+* **Cache**:
+* L1: 4×32KB (Little) + 4×64KB (Big).
+* L2: 4×128KB (Little) + 4×512KB (Big).
+* L3: 3072KB Unified.
+
+
+* **Memory**:
+* **Installed**: ~32 GB (32535 MB detected).
+* **Type**: LPDDR4.
+* **Usage**: ~6 GB used.
+* **Spec Options**: 4/8/16/32 GB.
+
+
+
+### Graphics & Compute (OpenCL/Vulkan)
+
+* **GPU**: ARM Mali-G610 MC4 (r0p0).
+* **Compute Units**: 4.
+* **Clock**: Max 1000 MHz.
+* **Driver**: OpenCL 3.0 (Driver v3.0); ICD Loader 2.2.14.
+* **Global Memory**: 31.02 GiB (Unified with Host).
+* **API Support**:
+* OpenCL 3.0 (Full Profile).
+* OpenGL ES 3.2.
+* Vulkan 1.2.162.
+
+
+* **Capabilities**: FP16 support; Coarse-grained SVM; Atomicity (Relaxed/Acquire-Release/Seq-Cst).
+* **Extensions (Selection)**: `cl_khr_fp16`, `cl_khr_int64_base_atomics`, `cl_khr_subgroups`, `cl_arm_import_memory`, `cl_arm_integer_dot_product_int8`.
+
+### Storage & Filesystems
+
+* **Primary (eMMC)**: `mmcblk0` (SCA128) - 116.5 GiB.
+* Vendor ID: `EMMC:0x0000df`.
+* Spec: On-board eMMC 16 GB (scalable to 128 GB).
+* Partitions: `/` (root), `/oem`, `/userdata`, `/opt`, `/srv`, `/var/log`.
+
+
+* **Secondary (SATA/PCIe)**: `sda` (MT-512) - 476.9 GiB.
+* Mounts: `/mnt/mSATA`, `/home/linaro`.
+* Drive Temp: 33.00°C.
+
+
+* **Supported Expansion**: 1× mSATA, 1× PCIe x4 (for SSD), 4× SATA 3.0.
+
+### Peripherals & Connectivity
+
+* **Network**:
+* **Ethernet**: RTL8111/8168/8211/8411 PCIe Gigabit Controller.
+* **Wi-Fi**: SDIO Wi-Fi 6 (802.11a/b/g/n/ac/ax). Interface: `wlan0` (192.168.1.8).
+* **Bluetooth**: Serial BT (v2.1+EDR to v5.0).
+~~~/target_platform
+      </hardware_platform>
       <script_language>Bash</script_language>
       <execution_context>Run by the user from within their home directory (`~/`).</execution_context>
     </system_environment>
