@@ -6,7 +6,7 @@ type: post
 layout: post
 published: true
 slug: images-to-searchable-pdf
-title: 'Images to Searchable PDF'
+title: 'Images to Searchable PDF or txt'
 ---
 This guide provides a comprehensive, in-depth walkthrough for transforming a directory full of images (such as scans of book pages, photographs of receipts, or digital documents saved in formats like JPG, PNG, or TIFF) into a single, unified, and text-searchable PDF file. Creating a searchable PDF unlocks numerous benefits: it allows for instant keyword searching, enables easy copying and pasting of text, improves accessibility for screen readers, facilitates data extraction, and allows seamless integration with document management systems.
 
@@ -283,3 +283,292 @@ Verify success and handle failures gracefully.
 * **Failed Runs & Cleanup:** If ocrmypdf fails, manually delete temporary directories (rm \-rf /tmp/ocrmypdf\_\* or in $TMPDIR) to free space.  
 * **Verification:** **Crucially, always open the final OCR'd PDF.** Test search, select/copy text, visually skim pages. Only delete originals/intermediates after verification.  
 * **Common OCR Errors:** Expect imperfections (character confusion: l/1, O/0; merged/split words; issues with tables/fonts). Perfect accuracy is rare. Manual correction might be needed for critical documents.
+
+* # bash script for OCR of a folder with PNG files
+```bash
+#!/usr/bin/env bash
+set -Eeuo pipefail
+IFS=$'\n\t'
+
+# batch_ocr_png_folder.sh
+#
+# OCR all PNG files in a folder and write the recognized text
+# into a single text file in that same folder.
+#
+# Target: Debian 11 Bullseye on ARM64 / RK3588
+# Default input directory: /home/linaro/SCREENSHOTS
+# Default OCR language: eng
+#
+# Usage:
+#   ./batch_ocr_png_folder.sh
+#   ./batch_ocr_png_folder.sh /home/linaro/SCREENSHOTS
+#   ./batch_ocr_png_folder.sh /home/linaro/SCREENSHOTS eng
+#
+# Optional environment variables:
+#   OCR_PSM=6            Tesseract page segmentation mode
+#   OCR_OEM=1            Tesseract OCR engine mode
+#   OCR_PREPROCESS=1     1=use ImageMagick preprocessing if available, 0=skip
+#   OCR_THRESHOLD=55%    Threshold used during preprocessing
+#   OCR_DENSITY=300      Density hint used during preprocessing
+#
+# Output files inside the input folder:
+#   ocr_output.txt
+#   ocr_run.log
+#
+# Notes:
+# - The script is non-recursive: it scans only the top level of the folder.
+# - English OCR in Tesseract uses 'eng', not 'en_US'.
+
+SCRIPT_NAME="$(basename "$0")"
+INPUT_DIR="${1:-/home/linaro/SCREENSHOTS}"
+OCR_LANG="${2:-eng}"
+
+OCR_PSM="${OCR_PSM:-6}"
+OCR_OEM="${OCR_OEM:-1}"
+OCR_PREPROCESS="${OCR_PREPROCESS:-1}"
+OCR_THRESHOLD="${OCR_THRESHOLD:-55%}"
+OCR_DENSITY="${OCR_DENSITY:-300}"
+
+OUTPUT_FILE=""
+LOG_FILE=""
+WORK_DIR=""
+TMP_OUTPUT=""
+IMAGEMAGICK_CMD=""
+
+usage() {
+    cat <<EOF
+Usage: $SCRIPT_NAME [input_dir] [tesseract_lang]
+
+Arguments:
+  input_dir        Folder containing PNG images
+                   Default: /home/linaro/SCREENSHOTS
+  tesseract_lang   Tesseract language code
+                   Default: eng
+
+Optional environment variables:
+  OCR_PSM=6
+  OCR_OEM=1
+  OCR_PREPROCESS=1
+  OCR_THRESHOLD=55%
+  OCR_DENSITY=300
+
+Examples:
+  $SCRIPT_NAME
+  $SCRIPT_NAME /home/linaro/SCREENSHOTS
+  $SCRIPT_NAME /home/linaro/SCREENSHOTS eng
+  OCR_PSM=11 $SCRIPT_NAME /home/linaro/SCREENSHOTS eng
+  OCR_PREPROCESS=0 $SCRIPT_NAME /home/linaro/SCREENSHOTS eng
+EOF
+}
+
+msg() {
+    printf '%s\n' "$*"
+}
+
+log() {
+    local level="$1"
+    shift
+    local line
+    line="$(date '+%Y-%m-%d %H:%M:%S') [$level] $*"
+    if [[ -n "${LOG_FILE:-}" ]]; then
+        printf '%s\n' "$line" | tee -a "$LOG_FILE"
+    else
+        printf '%s\n' "$line" >&2
+    fi
+}
+
+cleanup() {
+    if [[ -n "${WORK_DIR:-}" && -d "$WORK_DIR" ]]; then
+        rm -rf "$WORK_DIR"
+    fi
+}
+trap cleanup EXIT
+
+fail() {
+    log "ERROR" "$*"
+    exit 1
+}
+
+check_command() {
+    local cmd="$1"
+    command -v "$cmd" >/dev/null 2>&1 || fail "Required command not found: $cmd"
+}
+
+detect_imagemagick() {
+    if command -v magick >/dev/null 2>&1; then
+        IMAGEMAGICK_CMD="magick"
+    elif command -v convert >/dev/null 2>&1; then
+        IMAGEMAGICK_CMD="convert"
+    else
+        IMAGEMAGICK_CMD=""
+    fi
+}
+
+validate_input_dir() {
+    if [[ "$INPUT_DIR" == "-h" || "$INPUT_DIR" == "--help" ]]; then
+        usage
+        exit 0
+    fi
+
+    [[ -d "$INPUT_DIR" ]] || fail "Input directory does not exist: $INPUT_DIR"
+    [[ -r "$INPUT_DIR" ]] || fail "Input directory is not readable: $INPUT_DIR"
+    [[ -w "$INPUT_DIR" ]] || fail "Input directory is not writable: $INPUT_DIR"
+}
+
+prepare_paths() {
+    OUTPUT_FILE="$INPUT_DIR/ocr_output.txt"
+    LOG_FILE="$INPUT_DIR/ocr_run.log"
+    WORK_DIR="$(mktemp -d "${TMPDIR:-/tmp}/batch_ocr_png.XXXXXX")"
+    TMP_OUTPUT="$WORK_DIR/ocr_output.txt"
+
+    : > "$LOG_FILE"
+    : > "$TMP_OUTPUT"
+}
+
+check_dependencies() {
+    check_command find
+    check_command sort
+    check_command awk
+    check_command grep
+    check_command mktemp
+    check_command tesseract
+
+    if ! tesseract --list-langs 2>/dev/null | awk 'NR>1 {print $1}' | grep -Fxq "$OCR_LANG"; then
+        fail "Tesseract language '$OCR_LANG' is not installed. For English, install: sudo apt install -y tesseract-ocr-eng"
+    fi
+
+    detect_imagemagick
+}
+
+preprocess_image() {
+    local src="$1"
+    local dst="$2"
+
+    [[ "$OCR_PREPROCESS" == "1" ]] || return 1
+    [[ -n "$IMAGEMAGICK_CMD" ]] || return 1
+
+    if [[ "$IMAGEMAGICK_CMD" == "magick" ]]; then
+        magick "$src" \
+            -auto-orient \
+            -units PixelsPerInch -density "$OCR_DENSITY" \
+            -colorspace Gray \
+            -strip \
+            -normalize \
+            -sharpen 0x1.0 \
+            -threshold "$OCR_THRESHOLD" \
+            "$dst"
+    else
+        convert "$src" \
+            -auto-orient \
+            -units PixelsPerInch -density "$OCR_DENSITY" \
+            -colorspace Gray \
+            -strip \
+            -normalize \
+            -sharpen 0x1.0 \
+            -threshold "$OCR_THRESHOLD" \
+            "$dst"
+    fi
+}
+
+run_tesseract_to_file() {
+    local image="$1"
+    local out_txt="$2"
+
+    tesseract "$image" stdout \
+        -l "$OCR_LANG" \
+        --oem "$OCR_OEM" \
+        --psm "$OCR_PSM" \
+        2>>"$LOG_FILE" > "$out_txt"
+}
+
+ocr_one_file() {
+    local img="$1"
+    local filename preprocessed tmp_txt
+    filename="$(basename "$img")"
+    preprocessed="$WORK_DIR/${filename}.preprocessed.png"
+    tmp_txt="$WORK_DIR/${filename}.txt"
+
+    log "INFO" "Processing: $filename"
+
+    if preprocess_image "$img" "$preprocessed" 2>>"$LOG_FILE"; then
+        if ! run_tesseract_to_file "$preprocessed" "$tmp_txt"; then
+            log "WARN" "Preprocessed OCR failed for '$filename'; retrying original image"
+            if ! run_tesseract_to_file "$img" "$tmp_txt"; then
+                log "ERROR" "OCR failed for '$filename'"
+                return 1
+            fi
+        fi
+    else
+        if ! run_tesseract_to_file "$img" "$tmp_txt"; then
+            log "ERROR" "OCR failed for '$filename'"
+            return 1
+        fi
+    fi
+
+    {
+        printf '============================================================\n'
+        printf 'FILE: %s\n' "$filename"
+        printf 'PATH: %s\n' "$img"
+        printf '============================================================\n\n'
+        cat "$tmp_txt" 2>/dev/null || true
+        printf '\n\n'
+    } >> "$TMP_OUTPUT"
+
+    log "INFO" "Finished: $filename"
+    return 0
+}
+
+main() {
+    validate_input_dir
+    prepare_paths
+    check_dependencies
+
+    log "INFO" "Input directory: $INPUT_DIR"
+    log "INFO" "Output text file: $OUTPUT_FILE"
+    log "INFO" "Log file: $LOG_FILE"
+    log "INFO" "OCR language: $OCR_LANG"
+    log "INFO" "OCR_PSM: $OCR_PSM"
+    log "INFO" "OCR_OEM: $OCR_OEM"
+    log "INFO" "OCR_PREPROCESS: $OCR_PREPROCESS"
+
+    if [[ "$OCR_PREPROCESS" == "1" ]]; then
+        if [[ -n "$IMAGEMAGICK_CMD" ]]; then
+            log "INFO" "Preprocessing enabled via: $IMAGEMAGICK_CMD"
+        else
+            log "WARN" "Preprocessing requested but ImageMagick not found; OCR will use original images"
+        fi
+    fi
+
+    mapfile -d '' files < <(
+        LC_ALL=C find "$INPUT_DIR" -maxdepth 1 -type f \( -iname '*.png' \) -print0 | sort -z
+    )
+
+    if [[ "${#files[@]}" -eq 0 ]]; then
+        fail "No PNG files found in: $INPUT_DIR"
+    fi
+
+    local total ok failed
+    total="${#files[@]}"
+    ok=0
+    failed=0
+
+    for img in "${files[@]}"; do
+        if ocr_one_file "$img"; then
+            ok=$((ok + 1))
+        else
+            failed=$((failed + 1))
+        fi
+    done
+
+    mv -f "$TMP_OUTPUT" "$OUTPUT_FILE"
+
+    log "INFO" "Summary: total=$total ok=$ok failed=$failed"
+
+    msg
+    msg "OCR complete."
+    msg "Text output: $OUTPUT_FILE"
+    msg "Log file:    $LOG_FILE"
+}
+
+main "$@"
+```
